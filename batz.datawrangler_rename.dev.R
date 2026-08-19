@@ -44,6 +44,24 @@
 #      "test1": ->out1 and ->coconut), the FIRST matching row's replacement is
 #      used, matching R's own match() behavior. Setting first.match = FALSE
 #      uses the LAST matching row's replacement instead.
+#
+# NEW FEATURE (2026-08-19, per Josh): optional rename.headers = FALSE. When
+# TRUE, the function does NOT touch the data frame's contents at all -
+# instead it looks up each of data's column HEADERS in recode.table's first
+# column, and renames any header found there to the matching second-column
+# value (headers with no match are left unchanged). This reuses the exact
+# same recode.vec() matching/first.match logic already used for recoding
+# values - just applied to names(data) instead of the data itself. See
+# assumption 8 below.
+#   8. rename.headers requires `data` to be a data frame (a vector has no
+#      headers to rename) - errors with a clear message if data isn't a data
+#      frame and rename.headers = TRUE. When rename.headers = TRUE, the
+#      count.missing/list.missing diagnostics also switch what they consider
+#      "elements": instead of flattening the data frame's VALUES, they look
+#      at names(data) directly - since in this mode it's the headers being
+#      matched/renamed, not the values. count.duplicates/list.duplicates are
+#      unaffected either way (they only ever look at recode.table's own first
+#      column, independent of what's being renamed).
 # =============================================================================
 
 suppressMessages(library(readxl))
@@ -83,20 +101,31 @@ recode.vec <- function(x, recode.table, first.match = TRUE) {
 # batz.datawrangler_rename(data, recode.table,
 #                           count.missing = FALSE, list.missing = FALSE,
 #                           count.duplicates = FALSE, list.duplicates = FALSE,
-#                           first.match = TRUE)
+#                           first.match = TRUE, rename.headers = FALSE)
 # -----------------------------------------------------------------------------
 batz.datawrangler_rename <- function(data, recode.table,
                                       count.missing    = FALSE,
                                       list.missing     = FALSE,
                                       count.duplicates = FALSE,
                                       list.duplicates  = FALSE,
-                                      first.match      = TRUE) {
+                                      first.match      = TRUE,
+                                      rename.headers   = FALSE) {
+
+  if (rename.headers && !is.data.frame(data)) {
+    stop("rename.headers = TRUE requires 'data' to be a data frame - it renames column headers, not vector elements.")
+  }
 
   ref.find <- as.character(recode.table[[1]])
 
-  # ---- missing-element diagnostics (input elements with no match in ref) ----
+  # ---- missing-element diagnostics ----
+  # In rename.headers mode, "elements" means the column headers being looked
+  # up (not the data frame's contents); otherwise it's every data value.
   if (count.missing || list.missing) {
-    flat.chr <- as.character(if (is.data.frame(data)) unlist(data, use.names = FALSE) else data)
+    flat.chr <- if (rename.headers) {
+      names(data)
+    } else {
+      as.character(if (is.data.frame(data)) unlist(data, use.names = FALSE) else data)
+    }
     missing.vals <- flat.chr[!(flat.chr %in% ref.find)]
 
     if (count.missing) {
@@ -141,7 +170,12 @@ batz.datawrangler_rename <- function(data, recode.table,
     }
   }
 
-  # ---- actual recode ----
+  # ---- actual rename/recode ----
+  if (rename.headers) {
+    names(data) <- recode.vec(names(data), recode.table, first.match = first.match)
+    return(data)
+  }
+
   if (is.data.frame(data)) {
     out <- as.data.frame(
       lapply(data, recode.vec, recode.table = recode.table, first.match = first.match),
@@ -196,3 +230,39 @@ print(batz.datawrangler_rename(test.data.csv, recode.table.realdup))
 
 cat("\n=== first.match = FALSE - test1 should recode to 'coconut' instead ===\n")
 print(batz.datawrangler_rename(test.data.csv, recode.table.realdup, first.match = FALSE))
+
+# -----------------------------------------------------------------------------
+# rename.headers test - real test.data has columns "A" and "B"; use a
+# synthetic header-rename table (real recode.table's values don't match
+# column names, so a header-specific reference table is needed here).
+# -----------------------------------------------------------------------------
+cat("\n\n=== rename.headers = TRUE - real test.data columns before: ===\n")
+print(names(test.data))
+
+header.table <- data.frame(old = c("A", "B", "NoSuchColumn"),
+                            new = c("Alpha", "Beta", "Should.Not.Appear"),
+                            stringsAsFactors = FALSE)
+
+renamed <- batz.datawrangler_rename(test.data, header.table, rename.headers = TRUE)
+cat("\n=== rename.headers = TRUE - columns after (A->Alpha, B->Beta) ===\n")
+print(names(renamed))
+cat("contents unchanged? ", identical(as.data.frame(renamed, stringsAsFactors = FALSE),
+                                       setNames(as.data.frame(test.data, stringsAsFactors = FALSE), names(renamed))), "\n")
+
+cat("\n=== rename.headers = TRUE + a header with NO match in the reference\n",
+    "(column C - not in header.table - should stay unchanged) ===\n", sep = "")
+test.data.extra <- test.data
+test.data.extra$C <- "unchanged.column"
+renamed.extra <- batz.datawrangler_rename(test.data.extra, header.table, rename.headers = TRUE)
+print(names(renamed.extra))
+
+cat("\n=== rename.headers = TRUE + count.missing/list.missing now describe\n",
+    "unmatched HEADERS, not unmatched data values ===\n", sep = "")
+invisible(batz.datawrangler_rename(test.data.extra, header.table, rename.headers = TRUE, count.missing = TRUE))
+invisible(batz.datawrangler_rename(test.data.extra, header.table, rename.headers = TRUE, list.missing = TRUE))
+
+cat("\n=== rename.headers = TRUE on a plain vector should error ===\n")
+tryCatch(
+  batz.datawrangler_rename(c("A", "B"), header.table, rename.headers = TRUE),
+  error = function(e) cat("Got expected error:", conditionMessage(e), "\n")
+)

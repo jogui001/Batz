@@ -23,16 +23,16 @@ rounded to whole seconds in the written CSV only).}
 }
 \value{
 Invisibly, a list with:
-\describe{
-\item{aru.suntimes}{One row per (aru, date): \code{$aru}, \code{$date},
-\code{$date.mon}, \code{$sunregion}, \code{$lat}, \code{$long},
-\code{$time.zone}, \code{$suns}, \code{$suns.unix}, \code{$sunr},
-\code{$sunr.unix}, \code{$sunr.mon}, \code{$sunr.mon.unix}.}
-\item{efficiency}{One-row summary: \code{$aru.date.rows} (rows needed
-without de-duplication), \code{$site.date.rows} (unique site-date
-rows actually calculated), \code{$shared.sites} (count of sites
-with more than one ARU sharing the same lat/long/sunregion).}
-}
+  \describe{
+    \item{aru.suntimes}{One row per (aru, date): \code{$aru}, \code{$date},
+      \code{$date.mon}, \code{$sunregion}, \code{$lat}, \code{$long},
+      \code{$time.zone}, \code{$suns}, \code{$suns.unix}, \code{$sunr},
+      \code{$sunr.unix}, \code{$sunr.mon}, \code{$sunr.mon.unix}.}
+    \item{efficiency}{One-row summary: \code{$aru.date.rows} (rows needed
+      without de-duplication), \code{$site.date.rows} (unique site-date
+      rows actually calculated), \code{$shared.sites} (count of sites
+      with more than one ARU sharing the same lat/long/sunregion).}
+  }
 }
 \description{
 For every ARU in an \verb{*arulist.csv} deployment list, and for every
@@ -57,22 +57,22 @@ per shared date instead of repeating it per ARU.
 
 \strong{Assumptions made (spec was ambiguous on these - flag for review):}
 \itemize{
-\item \code{$suns} is treated as SUNSET on \code{$date} (the shorthand
-"suns"/"sunr" strongly implies sunset vs. sunrise, and \code{$sunr}
-is separately and explicitly defined as sunrise - having both be
-sunrise would make \code{$suns} a pure duplicate).
-\item \code{$date.mon} is \code{$date} itself at noon (12:00:00), NOT
-\code{$date + 1} - taken literally from "date plus time of
-12:00:00", with no mention of the following day (unlike
-\code{$sunr.mon}, which explicitly says "for the following day").
-Noon (rather than midnight) is used so the timestamp can't drift to
-the wrong calendar day when read back in a different time zone.
-\item \code{[$date.start, $date.end]} is inclusive of both endpoints.
-\item Sunrise/sunset use the standard -0.833 degree solar-elevation
-threshold (atmospheric refraction + the sun's angular radius).
-\item Locations that would produce polar day/night (no sunrise or
-sunset on some date) are not expected in this data and are not
-specially handled beyond returning \code{NA}.
+  \item \code{$suns} is treated as SUNSET on \code{$date} (the shorthand
+    "suns"/"sunr" strongly implies sunset vs. sunrise, and \code{$sunr}
+    is separately and explicitly defined as sunrise - having both be
+    sunrise would make \code{$suns} a pure duplicate).
+  \item \code{$date.mon} is \code{$date} itself at noon (12:00:00), NOT
+    \code{$date + 1} - taken literally from "date plus time of
+    12:00:00", with no mention of the following day (unlike
+    \code{$sunr.mon}, which explicitly says "for the following day").
+    Noon (rather than midnight) is used so the timestamp can't drift to
+    the wrong calendar day when read back in a different time zone.
+  \item \code{[$date.start, $date.end]} is inclusive of both endpoints.
+  \item Sunrise/sunset use the standard -0.833 degree solar-elevation
+    threshold (atmospheric refraction + the sun's angular radius).
+  \item Locations that would produce polar day/night (no sunrise or
+    sunset on some date) are not expected in this data and are not
+    specially handled beyond returning \code{NA}.
 }
 
 See \code{batz.suntimes_generate.dev.R} in the package source repo for
