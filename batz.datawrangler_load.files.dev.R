@@ -39,19 +39,19 @@
 #         top-level counterpart - exercises plain recursive load with no
 #         duplicate-name logic involved at all)
 #   HabitatAssessments_20m.csv also had one row duplicated within itself
-#   (SYNTHETIC edit, sandbox-only) to exercise remove.duplicates on a single,
+#   (SYNTHETIC edit, sandbox-only) to exercise duplicates.remove on a single,
 #   non-merged file.
 #
 #   Three additional small SYNTHETIC trees (sandbox-only, not from Josh's
 #   real data - built purely to isolate the newest features from each other
 #   and from the merge/dedup logic already exercised above):
 #     /home/claude/loadfiles_work/v2a/  (fileA.csv top-level + fileA.csv in
-#       subdir/, same columns/different rows) - isolates skip.duplicates.
+#       subdir/, same columns/different rows) - isolates duplicates.skip.
 #     /home/claude/loadfiles_work/v2b/  (fileA.csv + fileB_altname.csv, both
 #       with column set x,y but DIFFERENT names) - isolates header.match.
 #     /home/claude/loadfiles_work/v2c/  (fileA.csv + fileB.csv top-level,
 #       subdir/fileA.csv [same name/cols as top fileA] + subdir/fileC.csv
-#       [brand new name/cols]) - isolates max.objects, specifically that a
+#       [brand new name/cols]) - isolates objects.max, specifically that a
 #       merge (subdir/fileA.csv into fileA) is never blocked by the cap even
 #       after it's reached, while a file that would need a brand-new object
 #       (subdir/fileC.csv) IS blocked once the cap is hit.
@@ -106,7 +106,7 @@
 #      (invisible) list - not an error.
 #   8. A file that fails to read (e.g. corrupt/unreadable) is skipped with a
 #      console warning rather than stopping the whole function.
-#   9. remove.duplicates = TRUE removes exact duplicate rows (base
+#   9. duplicates.remove = TRUE removes exact duplicate rows (base
 #      duplicated()) from WITHIN each individual data frame - including
 #      separately within each sheet of a multi-sheet xlsx list - never across
 #      different top-level objects. Runs as a final pass AFTER all files are
@@ -114,30 +114,30 @@
 #      files have been merged together.
 #
 # NEW/CHANGED THIS ROUND (2026-08-19, later same day, per Josh):
-#  - max.files renamed to max.objects (Josh's own wording change).
-#  - Added header.match = FALSE (default) and skip.duplicates = FALSE
+#  - max.files renamed to objects.max (Josh's own wording change).
+#  - Added header.match = FALSE (default) and duplicates.skip = FALSE
 #    (default).
 #  - log.file gained two new columns, $reason and $objectname.
-#  - max.objects now explicitly does NOT count merges - only files that
+#  - objects.max now explicitly does NOT count merges - only files that
 #    create a brand-new top-level object count toward the cap, and merging
 #    keeps working even after the cap is reached (this was specifically
 #    requested: "do not count merged files towards the max.object limit...
 #    once the limit is reached keep loading and merging files").
 #
 #  10. SPEC CONTRADICTION - flagging rather than guessing: the "Optional
-#      inputs" list says `skip.duplicates = FALSE (default)`, but the Steps
+#      inputs" list says `duplicates.skip = FALSE (default)`, but the Steps
 #      section separately labels BOTH branches "(default)" - "if
-#      skip.duplicates = TRUE (default) then do not load that file in" AND
-#      "if skip.duplicates = FALSE (default) then merge...". Only one can
+#      duplicates.skip = TRUE (default) then do not load that file in" AND
+#      "if duplicates.skip = FALSE (default) then merge...". Only one can
 #      actually be the default. Went with the explicit parameter-list
 #      statement (FALSE is the default - matching the existing merge
-#      behavior nothing changes unless you turn skip.duplicates ON) - please
+#      behavior nothing changes unless you turn duplicates.skip ON) - please
 #      confirm this is what you meant.
 #  11. Full decision order implemented for a file whose base name ALREADY
 #      matches something already loaded (only possible when dir.sub = TRUE
 #      and the duplicate lives in a different folder):
-#        - skip.duplicates = TRUE: skip it outright, no column check at all.
-#        - skip.duplicates = FALSE: merge if columns match (by name); if they
+#        - duplicates.skip = TRUE: skip it outright, no column check at all.
+#        - duplicates.skip = FALSE: merge if columns match (by name); if they
 #          DON'T match, it falls through to the SAME header.match check
 #          described in 12 below before finally becoming its own object
 #          (under a folder-suffixed alt name, same as before).
@@ -148,7 +148,7 @@
 #      when a file's name already matches an existing object AND their
 #      columns already match (that's just resolved as a normal same-name
 #      merge, no need to also hunt for a header match elsewhere) or when
-#      skip.duplicates already skipped it. When header.match = TRUE and it's
+#      duplicates.skip already skipped it. When header.match = TRUE and it's
 #      time to check: every ALREADY-LOADED plain data-frame object (list-type
 #      multi-sheet-xlsx entries are never compared - a sheet-list has no
 #      single column set) is scanned in the order it was created, and the
@@ -157,8 +157,8 @@
 #      object's existing name), not given a new name of its own. A
 #      multi-sheet xlsx is never itself checked against header.match either
 #      way (as source or as target) - it can still be skipped/merged-by-NAME
-#      via skip.duplicates logic, just not via header.match.
-#  13. max.objects: capping ONLY applies at the exact moment a file is about
+#      via duplicates.skip logic, just not via header.match.
+#  13. objects.max: capping ONLY applies at the exact moment a file is about
 #      to become a brand-new standalone object (i.e., neither a name-based
 #      nor a header.match merge applied). A merge NEVER counts against the
 #      cap and is NEVER blocked by it, even after the cap has already been
@@ -175,21 +175,29 @@
 #                  and no header.match hit elsewhere either)
 #        merged -> "file had the same name" (matched by name) | "file has
 #                  same headers" (matched by header.match, different name)
-#        skipped -> "object limit met" (blocked by max.objects) | "duplicate
-#                  file" (blocked by skip.duplicates = TRUE)
+#        skipped -> "object limit met" (blocked by objects.max) | "duplicate
+#                  file" (blocked by duplicates.skip = TRUE)
 #      One gap remained beyond Josh's given four reason strings: a genuine
 #      file-READ failure (corrupt/unreadable file) doesn't fit any of them.
 #      Added an extra reason, "could not read file", purely for this case,
 #      since leaving it unlabeled or mislabeling it as one of the other four
 #      seemed worse - flagging this as an addition beyond what was specified.
 #
-# CORRECTION (2026-08-19, per Josh): the skip.duplicates = TRUE skip reason
+# CORRECTION (2026-08-19, per Josh): the duplicates.skip = TRUE skip reason
 # was originally mapped to "headers mismatched" (reusing the closest given
 # option) - Josh corrected this: the file is skipped because it has a
-# DUPLICATE NAME, not because headers were compared/mismatched (skip.
-# duplicates = TRUE never even checks columns). Changed the reason string to
+# DUPLICATE NAME, not because headers were compared/mismatched (duplicates.
+# skip = TRUE never even checks columns). Changed the reason string to
 # "duplicate file" instead, which isn't one of Josh's originally-given four
 # reason strings either, but accurately describes why the skip happens.
+#
+# NOTE (2026-08-20, per Josh): cross-function optional-input naming pass -
+# renamed remove.duplicates -> duplicates.remove, skip.duplicates ->
+# duplicates.skip, max.objects -> objects.max (defaults unchanged: TRUE,
+# FALSE, 25 respectively). dir.load, dir.sub, log.file, and header.match
+# were already consistent with the target naming and are unchanged. The
+# $reason/$objectname column names inside log.file are unaffected - this
+# round only touched the function's own parameter names.
 # =============================================================================
 
 suppressMessages(library(readxl))
@@ -199,11 +207,11 @@ suppressMessages(library(readxl))
 # -----------------------------------------------------------------------------
 batz.datawrangler_load.files <- function(dir.load = getwd(),
                                           dir.sub           = FALSE,
-                                          remove.duplicates = TRUE,
+                                          duplicates.remove = TRUE,
                                           log.file          = FALSE,
                                           header.match      = FALSE,
-                                          skip.duplicates   = FALSE,
-                                          max.objects       = 25) {
+                                          duplicates.skip   = FALSE,
+                                          objects.max       = 25) {
 
   read.one <- function(f) {
     ext <- tolower(tools::file_ext(f))
@@ -241,7 +249,7 @@ batz.datawrangler_load.files <- function(dir.load = getwd(),
   }
 
   dedup.frame <- function(df, label) {
-    if (!remove.duplicates) return(df)
+    if (!duplicates.remove) return(df)
     dup.mask <- duplicated(df)
     n.dup <- sum(dup.mask)
     if (n.dup > 0) {
@@ -291,12 +299,12 @@ batz.datawrangler_load.files <- function(dir.load = getwd(),
 
       name.exists <- base.name %in% names(loaded)
 
-      # ---- name-based duplicate handling (skip.duplicates governs this) ----
+      # ---- name-based duplicate handling (duplicates.skip governs this) ----
       if (name.exists) {
-        if (skip.duplicates) {
+        if (duplicates.skip) {
           add.log(basename(f), "failed", "skipped", "duplicate file", NA_character_)
           cat("  skipped '", f, "' - an object named '", base.name,
-              "' already exists (skip.duplicates = TRUE)\n", sep = "")
+              "' already exists (duplicates.skip = TRUE)\n", sep = "")
           next
         }
         existing <- loaded[[base.name]]
@@ -326,10 +334,10 @@ batz.datawrangler_load.files <- function(dir.load = getwd(),
       }
 
       # ---- otherwise this file needs to become its own new object ----
-      if (length(loaded) >= max.objects) {
+      if (length(loaded) >= objects.max) {
         add.log(basename(f), "failed", "skipped", "object limit met", NA_character_)
         n.capped <- n.capped + 1
-        cat("  skipped '", f, "' - max.objects =", max.objects, "reached\n")
+        cat("  skipped '", f, "' - objects.max =", objects.max, "reached\n")
         next
       }
 
@@ -342,13 +350,13 @@ batz.datawrangler_load.files <- function(dir.load = getwd(),
   }
 
   if (n.capped > 0) {
-    cat("\nmax.objects = ", max.objects, " reached - ", n.capped,
-        " additional file(s) were NOT loaded as new objects (merges into existing objects were still allowed; increase max.objects to load more new ones).\n", sep = "")
+    cat("\nobjects.max = ", objects.max, " reached - ", n.capped,
+        " additional file(s) were NOT loaded as new objects (merges into existing objects were still allowed; increase objects.max to load more new ones).\n", sep = "")
   }
 
   cat("\n", length(loaded), " object(s) created: ", paste(names(loaded), collapse = ", "), "\n", sep = "")
 
-  # ---- remove.duplicates: within each individual data frame, never across ----
+  # ---- duplicates.remove: within each individual data frame, never across ----
   for (nm in names(loaded)) {
     obj <- loaded[[nm]]
     if (is.data.frame(obj)) {
@@ -390,7 +398,7 @@ rm(list = ls()[ls() %in% c("Acoustic_SiteVisitARU", "HabitatAssessments_quad",
 res.top <- batz.datawrangler_load.files("/home/claude/loadfiles_work/top", dir.sub = FALSE)
 cat("\nobjects returned:", paste(names(res.top), collapse = ", "), "\n")
 
-cat("\n\n=== dir.sub = TRUE (default skip.duplicates/header.match - unchanged\n",
+cat("\n\n=== dir.sub = TRUE (default duplicates.skip/header.match - unchanged\n",
     "behavior from the previous round) ===\n", sep = "")
 res.all <- batz.datawrangler_load.files("/home/claude/loadfiles_work/top", dir.sub = TRUE)
 cat("\nobjects returned:", paste(names(res.all), collapse = ", "), "\n")
@@ -408,18 +416,18 @@ res.log <- batz.datawrangler_load.files("/home/claude/loadfiles_work/top", dir.s
 print(res.log$log.file)
 
 # -----------------------------------------------------------------------------
-# NEW: skip.duplicates tests (v2a - same name, same columns, different rows)
+# NEW: duplicates.skip tests (v2a - same name, same columns, different rows)
 # -----------------------------------------------------------------------------
-cat("\n\n=== skip.duplicates = FALSE (default) - v2a/fileA.csv +\n",
+cat("\n\n=== duplicates.skip = FALSE (default) - v2a/fileA.csv +\n",
     "v2a/subdir/fileA.csv should MERGE (same columns) ===\n", sep = "")
 res.v2a.merge <- batz.datawrangler_load.files("/home/claude/loadfiles_work/v2a", dir.sub = TRUE, log.file = TRUE)
 cat("fileA nrow (should be 4 - both files' rows):", nrow(res.v2a.merge$fileA), "\n")
 print(res.v2a.merge$log.file)
 
-cat("\n\n=== skip.duplicates = TRUE - the subdir copy should be SKIPPED,\n",
+cat("\n\n=== duplicates.skip = TRUE - the subdir copy should be SKIPPED,\n",
     "not merged (fileA should keep only the top-level file's 2 rows) ===\n", sep = "")
 res.v2a.skip <- batz.datawrangler_load.files("/home/claude/loadfiles_work/v2a", dir.sub = TRUE,
-                                              skip.duplicates = TRUE, log.file = TRUE)
+                                              duplicates.skip = TRUE, log.file = TRUE)
 cat("fileA nrow (should be 2 - subdir copy skipped):", nrow(res.v2a.skip$fileA), "\n")
 print(res.v2a.skip$log.file)
 
@@ -440,14 +448,14 @@ cat("fileA nrow (should be 3 - both files merged):", nrow(res.v2b.on$fileA), "\n
 print(res.v2b.on$log.file)
 
 # -----------------------------------------------------------------------------
-# NEW: max.objects tests (v2c - merges must NOT count toward/be blocked by cap)
+# NEW: objects.max tests (v2c - merges must NOT count toward/be blocked by cap)
 # -----------------------------------------------------------------------------
-cat("\n\n=== max.objects = 2, v2c: fileA.csv + fileB.csv (2 new objects, hits\n",
+cat("\n\n=== objects.max = 2, v2c: fileA.csv + fileB.csv (2 new objects, hits\n",
     "the cap) + subdir/fileA.csv (SAME NAME as fileA - should still MERGE,\n",
     "not get blocked by the cap) + subdir/fileC.csv (brand-new name/columns -\n",
     "SHOULD be skipped, object limit met) ===\n", sep = "")
 res.v2c <- batz.datawrangler_load.files("/home/claude/loadfiles_work/v2c", dir.sub = TRUE,
-                                         max.objects = 2, log.file = TRUE)
+                                         objects.max = 2, log.file = TRUE)
 cat("objects (excl. log.file):", paste(setdiff(names(res.v2c), "log.file"), collapse = ", "), "\n")
 cat("fileA nrow (should be 3 - merge succeeded even though cap was already met):",
     nrow(res.v2c$fileA), "\n")

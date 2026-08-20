@@ -5,7 +5,7 @@
 # before being wrapped into the final function (batz.arumeta_merge.format.R).
 #
 # Purpose (per spec): search a directory (and its subdirectories, if
-# sub.dir = TRUE) for .csv / .xlsx files, sort them into three categories by
+# dir.sub = TRUE) for .csv / .xlsx files, sort them into three categories by
 # filename (or, for a workbook ending in "ARUdeployments.xlsx", by sheet
 # name), merge each category's files into one data frame, remove duplicate
 # rows, and report how many were removed.
@@ -25,7 +25,7 @@
 #     "HabitatAssessments_20m"  -> "20m"     category
 #     "HabitatAssessments_quad" -> "quad"    category
 #     "sitevist" (typo'd sheet name, NOT "SiteVisitARU") -> "sitevis" category
-#   Plus, for the sub.dir=TRUE recursion test, a synthetic nested copy of
+#   Plus, for the dir.sub=TRUE recursion test, a synthetic nested copy of
 #   HabitatAssessments_20m.csv was placed one level down (not in Josh's real
 #   folder - built locally in this sandbox for testing only).
 #
@@ -35,7 +35,19 @@
 #
 # NOTE (2026-08-18, later): Josh also confirmed first.match was never supposed
 # to be part of this function's spec either - removed from the signature too.
-# batz.arumeta_merge.format() now only takes dir.path, sub.dir, and log.file.
+# batz.arumeta_merge.format() now takes dir.load, load.pattern, dir.sub, and
+# log.file (see the 2026-08-20 note above for the load.pattern/dir.sub change).
+#
+# NOTE (2026-08-19, per Josh): dir.path renamed to dir.load, to match the
+# parameter name used by batz.datawrangler_load.files for the same concept
+# (directory to search/load from) - names should be constant across functions.
+#
+# NOTE (2026-08-20, per Josh): cross-function optional-input naming pass -
+# "sub.dir" renamed to "dir.sub" (default flipped TRUE -> FALSE, matching the
+# new project-wide default), and a new "load.pattern" input added
+# (default c("*.csv", "*.xlsx")) replacing the previously-hardwired
+# "\\.(csv|xlsx)$" pattern. batz.arumeta_merge.format() now takes dir.load,
+# load.pattern, dir.sub, and log.file.
 #
 # BUG FOUND AND FIXED (2026-08-18): the original version of this script called
 # as.data.frame(lapply(d, as.character)) with the default check.names = TRUE
@@ -86,7 +98,7 @@
 #      checked against the file name for .csv files, and against the SHEET
 #      name (not the file name) for sheets inside an "...ARUdeployments.xlsx"
 #      workbook.
-#   2. `dir.path` was added as an explicit argument (default `getwd()`) rather
+#   2. `dir.load` was added as an explicit argument (default `getwd()`) rather
 #      than hard-wiring the function to the R working directory - keeps it
 #      testable/reusable while still matching "search the current directory"
 #      as the default behavior.
@@ -188,9 +200,14 @@ suppressMessages(library(readxl))
 # -----------------------------------------------------------------------------
 # core function
 # -----------------------------------------------------------------------------
-batz.arumeta_merge.format <- function(dir.path = getwd(),
-                                       sub.dir          = TRUE,
+batz.arumeta_merge.format <- function(dir.load = getwd(),
+                                       load.pattern     = c("*.csv", "*.xlsx"),
+                                       dir.sub          = FALSE,
                                        log.file         = FALSE) {
+
+  ## convert a plain wildcard/glob suffix pattern (or vector of them) into
+  ## one combined regex suitable for list.files()'s pattern= argument
+  pattern.regex <- function(p) paste(vapply(p, utils::glob2rx, character(1)), collapse = "|")
 
   log.rows <- list()
   add.log <- function(inputfile, event, action, count) {
@@ -262,8 +279,8 @@ batz.arumeta_merge.format <- function(dir.path = getwd(),
 
   category.patterns <- c(aru.visit = "sitevis", aru.quad = "quad", aru.20m = "20m")
 
-  all.files <- list.files(dir.path, pattern = "\\.(csv|xlsx)$",
-                           recursive = sub.dir, full.names = TRUE, ignore.case = TRUE)
+  all.files <- list.files(dir.load, pattern = pattern.regex(load.pattern),
+                           recursive = dir.sub, full.names = TRUE, ignore.case = TRUE)
 
   buckets <- setNames(vector("list", length(category.patterns)), names(category.patterns))
 
@@ -280,7 +297,7 @@ batz.arumeta_merge.format <- function(dir.path = getwd(),
     if (length(hit) == 0) NA_character_ else hit[1]
   }
 
-  cat("Scanning", dir.path, "(sub.dir =", sub.dir, ") ...\n")
+  cat("Scanning", dir.load, "(dir.sub =", dir.sub, ") ...\n")
 
   for (f in all.files) {
     fname <- basename(f)
@@ -356,14 +373,14 @@ batz.arumeta_merge.format <- function(dir.path = getwd(),
 # -----------------------------------------------------------------------------
 # tests
 # -----------------------------------------------------------------------------
-cat("=== sub.dir = FALSE (top-level only; nested copy should NOT appear) ===\n")
-res.top <- batz.arumeta_merge.format("/home/claude/arumeta_work/top", sub.dir = FALSE)
+cat("=== dir.sub = FALSE (top-level only; nested copy should NOT appear) ===\n")
+res.top <- batz.arumeta_merge.format("/home/claude/arumeta_work/top", dir.sub = FALSE)
 cat("\naru.visit rows:", nrow(res.top$aru.visit),
     "| aru.quad rows:", nrow(res.top$aru.quad),
     "| aru.20m rows:", nrow(res.top$aru.20m), "\n")
 
-cat("\n\n=== sub.dir = TRUE (should also pick up the nested 20m copy) ===\n")
-res.all <- batz.arumeta_merge.format("/home/claude/arumeta_work/top", sub.dir = TRUE)
+cat("\n\n=== dir.sub = TRUE (should also pick up the nested 20m copy) ===\n")
+res.all <- batz.arumeta_merge.format("/home/claude/arumeta_work/top", dir.sub = TRUE)
 cat("\naru.visit rows:", nrow(res.all$aru.visit),
     "| aru.quad rows:", nrow(res.all$aru.quad),
     "| aru.20m rows:", nrow(res.all$aru.20m), "\n")
@@ -373,11 +390,11 @@ print(sapply(res.all$aru.visit[c("Site Name", "Reason for site visit", "ARU Seri
              function(x) sum(!is.na(x) & x != "")))
 
 cat("\n\n=== log.file = FALSE (default) - result should have NO arumeta.mergelog element ===\n")
-res.nolog <- batz.arumeta_merge.format("/home/claude/arumeta_work/top", sub.dir = TRUE)
+res.nolog <- batz.arumeta_merge.format("/home/claude/arumeta_work/top", dir.sub = TRUE)
 cat("has arumeta.mergelog:", !is.null(res.nolog$arumeta.mergelog), "\n")
 
 cat("\n\n=== log.file = TRUE - arumeta.mergelog contents ===\n")
-res.log <- batz.arumeta_merge.format("/home/claude/arumeta_work/top", sub.dir = TRUE, log.file = TRUE)
+res.log <- batz.arumeta_merge.format("/home/claude/arumeta_work/top", dir.sub = TRUE, log.file = TRUE)
 print(res.log$arumeta.mergelog)
 
 cat("\n\n=== auto-assign - bare call (no assignment) should still create\n",
@@ -387,7 +404,7 @@ cat("before call - exist? aru.visit:", exists("aru.visit"),
     "| aru.quad:", exists("aru.quad"),
     "| aru.20m:", exists("aru.20m"),
     "| arumeta.mergelog:", exists("arumeta.mergelog"), "\n")
-batz.arumeta_merge.format("/home/claude/arumeta_work/top", sub.dir = TRUE, log.file = TRUE)
+batz.arumeta_merge.format("/home/claude/arumeta_work/top", dir.sub = TRUE, log.file = TRUE)
 cat("after bare call - exist? aru.visit:", exists("aru.visit"),
     "| aru.quad:", exists("aru.quad"),
     "| aru.20m:", exists("aru.20m"),

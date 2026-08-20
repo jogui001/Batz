@@ -9,14 +9,14 @@
 #'
 #' Two independent mechanisms can combine files into one data frame instead
 #' of creating separate objects: a duplicate FILE NAME (see
-#' \code{skip.duplicates}) and, optionally, a duplicate HEADER SET across
+#' \code{duplicates.skip}) and, optionally, a duplicate HEADER SET across
 #' differently-named files (see \code{header.match}).
 #'
 #' @param dir.load Character. Directory to search. Defaults to the current
 #'   working directory (\code{getwd()}).
 #' @param dir.sub Logical, default \code{FALSE}. If \code{TRUE}, also
 #'   searches every subdirectory of \code{dir.load}.
-#' @param remove.duplicates Logical, default \code{TRUE}. If \code{TRUE},
+#' @param duplicates.remove Logical, default \code{TRUE}. If \code{TRUE},
 #'   exact duplicate rows are removed from WITHIN each individual data frame
 #'   (including separately within each sheet of a multi-sheet \code{.xlsx}
 #'   list) - never across two different top-level objects. Runs as a final
@@ -37,7 +37,7 @@
 #'   object instead of becoming its own. Only ever applies to plain
 #'   single-sheet data frames - a multi-sheet \code{.xlsx}-derived list is
 #'   never compared, as source or as target.
-#' @param skip.duplicates Logical, default \code{FALSE}. Governs what
+#' @param duplicates.skip Logical, default \code{FALSE}. Governs what
 #'   happens when a file's name already matches an object already loaded
 #'   (only possible when \code{dir.sub = TRUE} and the duplicate lives in a
 #'   different folder). \code{TRUE}: the duplicate is skipped outright -
@@ -45,7 +45,7 @@
 #'   existing object if the columns match; if they don't, it falls through to
 #'   the \code{header.match} check (if enabled) before finally becoming its
 #'   own separate object.
-#' @param max.objects Integer, default \code{25}. The maximum number of
+#' @param objects.max Integer, default \code{25}. The maximum number of
 #'   top-level objects (not merges, and not raw files/sheets) the function
 #'   will create in one call. Once that many exist, no further BRAND-NEW
 #'   objects are created - but merges (by name or by \code{header.match})
@@ -68,7 +68,7 @@
 #'
 #' @details
 #' For a file whose base name already matches something already loaded, the
-#' order of decisions is: (1) \code{skip.duplicates = TRUE} skips it, full
+#' order of decisions is: (1) \code{duplicates.skip = TRUE} skips it, full
 #' stop; (2) otherwise, if its columns match the existing same-named object,
 #' it's merged into that object (columns are lined up by name first - "when
 #' merging any two files, the new file's columns are reordered to match the
@@ -90,8 +90,8 @@
 #' anything via \code{header.match}). For \code{action = "merged"}, either
 #' \code{"file had the same name"} or \code{"file has same headers"}. For
 #' \code{action = "skipped"}: \code{"object limit met"} (blocked by
-#' \code{max.objects}), \code{"duplicate file"} (skipped because
-#' \code{skip.duplicates = TRUE} found a same-named file already loaded), or
+#' \code{objects.max}), \code{"duplicate file"} (skipped because
+#' \code{duplicates.skip = TRUE} found a same-named file already loaded), or
 #' \code{"could not read file"} (the file itself failed to read/parse - not
 #' one of the originally-specified reasons, added because there wasn't
 #' another option that fit a genuinely corrupt/unreadable file).
@@ -103,7 +103,7 @@
 #'
 #' result <- batz.datawrangler_load.files("path/to/raw/data", dir.sub = TRUE,
 #'                                         header.match = TRUE, log.file = TRUE,
-#'                                         max.objects = 50)
+#'                                         objects.max = 50)
 #' result$my.file
 #' result$log.file
 #' }
@@ -111,11 +111,11 @@
 #' @export
 batz.datawrangler_load.files <- function(dir.load = getwd(),
                                           dir.sub           = FALSE,
-                                          remove.duplicates = TRUE,
+                                          duplicates.remove = TRUE,
                                           log.file          = FALSE,
                                           header.match      = FALSE,
-                                          skip.duplicates   = FALSE,
-                                          max.objects       = 25) {
+                                          duplicates.skip   = FALSE,
+                                          objects.max       = 25) {
 
   read.one <- function(f) {
     ext <- tolower(tools::file_ext(f))
@@ -153,7 +153,7 @@ batz.datawrangler_load.files <- function(dir.load = getwd(),
   }
 
   dedup.frame <- function(df, label) {
-    if (!remove.duplicates) return(df)
+    if (!duplicates.remove) return(df)
     dup.mask <- duplicated(df)
     n.dup <- sum(dup.mask)
     if (n.dup > 0) {
@@ -203,12 +203,12 @@ batz.datawrangler_load.files <- function(dir.load = getwd(),
 
       name.exists <- base.name %in% names(loaded)
 
-      # ---- name-based duplicate handling (skip.duplicates governs this) ----
+      # ---- name-based duplicate handling (duplicates.skip governs this) ----
       if (name.exists) {
-        if (skip.duplicates) {
+        if (duplicates.skip) {
           add.log(basename(f), "failed", "skipped", "duplicate file", NA_character_)
           cat("  skipped '", f, "' - an object named '", base.name,
-              "' already exists (skip.duplicates = TRUE)\n", sep = "")
+              "' already exists (duplicates.skip = TRUE)\n", sep = "")
           next
         }
         existing <- loaded[[base.name]]
@@ -238,10 +238,10 @@ batz.datawrangler_load.files <- function(dir.load = getwd(),
       }
 
       # ---- otherwise this file needs to become its own new object ----
-      if (length(loaded) >= max.objects) {
+      if (length(loaded) >= objects.max) {
         add.log(basename(f), "failed", "skipped", "object limit met", NA_character_)
         n.capped <- n.capped + 1
-        cat("  skipped '", f, "' - max.objects =", max.objects, "reached\n")
+        cat("  skipped '", f, "' - objects.max =", objects.max, "reached\n")
         next
       }
 
@@ -254,13 +254,13 @@ batz.datawrangler_load.files <- function(dir.load = getwd(),
   }
 
   if (n.capped > 0) {
-    cat("\nmax.objects = ", max.objects, " reached - ", n.capped,
-        " additional file(s) were NOT loaded as new objects (merges into existing objects were still allowed; increase max.objects to load more new ones).\n", sep = "")
+    cat("\nobjects.max = ", objects.max, " reached - ", n.capped,
+        " additional file(s) were NOT loaded as new objects (merges into existing objects were still allowed; increase objects.max to load more new ones).\n", sep = "")
   }
 
   cat("\n", length(loaded), " object(s) created: ", paste(names(loaded), collapse = ", "), "\n", sep = "")
 
-  # ---- remove.duplicates: within each individual data frame, never across ----
+  # ---- duplicates.remove: within each individual data frame, never across ----
   for (nm in names(loaded)) {
     obj <- loaded[[nm]]
     if (is.data.frame(obj)) {

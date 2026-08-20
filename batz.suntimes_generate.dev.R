@@ -164,14 +164,33 @@ format.local <- function(instant.utc, tz) {
 ## ===========================================================================
 ## SECTION 2: config for this test run
 ## ===========================================================================
-path         <- "/home/claude/batz_test"
-subdirectory <- TRUE
+## NOTE (2026-08-19, per Josh): renamed from "path" to "dir.load" to match
+## the parameter name used by batz.datawrangler_load.files - same concept
+## (directory to search/load from), should use the same name across functions.
+##
+## NOTE (2026-08-20, per Josh): cross-function optional-input naming pass -
+## "subdirectory" renamed to "dir.sub" (default flipped TRUE -> FALSE), and
+## a new "load.pattern" input added for the *arulist.csv suffix (previously
+## hardwired). Josh's instruction listed a default of
+## c("*templog.csv", "*templog.meta.csv") for this input, which is clearly a
+## copy-paste artifact from the batz.templogger_merge.format part of the same
+## message (this function has nothing to do with templog files) - used
+## "*arulist.csv" instead, which is what this function actually searches
+## for. Flagging this rather than silently applying the templog patterns
+## here - please confirm "*arulist.csv" is what you meant.
+dir.load     <- "/home/claude/batz_test"
+load.pattern <- "*arulist.csv"
+dir.sub      <- FALSE
+
+## convert a plain wildcard/glob suffix pattern (or vector of them) into one
+## combined regex suitable for list.files()'s pattern= argument
+pattern.regex <- function(p) paste(vapply(p, utils::glob2rx, character(1)), collapse = "|")
 
 ## ===========================================================================
 ## SECTION 3: load ARU deployment list(s)
 ## ===========================================================================
-aru.files <- list.files(path, pattern = "arulist\\.csv$",
-                         recursive = subdirectory, full.names = TRUE)
+aru.files <- list.files(dir.load, pattern = pattern.regex(load.pattern),
+                         recursive = dir.sub, full.names = TRUE)
 
 cat("Found", length(aru.files), "arulist.csv file(s)\n\n")
 
@@ -320,5 +339,5 @@ aru.suntimes.out$suns.unix     <- round(aru.suntimes.out$suns.unix)
 aru.suntimes.out$sunr.unix     <- round(aru.suntimes.out$sunr.unix)
 aru.suntimes.out$sunr.mon.unix <- round(aru.suntimes.out$sunr.mon.unix)
 
-write.csv(aru.suntimes.out, file.path(path, "aru.suntimes.csv"), row.names = FALSE)
-cat("\nWrote aru.suntimes.csv to", path, "\n")
+write.csv(aru.suntimes.out, file.path(dir.load, "aru.suntimes.csv"), row.names = FALSE)
+cat("\nWrote aru.suntimes.csv to", dir.load, "\n")

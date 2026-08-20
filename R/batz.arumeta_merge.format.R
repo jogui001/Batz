@@ -6,10 +6,14 @@
 #' merges each category's files into a single data frame, removes duplicate
 #' rows, and reports how many were removed.
 #'
-#' @param dir.path Character. Directory to search. Defaults to the current
+#' @param dir.load Character. Directory to search. Defaults to the current
 #'   working directory (\code{getwd()}).
-#' @param sub.dir Logical, default \code{TRUE}. If \code{TRUE}, also searches
-#'   every subdirectory of \code{dir.path}.
+#' @param load.pattern Character vector, default \code{c("*.csv", "*.xlsx")}:
+#'   the file-name suffix pattern(s) (plain wildcard/glob style - \code{"*"}
+#'   as a leading wildcard, everything else literal) that identify which
+#'   files in \code{dir.load} get scanned/classified.
+#' @param dir.sub Logical, default \code{FALSE}. If \code{TRUE}, also searches
+#'   every subdirectory of \code{dir.load}.
 #' @param log.file Logical, default \code{FALSE}. If \code{TRUE}, an
 #'   additional data frame named \code{arumeta.mergelog} is added to the
 #'   returned list, with one row per deletion/merge action taken while
@@ -84,7 +88,7 @@
 #'
 #' @examples
 #' \dontrun{
-#' result <- batz.arumeta_merge.format("path/to/raw/data", sub.dir = TRUE)
+#' result <- batz.arumeta_merge.format("path/to/raw/data", dir.sub = TRUE)
 #' result$aru.visit
 #' result$aru.quad
 #' result$aru.20m
@@ -94,9 +98,14 @@
 #' }
 #'
 #' @export
-batz.arumeta_merge.format <- function(dir.path = getwd(),
-                                       sub.dir          = TRUE,
+batz.arumeta_merge.format <- function(dir.load = getwd(),
+                                       load.pattern     = c("*.csv", "*.xlsx"),
+                                       dir.sub          = FALSE,
                                        log.file         = FALSE) {
+
+  ## convert a plain wildcard/glob suffix pattern (or vector of them) into
+  ## one combined regex suitable for list.files()'s pattern= argument
+  pattern.regex <- function(p) paste(vapply(p, utils::glob2rx, character(1)), collapse = "|")
 
   log.rows <- list()
   add.log <- function(inputfile, event, action, count) {
@@ -168,8 +177,8 @@ batz.arumeta_merge.format <- function(dir.path = getwd(),
 
   category.patterns <- c(aru.visit = "sitevis", aru.quad = "quad", aru.20m = "20m")
 
-  all.files <- list.files(dir.path, pattern = "\\.(csv|xlsx)$",
-                           recursive = sub.dir, full.names = TRUE, ignore.case = TRUE)
+  all.files <- list.files(dir.load, pattern = pattern.regex(load.pattern),
+                           recursive = dir.sub, full.names = TRUE, ignore.case = TRUE)
 
   buckets <- setNames(vector("list", length(category.patterns)), names(category.patterns))
 
@@ -186,7 +195,7 @@ batz.arumeta_merge.format <- function(dir.path = getwd(),
     if (length(hit) == 0) NA_character_ else hit[1]
   }
 
-  cat("Scanning", dir.path, "(sub.dir =", sub.dir, ") ...\n")
+  cat("Scanning", dir.load, "(dir.sub =", dir.sub, ") ...\n")
 
   for (f in all.files) {
     fname <- basename(f)

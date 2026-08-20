@@ -53,12 +53,16 @@
 #' with ARU deployment lists and solar-time calculations), action =
 #' "generate".
 #'
-#' @param path Directory to search for \verb{*arulist.csv} file(s). Default:
-#'   current working directory.
-#' @param subdirectory If \code{TRUE} (default), search \code{path}
-#'   recursively.
+#' @param dir.load Directory to search for files matching \code{load.pattern}.
+#'   Default: current working directory.
+#' @param load.pattern Character, default \code{"*arulist.csv"}: the
+#'   file-name suffix pattern (plain wildcard/glob style - \code{"*"} as a
+#'   leading wildcard, everything else literal) that identifies the ARU
+#'   deployment-list file(s) to load.
+#' @param dir.sub Logical, default \code{FALSE}. If \code{TRUE}, also search
+#'   every subdirectory of \code{dir.load}.
 #' @param write.output If \code{TRUE} (default), also write
-#'   \code{aru.suntimes.csv} into \code{path} (with the \verb{*.unix} columns
+#'   \code{aru.suntimes.csv} into \code{dir.load} (with the \verb{*.unix} columns
 #'   rounded to whole seconds in the written CSV only).
 #'
 #' @return Invisibly, a list with:
@@ -75,15 +79,20 @@
 #'
 #' @examples
 #' \dontrun{
-#' result <- batz.suntimes_generate(path = "path/to/data")
+#' result <- batz.suntimes_generate(dir.load = "path/to/data")
 #' result$aru.suntimes
 #' result$efficiency
 #' }
 #'
 #' @export
-batz.suntimes_generate <- function(path = getwd(),
-                                    subdirectory = TRUE,
+batz.suntimes_generate <- function(dir.load = getwd(),
+                                    load.pattern = "*arulist.csv",
+                                    dir.sub = FALSE,
                                     write.output = TRUE) {
+
+  ## convert a plain wildcard/glob suffix pattern (or vector of them) into
+  ## one combined regex suitable for list.files()'s pattern= argument
+  pattern.regex <- function(p) paste(vapply(p, utils::glob2rx, character(1)), collapse = "|")
 
   ## ---- internal helpers: solar calculation (base R port of the standard
   ## astronomy-answers.nl / NOAA sunrise-sunset algorithm) -------------------
@@ -177,8 +186,8 @@ batz.suntimes_generate <- function(path = getwd(),
   ## ===========================================================================
   ## load ARU deployment list(s)
   ## ===========================================================================
-  aru.files <- list.files(path, pattern = "arulist\\.csv$",
-                           recursive = subdirectory, full.names = TRUE)
+  aru.files <- list.files(dir.load, pattern = pattern.regex(load.pattern),
+                           recursive = dir.sub, full.names = TRUE)
 
   aru.list <- do.call(rbind, lapply(aru.files, read.csv,
                                      stringsAsFactors = FALSE,
@@ -278,7 +287,7 @@ batz.suntimes_generate <- function(path = getwd(),
     aru.suntimes.out$suns.unix     <- round(aru.suntimes.out$suns.unix)
     aru.suntimes.out$sunr.unix     <- round(aru.suntimes.out$sunr.unix)
     aru.suntimes.out$sunr.mon.unix <- round(aru.suntimes.out$sunr.mon.unix)
-    write.csv(aru.suntimes.out, file.path(path, "aru.suntimes.csv"), row.names = FALSE)
+    write.csv(aru.suntimes.out, file.path(dir.load, "aru.suntimes.csv"), row.names = FALSE)
   }
 
   invisible(list(aru.suntimes = aru.suntimes, efficiency = efficiency))

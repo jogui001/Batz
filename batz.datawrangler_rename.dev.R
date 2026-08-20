@@ -27,7 +27,7 @@
 #      (as.character) - values are compared and replaced as text. A returned
 #      data frame's columns come back as character vectors (not re-cast to
 #      factor).
-#   5. "Instances" (count.missing / count.duplicates) = every occurrence, not
+#   5. "Instances" (missing.count / duplicates.count) = every occurrence, not
 #      just distinct values - e.g. if "test6" appears 3 times unmatched, that
 #      counts as 3 instances, and if a reference key repeats 3 times, all 3
 #      rows count toward the duplicate total (not just the 2 "extra" ones).
@@ -38,28 +38,28 @@
 #   6. These four flags are pure reporting side effects (printed via cat()/
 #      print()) - they never change the returned recoded vector/data frame,
 #      and unmatched values are still passed through unchanged regardless of
-#      whether count.missing/list.missing are on.
-#   7. first.match = TRUE (default) - when the reference table's first column
+#      whether missing.count/missing.list are on.
+#   7. match.first = TRUE (default) - when the reference table's first column
 #      has a duplicate key (e.g. real test data recode.csv has two rows for
 #      "test1": ->out1 and ->coconut), the FIRST matching row's replacement is
-#      used, matching R's own match() behavior. Setting first.match = FALSE
+#      used, matching R's own match() behavior. Setting match.first = FALSE
 #      uses the LAST matching row's replacement instead.
 #
-# NEW FEATURE (2026-08-19, per Josh): optional rename.headers = FALSE. When
+# NEW FEATURE (2026-08-19, per Josh): optional headers.rename = FALSE. When
 # TRUE, the function does NOT touch the data frame's contents at all -
 # instead it looks up each of data's column HEADERS in recode.table's first
 # column, and renames any header found there to the matching second-column
 # value (headers with no match are left unchanged). This reuses the exact
-# same recode.vec() matching/first.match logic already used for recoding
+# same recode.vec() matching/match.first logic already used for recoding
 # values - just applied to names(data) instead of the data itself. See
 # assumption 8 below.
-#   8. rename.headers requires `data` to be a data frame (a vector has no
+#   8. headers.rename requires `data` to be a data frame (a vector has no
 #      headers to rename) - errors with a clear message if data isn't a data
-#      frame and rename.headers = TRUE. When rename.headers = TRUE, the
-#      count.missing/list.missing diagnostics also switch what they consider
+#      frame and headers.rename = TRUE. When headers.rename = TRUE, the
+#      missing.count/missing.list diagnostics also switch what they consider
 #      "elements": instead of flattening the data frame's VALUES, they look
 #      at names(data) directly - since in this mode it's the headers being
-#      matched/renamed, not the values. count.duplicates/list.duplicates are
+#      matched/renamed, not the values. duplicates.count/duplicates.list are
 #      unaffected either way (they only ever look at recode.table's own first
 #      column, independent of what's being renamed).
 # =============================================================================
@@ -74,16 +74,16 @@ cat("\n=== test.data ===\n"); print(test.data)
 
 # -----------------------------------------------------------------------------
 # core: recode a single vector against a 2-column recode table (by position).
-# When the reference table's first column has a duplicate key, first.match
+# When the reference table's first column has a duplicate key, match.first
 # picks whether the FIRST or LAST matching row's replacement value is used.
 # -----------------------------------------------------------------------------
-recode.vec <- function(x, recode.table, first.match = TRUE) {
+recode.vec <- function(x, recode.table, match.first = TRUE) {
   find.vals    <- as.character(recode.table[[1]])
   replace.vals <- as.character(recode.table[[2]])
 
   x.chr <- as.character(x)
 
-  if (first.match) {
+  if (match.first) {
     match.idx <- match(x.chr, find.vals)
   } else {
     n <- length(find.vals)
@@ -99,36 +99,36 @@ recode.vec <- function(x, recode.table, first.match = TRUE) {
 
 # -----------------------------------------------------------------------------
 # batz.datawrangler_rename(data, recode.table,
-#                           count.missing = FALSE, list.missing = FALSE,
-#                           count.duplicates = FALSE, list.duplicates = FALSE,
-#                           first.match = TRUE, rename.headers = FALSE)
+#                           missing.count = FALSE, missing.list = FALSE,
+#                           duplicates.count = FALSE, duplicates.list = FALSE,
+#                           match.first = TRUE, headers.rename = FALSE)
 # -----------------------------------------------------------------------------
 batz.datawrangler_rename <- function(data, recode.table,
-                                      count.missing    = FALSE,
-                                      list.missing     = FALSE,
-                                      count.duplicates = FALSE,
-                                      list.duplicates  = FALSE,
-                                      first.match      = TRUE,
-                                      rename.headers   = FALSE) {
+                                      missing.count    = FALSE,
+                                      missing.list     = FALSE,
+                                      duplicates.count = FALSE,
+                                      duplicates.list  = FALSE,
+                                      match.first      = TRUE,
+                                      headers.rename   = FALSE) {
 
-  if (rename.headers && !is.data.frame(data)) {
-    stop("rename.headers = TRUE requires 'data' to be a data frame - it renames column headers, not vector elements.")
+  if (headers.rename && !is.data.frame(data)) {
+    stop("headers.rename = TRUE requires 'data' to be a data frame - it renames column headers, not vector elements.")
   }
 
   ref.find <- as.character(recode.table[[1]])
 
   # ---- missing-element diagnostics ----
-  # In rename.headers mode, "elements" means the column headers being looked
+  # In headers.rename mode, "elements" means the column headers being looked
   # up (not the data frame's contents); otherwise it's every data value.
-  if (count.missing || list.missing) {
-    flat.chr <- if (rename.headers) {
+  if (missing.count || missing.list) {
+    flat.chr <- if (headers.rename) {
       names(data)
     } else {
       as.character(if (is.data.frame(data)) unlist(data, use.names = FALSE) else data)
     }
     missing.vals <- flat.chr[!(flat.chr %in% ref.find)]
 
-    if (count.missing) {
+    if (missing.count) {
       if (length(missing.vals) == 0) {
         cat("all elements modified\n")
       } else {
@@ -136,7 +136,7 @@ batz.datawrangler_rename <- function(data, recode.table,
       }
     }
 
-    if (list.missing) {
+    if (missing.list) {
       if (length(missing.vals) == 0) {
         cat("all elements modified\n")
       } else {
@@ -148,12 +148,12 @@ batz.datawrangler_rename <- function(data, recode.table,
   }
 
   # ---- duplicate-key diagnostics (reference table's first column) ----
-  if (count.duplicates || list.duplicates) {
+  if (duplicates.count || duplicates.list) {
     ref.tbl <- as.data.frame(table(ref.find), stringsAsFactors = FALSE)
     names(ref.tbl) <- c("value", "count")
     dup.tbl <- ref.tbl[ref.tbl$count > 1, ]
 
-    if (count.duplicates) {
+    if (duplicates.count) {
       if (nrow(dup.tbl) == 0) {
         cat("all reference elements are unique\n")
       } else {
@@ -161,7 +161,7 @@ batz.datawrangler_rename <- function(data, recode.table,
       }
     }
 
-    if (list.duplicates) {
+    if (duplicates.list) {
       if (nrow(dup.tbl) == 0) {
         cat("all reference elements are unique\n")
       } else {
@@ -171,20 +171,20 @@ batz.datawrangler_rename <- function(data, recode.table,
   }
 
   # ---- actual rename/recode ----
-  if (rename.headers) {
-    names(data) <- recode.vec(names(data), recode.table, first.match = first.match)
+  if (headers.rename) {
+    names(data) <- recode.vec(names(data), recode.table, match.first = match.first)
     return(data)
   }
 
   if (is.data.frame(data)) {
     out <- as.data.frame(
-      lapply(data, recode.vec, recode.table = recode.table, first.match = first.match),
+      lapply(data, recode.vec, recode.table = recode.table, match.first = match.first),
       stringsAsFactors = FALSE
     )
     names(out) <- names(data)
     return(out)
   }
-  recode.vec(data, recode.table, first.match = first.match)
+  recode.vec(data, recode.table, match.first = match.first)
 }
 
 # -----------------------------------------------------------------------------
@@ -194,30 +194,30 @@ cat("\n=== basic recode (unchanged behavior) ===\n")
 recoded.df <- batz.datawrangler_rename(test.data, recode.table)
 print(recoded.df)
 
-cat("\n=== count.missing = TRUE (test6 unmatched, appears twice in test.data) ===\n")
-invisible(batz.datawrangler_rename(test.data, recode.table, count.missing = TRUE))
+cat("\n=== missing.count = TRUE (test6 unmatched, appears twice in test.data) ===\n")
+invisible(batz.datawrangler_rename(test.data, recode.table, missing.count = TRUE))
 
-cat("\n=== list.missing = TRUE ===\n")
-invisible(batz.datawrangler_rename(test.data, recode.table, list.missing = TRUE))
+cat("\n=== missing.list = TRUE ===\n")
+invisible(batz.datawrangler_rename(test.data, recode.table, missing.list = TRUE))
 
-cat("\n=== count.missing/list.missing when nothing is missing ('all elements modified') ===\n")
+cat("\n=== missing.count/missing.list when nothing is missing ('all elements modified') ===\n")
 full.coverage.table <- rbind(recode.table, data.frame(`in` = "test6", out = "renamed6", check.names = FALSE))
-invisible(batz.datawrangler_rename(test.data, full.coverage.table, count.missing = TRUE))
-invisible(batz.datawrangler_rename(test.data, full.coverage.table, list.missing = TRUE))
+invisible(batz.datawrangler_rename(test.data, full.coverage.table, missing.count = TRUE))
+invisible(batz.datawrangler_rename(test.data, full.coverage.table, missing.list = TRUE))
 
-cat("\n=== count.duplicates = TRUE (real recode.xlsx has no duplicate keys) ===\n")
-invisible(batz.datawrangler_rename(test.data, recode.table, count.duplicates = TRUE))
+cat("\n=== duplicates.count = TRUE (real recode.xlsx has no duplicate keys) ===\n")
+invisible(batz.datawrangler_rename(test.data, recode.table, duplicates.count = TRUE))
 
-cat("\n=== list.duplicates = TRUE (real recode.xlsx has no duplicate keys) ===\n")
-invisible(batz.datawrangler_rename(test.data, recode.table, list.duplicates = TRUE))
+cat("\n=== duplicates.list = TRUE (real recode.xlsx has no duplicate keys) ===\n")
+invisible(batz.datawrangler_rename(test.data, recode.table, duplicates.list = TRUE))
 
-cat("\n=== count.duplicates/list.duplicates with a synthetic duplicate-key table ===\n")
+cat("\n=== duplicates.count/duplicates.list with a synthetic duplicate-key table ===\n")
 dup.table <- rbind(recode.table, recode.table[1, ], recode.table[1, ])  # duplicate "test1" 2 extra times
-invisible(batz.datawrangler_rename(test.data, dup.table, count.duplicates = TRUE))
-invisible(batz.datawrangler_rename(test.data, dup.table, list.duplicates = TRUE))
+invisible(batz.datawrangler_rename(test.data, dup.table, duplicates.count = TRUE))
+invisible(batz.datawrangler_rename(test.data, dup.table, duplicates.list = TRUE))
 
 # -----------------------------------------------------------------------------
-# first.match test - real duplicate-key data (recode.csv has TWO rows for
+# match.first test - real duplicate-key data (recode.csv has TWO rows for
 # "test1": test1->out1 (row 1, first) and test1->coconut (row 5, last))
 # -----------------------------------------------------------------------------
 recode.table.realdup <- read.csv("/home/claude/recode_work/recode.csv", stringsAsFactors = FALSE)
@@ -225,44 +225,44 @@ test.data.csv        <- read.csv("/home/claude/recode_work/recode.test.csv", str
 
 cat("\n=== real duplicate-key reference table ===\n"); print(recode.table.realdup)
 
-cat("\n=== first.match = TRUE (default) - test1 should recode to 'out1' ===\n")
+cat("\n=== match.first = TRUE (default) - test1 should recode to 'out1' ===\n")
 print(batz.datawrangler_rename(test.data.csv, recode.table.realdup))
 
-cat("\n=== first.match = FALSE - test1 should recode to 'coconut' instead ===\n")
-print(batz.datawrangler_rename(test.data.csv, recode.table.realdup, first.match = FALSE))
+cat("\n=== match.first = FALSE - test1 should recode to 'coconut' instead ===\n")
+print(batz.datawrangler_rename(test.data.csv, recode.table.realdup, match.first = FALSE))
 
 # -----------------------------------------------------------------------------
-# rename.headers test - real test.data has columns "A" and "B"; use a
+# headers.rename test - real test.data has columns "A" and "B"; use a
 # synthetic header-rename table (real recode.table's values don't match
 # column names, so a header-specific reference table is needed here).
 # -----------------------------------------------------------------------------
-cat("\n\n=== rename.headers = TRUE - real test.data columns before: ===\n")
+cat("\n\n=== headers.rename = TRUE - real test.data columns before: ===\n")
 print(names(test.data))
 
 header.table <- data.frame(old = c("A", "B", "NoSuchColumn"),
                             new = c("Alpha", "Beta", "Should.Not.Appear"),
                             stringsAsFactors = FALSE)
 
-renamed <- batz.datawrangler_rename(test.data, header.table, rename.headers = TRUE)
-cat("\n=== rename.headers = TRUE - columns after (A->Alpha, B->Beta) ===\n")
+renamed <- batz.datawrangler_rename(test.data, header.table, headers.rename = TRUE)
+cat("\n=== headers.rename = TRUE - columns after (A->Alpha, B->Beta) ===\n")
 print(names(renamed))
 cat("contents unchanged? ", identical(as.data.frame(renamed, stringsAsFactors = FALSE),
                                        setNames(as.data.frame(test.data, stringsAsFactors = FALSE), names(renamed))), "\n")
 
-cat("\n=== rename.headers = TRUE + a header with NO match in the reference\n",
+cat("\n=== headers.rename = TRUE + a header with NO match in the reference\n",
     "(column C - not in header.table - should stay unchanged) ===\n", sep = "")
 test.data.extra <- test.data
 test.data.extra$C <- "unchanged.column"
-renamed.extra <- batz.datawrangler_rename(test.data.extra, header.table, rename.headers = TRUE)
+renamed.extra <- batz.datawrangler_rename(test.data.extra, header.table, headers.rename = TRUE)
 print(names(renamed.extra))
 
-cat("\n=== rename.headers = TRUE + count.missing/list.missing now describe\n",
+cat("\n=== headers.rename = TRUE + missing.count/missing.list now describe\n",
     "unmatched HEADERS, not unmatched data values ===\n", sep = "")
-invisible(batz.datawrangler_rename(test.data.extra, header.table, rename.headers = TRUE, count.missing = TRUE))
-invisible(batz.datawrangler_rename(test.data.extra, header.table, rename.headers = TRUE, list.missing = TRUE))
+invisible(batz.datawrangler_rename(test.data.extra, header.table, headers.rename = TRUE, missing.count = TRUE))
+invisible(batz.datawrangler_rename(test.data.extra, header.table, headers.rename = TRUE, missing.list = TRUE))
 
-cat("\n=== rename.headers = TRUE on a plain vector should error ===\n")
+cat("\n=== headers.rename = TRUE on a plain vector should error ===\n")
 tryCatch(
-  batz.datawrangler_rename(c("A", "B"), header.table, rename.headers = TRUE),
+  batz.datawrangler_rename(c("A", "B"), header.table, headers.rename = TRUE),
   error = function(e) cat("Got expected error:", conditionMessage(e), "\n")
 )

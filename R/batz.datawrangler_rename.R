@@ -6,51 +6,51 @@
 #' by the corresponding value in the reference table's second column. Values
 #' with no match are left unchanged. Optionally reports diagnostics on
 #' unmatched input elements and on duplicate keys in the reference table.
-#' Alternatively, set \code{rename.headers = TRUE} to rename column HEADERS
+#' Alternatively, set \code{headers.rename = TRUE} to rename column HEADERS
 #' instead of recoding the data frame's contents.
 #'
 #' @param data A vector or a data frame to be recoded. If a data frame is
-#'   supplied and \code{rename.headers = FALSE} (the default), every column
+#'   supplied and \code{headers.rename = FALSE} (the default), every column
 #'   is recoded against the same \code{recode.table} (there is no
-#'   column-selection argument). If \code{rename.headers = TRUE}, \code{data}
+#'   column-selection argument). If \code{headers.rename = TRUE}, \code{data}
 #'   must be a data frame (a vector has no headers to rename).
 #' @param recode.table A data frame (or tibble) with at least two columns:
 #'   the first column holds the values to search for, the second column
 #'   holds the corresponding replacement values. Columns are read by
 #'   position, not by name, so \code{recode.table} may use any column names.
-#' @param count.missing Logical, default \code{FALSE}. If \code{TRUE}, print
+#' @param missing.count Logical, default \code{FALSE}. If \code{TRUE}, print
 #'   the number of instances (every occurrence, not just distinct values) in
 #'   \code{data} that had no match anywhere in \code{recode.table}'s first
 #'   column. If there are none, prints \code{"all elements modified"}. When
-#'   \code{rename.headers = TRUE}, this counts unmatched COLUMN HEADERS
-#'   instead of unmatched data values (see \code{rename.headers} below).
-#' @param list.missing Logical, default \code{FALSE}. If \code{TRUE}, print a
+#'   \code{headers.rename = TRUE}, this counts unmatched COLUMN HEADERS
+#'   instead of unmatched data values (see \code{headers.rename} below).
+#' @param missing.list Logical, default \code{FALSE}. If \code{TRUE}, print a
 #'   table of each unique unmatched value in \code{data} and how many
 #'   instances of it were found. If there are none, prints
-#'   \code{"all elements modified"}. When \code{rename.headers = TRUE}, this
+#'   \code{"all elements modified"}. When \code{headers.rename = TRUE}, this
 #'   lists unmatched COLUMN HEADERS instead of unmatched data values.
-#' @param count.duplicates Logical, default \code{FALSE}. If \code{TRUE},
+#' @param duplicates.count Logical, default \code{FALSE}. If \code{TRUE},
 #'   print the number of elements in \code{recode.table}'s first column that
 #'   repeat (all instances of any repeated key, not just the extras). If none
 #'   repeat, prints \code{"all reference elements are unique"}.
-#' @param list.duplicates Logical, default \code{FALSE}. If \code{TRUE},
+#' @param duplicates.list Logical, default \code{FALSE}. If \code{TRUE},
 #'   print a table of the name and total count of each element in
 #'   \code{recode.table}'s first column that repeats. If none repeat, prints
 #'   \code{"all reference elements are unique"}.
-#' @param first.match Logical, default \code{TRUE}. When
+#' @param match.first Logical, default \code{TRUE}. When
 #'   \code{recode.table}'s first column has a duplicate key (e.g. it maps
 #'   the same input value to two different replacements), \code{TRUE} uses
 #'   the FIRST matching row's replacement value (matching R's own
 #'   \code{match()} behavior); \code{FALSE} uses the LAST matching row's
 #'   replacement value instead.
-#' @param rename.headers Logical, default \code{FALSE}. If \code{TRUE}, the
+#' @param headers.rename Logical, default \code{FALSE}. If \code{TRUE}, the
 #'   function does NOT touch the contents of \code{data} at all - instead it
 #'   looks up each of \code{data}'s column HEADERS in \code{recode.table}'s
 #'   first column, and renames any header found there to the matching second-
 #'   column value. Headers with no match in \code{recode.table} are left
 #'   unchanged. Requires \code{data} to be a data frame (errors otherwise).
 #'
-#' @return If \code{rename.headers = TRUE}, \code{data} unchanged except for
+#' @return If \code{headers.rename = TRUE}, \code{data} unchanged except for
 #'   its column names. Otherwise: if \code{data} is a data frame, a data
 #'   frame of the same shape and column names, with every value recoded
 #'   (columns are returned as character vectors); if \code{data} is a vector,
@@ -61,16 +61,16 @@
 #' @details
 #' Matching and replacement are done on the character representation of
 #' values (\code{as.character}). A value in \code{data} (or, in
-#' \code{rename.headers} mode, a column header) with no matching entry in
+#' \code{headers.rename} mode, a column header) with no matching entry in
 #' \code{recode.table[[1]]} is left unchanged in the output - it is not set
 #' to \code{NA} and does not raise an error, regardless of whether
-#' \code{count.missing}/\code{list.missing} are on.
+#' \code{missing.count}/\code{missing.list} are on.
 #'
-#' For a data frame input (with \code{rename.headers = FALSE}), the missing-
-#' element diagnostics (\code{count.missing}/\code{list.missing}) are
+#' For a data frame input (with \code{headers.rename = FALSE}), the missing-
+#' element diagnostics (\code{missing.count}/\code{missing.list}) are
 #' computed across ALL columns combined, not per column - consistent with how
 #' the recode itself treats every column the same way. With
-#' \code{rename.headers = TRUE}, those same diagnostics instead look at the
+#' \code{headers.rename = TRUE}, those same diagnostics instead look at the
 #' column headers themselves (\code{names(data)}), since that's what's being
 #' matched/renamed in that mode.
 #'
@@ -82,34 +82,34 @@
 #' # "out1"   "banana" "test6"   (test6 has no match, stays unchanged)
 #'
 #' batz.datawrangler_rename(my.dataframe, recode.table,
-#'                           count.missing = TRUE, list.duplicates = TRUE)
+#'                           missing.count = TRUE, duplicates.list = TRUE)
 #'
 #' # reference table with a duplicate key ("test1" -> "out1" AND "coconut")
 #' dup.table <- data.frame(in_ = c("test1", "test1"), out = c("out1", "coconut"))
 #' batz.datawrangler_rename("test1", dup.table)                    # "out1"
-#' batz.datawrangler_rename("test1", dup.table, first.match = FALSE) # "coconut"
+#' batz.datawrangler_rename("test1", dup.table, match.first = FALSE) # "coconut"
 #'
 #' # rename column HEADERS instead of recoding values
 #' header.table <- data.frame(old = c("A", "B"), new = c("Alpha", "Beta"))
-#' batz.datawrangler_rename(my.dataframe, header.table, rename.headers = TRUE)
+#' batz.datawrangler_rename(my.dataframe, header.table, headers.rename = TRUE)
 #' }
 #'
 #' @export
 batz.datawrangler_rename <- function(data, recode.table,
-                                      count.missing    = FALSE,
-                                      list.missing     = FALSE,
-                                      count.duplicates = FALSE,
-                                      list.duplicates  = FALSE,
-                                      first.match      = TRUE,
-                                      rename.headers   = FALSE) {
+                                      missing.count    = FALSE,
+                                      missing.list     = FALSE,
+                                      duplicates.count = FALSE,
+                                      duplicates.list  = FALSE,
+                                      match.first      = TRUE,
+                                      headers.rename   = FALSE) {
 
-  recode.vec <- function(x, recode.table, first.match = TRUE) {
+  recode.vec <- function(x, recode.table, match.first = TRUE) {
     find.vals    <- as.character(recode.table[[1]])
     replace.vals <- as.character(recode.table[[2]])
 
     x.chr <- as.character(x)
 
-    if (first.match) {
+    if (match.first) {
       match.idx <- match(x.chr, find.vals)
     } else {
       n <- length(find.vals)
@@ -123,24 +123,24 @@ batz.datawrangler_rename <- function(data, recode.table,
     out
   }
 
-  if (rename.headers && !is.data.frame(data)) {
-    stop("rename.headers = TRUE requires 'data' to be a data frame - it renames column headers, not vector elements.")
+  if (headers.rename && !is.data.frame(data)) {
+    stop("headers.rename = TRUE requires 'data' to be a data frame - it renames column headers, not vector elements.")
   }
 
   ref.find <- as.character(recode.table[[1]])
 
   # ---- missing-element diagnostics ----
-  # In rename.headers mode, "elements" means the column headers being looked
+  # In headers.rename mode, "elements" means the column headers being looked
   # up (not the data frame's contents); otherwise it's every data value.
-  if (count.missing || list.missing) {
-    flat.chr <- if (rename.headers) {
+  if (missing.count || missing.list) {
+    flat.chr <- if (headers.rename) {
       names(data)
     } else {
       as.character(if (is.data.frame(data)) unlist(data, use.names = FALSE) else data)
     }
     missing.vals <- flat.chr[!(flat.chr %in% ref.find)]
 
-    if (count.missing) {
+    if (missing.count) {
       if (length(missing.vals) == 0) {
         cat("all elements modified\n")
       } else {
@@ -148,7 +148,7 @@ batz.datawrangler_rename <- function(data, recode.table,
       }
     }
 
-    if (list.missing) {
+    if (missing.list) {
       if (length(missing.vals) == 0) {
         cat("all elements modified\n")
       } else {
@@ -160,12 +160,12 @@ batz.datawrangler_rename <- function(data, recode.table,
   }
 
   # ---- duplicate-key diagnostics (reference table's first column) ----
-  if (count.duplicates || list.duplicates) {
+  if (duplicates.count || duplicates.list) {
     ref.tbl <- as.data.frame(table(ref.find), stringsAsFactors = FALSE)
     names(ref.tbl) <- c("value", "count")
     dup.tbl <- ref.tbl[ref.tbl$count > 1, ]
 
-    if (count.duplicates) {
+    if (duplicates.count) {
       if (nrow(dup.tbl) == 0) {
         cat("all reference elements are unique\n")
       } else {
@@ -173,7 +173,7 @@ batz.datawrangler_rename <- function(data, recode.table,
       }
     }
 
-    if (list.duplicates) {
+    if (duplicates.list) {
       if (nrow(dup.tbl) == 0) {
         cat("all reference elements are unique\n")
       } else {
@@ -183,18 +183,18 @@ batz.datawrangler_rename <- function(data, recode.table,
   }
 
   # ---- actual rename/recode ----
-  if (rename.headers) {
-    names(data) <- recode.vec(names(data), recode.table, first.match = first.match)
+  if (headers.rename) {
+    names(data) <- recode.vec(names(data), recode.table, match.first = match.first)
     return(data)
   }
 
   if (is.data.frame(data)) {
     out <- as.data.frame(
-      lapply(data, recode.vec, recode.table = recode.table, first.match = first.match),
+      lapply(data, recode.vec, recode.table = recode.table, match.first = match.first),
       stringsAsFactors = FALSE
     )
     names(out) <- names(data)
     return(out)
   }
-  recode.vec(data, recode.table, first.match = first.match)
+  recode.vec(data, recode.table, match.first = match.first)
 }
