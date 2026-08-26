@@ -20,7 +20,7 @@
 #'   \item If exactly one candidate is viable, that's the detected format.
 #'   \item If more than one is viable and they parse the data to
 #'     DIFFERENT actual values (e.g. \code{"01/02/2025"} as
-#'     \verb{%m/%d/%Y} vs \verb{%d/%m/%Y}) - genuine ambiguity - the
+#'     \verb{\%m/\%d/\%Y} vs \verb{\%d/\%m/\%Y}) - genuine ambiguity - the
 #'     viable candidates are printed and the function stops, UNLESS the
 #'     currently-set \code{date.format}/\code{time.format} value (its
 #'     default counts the same as an explicit override - see the dev
@@ -36,7 +36,7 @@
 #' \strong{WARNING - a real correctness trap this avoids:}
 #' \code{strptime()}/\code{as.Date()} only require a format to match the
 #' BEGINNING of a string, not consume all of it - naively trying
-#' \verb{%H%M} against a real 6-digit time like \code{"212144"} would
+#' \verb{\%H\%M} against a real 6-digit time like \code{"212144"} would
 #' "succeed" by reading just the first 4 digits (21:21) and silently
 #' discarding \code{"44"}, a wrong answer with no warning. Every candidate
 #' format is paired internally with a hand-built regex requiring an EXACT
@@ -57,14 +57,14 @@
 #'   dates (e.g. \code{$date}).
 #' @param time Character or coercible-to-character vector of recorded
 #'   times, the same length as \code{date} (e.g. \code{$time}).
-#' @param date.format Character vector, default \code{c("%Y%m%d")}. Format
+#' @param date.format Character vector, default \code{c("\%Y\%m\%d")}. Format
 #'   string(s) (\code{strptime()}/\code{as.Date()} style) to prefer if
 #'   \code{date}'s format is genuinely ambiguous between more than one
 #'   built-in candidate - see Details.
-#' @param time.format Character vector, default \code{c("%H%M%S")}. Same
+#' @param time.format Character vector, default \code{c("\%H\%M\%S")}. Same
 #'   idea as \code{date.format}, for \code{time}.
 #' @param output.format Character, default
-#'   \code{"%Y-%m-%d %H:%M:%S"}. \code{strftime()}-style format used to
+#'   \code{"\%Y-\%m-\%d \%H:\%M:\%S"}. \code{strftime()}-style format used to
 #'   build the returned combined date-time strings.
 #'
 #' @return A character vector the same length as \code{date}/\code{time}:
