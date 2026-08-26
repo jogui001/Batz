@@ -58,11 +58,35 @@
 #
 #  6. Efficiency step (per Josh): before running any solar calculations,
 #     ARU rows are expanded to one row per (aru, date), then collapsed to
-#     the DISTINCT set of (sunregion, lat, long, time.zone, date)
-#     combinations actually needed. Multiple ARUs at the same sunregion/
-#     lat/long with identical or overlapping date ranges automatically
-#     share one calculation per shared date instead of repeating it per
-#     ARU - see the "efficiency" section below for the before/after count.
+#     the DISTINCT set of (sunregion, calc.lat, calc.long, time.zone, date)
+#     combinations actually needed (calc.lat/calc.long per assumption #7
+#     below). Multiple ARUs at the same site with identical or overlapping
+#     date ranges automatically share one calculation per shared date
+#     instead of repeating it per ARU - see the "efficiency" section below
+#     for the before/after count.
+#
+#  7. $sunregion.type (added 2026-08-26, per Josh) - four categories were
+#     specified: "fixed.unique", "fixed.pooled", "mobile.unique",
+#     "mobile.pooled". Per Josh: "We will update the code to deal with the
+#     fixed.unique & fixed.pooled first before moving on to the mobile
+#     two" - so ONLY the two fixed types are implemented here; any row
+#     tagged mobile.unique/mobile.pooled makes the script stop with a clear
+#     error rather than silently running fixed-site logic against it.
+#     - "fixed.unique": solar calc uses the ARU's own exact lat/long
+#       (same as pre-existing behavior).
+#     - "fixed.pooled": solar calc uses ONE representative lat/long per
+#       $sunregion (the mean across every ARU sharing that sunregion), so
+#       ARUs described as "near by but not exactly the same lat/long" still
+#       share a single calculation per sunregion/date rather than getting
+#       one calculation each for near-identical coordinates.
+#     - If $sunregion.type is missing entirely (older input files), every
+#       row defaults to "fixed.unique" so old files still run unchanged.
+#     >>> Also note: Josh's own definitions of "mobile.unique" and
+#     "mobile.pooled" are worded identically to each other - almost
+#     certainly a copy/paste slip (by analogy with fixed.unique vs.
+#     fixed.pooled, mobile.pooled should presumably differ by having a
+#     pooled/shared sunregion ID). Not a blocker now since mobile isn't
+#     implemented yet, but will need clarifying before that work starts. <<<
 # ---------------------------------------------------------------------------
 
 ## base R only - no package dependencies required
@@ -178,7 +202,19 @@ format.local <- function(instant.utc, tz) {
 ## "*arulist.csv" instead, which is what this function actually searches
 ## for. Flagging this rather than silently applying the templog patterns
 ## here - please confirm "*arulist.csv" is what you meant.
-dir.load     <- "/home/claude/batz_test"
+## NOTE (2026-08-26, per Josh - load-error bugfix): dir.load was hardcoded to
+## "/home/claude/batz_test", a path that only ever existed in Claude's own
+## cloud sandbox from original development. On any other machine (e.g.
+## Josh's Windows machine) this matches zero files, and the old script had
+## no check for that - it silently cascaded into a malformed aru.list and a
+## confusing "argument must be coercible to non-negative integer" error deep
+## in SECTION 4. Fixed two ways: (1) default is now getwd() (matches the
+## dir.load convention used by other batz functions, e.g.
+## batz.vettedacoustics_merge.format) - >>> set this to wherever your
+## *arulist.csv file actually lives before running <<<. (2) an explicit
+## check right after list.files() now stops with a clear message instead of
+## silently corrupting aru.list when zero files are found.
+dir.load     <- getwd()
 load.pattern <- "*arulist.csv"
 dir.sub      <- FALSE
 
@@ -191,6 +227,18 @@ pattern.regex <- function(p) paste(vapply(p, utils::glob2rx, character(1)), coll
 ## ===========================================================================
 aru.files <- list.files(dir.load, pattern = pattern.regex(load.pattern),
                          recursive = dir.sub, full.names = TRUE)
+
+## NOTE (2026-08-26, per Josh - load-error bugfix): fail loudly and clearly
+## here instead of letting a zero-file match cascade into a malformed
+## aru.list (a plain, non-data.frame list produced by `NULL$field <- value`)
+## whose nrow() misbehaves several sections later - that cascade is exactly
+## what produced the "argument must be coercible to non-negative integer"
+## error Josh saw.
+if (length(aru.files) == 0) {
+  stop("No files matching load.pattern (\"", paste(load.pattern, collapse = "\", \""),
+       "\") were found in dir.load (\"", dir.load, "\"). Check that dir.load points ",
+       "to the folder containing your *arulist.csv file.")
+}
 
 cat("Found", length(aru.files), "arulist.csv file(s)\n\n")
 
@@ -223,18 +271,103 @@ aru.list$date.end   <- parse.simple.date(aru.list$date.end)
 cat("Loaded", nrow(aru.list), "ARU row(s) from input file(s)\n\n")
 
 ## ===========================================================================
+## SECTION 3b: $sunregion.type (NEW, 2026-08-26 per Josh) - categorizes how
+## $sunregion relates to ARU identity and lat/long stability:
+##   "fixed.unique" - fixed lat/long, $sunregion == the ARU's own name (one
+##                    ARU per sunregion).
+##   "fixed.pooled" - fixed lat/long, $sunregion is SHARED across multiple
+##                    ARUs that are near each other but not at exactly the
+##                    same lat/long.
+##   "mobile.unique"/"mobile.pooled" - lat/long changes across the date
+##                    range enough to change sunrise/sunset - NOT YET
+##                    IMPLEMENTED. Per Josh: "We will update the code to
+##                    deal with the fixed.unique & fixed.pooled first before
+##                    moving on to the mobile two" - so this script stops
+##                    with a clear error if it sees either mobile type,
+##                    rather than silently running fixed-site logic against
+##                    a moving ARU (which would give wrong times).
+## ===========================================================================
+if (!"sunregion.type" %in% names(aru.list)) {
+  ## older input files won't have this column yet - default to the simplest/
+  ## previous behavior rather than forcing every existing file to be edited
+  aru.list$sunregion.type <- "fixed.unique"
+}
+aru.list$sunregion.type <- trimws(tolower(aru.list$sunregion.type))
+
+valid.types <- c("fixed.unique", "fixed.pooled", "mobile.unique", "mobile.pooled")
+bad.types <- setdiff(unique(aru.list$sunregion.type), valid.types)
+if (length(bad.types) > 0) {
+  stop("Unrecognized $sunregion.type value(s): ", paste(bad.types, collapse = ", "),
+       ". Expected one of: ", paste(valid.types, collapse = ", "), ".")
+}
+
+mobile.rows <- aru.list$sunregion.type %in% c("mobile.unique", "mobile.pooled")
+if (any(mobile.rows)) {
+  stop(sum(mobile.rows), " row(s) have $sunregion.type \"mobile.unique\"/",
+       "\"mobile.pooled\", which this script does not yet implement (mobile ",
+       "logic - lat/long changing across the date range - is planned but not ",
+       "built yet). Affected ARU(s): ",
+       paste(unique(aru.list$aru[mobile.rows]), collapse = ", "),
+       ". Remove/hold these rows out until mobile support is added.")
+}
+
+## fixed.unique sanity check: spec says $sunregion should equal $aru for this
+## type. Flagging a mismatch rather than silently ignoring it or guessing -
+## does not block the run, since the lat/long-based grouping below is
+## unaffected either way.
+is.fixed.unique <- aru.list$sunregion.type == "fixed.unique"
+mismatched.unique <- is.fixed.unique & (aru.list$sunregion != aru.list$aru)
+if (any(mismatched.unique)) {
+  cat("NOTE:", sum(mismatched.unique), "row(s) marked \"fixed.unique\" have",
+      "$sunregion != $aru (spec says these should match for this type):",
+      paste(aru.list$aru[mismatched.unique], collapse = ", "), "\n\n")
+}
+
+## flag a $sunregion used with more than one $sunregion.type across its ARUs
+## (e.g. one ARU says "fixed.unique", another at the same sunregion says
+## "fixed.pooled") - almost certainly a data-entry inconsistency
+type.per.region <- aggregate(sunregion.type ~ sunregion, data = aru.list,
+                              FUN = function(x) length(unique(x)))
+mixed.regions <- type.per.region$sunregion[type.per.region$sunregion.type > 1]
+if (length(mixed.regions) > 0) {
+  cat("NOTE: sunregion(s) with inconsistent $sunregion.type across their ARUs:",
+      paste(mixed.regions, collapse = ", "), "\n\n")
+}
+
+## ---- resolve the lat/long actually used for the solar calculation --------
+## fixed.unique: use the ARU's own (exact) lat/long, as before.
+## fixed.pooled: use ONE representative lat/long per $sunregion (the mean of
+## every ARU sharing that sunregion), so ARUs that are "near by but not
+## exactly the same lat/long" (Josh's definition) share a single calculation
+## per sunregion/date instead of one per slightly-different coordinate.
+aru.list$calc.lat  <- aru.list$lat
+aru.list$calc.long <- aru.list$long
+
+is.fixed.pooled <- aru.list$sunregion.type == "fixed.pooled"
+if (any(is.fixed.pooled)) {
+  pooled.centers <- aggregate(cbind(calc.lat = lat, calc.long = long) ~ sunregion,
+                               data = aru.list[is.fixed.pooled, ], FUN = mean)
+  idx <- match(aru.list$sunregion[is.fixed.pooled], pooled.centers$sunregion)
+  aru.list$calc.lat[is.fixed.pooled]  <- pooled.centers$calc.lat[idx]
+  aru.list$calc.long[is.fixed.pooled] <- pooled.centers$calc.long[idx]
+}
+
+## ===========================================================================
 ## SECTION 4: expand each ARU row to one row per date in its range
 ## ===========================================================================
 expand.one <- function(i) {
   row <- aru.list[i, ]
   dates <- seq(row$date.start, row$date.end, by = "day")
   data.frame(
-    aru       = row$aru,
-    sunregion = row$sunregion,
-    lat       = row$lat,
-    long      = row$long,
-    time.zone = row$time.zone,
-    date      = dates,
+    aru            = row$aru,
+    sunregion      = row$sunregion,
+    sunregion.type = row$sunregion.type,
+    lat            = row$lat,
+    long           = row$long,
+    calc.lat       = row$calc.lat,
+    calc.long      = row$calc.long,
+    time.zone      = row$time.zone,
+    date           = dates,
     stringsAsFactors = FALSE
   )
 }
@@ -249,15 +382,22 @@ cat("Expanded to", nrow(aru.expand), "aru-date row(s)\n\n")
 ## ranges collapse onto the same rows here, so the solar calculation below
 ## runs once per unique site-date rather than once per aru-date.
 ## ===========================================================================
-site.key <- with(aru.expand, paste(sunregion, lat, long, date, sep = "|||"))
+## NOTE (2026-08-26, per Josh - $sunregion.type): grouping now uses
+## calc.lat/calc.long rather than the ARU's own raw lat/long - for
+## "fixed.unique" rows these are identical to lat/long (unchanged
+## behavior), but for "fixed.pooled" rows calc.lat/calc.long is the shared
+## per-sunregion center computed above, so ARUs at the same sunregion but
+## slightly different exact coordinates still collapse onto one calculation.
+site.key <- with(aru.expand, paste(sunregion, calc.lat, calc.long, date, sep = "|||"))
 site.dates <- aru.expand[!duplicated(site.key),
-                          c("sunregion", "lat", "long", "time.zone", "date")]
+                          c("sunregion", "calc.lat", "calc.long", "time.zone", "date")]
 row.names(site.dates) <- NULL
 
-## how many aru rows share each (sunregion, lat, long) site (for the note
-## below - a site with >1 aru row is exactly the "same lat/long/sunregion,
-## overlapping or identical date range" case Josh asked to combine)
-site.group.key <- with(aru.list, paste(sunregion, lat, long, sep = "|||"))
+## how many aru rows share each (sunregion, calc.lat, calc.long) site (for
+## the note below - a site with >1 aru row is exactly the "same
+## lat/long/sunregion, overlapping or identical date range" case Josh asked
+## to combine)
+site.group.key <- with(aru.list, paste(sunregion, calc.lat, calc.long, sep = "|||"))
 arus.per.site  <- table(site.group.key)
 n.shared.sites <- sum(arus.per.site > 1)
 
@@ -272,8 +412,8 @@ cat(" -", n.shared.sites, "site(s) have >1 ARU sharing the same lat/long/sunregi
 ## look-ahead, then union with site.dates so everything gets computed once
 lookahead <- site.dates
 lookahead$date <- lookahead$date + 1
-calc.key        <- with(site.dates, paste(sunregion, lat, long, date, sep = "|||"))
-lookahead.key   <- with(lookahead,  paste(sunregion, lat, long, date, sep = "|||"))
+calc.key        <- with(site.dates, paste(sunregion, calc.lat, calc.long, date, sep = "|||"))
+lookahead.key   <- with(lookahead,  paste(sunregion, calc.lat, calc.long, date, sep = "|||"))
 extra.needed    <- lookahead[!lookahead.key %in% calc.key &
                                 !duplicated(lookahead.key), ]
 
@@ -286,18 +426,18 @@ cat(nrow(extra.needed), "extra look-ahead row(s) added for next-day sunrise",
 ## ===========================================================================
 ## SECTION 6: run the solar calculation once per unique site-date
 ## ===========================================================================
-suns <- calc.suntimes(calc.dates$date, calc.dates$lat, calc.dates$long)
+suns <- calc.suntimes(calc.dates$date, calc.dates$calc.lat, calc.dates$calc.long)
 calc.dates$sunrise.utc <- suns$sunrise
 calc.dates$sunset.utc  <- suns$sunset
 
-calc.dates$calc.key <- with(calc.dates, paste(sunregion, lat, long, date, sep = "|||"))
+calc.dates$calc.key <- with(calc.dates, paste(sunregion, calc.lat, calc.long, date, sep = "|||"))
 
 ## ===========================================================================
 ## SECTION 7: join results back onto every (aru, date) row
 ## ===========================================================================
-aru.expand$calc.key <- with(aru.expand, paste(sunregion, lat, long, date, sep = "|||"))
+aru.expand$calc.key <- with(aru.expand, paste(sunregion, calc.lat, calc.long, date, sep = "|||"))
 aru.expand$next.day.key <- with(aru.expand,
-                                 paste(sunregion, lat, long, date + 1, sep = "|||"))
+                                 paste(sunregion, calc.lat, calc.long, date + 1, sep = "|||"))
 
 lookup <- calc.dates[, c("calc.key", "sunrise.utc", "sunset.utc")]
 
@@ -305,13 +445,14 @@ today <- lookup[match(aru.expand$calc.key, lookup$calc.key), ]
 nextd <- lookup[match(aru.expand$next.day.key, lookup$calc.key), ]
 
 aru.suntimes <- data.frame(
-  aru       = aru.expand$aru,
-  date      = aru.expand$date,
-  date.mon  = as.POSIXct(paste(aru.expand$date, "12:00:00")),
-  sunregion = aru.expand$sunregion,
-  lat       = aru.expand$lat,
-  long      = aru.expand$long,
-  time.zone = aru.expand$time.zone,
+  aru            = aru.expand$aru,
+  date           = aru.expand$date,
+  date.mon       = as.POSIXct(paste(aru.expand$date, "12:00:00")),
+  sunregion      = aru.expand$sunregion,
+  sunregion.type = aru.expand$sunregion.type,
+  lat            = aru.expand$lat,
+  long           = aru.expand$long,
+  time.zone      = aru.expand$time.zone,
   stringsAsFactors = FALSE
 )
 

@@ -5,33 +5,43 @@
 \title{Generate sunrise/sunset times for an ARU deployment list}
 \usage{
 batz.suntimes_generate(
-  path = getwd(),
-  subdirectory = TRUE,
+  dir.load = getwd(),
+  load.pattern = "*arulist.csv",
+  dir.sub = FALSE,
   write.output = TRUE
 )
 }
 \arguments{
-\item{path}{Directory to search for \verb{*arulist.csv} file(s). Default:
-current working directory.}
+\item{dir.load}{Directory to search for files matching \code{load.pattern}.
+Default: current working directory. Must actually contain the
+\verb{*arulist.csv} file(s) - if no matching file is found, the
+function stops with a clear error rather than proceeding on an empty
+deployment list.}
 
-\item{subdirectory}{If \code{TRUE} (default), search \code{path}
-recursively.}
+\item{load.pattern}{Character, default \code{"*arulist.csv"}: the
+file-name suffix pattern (plain wildcard/glob style - \code{"*"} as a
+leading wildcard, everything else literal) that identifies the ARU
+deployment-list file(s) to load.}
+
+\item{dir.sub}{Logical, default \code{FALSE}. If \code{TRUE}, also search
+every subdirectory of \code{dir.load}.}
 
 \item{write.output}{If \code{TRUE} (default), also write
-\code{aru.suntimes.csv} into \code{path} (with the \verb{*.unix} columns
+\code{aru.suntimes.csv} into \code{dir.load} (with the \verb{*.unix} columns
 rounded to whole seconds in the written CSV only).}
 }
 \value{
 Invisibly, a list with:
   \describe{
     \item{aru.suntimes}{One row per (aru, date): \code{$aru}, \code{$date},
-      \code{$date.mon}, \code{$sunregion}, \code{$lat}, \code{$long},
-      \code{$time.zone}, \code{$suns}, \code{$suns.unix}, \code{$sunr},
-      \code{$sunr.unix}, \code{$sunr.mon}, \code{$sunr.mon.unix}.}
+      \code{$date.mon}, \code{$sunregion}, \code{$sunregion.type},
+      \code{$lat}, \code{$long}, \code{$time.zone}, \code{$suns},
+      \code{$suns.unix}, \code{$sunr}, \code{$sunr.unix},
+      \code{$sunr.mon}, \code{$sunr.mon.unix}.}
     \item{efficiency}{One-row summary: \code{$aru.date.rows} (rows needed
       without de-duplication), \code{$site.date.rows} (unique site-date
       rows actually calculated), \code{$shared.sites} (count of sites
-      with more than one ARU sharing the same lat/long/sunregion).}
+      with more than one ARU sharing the same calculation site).}
   }
 }
 \description{
@@ -50,12 +60,50 @@ tables.
 
 Before any solar calculation runs, ARU rows are expanded to one row per
 (aru, date) and then collapsed to the DISTINCT set of
-(\code{sunregion}, \code{lat}, \code{long}, \code{time.zone}, \code{date})
-combinations actually needed. ARUs that share a sunregion/lat/long with
-identical or overlapping date ranges automatically reuse one calculation
-per shared date instead of repeating it per ARU.
+(\code{sunregion}, \code{calc.lat}, \code{calc.long}, \code{time.zone},
+\code{date}) combinations actually needed (\code{calc.lat}/\code{calc.long}
+per the \code{$sunregion.type} handling below). ARUs that share a site
+with identical or overlapping date ranges automatically reuse one
+calculation per shared date instead of repeating it per ARU.
 
-\strong{Assumptions made (spec was ambiguous on these - flag for review):}
+\strong{$sunregion.type (added 2026-08-26, per Josh):} an optional input
+column categorizing how \code{$sunregion} relates to ARU identity and
+lat/long stability. Four categories were specified -
+\code{"fixed.unique"}, \code{"fixed.pooled"}, \code{"mobile.unique"},
+\code{"mobile.pooled"} - but per Josh's own instruction ("We will update
+the code to deal with the fixed.unique & fixed.pooled first before
+moving on to the mobile two"), only the two fixed types are implemented
+here:
+\itemize{
+  \item \code{"fixed.unique"} - a fixed lat/long where \code{$sunregion}
+    is the same as the ARU's own name. The solar calculation uses the
+    ARU's own exact lat/long (unchanged from the original behavior).
+  \item \code{"fixed.pooled"} - a fixed lat/long where \code{$sunregion}
+    is SHARED across multiple ARUs that are near each other but not at
+    exactly the same lat/long. The solar calculation uses ONE
+    representative lat/long per \code{$sunregion} (the mean across every
+    ARU sharing that sunregion), so these ARUs still share a single
+    calculation per sunregion/date instead of getting one calculation
+    each for near-identical coordinates. \code{$lat}/\code{$long} in the
+    output remain each ARU's own actual coordinates - only the
+    calculation itself uses the shared center.
+  \item \code{"mobile.unique"}/\code{"mobile.pooled"} - NOT YET
+    IMPLEMENTED (lat/long changing across the date range enough to
+    change sunrise/sunset). Any row tagged with either of these makes
+    the function stop with a clear error, rather than silently running
+    fixed-site logic against a moving ARU (which would give wrong
+    times).
+  \item If \code{$sunregion.type} is absent from the input file entirely
+    (older files), every row defaults to \code{"fixed.unique"} so old
+    files still run unchanged.
+}
+A row marked \code{"fixed.unique"} whose \code{$sunregion} does not equal
+its \code{$aru} is flagged with a console \code{NOTE} (per the spec's own
+definition that the two should match for this type) but does not block
+the run.
+
+\strong{Assumptions made (spec was ambiguous on these - flag for
+review):}
 \itemize{
   \item \code{$suns} is treated as SUNSET on \code{$date} (the shorthand
     "suns"/"sunr" strongly implies sunset vs. sunrise, and \code{$sunr}
@@ -76,12 +124,10 @@ per shared date instead of repeating it per ARU.
 }
 
 See \code{batz.suntimes_generate.dev.R} in the package source repo for
-the tested procedural version, the full assumptions list, and a
-before/after efficiency check on real sample data (9 ARUs, 3 shared
-sites, 567 aru-date rows collapsed to 189 unique site-date calculations).
-Those assumptions apply here unchanged and should be reviewed before
-relying on this in production - in particular, please confirm the
-\code{$suns} = sunset interpretation above is what was intended.
+the tested procedural version and the full assumptions list. Those
+assumptions apply here unchanged and should be reviewed before relying
+on this in production - in particular, please confirm the \code{$suns} =
+sunset interpretation above is what was intended.
 
 Naming convention (per project preferences):
 \code{package.family_action.subject()}. This function is
@@ -91,7 +137,7 @@ with ARU deployment lists and solar-time calculations), action =
 }
 \examples{
 \dontrun{
-result <- batz.suntimes_generate(path = "path/to/data")
+result <- batz.suntimes_generate(dir.load = "path/to/data")
 result$aru.suntimes
 result$efficiency
 }
