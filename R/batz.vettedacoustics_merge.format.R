@@ -80,12 +80,12 @@
 #'     lat, lon, manid, autoid.kp, autoid.sb, date, time}.
 #'   \item \code{\link{batz.datawrangler_call.datetime}} is run on
 #'     \code{$date}/\code{$time} to add \code{$call.datetime}.
-#'   \item \code{\link{batz.batusa_recode.names}} (default
-#'     \code{output.format = "common"}, default \code{grammar.dash =
-#'     TRUE} - not specified which format to recode to, flagged) is run on
-#'     \code{$manid}, \code{$autoid.kp}, and \code{$autoid.sb} in place -
-#'     any value not recognized as a species name/code (e.g. \code{"NOISE"},
-#'     \code{"NoID"}, or a blank) passes through unchanged.
+#'   \item \code{\link{batz.batusa_recode.names}} is run on \code{$manid},
+#'     \code{$autoid.kp}, and \code{$autoid.sb} in place, using
+#'     \code{output.format = bat.names} (default \code{grammar.dash =
+#'     TRUE}) - any value not recognized as a species name/code (e.g.
+#'     \code{"NOISE"}, \code{"NoID"}, or a blank) passes through
+#'     unchanged.
 #'   \item If \code{manid.kp = TRUE} (default), \code{$manid.kp} is created
 #'     as a copy of (the now-recoded) \code{$manid}; every blank/NA element
 #'     of \code{$manid.kp} is overwritten with that row's \code{$autoid.kp}
@@ -113,6 +113,25 @@
 #' unrecognized values like \code{"noise"}/\code{"NoID"} through unchanged,
 #' so they're still there to match against.
 #'
+#' \strong{Update (2026-08-26, later) - \code{bat.names}.} Josh's own
+#' instruction for this input was terse ("If bat.names = 'code4' ... set
+#' the output name to default") and admits more than one reading - read
+#' here as: \code{bat.names} IS the \code{output.format} value passed to
+#' every \code{batz.batusa_recode.names()} call in the pipeline above
+#' (replacing the previously-hardcoded, unconfigurable \code{"common"}),
+#' and "default" refers to \code{bat.names}'s OWN default value
+#' (\code{"code4"}), not to \code{batz.batusa_recode.names()}'s internal
+#' default (\code{"common"}). Concretely: with the default
+#' \code{bat.names = "code4"}, \code{$manid}/\code{$autoid.kp}/
+#' \code{$autoid.sb} now come back as 4-letter codes (e.g.
+#' \code{"epfu"}) instead of common names (e.g. \code{"Big brown bat"}) -
+#' a real behavior change from the version delivered earlier the same day.
+#' \strong{Please confirm this is what was meant} - the alternative
+#' reading (leave \code{batz.batusa_recode.names()} at its own built-in
+#' default of \code{"common"} whenever \code{bat.names == "code4"}, making
+#' the new parameter inert for its default value) was considered and
+#' rejected as a strange thing to add a whole new parameter for.
+#'
 #' @param dir.load Character, default \code{getwd()}. Directory to scan.
 #' @param load.pattern Character vector, default \code{c("*vetted.csv")}. A
 #'   wildcard/glob pattern (or vector of patterns) identifying which files to
@@ -128,6 +147,14 @@
 #' @param log.file Logical, default \code{FALSE}. When \code{TRUE}, also
 #'   creates \code{vetted.merged_log.file} (one row per SKIPPED file, with
 #'   \code{$filepath}, \code{$reason}, \code{$headers.missing}).
+#' @param bat.names Character, default \code{"code4"}. The
+#'   \code{output.format} passed to \code{\link{batz.batusa_recode.names}}
+#'   when recoding \code{$manid}/\code{$autoid.kp}/\code{$autoid.sb} - must
+#'   be one of that function's valid \code{output.format} values (e.g.
+#'   \code{"code4"}, \code{"common"}, \code{"code6"}, \code{"latin"}, ...).
+#'   Not specified in the original spec beyond its default; read as "the
+#'   format the recoded manual/auto ID columns end up in" and passed
+#'   straight through to \code{output.format} - see Details.
 #' @param manid.kp Logical, default \code{TRUE}. Create \code{$manid.kp}
 #'   (a copy of \code{$manid} with blanks filled from \code{$autoid.kp} -
 #'   Kaleidoscope's auto ID). See Details.
@@ -162,6 +189,7 @@ batz.vettedacoustics_merge.format <- function(dir.load = getwd(),
                                                dir.sub = FALSE,
                                                duplicates.remove = TRUE,
                                                log.file = FALSE,
+                                               bat.names = "code4",
                                                manid.kp = TRUE,
                                                manid.sb = TRUE,
                                                trim.noise = TRUE,
@@ -234,10 +262,10 @@ batz.vettedacoustics_merge.format <- function(dir.load = getwd(),
     vetted.merged$call.datetime <- batz.datawrangler_call.datetime(
       date = vetted.merged$date, time = vetted.merged$time)
 
-    ## recode manid/autoid.kp/autoid.sb (default output.format = "common")
-    vetted.merged$manid     <- batz.batusa_recode.names(vetted.merged$manid)
-    vetted.merged$autoid.kp <- batz.batusa_recode.names(vetted.merged$autoid.kp)
-    vetted.merged$autoid.sb <- batz.batusa_recode.names(vetted.merged$autoid.sb)
+    ## recode manid/autoid.kp/autoid.sb (output.format = bat.names, default "code4")
+    vetted.merged$manid     <- batz.batusa_recode.names(vetted.merged$manid, output.format = bat.names)
+    vetted.merged$autoid.kp <- batz.batusa_recode.names(vetted.merged$autoid.kp, output.format = bat.names)
+    vetted.merged$autoid.sb <- batz.batusa_recode.names(vetted.merged$autoid.sb, output.format = bat.names)
 
     is.empty <- function(x) is.na(x) | !nzchar(trimws(x))
 

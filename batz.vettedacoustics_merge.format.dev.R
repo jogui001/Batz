@@ -45,11 +45,20 @@
 #     recode.names() (the step immediately before this one) is run on
 #     exactly those two columns.
 #
-#  3. batz.batusa_recode.names() is called with its DEFAULT
-#     output.format = "common" (and default grammar.dash = TRUE) since
-#     the spec didn't say which format to recode to - flagged, easy to
-#     change to another output.format if Josh wants e.g. codes instead of
-#     common names.
+#  3. batz.batusa_recode.names() is called with output.format = bat.names
+#     (a new optional input, default "code4") and default grammar.dash =
+#     TRUE. Originally this was hardcoded to recode.names()'s own default
+#     ("common"); per Josh's follow-up ("add bat.names = 'code4' / If
+#     bat.names = 'code4' ... set the output name to default") a new
+#     bat.names parameter now controls this, defaulting to "code4"
+#     instead. Josh's own wording admits more than one reading - read here
+#     as "bat.names IS the output.format value, and its own default is
+#     'code4'" (a real behavior change: manid/autoid.kp/autoid.sb now come
+#     back as 4-letter codes, not common names) rather than "bat.names ==
+#     'code4' means fall back to recode.names()'s internal default of
+#     'common'" (which would make the new parameter inert for its own
+#     default value - seemed like a strange thing to add a parameter for).
+#     FLAGGED for Josh to confirm.
 #
 #  4. New columns land in this order, appended at the very end (not
 #     specified): ... date, time, call.datetime, manid.kp, manid.sb.
@@ -89,6 +98,7 @@ batz.vettedacoustics_merge.format <- function(dir.load = getwd(),
                                                dir.sub = FALSE,
                                                duplicates.remove = TRUE,
                                                log.file = FALSE,
+                                               bat.names = "code4",
                                                manid.kp = TRUE,
                                                manid.sb = TRUE,
                                                trim.noise = TRUE,
@@ -161,10 +171,10 @@ batz.vettedacoustics_merge.format <- function(dir.load = getwd(),
     vetted.merged$call.datetime <- batz.datawrangler_call.datetime(
       date = vetted.merged$date, time = vetted.merged$time)
 
-    ## recode manid/autoid.kp/autoid.sb (default output.format = "common")
-    vetted.merged$manid     <- batz.batusa_recode.names(vetted.merged$manid)
-    vetted.merged$autoid.kp <- batz.batusa_recode.names(vetted.merged$autoid.kp)
-    vetted.merged$autoid.sb <- batz.batusa_recode.names(vetted.merged$autoid.sb)
+    ## recode manid/autoid.kp/autoid.sb (output.format = bat.names, default "code4")
+    vetted.merged$manid     <- batz.batusa_recode.names(vetted.merged$manid, output.format = bat.names)
+    vetted.merged$autoid.kp <- batz.batusa_recode.names(vetted.merged$autoid.kp, output.format = bat.names)
+    vetted.merged$autoid.sb <- batz.batusa_recode.names(vetted.merged$autoid.sb, output.format = bat.names)
 
     is.empty <- function(x) is.na(x) | !nzchar(trimws(x))
 
@@ -303,5 +313,20 @@ res8 <- batz.vettedacoustics_merge.format(dir.load = dir.load,
                                            log.file = TRUE)
 cat("has vetted.merged_log.file?", "vetted.merged_log.file" %in% names(res8), "\n")
 print(res8$vetted.merged_log.file)
+
+cat("=== TEST 9: bat.names default ('code4') - real data spot check ===\n")
+res9 <- batz.vettedacoustics_merge.format(dir.load = dir.load,
+                                           load.pattern = "*FinalVetted.csv",
+                                           dir.sub = FALSE)
+print(head(res9$vetted.merged[, c("manid", "autoid.kp", "autoid.sb")], 3))
+cat("manid values look like 4-letter codes (lowercase)?",
+    all(grepl("^[a-z]{4}$|^$", res9$vetted.merged$manid[nzchar(res9$vetted.merged$manid)] [1:5])), "\n\n")
+
+cat("=== TEST 10: bat.names = 'common' explicitly (old behavior, still available) ===\n")
+res10 <- batz.vettedacoustics_merge.format(dir.load = dir.load,
+                                            load.pattern = "*FinalVetted.csv",
+                                            dir.sub = FALSE,
+                                            bat.names = "common")
+print(head(res10$vetted.merged[, c("manid", "autoid.kp", "autoid.sb")], 3))
 
 cat("\nAll dev-script tests completed.\n")
