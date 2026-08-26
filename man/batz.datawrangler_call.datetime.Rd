@@ -7,9 +7,9 @@
 batz.datawrangler_call.datetime(
   date,
   time,
-  date.format = c("%Y%m%d"),
-  time.format = c("%H%M%S"),
-  output.format = "%Y-%m-%d %H:%M:%S"
+  date.format = c("\%Y\%m\%d"),
+  time.format = c("\%H\%M\%S"),
+  output.format = "\%Y-\%m-\%d \%H:\%M:\%S"
 )
 }
 \arguments{
