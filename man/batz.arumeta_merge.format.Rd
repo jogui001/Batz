@@ -4,14 +4,24 @@
 \alias{batz.arumeta_merge.format}
 \title{Search, merge, and de-duplicate raw ARU/habitat-assessment data files}
 \usage{
-batz.arumeta_merge.format(dir.path = getwd(), sub.dir = TRUE, log.file = FALSE)
+batz.arumeta_merge.format(
+  dir.load = getwd(),
+  load.pattern = c("*.csv", "*.xlsx"),
+  dir.sub = FALSE,
+  log.file = FALSE
+)
 }
 \arguments{
-\item{dir.path}{Character. Directory to search. Defaults to the current
+\item{dir.load}{Character. Directory to search. Defaults to the current
 working directory (\code{getwd()}).}
 
-\item{sub.dir}{Logical, default \code{TRUE}. If \code{TRUE}, also searches
-every subdirectory of \code{dir.path}.}
+\item{load.pattern}{Character vector, default \code{c("*.csv", "*.xlsx")}:
+the file-name suffix pattern(s) (plain wildcard/glob style - \code{"*"}
+as a leading wildcard, everything else literal) that identify which
+files in \code{dir.load} get scanned/classified.}
+
+\item{dir.sub}{Logical, default \code{FALSE}. If \code{TRUE}, also searches
+every subdirectory of \code{dir.load}.}
 
 \item{log.file}{Logical, default \code{FALSE}. If \code{TRUE}, an
 additional data frame named \code{arumeta.mergelog} is added to the
@@ -28,18 +38,20 @@ means no log rows at all for that file/category.}
 }
 \value{
 Invisibly, a named list with three elements: \code{aru.visit},
-  \code{aru.quad}, \code{aru.20m}. Each is a merged, de-duplicated data
-  frame (character columns throughout), or \code{NULL} if no matching
-  files were found for that category. If \code{log.file = TRUE}, a fourth
-  element, \code{arumeta.mergelog}, is also included (see \code{log.file}
-  above). In addition to being returned, each of these (whichever aren't
-  \code{NULL}) is also assigned as its own object - \code{aru.visit},
-  \code{aru.quad}, \code{aru.20m}, and (if requested) \code{arumeta.mergelog}
-  - directly into the environment the function was called from, so calling
-  \code{batz.arumeta_merge.format(...)} on its own (with no assignment)
-  creates those data frames right in your workspace. You can still do
-  \code{result <- batz.arumeta_merge.format(...)} and access them as
-  \code{result$aru.visit} etc. if you'd rather work with the list.
+\code{aru.quad}, \code{aru.20m}. Each is a merged, de-duplicated data
+frame (character columns throughout), or \code{NULL} if no matching
+files were found for that category. If \code{log.file = TRUE}, a fourth
+element, \code{arumeta.mergelog}, is also included (see \code{log.file}
+above). In addition to being returned, each of these (whichever aren't
+\code{NULL}) is also assigned as its own object - \code{aru.visit},
+\code{aru.quad}, \code{aru.20m}, and (if requested) \code{arumeta.mergelog}
+\itemize{
+\item directly into the environment the function was called from, so calling
+\code{batz.arumeta_merge.format(...)} on its own (with no assignment)
+creates those data frames right in your workspace. You can still do
+\code{result <- batz.arumeta_merge.format(...)} and access them as
+\code{result$aru.visit} etc. if you'd rather work with the list.
+}
 }
 \description{
 Scans a directory (and, optionally, its subdirectories) for \code{.csv} and
@@ -90,14 +102,14 @@ back to the specific file(s) they came from.
 \section{Known open items (not yet resolved - see project notes)}{
 
 \itemize{
-  \item No "format" step (column/date standardization, etc.) has been
-    specified yet - only search/merge/de-duplicate is implemented.
+\item No "format" step (column/date standardization, etc.) has been
+specified yet - only search/merge/de-duplicate is implemented.
 }
 }
 
 \examples{
 \dontrun{
-result <- batz.arumeta_merge.format("path/to/raw/data", sub.dir = TRUE)
+result <- batz.arumeta_merge.format("path/to/raw/data", dir.sub = TRUE)
 result$aru.visit
 result$aru.quad
 result$aru.20m

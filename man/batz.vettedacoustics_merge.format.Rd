@@ -4,8 +4,13 @@
 \alias{batz.vettedacoustics_merge.format}
 \title{Merge vetted bat-acoustic-call files (k-Pro/Kaleidoscope or SonoBat) into one master table}
 \usage{
-batz.vettedacoustics_merge.format(dir.load = getwd(), load.pattern = c("*vetted.csv"),
-  dir.sub = FALSE, duplicates.remove = TRUE, log.file = FALSE)
+batz.vettedacoustics_merge.format(
+  dir.load = getwd(),
+  load.pattern = c("*vetted.csv"),
+  dir.sub = FALSE,
+  duplicates.remove = TRUE,
+  log.file = FALSE
+)
 }
 \arguments{
 \item{dir.load}{Character, default \code{getwd()}. Directory to scan.}
@@ -29,12 +34,12 @@ creates \code{vetted.merged_log.file} (one row per SKIPPED file, with
 }
 \value{
 Invisibly, a named list: \code{vetted.merged} (always), and
-  \code{vetted.merged_log.file} (only if \code{log.file = TRUE}). As a
-  side effect, the same object(s) are also assigned directly into the
-  calling environment (same auto-assign convention as
-  \code{batz.arumeta_merge.format}/\code{batz.datawrangler_load.files}),
-  so a bare call with no assignment populates \code{vetted.merged}
-  (and \code{vetted.merged_log.file}) directly.
+\code{vetted.merged_log.file} (only if \code{log.file = TRUE}). As a
+side effect, the same object(s) are also assigned directly into the
+calling environment (same auto-assign convention as
+\code{batz.arumeta_merge.format}/\code{batz.datawrangler_load.files}),
+so a bare call with no assignment populates \code{vetted.merged}
+(and \code{vetted.merged_log.file}) directly.
 }
 \description{
 Searches a directory (and its subdirectories, if \code{dir.sub = TRUE})

@@ -7,11 +7,11 @@
 batz.datawrangler_load.files(
   dir.load = getwd(),
   dir.sub = FALSE,
-  remove.duplicates = TRUE,
+  duplicates.remove = TRUE,
   log.file = FALSE,
   header.match = FALSE,
-  skip.duplicates = FALSE,
-  max.objects = 25
+  duplicates.skip = FALSE,
+  objects.max = 25
 )
 }
 \arguments{
@@ -21,7 +21,7 @@ working directory (\code{getwd()}).}
 \item{dir.sub}{Logical, default \code{FALSE}. If \code{TRUE}, also
 searches every subdirectory of \code{dir.load}.}
 
-\item{remove.duplicates}{Logical, default \code{TRUE}. If \code{TRUE},
+\item{duplicates.remove}{Logical, default \code{TRUE}. If \code{TRUE},
 exact duplicate rows are removed from WITHIN each individual data frame
 (including separately within each sheet of a multi-sheet \code{.xlsx}
 list) - never across two different top-level objects. Runs as a final
@@ -38,14 +38,16 @@ or \code{NA} if it wasn't loaded at all).}
 
 \item{header.match}{Logical, default \code{FALSE}. If \code{TRUE}, every
 file - not just ones sharing a file name with something already loaded
-- has its column-name set compared against every already-loaded plain
-data frame (in the order those were created); if one matches 100%
+\itemize{
+\item has its column-name set compared against every already-loaded plain
+data frame (in the order those were created); if one matches 100\%
 (same columns, order doesn't matter), the new file is merged into THAT
 object instead of becoming its own. Only ever applies to plain
 single-sheet data frames - a multi-sheet \code{.xlsx}-derived list is
-never compared, as source or as target.}
+never compared, as source or as target.
+}}
 
-\item{skip.duplicates}{Logical, default \code{FALSE}. Governs what
+\item{duplicates.skip}{Logical, default \code{FALSE}. Governs what
 happens when a file's name already matches an object already loaded
 (only possible when \code{dir.sub = TRUE} and the duplicate lives in a
 different folder). \code{TRUE}: the duplicate is skipped outright -
@@ -54,7 +56,7 @@ existing object if the columns match; if they don't, it falls through to
 the \code{header.match} check (if enabled) before finally becoming its
 own separate object.}
 
-\item{max.objects}{Integer, default \code{25}. The maximum number of
+\item{objects.max}{Integer, default \code{25}. The maximum number of
 top-level objects (not merges, and not raw files/sheets) the function
 will create in one call. Once that many exist, no further BRAND-NEW
 objects are created - but merges (by name or by \code{header.match})
@@ -63,18 +65,18 @@ don't add to the count.}
 }
 \value{
 Invisibly, a named list of everything that was loaded (data
-  frames and/or lists-of-sheets, one element per input file/merged group,
-  plus \code{log.file} if requested). In addition to being returned,
-  every element of that list is also assigned as its own object - under
-  its own name - directly into the environment the function was called
-  from, so calling \code{batz.datawrangler_load.files(...)} on its own
-  (with no assignment) loads everything right into your workspace,
-  including \code{log.file} itself if \code{log.file = TRUE}. You can
-  still do \code{result <- batz.datawrangler_load.files(...)} and access
-  things as \code{result$my.file} if you'd rather work with the list. If
-  a file's name isn't a syntactically "plain" R name (it has spaces,
-  starts with a digit, etc.), the object is still created exactly as
-  named - just access it with backticks or \code{get()}.
+frames and/or lists-of-sheets, one element per input file/merged group,
+plus \code{log.file} if requested). In addition to being returned,
+every element of that list is also assigned as its own object - under
+its own name - directly into the environment the function was called
+from, so calling \code{batz.datawrangler_load.files(...)} on its own
+(with no assignment) loads everything right into your workspace,
+including \code{log.file} itself if \code{log.file = TRUE}. You can
+still do \code{result <- batz.datawrangler_load.files(...)} and access
+things as \code{result$my.file} if you'd rather work with the list. If
+a file's name isn't a syntactically "plain" R name (it has spaces,
+starts with a digit, etc.), the object is still created exactly as
+named - just access it with backticks or \code{get()}.
 }
 \description{
 Scans a directory (and, optionally, its subdirectories) for \code{.csv}
@@ -87,12 +89,11 @@ frame per sheet, named by sheet name).
 \details{
 Two independent mechanisms can combine files into one data frame instead
 of creating separate objects: a duplicate FILE NAME (see
-\code{skip.duplicates}) and, optionally, a duplicate HEADER SET across
+\code{duplicates.skip}) and, optionally, a duplicate HEADER SET across
 differently-named files (see \code{header.match}).
 
-
 For a file whose base name already matches something already loaded, the
-order of decisions is: (1) \code{skip.duplicates = TRUE} skips it, full
+order of decisions is: (1) \code{duplicates.skip = TRUE} skips it, full
 stop; (2) otherwise, if its columns match the existing same-named object,
 it's merged into that object (columns are lined up by name first - "when
 merging any two files, the new file's columns are reordered to match the
@@ -114,8 +115,8 @@ with different headers"} (a same-name duplicate that also didn't match
 anything via \code{header.match}). For \code{action = "merged"}, either
 \code{"file had the same name"} or \code{"file has same headers"}. For
 \code{action = "skipped"}: \code{"object limit met"} (blocked by
-\code{max.objects}), \code{"duplicate file"} (skipped because
-\code{skip.duplicates = TRUE} found a same-named file already loaded), or
+\code{objects.max}), \code{"duplicate file"} (skipped because
+\code{duplicates.skip = TRUE} found a same-named file already loaded), or
 \code{"could not read file"} (the file itself failed to read/parse - not
 one of the originally-specified reasons, added because there wasn't
 another option that fit a genuinely corrupt/unreadable file).
@@ -127,7 +128,7 @@ batz.datawrangler_load.files()
 
 result <- batz.datawrangler_load.files("path/to/raw/data", dir.sub = TRUE,
                                         header.match = TRUE, log.file = TRUE,
-                                        max.objects = 50)
+                                        objects.max = 50)
 result$my.file
 result$log.file
 }

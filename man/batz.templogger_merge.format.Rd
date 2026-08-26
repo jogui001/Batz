@@ -5,33 +5,49 @@
 \title{Merge and format raw temperature-logger exports}
 \usage{
 batz.templogger_merge.format(
-  path = getwd(),
-  subdirectory = TRUE,
+  dir.load = getwd(),
+  load.pattern = c("*templog.csv", "*templog.meta.csv"),
+  dir.sub = FALSE,
+  dir.save = dir.load,
   write.output = TRUE
 )
 }
 \arguments{
-\item{path}{Directory to search for \verb{*templog.csv} and
-\verb{*templog.meta.csv} files. Default: current working directory.}
+\item{dir.load}{Directory to search for files matching \code{load.pattern}.
+Default: current working directory.}
 
-\item{subdirectory}{If \code{TRUE} (default), search \code{path}
-recursively.}
+\item{load.pattern}{Character vector of length 2, default
+\code{c("*templog.csv", "*templog.meta.csv")}: the file-name suffix
+patterns (plain wildcard/glob style - \code{"*"} as a leading wildcard,
+everything else literal) that identify, respectively, (1) the raw
+datalogger export files and (2) the station-metadata file(s).}
+
+\item{dir.sub}{Logical, default \code{FALSE}. If \code{TRUE}, also search
+every subdirectory of \code{dir.load}. \strong{Note:} the real test data
+keeps \code{templog.meta.csv} inside a \code{meta files/} subfolder, so
+with the new \code{FALSE} default that meta file will NOT be found
+unless you explicitly pass \code{dir.sub = TRUE}.}
+
+\item{dir.save}{Directory to write \code{templog.merged.csv} and
+\code{templog.notes.csv} into when \code{write.output = TRUE}. Default:
+same as \code{dir.load}.}
 
 \item{write.output}{If \code{TRUE} (default), also write
-\code{templog.merged.csv} and \code{templog.notes.csv} into \code{path}
-(with \code{$rh} rounded to 3 decimal places in the written CSV only).}
+\code{templog.merged.csv} and \code{templog.notes.csv} into
+\code{dir.save} (with \code{$rh} rounded to 3 decimal places in the
+written CSV only).}
 }
 \value{
 Invisibly, a list with two data frames:
-  \describe{
-    \item{templog.merged}{\code{$obs}, \code{$date.time},
-      \code{$temp.dry.c}, \code{$temp.wet.c}, \code{$rh},
-      \code{$serial.num}, plus every other column from the matched
-      \code{templog.meta.csv} row.}
-    \item{templog.notes}{\code{$serial.num}, \code{$date.start},
-      \code{$date.end}, \code{$temp.type}, \code{$rows.in},
-      \code{$rows.out}, \code{$rows.trimmed}, \code{$notes}.}
-  }
+\describe{
+\item{templog.merged}{\code{$obs}, \code{$date.time},
+\code{$temp.dry.c}, \code{$temp.wet.c}, \code{$rh},
+\code{$serial.num}, plus every other column from the matched
+\code{templog.meta.csv} row.}
+\item{templog.notes}{\code{$serial.num}, \code{$date.start},
+\code{$date.end}, \code{$temp.type}, \code{$rows.in},
+\code{$rows.out}, \code{$rows.trimmed}, \code{$notes}.}
+}
 }
 \description{
 Merges raw \verb{*templog.csv} datalogger exports (heterogeneous formats -
@@ -43,15 +59,17 @@ deployment/recovery window.
 }
 \details{
 RH is gated strictly on the matched \code{templog.meta.csv} \code{$logger.type}
-- not on header text or any other heuristic:
 \itemize{
-  \item \code{logger.type == "H"}: \code{$temp.wet.c} keeps the real
-    column-4 reading, and \code{$rh} is calculated from dry/wet bulb.
-  \item \code{logger.type == "T"}: \code{$temp.wet.c} and \code{$rh} are
-    both forced to \code{NA}, even if the raw file has a second
-    temperature column.
-  \item No confident meta match (missing, ambiguous, or no meta.csv at
-    all): treated the same as \code{"T"} (both \code{NA}).
+\item not on header text or any other heuristic:
+\itemize{
+\item \code{logger.type == "H"}: \code{$temp.wet.c} keeps the real
+column-4 reading, and \code{$rh} is calculated from dry/wet bulb.
+\item \code{logger.type == "T"}: \code{$temp.wet.c} and \code{$rh} are
+both forced to \code{NA}, even if the raw file has a second
+temperature column.
+\item No confident meta match (missing, ambiguous, or no meta.csv at
+all): treated the same as \code{"T"} (both \code{NA}).
+}
 }
 
 The meta join uses ONLY \code{$serial#} (the file's real 8-digit serial)
@@ -99,7 +117,7 @@ this in production.
 }
 \examples{
 \dontrun{
-result <- batz.templogger_merge.format(path = "path/to/data")
+result <- batz.templogger_merge.format(dir.load = "path/to/data", dir.sub = TRUE)
 result$templog.merged
 result$templog.notes
 }

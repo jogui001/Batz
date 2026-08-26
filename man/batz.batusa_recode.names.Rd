@@ -49,10 +49,10 @@ every hyphen in a matched value with a space instead (e.g.
 }
 \value{
 A vector (if \code{data} is a vector) or data frame (if
-  \code{data} is a data frame) of the same length/dimensions as
-  \code{data}, with every element re-expressed in \code{output.format}.
-  An input element with no match anywhere in the reference table is
-  returned unchanged (not \code{NA}, no error).
+\code{data} is a data frame) of the same length/dimensions as
+\code{data}, with every element re-expressed in \code{output.format}.
+An input element with no match anywhere in the reference table is
+returned unchanged (not \code{NA}, no error).
 }
 \description{
 Given a vector or data frame containing any mix of common name, latin
