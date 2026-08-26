@@ -28,45 +28,48 @@ deployment-list file(s) to load.}
 \item{dir.sub}{Logical, default \code{FALSE}. If \code{TRUE}, also search
 every subdirectory of \code{dir.load}.}
 
-\item{write.output}{If \code{TRUE} (default), also write
-\code{aru.suntimes.csv} into \code{dir.save} (with the \verb{*.unix}
-columns rounded to whole seconds in the written CSV only).}
+\item{write.output}{If \code{TRUE} (default), also write the output CSV
+into \code{dir.save} (with the \verb{*.unix} columns rounded to whole
+seconds in the written CSV only).}
 
 \item{dir.save}{Directory to write the output CSV into when
-\code{write.output = TRUE}. Default: same as \code{dir.load} - set
-this separately if the output should be written somewhere other than
-where the input \verb{*arulist.csv} was loaded from.}
+\code{write.output = TRUE}. Default: same as \code{dir.load} - set this
+separately if the output should be written somewhere other than where
+the input \verb{*arulist.csv} was loaded from.}
 
 \item{file}{Character, default \code{""}: base name for the output CSV
-written when \code{write.output = TRUE}. Every output file name gets
-a date-range + save-time stamp appended automatically, so no two runs
-ever silently overwrite each other:
+written when \code{write.output = TRUE}. Every output file name gets a
+date-range + save-time stamp appended automatically, so no two runs ever
+silently overwrite each other:
 \verb{<base>_<DATE1>to<DATE2>_sav<timestamp>_suntimes.csv}, where
 \code{DATE1}/\code{DATE2} are the earliest/latest \code{$date} in the
 output (\code{YYYYMMDD}) and \code{<timestamp>} is when the file was
 written (\code{YYYYMMDDHHMMSS}, e.g. \code{sav20260826114426}).
-\code{""} (default) uses \code{"aru"} as \verb{<base>}. Any other
-value is used as \verb{<base>} instead - e.g. \code{file =
+\code{""} (default) uses \code{"aru"} as \verb{<base>}. Any other value
+is used as \verb{<base>} instead - e.g. \code{file =
 "projectname_suntimes.csv"} produces something like
 \code{"projectname_20250101to20250202_sav20260826113700_suntimes.csv"}.
 If the given value already ends in a previously-auto-generated suffix
-(e.g. you passed a prior run's output file name back in), that suffix
-is stripped back off first, so the file gets a fresh stamp instead of
-a second one stacked on top.}
+(e.g. you passed a prior run's output file name back in), that suffix is
+stripped back off first, so the file gets a fresh stamp instead of a
+second one stacked on top.}
 }
 \value{
 Invisibly, a list with:
-\describe{
-\item{aru.suntimes}{One row per (aru, date): \code{$aru}, \code{$date},
-\code{$date.mon}, \code{$sunregion}, \code{$sunregion.type},
-\code{$lat}, \code{$long}, \code{$time.zone}, \code{$suns},
-\code{$suns.unix}, \code{$sunr}, \code{$sunr.unix},
-\code{$sunr.mon}, \code{$sunr.mon.unix}.}
-\item{efficiency}{One-row summary: \code{$aru.date.rows} (rows needed
-without de-duplication), \code{$site.date.rows} (unique site-date
-rows actually calculated), \code{$shared.sites} (count of sites
-with more than one ARU sharing the same calculation site).}
-}
+  \describe{
+    \item{aru.suntimes}{One row per (aru, date), \code{"fixed.unique"}/
+      \code{"fixed.pooled"} rows only: \code{$aru}, \code{$date},
+      \code{$date.mon}, \code{$sunregion}, \code{$sunregion.long},
+      \code{$sunregion.lat}, \code{$date.start}, \code{$date.end},
+      \code{$time.zone}, \code{$sunregion.type}, \code{$schedual1},
+      \code{$schedual2}, \code{$lat}, \code{$long}, \code{$suns},
+      \code{$suns.unix}, \code{$sunr}, \code{$sunr.unix},
+      \code{$sunr.mon}, \code{$sunr.mon.unix}.}
+    \item{efficiency}{One-row summary: \code{$aru.date.rows} (rows needed
+      without de-duplication), \code{$site.date.rows} (unique site-date
+      rows actually calculated), \code{$shared.sites} (count of sites
+      with more than one ARU sharing the same calculation site).}
+  }
 }
 \description{
 For every ARU in an \verb{*arulist.csv} deployment list, and for every
@@ -90,37 +93,59 @@ per the \code{$sunregion.type} handling below). ARUs that share a site
 with identical or overlapping date ranges automatically reuse one
 calculation per shared date instead of repeating it per ARU.
 
-\strong{$sunregion.type (added 2026-08-26, per Josh):} an optional input
-column categorizing how \code{$sunregion} relates to ARU identity and
-lat/long stability. Four categories were specified -
-\code{"fixed.unique"}, \code{"fixed.pooled"}, \code{"mobile.unique"},
-\code{"mobile.pooled"} - but per Josh's own instruction ("We will update
-the code to deal with the fixed.unique & fixed.pooled first before
-moving on to the mobile two"), only the two fixed types are implemented
-here:
-\itemize{
-\item \code{"fixed.unique"} - a fixed lat/long where \code{$sunregion}
-is the same as the ARU's own name. The solar calculation uses the
-ARU's own exact lat/long (unchanged from the original behavior).
-\item \code{"fixed.pooled"} - a fixed lat/long where \code{$sunregion}
-is SHARED across multiple ARUs that are near each other but not at
-exactly the same lat/long. The solar calculation uses ONE
-representative lat/long per \code{$sunregion} (the mean across every
-ARU sharing that sunregion), so these ARUs still share a single
-calculation per sunregion/date instead of getting one calculation
-each for near-identical coordinates. \code{$lat}/\code{$long} in the
-output remain each ARU's own actual coordinates - only the
-calculation itself uses the shared center.
-\item \code{"mobile.unique"}/\code{"mobile.pooled"} - NOT YET
-IMPLEMENTED (lat/long changing across the date range enough to
-change sunrise/sunset). Any row tagged with either of these makes
-the function stop with a clear error, rather than silently running
-fixed-site logic against a moving ARU (which would give wrong
-times).
-\item If \code{$sunregion.type} is absent from the input file entirely
-(older files), every row defaults to \code{"fixed.unique"} so old
-files still run unchanged.
-}
+\strong{Required input headers (added 2026-08-26, per Josh) - checked
+up front, before anything else runs.} \code{dir.load}'s
+\verb{*arulist.csv} must have every one of: \code{aru}, \code{long},
+\code{lat}, \code{sunregion}, \code{sunregion.long},
+\code{sunregion.lat}, \code{date.start}, \code{date.end},
+\code{time.zone}, \code{sunregion.type}, \code{schedual1},
+\code{schedual2}. If any are missing, the function stops immediately
+with \code{"inputfile is missing these headers"} followed by the list
+of missing header names (Josh's own literal message text, used
+verbatim). \code{$sunregion.type} is now REQUIRED - the previous
+behavior of defaulting to \code{"fixed.unique"} when the column was
+entirely absent no longer applies, since a missing
+\code{$sunregion.type} column now fails this header check before
+reaching that point. \code{$schedual1}/\code{$schedual2} are new,
+pass-through-only columns (not used in any calculation, just carried
+into the output - see below); note the spelling is Josh's own
+("schedual", not "schedule"), kept exactly as given.
+
+\strong{Only \code{"fixed.unique"}/\code{"fixed.pooled"} rows get
+records generated (updated 2026-08-26, per Josh) - a real behavior
+change from erroring to filtering.} Four \code{$sunregion.type}
+categories exist - \code{"fixed.unique"}, \code{"fixed.pooled"},
+\code{"mobile.unique"}, \code{"mobile.pooled"} - but only rows where
+\code{$sunregion.type} is \code{"fixed.unique"} or \code{"fixed.pooled"}
+get records generated. Any OTHER value (\code{"mobile.unique"}/
+\code{"mobile.pooled"}, or anything else, including a typo) is
+EXCLUDED from the run with a console \code{NOTE} listing the affected
+ARU(s) and their actual \code{$sunregion.type} value, rather than
+stopping the whole function. \strong{The PREVIOUS version of this
+function hard-stopped the entire run if ANY row was
+\code{"mobile.unique"}/\code{"mobile.pooled"}; that hard stop is gone
+now} - those rows are simply left out of \code{aru.suntimes}. If every
+row ends up excluded, the function still stops (nothing to generate).
+
+\strong{Solar-calculation coordinates now come directly from
+\code{$sunregion.long}/\code{$sunregion.lat} (updated 2026-08-26, per
+Josh) - a real behavior change.} The PREVIOUS version used the ARU's
+own exact \code{$lat}/\code{$long} for \code{"fixed.unique"} rows, and
+a COMPUTED MEAN of \code{$lat}/\code{$long} across every ARU sharing a
+\code{$sunregion} for \code{"fixed.pooled"} rows. Now, for EVERY kept
+row (both types), the solar calculation uses \code{$sunregion.long}/
+\code{$sunregion.lat} exactly as given in the input file - no
+averaging happens here anymore; the input file itself is now
+responsible for carrying one consistent coordinate pair on every row
+sharing a \code{$sunregion}. \code{$lat}/\code{$long} (the ARU's own
+coordinates) are still required as input and still appear in the
+output, just no longer used for the calculation itself. A console
+\code{NOTE} (non-blocking) is printed if any \code{$sunregion} has
+more than one distinct \code{$sunregion.long}/\code{$sunregion.lat}
+pair across its rows - not explicitly requested, added as a light
+data-entry sanity check matching the existing
+\code{$sunregion.type}-consistency \code{NOTE} below.
+
 A row marked \code{"fixed.unique"} whose \code{$sunregion} does not equal
 its \code{$aru} is flagged with a console \code{NOTE} (per the spec's own
 definition that the two should match for this type) but does not block
@@ -129,22 +154,22 @@ the run.
 \strong{Assumptions made (spec was ambiguous on these - flag for
 review):}
 \itemize{
-\item \code{$suns} is treated as SUNSET on \code{$date} (the shorthand
-"suns"/"sunr" strongly implies sunset vs. sunrise, and \code{$sunr}
-is separately and explicitly defined as sunrise - having both be
-sunrise would make \code{$suns} a pure duplicate).
-\item \code{$date.mon} is \code{$date} itself at noon (12:00:00), NOT
-\code{$date + 1} - taken literally from "date plus time of
-12:00:00", with no mention of the following day (unlike
-\code{$sunr.mon}, which explicitly says "for the following day").
-Noon (rather than midnight) is used so the timestamp can't drift to
-the wrong calendar day when read back in a different time zone.
-\item \code{[$date.start, $date.end]} is inclusive of both endpoints.
-\item Sunrise/sunset use the standard -0.833 degree solar-elevation
-threshold (atmospheric refraction + the sun's angular radius).
-\item Locations that would produce polar day/night (no sunrise or
-sunset on some date) are not expected in this data and are not
-specially handled beyond returning \code{NA}.
+  \item \code{$suns} is treated as SUNSET on \code{$date} (the shorthand
+    "suns"/"sunr" strongly implies sunset vs. sunrise, and \code{$sunr}
+    is separately and explicitly defined as sunrise - having both be
+    sunrise would make \code{$suns} a pure duplicate).
+  \item \code{$date.mon} is \code{$date} itself at noon (12:00:00), NOT
+    \code{$date + 1} - taken literally from "date plus time of
+    12:00:00", with no mention of the following day (unlike
+    \code{$sunr.mon}, which explicitly says "for the following day").
+    Noon (rather than midnight) is used so the timestamp can't drift to
+    the wrong calendar day when read back in a different time zone.
+  \item \code{[$date.start, $date.end]} is inclusive of both endpoints.
+  \item Sunrise/sunset use the standard -0.833 degree solar-elevation
+    threshold (atmospheric refraction + the sun's angular radius).
+  \item Locations that would produce polar day/night (no sunrise or
+    sunset on some date) are not expected in this data and are not
+    specially handled beyond returning \code{NA}.
 }
 
 See \code{batz.suntimes_generate.dev.R} in the package source repo for

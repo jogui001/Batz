@@ -20,37 +20,59 @@
 #' with identical or overlapping date ranges automatically reuse one
 #' calculation per shared date instead of repeating it per ARU.
 #'
-#' \strong{$sunregion.type (added 2026-08-26, per Josh):} an optional input
-#' column categorizing how \code{$sunregion} relates to ARU identity and
-#' lat/long stability. Four categories were specified -
-#' \code{"fixed.unique"}, \code{"fixed.pooled"}, \code{"mobile.unique"},
-#' \code{"mobile.pooled"} - but per Josh's own instruction ("We will update
-#' the code to deal with the fixed.unique & fixed.pooled first before
-#' moving on to the mobile two"), only the two fixed types are implemented
-#' here:
-#' \itemize{
-#'   \item \code{"fixed.unique"} - a fixed lat/long where \code{$sunregion}
-#'     is the same as the ARU's own name. The solar calculation uses the
-#'     ARU's own exact lat/long (unchanged from the original behavior).
-#'   \item \code{"fixed.pooled"} - a fixed lat/long where \code{$sunregion}
-#'     is SHARED across multiple ARUs that are near each other but not at
-#'     exactly the same lat/long. The solar calculation uses ONE
-#'     representative lat/long per \code{$sunregion} (the mean across every
-#'     ARU sharing that sunregion), so these ARUs still share a single
-#'     calculation per sunregion/date instead of getting one calculation
-#'     each for near-identical coordinates. \code{$lat}/\code{$long} in the
-#'     output remain each ARU's own actual coordinates - only the
-#'     calculation itself uses the shared center.
-#'   \item \code{"mobile.unique"}/\code{"mobile.pooled"} - NOT YET
-#'     IMPLEMENTED (lat/long changing across the date range enough to
-#'     change sunrise/sunset). Any row tagged with either of these makes
-#'     the function stop with a clear error, rather than silently running
-#'     fixed-site logic against a moving ARU (which would give wrong
-#'     times).
-#'   \item If \code{$sunregion.type} is absent from the input file entirely
-#'     (older files), every row defaults to \code{"fixed.unique"} so old
-#'     files still run unchanged.
-#' }
+#' \strong{Required input headers (added 2026-08-26, per Josh) - checked
+#' up front, before anything else runs.} \code{dir.load}'s
+#' \verb{*arulist.csv} must have every one of: \code{aru}, \code{long},
+#' \code{lat}, \code{sunregion}, \code{sunregion.long},
+#' \code{sunregion.lat}, \code{date.start}, \code{date.end},
+#' \code{time.zone}, \code{sunregion.type}, \code{schedual1},
+#' \code{schedual2}. If any are missing, the function stops immediately
+#' with \code{"inputfile is missing these headers"} followed by the list
+#' of missing header names (Josh's own literal message text, used
+#' verbatim). \code{$sunregion.type} is now REQUIRED - the previous
+#' behavior of defaulting to \code{"fixed.unique"} when the column was
+#' entirely absent no longer applies, since a missing
+#' \code{$sunregion.type} column now fails this header check before
+#' reaching that point. \code{$schedual1}/\code{$schedual2} are new,
+#' pass-through-only columns (not used in any calculation, just carried
+#' into the output - see below); note the spelling is Josh's own
+#' ("schedual", not "schedule"), kept exactly as given.
+#'
+#' \strong{Only \code{"fixed.unique"}/\code{"fixed.pooled"} rows get
+#' records generated (updated 2026-08-26, per Josh) - a real behavior
+#' change from erroring to filtering.} Four \code{$sunregion.type}
+#' categories exist - \code{"fixed.unique"}, \code{"fixed.pooled"},
+#' \code{"mobile.unique"}, \code{"mobile.pooled"} - but only rows where
+#' \code{$sunregion.type} is \code{"fixed.unique"} or \code{"fixed.pooled"}
+#' get records generated. Any OTHER value (\code{"mobile.unique"}/
+#' \code{"mobile.pooled"}, or anything else, including a typo) is
+#' EXCLUDED from the run with a console \code{NOTE} listing the affected
+#' ARU(s) and their actual \code{$sunregion.type} value, rather than
+#' stopping the whole function. \strong{The PREVIOUS version of this
+#' function hard-stopped the entire run if ANY row was
+#' \code{"mobile.unique"}/\code{"mobile.pooled"}; that hard stop is gone
+#' now} - those rows are simply left out of \code{aru.suntimes}. If every
+#' row ends up excluded, the function still stops (nothing to generate).
+#'
+#' \strong{Solar-calculation coordinates now come directly from
+#' \code{$sunregion.long}/\code{$sunregion.lat} (updated 2026-08-26, per
+#' Josh) - a real behavior change.} The PREVIOUS version used the ARU's
+#' own exact \code{$lat}/\code{$long} for \code{"fixed.unique"} rows, and
+#' a COMPUTED MEAN of \code{$lat}/\code{$long} across every ARU sharing a
+#' \code{$sunregion} for \code{"fixed.pooled"} rows. Now, for EVERY kept
+#' row (both types), the solar calculation uses \code{$sunregion.long}/
+#' \code{$sunregion.lat} exactly as given in the input file - no
+#' averaging happens here anymore; the input file itself is now
+#' responsible for carrying one consistent coordinate pair on every row
+#' sharing a \code{$sunregion}. \code{$lat}/\code{$long} (the ARU's own
+#' coordinates) are still required as input and still appear in the
+#' output, just no longer used for the calculation itself. A console
+#' \code{NOTE} (non-blocking) is printed if any \code{$sunregion} has
+#' more than one distinct \code{$sunregion.long}/\code{$sunregion.lat}
+#' pair across its rows - not explicitly requested, added as a light
+#' data-entry sanity check matching the existing
+#' \code{$sunregion.type}-consistency \code{NOTE} below.
+#'
 #' A row marked \code{"fixed.unique"} whose \code{$sunregion} does not equal
 #' its \code{$aru} is flagged with a console \code{NOTE} (per the spec's own
 #' definition that the two should match for this type) but does not block
@@ -126,9 +148,12 @@
 #'
 #' @return Invisibly, a list with:
 #'   \describe{
-#'     \item{aru.suntimes}{One row per (aru, date): \code{$aru}, \code{$date},
-#'       \code{$date.mon}, \code{$sunregion}, \code{$sunregion.type},
-#'       \code{$lat}, \code{$long}, \code{$time.zone}, \code{$suns},
+#'     \item{aru.suntimes}{One row per (aru, date), \code{"fixed.unique"}/
+#'       \code{"fixed.pooled"} rows only: \code{$aru}, \code{$date},
+#'       \code{$date.mon}, \code{$sunregion}, \code{$sunregion.long},
+#'       \code{$sunregion.lat}, \code{$date.start}, \code{$date.end},
+#'       \code{$time.zone}, \code{$sunregion.type}, \code{$schedual1},
+#'       \code{$schedual2}, \code{$lat}, \code{$long}, \code{$suns},
 #'       \code{$suns.unix}, \code{$sunr}, \code{$sunr.unix},
 #'       \code{$sunr.mon}, \code{$sunr.mon.unix}.}
 #'     \item{efficiency}{One-row summary: \code{$aru.date.rows} (rows needed
@@ -265,36 +290,49 @@ batz.suntimes_generate <- function(dir.load = getwd(),
                                      stringsAsFactors = FALSE,
                                      colClasses = "character"))
 
+  ## ===========================================================================
+  ## required-header check (added 2026-08-26, per Josh) - runs on the raw
+  ## loaded columns, before any parsing/filtering below. Message text is
+  ## Josh's own, used verbatim.
+  ## ===========================================================================
+  required.headers <- c("aru", "long", "lat", "sunregion", "sunregion.long",
+                         "sunregion.lat", "date.start", "date.end", "time.zone",
+                         "sunregion.type", "schedual1", "schedual2")
+  missing.headers <- setdiff(required.headers, names(aru.list))
+  if (length(missing.headers) > 0) {
+    stop("inputfile is missing these headers: ", paste(missing.headers, collapse = ", "))
+  }
+
   aru.list$lat  <- as.numeric(aru.list$lat)
   aru.list$long <- as.numeric(aru.list$long)
+  aru.list$sunregion.long <- as.numeric(aru.list$sunregion.long)
+  aru.list$sunregion.lat  <- as.numeric(aru.list$sunregion.lat)
   aru.list$date.start <- parse.simple.date(aru.list$date.start)
   aru.list$date.end   <- parse.simple.date(aru.list$date.end)
 
   ## ===========================================================================
-  ## $sunregion.type - see @details above for the four categories and what's
-  ## implemented. Only fixed.unique/fixed.pooled are supported; mobile.* stop
-  ## with a clear error.
+  ## $sunregion.type - see @details above. $sunregion.type is now required
+  ## (enforced by the header check above), so no more default-when-absent
+  ## fallback. Only "fixed.unique"/"fixed.pooled" rows are kept; every other
+  ## value (mobile.*, or a typo) is EXCLUDED with a NOTE instead of
+  ## stopping the whole run - a real behavior change from the previous
+  ## version, which hard-stopped on any mobile.* row.
   ## ===========================================================================
-  if (!"sunregion.type" %in% names(aru.list)) {
-    aru.list$sunregion.type <- "fixed.unique"
-  }
   aru.list$sunregion.type <- trimws(tolower(aru.list$sunregion.type))
 
-  valid.types <- c("fixed.unique", "fixed.pooled", "mobile.unique", "mobile.pooled")
-  bad.types <- setdiff(unique(aru.list$sunregion.type), valid.types)
-  if (length(bad.types) > 0) {
-    stop("Unrecognized $sunregion.type value(s): ", paste(bad.types, collapse = ", "),
-         ". Expected one of: ", paste(valid.types, collapse = ", "), ".")
+  allowed.types <- c("fixed.unique", "fixed.pooled")
+  keep.rows <- aru.list$sunregion.type %in% allowed.types
+  if (any(!keep.rows)) {
+    excluded <- aru.list[!keep.rows, ]
+    cat("NOTE:", nrow(excluded), "row(s) excluded - $sunregion.type is not",
+        "\"fixed.unique\"/\"fixed.pooled\":",
+        paste(unique(paste0(excluded$aru, " (", excluded$sunregion.type, ")")), collapse = ", "),
+        "\n\n")
   }
-
-  mobile.rows <- aru.list$sunregion.type %in% c("mobile.unique", "mobile.pooled")
-  if (any(mobile.rows)) {
-    stop(sum(mobile.rows), " row(s) have $sunregion.type \"mobile.unique\"/",
-         "\"mobile.pooled\", which this function does not yet implement (mobile ",
-         "logic - lat/long changing across the date range - is planned but not ",
-         "built yet). Affected ARU(s): ",
-         paste(unique(aru.list$aru[mobile.rows]), collapse = ", "),
-         ". Remove/hold these rows out until mobile support is added.")
+  aru.list <- aru.list[keep.rows, , drop = FALSE]
+  if (nrow(aru.list) == 0) {
+    stop("No rows remain after filtering to $sunregion.type \"fixed.unique\"/",
+         "\"fixed.pooled\" - nothing to generate.")
   }
 
   is.fixed.unique <- aru.list$sunregion.type == "fixed.unique"
@@ -313,20 +351,26 @@ batz.suntimes_generate <- function(dir.load = getwd(),
         paste(mixed.regions, collapse = ", "), "\n\n")
   }
 
-  ## resolve the lat/long actually used for the solar calculation:
-  ## fixed.unique -> the ARU's own exact lat/long; fixed.pooled -> one
-  ## representative (mean) lat/long per $sunregion
-  aru.list$calc.lat  <- aru.list$lat
-  aru.list$calc.long <- aru.list$long
-
-  is.fixed.pooled <- aru.list$sunregion.type == "fixed.pooled"
-  if (any(is.fixed.pooled)) {
-    pooled.centers <- aggregate(cbind(calc.lat = lat, calc.long = long) ~ sunregion,
-                                 data = aru.list[is.fixed.pooled, ], FUN = mean)
-    idx <- match(aru.list$sunregion[is.fixed.pooled], pooled.centers$sunregion)
-    aru.list$calc.lat[is.fixed.pooled]  <- pooled.centers$calc.lat[idx]
-    aru.list$calc.long[is.fixed.pooled] <- pooled.centers$calc.long[idx]
+  ## light data-entry sanity check (not requested, added to match the
+  ## $sunregion.type-consistency NOTE above): flag a $sunregion whose
+  ## $sunregion.long/$sunregion.lat aren't identical across every row that
+  ## shares it - not enforced/blocking, since the calculation below uses
+  ## each row's own value directly (no averaging happens anymore)
+  coord.per.region <- aggregate(cbind(n.long = sunregion.long, n.lat = sunregion.lat) ~ sunregion,
+                                 data = aru.list, FUN = function(x) length(unique(x)))
+  mixed.coords <- coord.per.region$sunregion[coord.per.region$n.long > 1 | coord.per.region$n.lat > 1]
+  if (length(mixed.coords) > 0) {
+    cat("NOTE: sunregion(s) with inconsistent $sunregion.long/$sunregion.lat across their ARUs:",
+        paste(mixed.coords, collapse = ", "), "\n\n")
   }
+
+  ## resolve the lat/long actually used for the solar calculation (updated
+  ## 2026-08-26, per Josh): $sunregion.long/$sunregion.lat are now used
+  ## DIRECTLY for every kept row (both fixed.unique and fixed.pooled) - see
+  ## @details above for the behavior change from the previous
+  ## exact-ARU-coords/computed-mean split.
+  aru.list$calc.lat  <- aru.list$sunregion.lat
+  aru.list$calc.long <- aru.list$sunregion.long
 
   ## ===========================================================================
   ## expand each ARU row to one row per date in its range
@@ -338,7 +382,10 @@ batz.suntimes_generate <- function(dir.load = getwd(),
       aru = row$aru, sunregion = row$sunregion,
       sunregion.type = row$sunregion.type,
       lat = row$lat, long = row$long,
+      sunregion.long = row$sunregion.long, sunregion.lat = row$sunregion.lat,
       calc.lat = row$calc.lat, calc.long = row$calc.long,
+      date.start = row$date.start, date.end = row$date.end,
+      schedual1 = row$schedual1, schedual2 = row$schedual2,
       time.zone = row$time.zone, date = dates,
       stringsAsFactors = FALSE
     )
@@ -395,10 +442,16 @@ batz.suntimes_generate <- function(dir.load = getwd(),
     date           = aru.expand$date,
     date.mon       = as.POSIXct(paste(aru.expand$date, "12:00:00")),
     sunregion      = aru.expand$sunregion,
+    sunregion.long = aru.expand$sunregion.long,
+    sunregion.lat  = aru.expand$sunregion.lat,
+    date.start     = aru.expand$date.start,
+    date.end       = aru.expand$date.end,
+    time.zone      = aru.expand$time.zone,
     sunregion.type = aru.expand$sunregion.type,
+    schedual1      = aru.expand$schedual1,
+    schedual2      = aru.expand$schedual2,
     lat            = aru.expand$lat,
     long           = aru.expand$long,
-    time.zone      = aru.expand$time.zone,
     stringsAsFactors = FALSE
   )
   aru.suntimes$suns          <- format.local(today$sunset.utc, aru.expand$time.zone)
