@@ -101,8 +101,28 @@
 #' @param dir.sub Logical, default \code{FALSE}. If \code{TRUE}, also search
 #'   every subdirectory of \code{dir.load}.
 #' @param write.output If \code{TRUE} (default), also write
-#'   \code{aru.suntimes.csv} into \code{dir.load} (with the \verb{*.unix} columns
-#'   rounded to whole seconds in the written CSV only).
+#'   \code{aru.suntimes.csv} into \code{dir.save} (with the \verb{*.unix}
+#'   columns rounded to whole seconds in the written CSV only).
+#' @param dir.save Directory to write the output CSV into when
+#'   \code{write.output = TRUE}. Default: same as \code{dir.load} - set
+#'   this separately if the output should be written somewhere other than
+#'   where the input \verb{*arulist.csv} was loaded from.
+#' @param file Character, default \code{""}: base name for the output CSV
+#'   written when \code{write.output = TRUE}. Every output file name gets
+#'   a date-range + save-time stamp appended automatically, so no two runs
+#'   ever silently overwrite each other:
+#'   \verb{<base>_<DATE1>to<DATE2>_sav<timestamp>_suntimes.csv}, where
+#'   \code{DATE1}/\code{DATE2} are the earliest/latest \code{$date} in the
+#'   output (\code{YYYYMMDD}) and \code{<timestamp>} is when the file was
+#'   written (\code{YYYYMMDDHHMMSS}, e.g. \code{sav20260826114426}).
+#'   \code{""} (default) uses \code{"aru"} as \verb{<base>}. Any other
+#'   value is used as \verb{<base>} instead - e.g. \code{file =
+#'   "projectname_suntimes.csv"} produces something like
+#'   \code{"projectname_20250101to20250202_sav20260826113700_suntimes.csv"}.
+#'   If the given value already ends in a previously-auto-generated suffix
+#'   (e.g. you passed a prior run's output file name back in), that suffix
+#'   is stripped back off first, so the file gets a fresh stamp instead of
+#'   a second one stacked on top.
 #'
 #' @return Invisibly, a list with:
 #'   \describe{
@@ -128,7 +148,9 @@
 batz.suntimes_generate <- function(dir.load = getwd(),
                                     load.pattern = "*arulist.csv",
                                     dir.sub = FALSE,
-                                    write.output = TRUE) {
+                                    write.output = TRUE,
+                                    dir.save = dir.load,
+                                    file = "") {
 
   ## convert a plain wildcard/glob suffix pattern (or vector of them) into
   ## one combined regex suitable for list.files()'s pattern= argument
@@ -399,7 +421,27 @@ batz.suntimes_generate <- function(dir.load = getwd(),
     aru.suntimes.out$suns.unix     <- round(aru.suntimes.out$suns.unix)
     aru.suntimes.out$sunr.unix     <- round(aru.suntimes.out$sunr.unix)
     aru.suntimes.out$sunr.mon.unix <- round(aru.suntimes.out$sunr.mon.unix)
-    write.csv(aru.suntimes.out, file.path(dir.load, "aru.suntimes.csv"), row.names = FALSE)
+    # ---- resolve the output file name ----------------------------------
+    # <base>_<DATE1>to<DATE2>_sav<timestamp>_suntimes.csv - see @param file
+    # above. Strip any previously-auto-generated suffix off a user-given
+    # `file` first, so feeding a prior stamped output file name back in
+    # re-stamps rather than stacking a second stamp on top of the first.
+    strip.autoname <- function(x) {
+      x <- sub("\\.csv$", "", x, ignore.case = TRUE)
+      x <- sub("_suntimes$", "", x, ignore.case = TRUE)
+      x <- sub("_sav[0-9]{14}$", "", x, ignore.case = TRUE)
+      x <- sub("_[0-9]{8}to[0-9]{8}$", "", x, ignore.case = TRUE)
+      x
+    }
+    base.name <- if (identical(file, "")) "aru" else strip.autoname(file)
+
+    date1     <- format(min(aru.suntimes$date), "%Y%m%d")
+    date2     <- format(max(aru.suntimes$date), "%Y%m%d")
+    savestamp <- paste0("sav", format(Sys.time(), "%Y%m%d%H%M%S"))
+
+    out.file <- paste0(base.name, "_", date1, "to", date2, "_", savestamp, "_suntimes.csv")
+
+    write.csv(aru.suntimes.out, file.path(dir.save, out.file), row.names = FALSE)
   }
 
   invisible(list(aru.suntimes = aru.suntimes, efficiency = efficiency))

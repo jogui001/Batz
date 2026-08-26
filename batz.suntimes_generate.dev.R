@@ -218,6 +218,30 @@ dir.load     <- getwd()
 load.pattern <- "*arulist.csv"
 dir.sub      <- FALSE
 
+## NOTE (2026-08-26, per Josh): added dir.save - a separate output-write
+## location, defaulting to dir.load - matching the same option already
+## added to batz.templogger_merge.format (see preferences.md's "Second
+## consistency pass" note). aru.suntimes.csv is now written to dir.save
+## instead of always going back into dir.load.
+dir.save     <- dir.load
+
+## NOTE (2026-08-26, per Josh, revised same day): "file" lets Josh choose
+## the output CSV's base name. The auto-generated part of the name is no
+## longer optional - EVERY output file name gets a date-range + save-time
+## stamp appended, so two runs never silently overwrite each other and the
+## date coverage is visible from the file name alone:
+##   <base>_<DATE1>to<DATE2>_sav<timestamp>_suntimes.csv
+## where DATE1/DATE2 are the earliest/latest $date in the output (YYYYMMDD)
+## and <timestamp> is when the file was written (YYYYMMDDHHMMSS). "" (the
+## default) uses "aru" as <base>. Any other value is used as <base> - but
+## first has any already-auto-generated suffix (a prior stamped run's
+## "_DATE1toDATE2_savTIMESTAMP_suntimes.csv"/".csv" tail) stripped back
+## off, so passing a previously-stamped output file name back in as `file`
+## re-stamps it instead of stacking a second date/timestamp on top. See
+## the stamping code itself, just above the write.csv() call below, for
+## the actual strip/build logic.
+file         <- ""
+
 ## convert a plain wildcard/glob suffix pattern (or vector of them) into one
 ## combined regex suitable for list.files()'s pattern= argument
 pattern.regex <- function(p) paste(vapply(p, utils::glob2rx, character(1)), collapse = "|")
@@ -480,5 +504,26 @@ aru.suntimes.out$suns.unix     <- round(aru.suntimes.out$suns.unix)
 aru.suntimes.out$sunr.unix     <- round(aru.suntimes.out$sunr.unix)
 aru.suntimes.out$sunr.mon.unix <- round(aru.suntimes.out$sunr.mon.unix)
 
-write.csv(aru.suntimes.out, file.path(dir.load, "aru.suntimes.csv"), row.names = FALSE)
-cat("\nWrote aru.suntimes.csv to", dir.load, "\n")
+## ---- resolve the output file name -----------------------------------
+## <base>_<DATE1>to<DATE2>_sav<timestamp>_suntimes.csv - see the NOTE on
+## `file` in SECTION 2 above for the full explanation. Strip any
+## previously-auto-generated suffix off a user-given `file` first, so
+## feeding a prior stamped output file name back in re-stamps rather than
+## stacking a second stamp on top of the first.
+strip.autoname <- function(x) {
+  x <- sub("\\.csv$", "", x, ignore.case = TRUE)
+  x <- sub("_suntimes$", "", x, ignore.case = TRUE)
+  x <- sub("_sav[0-9]{14}$", "", x, ignore.case = TRUE)
+  x <- sub("_[0-9]{8}to[0-9]{8}$", "", x, ignore.case = TRUE)
+  x
+}
+base.name <- if (identical(file, "")) "aru" else strip.autoname(file)
+
+date1     <- format(min(aru.suntimes$date), "%Y%m%d")
+date2     <- format(max(aru.suntimes$date), "%Y%m%d")
+savestamp <- paste0("sav", format(Sys.time(), "%Y%m%d%H%M%S"))
+
+out.file <- paste0(base.name, "_", date1, "to", date2, "_", savestamp, "_suntimes.csv")
+
+write.csv(aru.suntimes.out, file.path(dir.save, out.file), row.names = FALSE)
+cat("\nWrote", out.file, "to", dir.save, "\n")
