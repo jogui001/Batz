@@ -46,7 +46,7 @@
 #
 # TEST DATA STATUS - real files found and used directly from Josh's own
 # "4 Current  test data" folder (device-bridge access already granted):
-#   - vetted.processed.csv -> plot.data: headers match the spec's list
+#   - vetted.processed.csv -> data: headers match the spec's list
 #     EXACTLY ($spp.id $date $aru.groupby $obs $mins2.noon.min
 #     $mins2.noon.max $vetting.type). Real data: 13 rows, ARU "WTG-GOM102",
 #     dates 5/15/2026-5/21/2026, spp.id values include "All Detections"
@@ -54,7 +54,7 @@
 #     see below), "LoF"/"LoFrag" (the exact category labels just added to
 #     batz.batusa_recode.names earlier today), "Hoary bat"/"Big brown bat"/
 #     "Silver-haired bat".
-#   - plot.meta.csv -> aru.metadata.db: **real headers do NOT match the
+#   - plot.meta.csv -> fig.list: **real headers do NOT match the
 #     spec's literal list** ($plot.type $varible1 $varible2 $facet
 #     $facet.set $plot.set $date.format $date.start $date.end $xaxe
 #     $xaxe.ticks $yaxe $yaxe.ticks $ytransform). The real file instead has:
@@ -75,10 +75,10 @@
 #     certainly meant to be "yaxe.title", not a second "xaxe.title". Since
 #     R does allow (and silently mis-handles) duplicate column names when
 #     check.names = FALSE, this function explicitly checks for and stops on
-#     any duplicate column name in aru.metadata.db, rather than silently
+#     any duplicate column name in fig.list, rather than silently
 #     picking one of the two "xaxe.title" columns - **Josh: please rename
 #     the second "xaxe.title" column to "yaxe.title" in plot.meta.csv.**
-#   - aru_..._suntimes.csv -> suntimes.db: matches the spec's required list
+#   - aru_..._suntimes.csv -> suntimes: matches the spec's required list
 #     (real file is a superset - also has $sunregion.long/$sunregion.lat/
 #     $lat/$long, all fine as extra columns) - this is a real output of
 #     batz.suntimes_generate() from earlier today. **Real-data misalignment
@@ -98,7 +98,7 @@
 #     instead of silently producing a wrong plot. **Josh: please align the
 #     three real test files (same ARU name, overlapping date range) for a
 #     true end-to-end test.**
-#   - batactivity.plotoptions.csv -> default.plotaesthetics: Josh's own copy
+#   - batactivity.plotoptions.csv -> aes.default: Josh's own copy
 #     of this session's earlier plotoptions.batactivity.default.csv
 #     deliverable, but an OLDER version - still on the numeric-minutes Y
 #     axis (yaxe.limit.min = "0", $yaxe.break.interval.min), not the
@@ -106,7 +106,7 @@
 #     rather than the number of minutes" request in THIS spec (the same
 #     request, essentially, made twice today). Since this function is
 #     explicitly built against the time-of-day design, a MERGED/updated
-#     default.plotaesthetics is used here instead - the current project
+#     aes.default is used here instead - the current project
 #     master (time-of-day Y axis, $plot.order, $layer.order) plus two rows
 #     Josh had already added to his own device copy that aren't in the
 #     project master yet ($plot.width/$plot.height, trimming the trailing-
@@ -123,9 +123,9 @@
 # project convention):
 #   1. Function signature/parameter names taken directly from the "Required
 #      Inputs" section's "<-" mapping (e.g. "*vetted.processed.csv <-
-#      plot.data" reads as "the test file vetted.processed.csv is what gets
-#      loaded into the plot.data parameter for testing"): plot.data,
-#      aru.metadata.db, suntimes.db, default.plotaesthetics all take
+#      data" reads as "the test file vetted.processed.csv is what gets
+#      loaded into the data parameter for testing"): data,
+#      fig.list, suntimes, aes.default all take
 #      data frames (already loaded, e.g. via batz.datawrangler_load.files())
 #      - not file paths, matching every other batz plotting/merge function's
 #      convention. Optional project.name = "" also taken directly from spec.
@@ -135,7 +135,7 @@
 #      input file and which headers are missing" (plural "files"), read as
 #      checking everything first, consistent with how other batz functions'
 #      multi-file header checks work.
-#   3. default.plotaesthetics's own required headers: spec text here is
+#   3. aes.default's own required headers: spec text here is
 #      garbled ("batactivity.plotoptions should have all the values
 #      $category,") - read as "must have (at minimum) $category, $parameter,
 #      $default.value" (the three columns the settings-resolution logic
@@ -146,18 +146,18 @@
 #      project.name = header in batactivity.plotoptions then those those
 #      values, of the element is empty use $default.value" (read as: if
 #      `project.name` is non-blank AND matches a column name in
-#      default.plotaesthetics, use that row's value from that column for
+#      aes.default, use that row's value from that column for
 #      each parameter UNLESS it's blank, in which case fall back to
-#      $default.value) - AND SEPARATELY: "aru.metadata.db has a list of the
-#      plots to me made, if any of the headers in aru.metadata.db are the
+#      $default.value) - AND SEPARATELY: "fig.list has a list of the
+#      plots to me made, if any of the headers in fig.list are the
 #      same as the varables pulled from batactivity.plotoptions default to
-#      them" - read as aru.metadata.db's OWN per-row value for a given
+#      them" - read as fig.list's OWN per-row value for a given
 #      parameter (when that column exists there and is non-blank) takes
-#      priority over whatever default.plotaesthetics/project.name resolved
+#      priority over whatever aes.default/project.name resolved
 #      to - this is the only reading under which per-plot customization
 #      (e.g. plot.meta.csv's real $xaxe.interval = 4, overriding the
 #      generic default of "4 days") does anything at all. **Please confirm
-#      this precedence (aru.metadata.db row > project.name column >
+#      this precedence (fig.list row > project.name column >
 #      $default.value) is what was meant.**
 #   5. $facet.label's real value is a doubly-quoted string ("\"common\"" -
 #      the CSV literally contains a quoted "common") - stripped of its
@@ -173,7 +173,7 @@
 #      literal spec text for $MYSO = TRUE) is passed through
 #      batz.batusa_recode.names() like every other species name, so it
 #      resolves correctly regardless of the literal capitalization given.
-#   7. $facet maps a KEYWORD to a plot.data column to facet by - only one
+#   7. $facet maps a KEYWORD to a data column to facet by - only one
 #      keyword ("sppid" -> $spp.id) is defined by the spec/real data, so
 #      that's the only one implemented; any other value currently stops
 #      with a clear "not yet implemented" message rather than silently
@@ -190,8 +190,8 @@
 #      - same technique Josh's own original plot script used.
 #   10. Only $plot.type = "bat.detection" is implemented (the only value
 #      that appears in the real data/spec) - any other $plot.type value in
-#      aru.metadata.db is skipped with a console NOTE rather than erroring,
-#      since aru.metadata.db is described as a list of MULTIPLE plots to
+#      fig.list is skipped with a console NOTE rather than erroring,
+#      since fig.list is described as a list of MULTIPLE plots to
 #      generate and a plot-type this function doesn't yet handle shouldn't
 #      block the ones it does.
 #   11. *** THE GGPLOT2-RENDERING PORTION OF THIS SCRIPT COULD NOT BE
@@ -219,16 +219,16 @@ source("batz.batusa_recode.names.R")
 # -----------------------------------------------------------------------------
 plot.data.real              <- read.csv("vetted.processed.csv", stringsAsFactors = FALSE, check.names = FALSE)
 plot.data.real               <- plot.data.real[, names(plot.data.real) != "", drop = FALSE]   # drop the row-number column read.csv picked up from the CSV's blank first header
-aru.metadata.db.real        <- read.csv("plot.meta.csv", stringsAsFactors = FALSE, check.names = FALSE)
+aru.metadata.db.real        <- read.csv("fig.list.csv", stringsAsFactors = FALSE, check.names = FALSE)
 suntimes.db.real            <- read.csv("suntimes.csv", stringsAsFactors = FALSE, check.names = FALSE)
-default.plotaesthetics.real <- read.csv("batactivity.plotoptions.csv", stringsAsFactors = FALSE, check.names = FALSE)
+default.plotaesthetics.real <- read.csv("plotopts_first.last.csv", stringsAsFactors = FALSE, check.names = FALSE)
 
-cat("=== real plot.data ===\n"); str(plot.data.real)
-cat("\n=== real aru.metadata.db (raw column names, note the duplicate) ===\n"); print(names(aru.metadata.db.real))
-cat("\n=== real suntimes.db aru/date range ===\n")
+cat("=== real data ===\n"); str(plot.data.real)
+cat("\n=== real fig.list (raw column names, note the duplicate) ===\n"); print(names(aru.metadata.db.real))
+cat("\n=== real suntimes aru/date range ===\n")
 cat("aru values:", paste(unique(suntimes.db.real$aru), collapse = ", "), "\n")
 cat("date range:", range(as.Date(suntimes.db.real$date, format = "%m/%d/%Y")), "\n")
-cat("\n=== real plot.data aru/date range ===\n")
+cat("\n=== real data aru/date range ===\n")
 cat("aru.groupby values:", paste(unique(plot.data.real$aru.groupby), collapse = ", "), "\n")
 cat("date range:", range(as.Date(plot.data.real$date, format = "%m/%d/%Y")), "\n")
 
@@ -238,7 +238,7 @@ cat("date range:", range(as.Date(plot.data.real$date, format = "%m/%d/%Y")), "\n
 # 2026-08-27, per Josh ("The dates should start at $date.start = 4/8/2026
 # $date.end = 4/27/2026 as found in the meta files"): previously this block
 # re-dated a WTG-GOM101 suntimes stand-in onto May 2026 and overrode
-# aru.metadata.db's $plot.set/$date.start/$date.end, purely to match
+# fig.list's $plot.set/$date.start/$date.end, purely to match
 # plot.data.real's real (May) detection dates - back when suntimes.db.real
 # only covered WTG-GOM101/Jan 2025 and none of the three real files
 # overlapped at all. Both of those real gaps are now closed: Josh's own
@@ -248,7 +248,7 @@ cat("date range:", range(as.Date(plot.data.real$date, format = "%m/%d/%Y")), "\n
 # adjustment here anymore - both are used completely UNMODIFIED, matching
 # Josh's real config exactly.
 #
-# Only plot.data still needs to be synthetic: the real vetted.processed.csv
+# Only data still needs to be synthetic: the real vetted.processed.csv
 # detections are fixed in May 2026, and aru.metadata.db.real's own
 # $date.start/$date.end window is Josh's to edit at will (it has already
 # moved twice in one session: 4/8-4/27/2026, then 5/8-5/27/2026) - so rather
@@ -287,32 +287,75 @@ check.duplicates <- function(df, label) {
   NULL
 }
 
-PLOT.DATA.REQUIRED <- c("spp.id", "date", "aru.groupby", "obs",
+DATA.REQUIRED <- c("spp.id", "date", "aru.groupby", "obs",
                          "mins2.noon.min", "mins2.noon.max", "vetting.type")
-SUNTIMES.DB.REQUIRED <- c("aru", "date", "date.mon", "sunregion", "time.zone",
+SUNTIMES.REQUIRED <- c("aru", "date", "date.mon", "sunregion", "time.zone",
                            "sunregion.type", "schedual1", "schedual2", "suns",
                            "suns.unix", "sunr", "sunr.unix", "sunr.mon", "sunr.mon.unix")
-ARU.METADATA.DB.REQUIRED <- c("plot.type", "plot.name", "facet", "facet.set", "MYSO",
+FIG.LIST.REQUIRED <- c("plot.type", "plot.name", "facet", "facet.set", "MYSO",
                                "Alldect", "facet.panel", "40khzmyo", "facet.label",
                                "plot.set", "date.format", "date.start", "date.end",
                                "xaxe.interval", "xaxe.title")
-DEFAULT.PLOTAESTHETICS.REQUIRED <- c("category", "parameter", "default.value")
+AES.DEFAULT.REQUIRED <- c("category", "parameter", "default.value")
+
+# 2026-08-27, later still - real bug hit on Josh's machine: his loaded
+# aes.default was an OLDER copy of batactivity.plotoptions.csv
+# from before $panel.spacing.x was added (see the round above). The
+# column-structure check above (AES.DEFAULT.REQUIRED) only
+# verifies aes.default HAS the right columns
+# (category/parameter/default.value) - it never checked that every
+# PARAMETER ROW this function actually depends on is present. With
+# $panel.spacing.x missing, get.default("panel.spacing.x") silently
+# returned NA (its own documented behavior for an unknown parameter),
+# as.numeric(NA) stayed NA, and grid::unit(NA, "pt") only failed much
+# later and far downstream, deep inside grid's own rendering code -
+# "Error in grid.Call.graphics(C_setviewport, vp, TRUE): non-finite
+# location and/or size for viewport" - which names no setting and gives
+# no hint that a CSV row is missing. Every parameter name this function
+# looks up ONLY via get.default() (i.e. no fig.list per-job
+# override path) is now checked up front, the same way data/
+# suntimes/fig.list's own required COLUMNS already are -
+# missing rows now stop with one clear, actionable message instead of a
+# cryptic grid crash three layers of code away from the real cause.
+AES.DEFAULT.REQUIRED.PARAMETERS <- c(
+  "facpan.numcol", "plot.title.size", "plot.title.hjust", "axis.title.size",
+  "axis.text.size", "legend.text.size", "legend.title.size", "panel.spacing.x",
+  "panel.border.linewidth", "legend.position", "xaxe.interval",
+  "yaxe.break.interval", "yaxe.labelformat", "yaxe.break.labels",
+  "midnight.linetype", "midnight.color", "midnight.dots.color",
+  "midnight.dots.size", "dawn.linetype", "dawn.color", "dusk.linetype",
+  "dusk.color", "reference.line.legend.title", "crossbar.alldetections.fill",
+  "crossbar.40khzmyo.fill", "crossbar.linewidth", "crossbar.fill.legend.title",
+  "ggsave.dpi", "ggsave.units", "ggsave.width.pad", "ggsave.height.pad",
+  "output.filename.pattern", "plot.width", "plot.height"
+)
+
+check.parameters <- function(df, required, label) {
+  if (!("parameter" %in% names(df))) return(NULL)  # already reported by check.headers above
+  missing <- setdiff(required, df$parameter)
+  if (length(missing) > 0) {
+    return(sprintf("%s is missing these required $parameter rows: %s - it may be an older copy missing settings added since it was last saved",
+                    label, paste(missing, collapse = ", ")))
+  }
+  NULL
+}
 
 # -----------------------------------------------------------------------------
 # batz.plotdetections_first.last()
 # -----------------------------------------------------------------------------
-batz.plotdetections_first.last <- function(plot.data, aru.metadata.db, suntimes.db,
-                                            default.plotaesthetics, project.name = "") {
+batz.plotdetections_first.last <- function(data, fig.list, suntimes,
+                                            aes.default, project.name = "") {
 
   problems <- c(
-    check.headers(plot.data, PLOT.DATA.REQUIRED, "plot.data"),
-    check.headers(suntimes.db, SUNTIMES.DB.REQUIRED, "suntimes.db"),
-    check.headers(aru.metadata.db, ARU.METADATA.DB.REQUIRED, "aru.metadata.db"),
-    check.headers(default.plotaesthetics, DEFAULT.PLOTAESTHETICS.REQUIRED, "default.plotaesthetics"),
-    check.duplicates(plot.data, "plot.data"),
-    check.duplicates(suntimes.db, "suntimes.db"),
-    check.duplicates(aru.metadata.db, "aru.metadata.db"),
-    check.duplicates(default.plotaesthetics, "default.plotaesthetics")
+    check.headers(data, DATA.REQUIRED, "data"),
+    check.headers(suntimes, SUNTIMES.REQUIRED, "suntimes"),
+    check.headers(fig.list, FIG.LIST.REQUIRED, "fig.list"),
+    check.headers(aes.default, AES.DEFAULT.REQUIRED, "aes.default"),
+    check.parameters(aes.default, AES.DEFAULT.REQUIRED.PARAMETERS, "aes.default"),
+    check.duplicates(data, "data"),
+    check.duplicates(suntimes, "suntimes"),
+    check.duplicates(fig.list, "fig.list"),
+    check.duplicates(aes.default, "aes.default")
   )
   if (length(problems) > 0) {
     stop(paste(problems, collapse = "\n"))
@@ -328,7 +371,7 @@ batz.plotdetections_first.last <- function(plot.data, aru.metadata.db, suntimes.
   # not m/d/Y ("5/15/2026", "5/15/2026 19:56") - a real ISO-format
   # suntimes.csv silently produced 0 rows here (all dates parsed to NA
   # under a hardcoded "%m/%d/%Y" format) even though the aru/date range
-  # genuinely overlapped. plot.data/aru.metadata.db (hand-typed by Josh)
+  # genuinely overlapped. data/fig.list (hand-typed by Josh)
   # have so far always been m/d/Y, but parsing flexibly for all
   # date/datetime fields - mirroring the multi-format parse.simple.date()
   # approach already used in batz.suntimes_generate - costs nothing and
@@ -356,11 +399,11 @@ batz.plotdetections_first.last <- function(plot.data, aru.metadata.db, suntimes.
   }
 
   get.default <- function(param) {
-    row.idx <- which(default.plotaesthetics$parameter == param)
+    row.idx <- which(aes.default$parameter == param)
     if (length(row.idx) == 0) return(NA_character_)
-    val <- as.character(default.plotaesthetics$default.value[row.idx[1]])
-    if (nzchar(project.name) && project.name %in% names(default.plotaesthetics)) {
-      override <- default.plotaesthetics[[project.name]][row.idx[1]]
+    val <- as.character(aes.default$default.value[row.idx[1]])
+    if (nzchar(project.name) && project.name %in% names(aes.default)) {
+      override <- aes.default[[project.name]][row.idx[1]]
       if (!is.na(override) && nzchar(trimws(as.character(override)))) {
         val <- as.character(override)
       }
@@ -393,9 +436,9 @@ batz.plotdetections_first.last <- function(plot.data, aru.metadata.db, suntimes.
                        "Eastern small-footed myotis", "Little brown bat",
                        "Northern long-eared bat", "Tri-colored bat")
 
-  jobs <- aru.metadata.db[!is.na(aru.metadata.db$plot.type) & nzchar(trimws(aru.metadata.db$plot.type)), , drop = FALSE]
+  jobs <- fig.list[!is.na(fig.list$plot.type) & nzchar(trimws(fig.list$plot.type)), , drop = FALSE]
   if (nrow(jobs) == 0) {
-    stop("aru.metadata.db has no plot rows (every row's $plot.type is blank) - nothing to plot.")
+    stop("fig.list has no plot rows (every row's $plot.type is blank) - nothing to plot.")
   }
 
   plots <- list()
@@ -405,14 +448,14 @@ batz.plotdetections_first.last <- function(plot.data, aru.metadata.db, suntimes.
     job.label <- if (nzchar(trimws(job$plot.name))) job$plot.name else sprintf("row %d", j)
 
     if (!identical(tolower(trimws(job$plot.type)), "bat.detection")) {
-      cat(sprintf("NOTE: aru.metadata.db row for '%s' has plot.type = '%s' - skipped (only 'bat.detection' is implemented so far).\n",
+      cat(sprintf("NOTE: fig.list row for '%s' has plot.type = '%s' - skipped (only 'bat.detection' is implemented so far).\n",
                    job.label, job$plot.type))
       next
     }
 
     facet.kind <- tolower(trimws(job$facet))
     if (!identical(facet.kind, "sppid")) {
-      cat(sprintf("NOTE: aru.metadata.db row for '%s' has facet = '%s' - skipped ($facet = \"sppid\" is the only value implemented so far).\n",
+      cat(sprintf("NOTE: fig.list row for '%s' has facet = '%s' - skipped ($facet = \"sppid\" is the only value implemented so far).\n",
                    job.label, job$facet))
       next
     }
@@ -448,14 +491,14 @@ batz.plotdetections_first.last <- function(plot.data, aru.metadata.db, suntimes.
     # (except the two non-species pseudo-panels, "All detections"/"40khzmyo",
     # already canonical per batz.batusa_recode.names's own category-label
     # rows) - so a spec/typed list that's slightly off (like the
-    # "Tricolored bat" case above) still lines up with plot.data$spp.common,
+    # "Tricolored bat" case above) still lines up with data$spp.common,
     # which is always the reference table's canonical spelling, rather than
     # silently failing a plain string match.
     spp.plot <- batz.batusa_recode.names(spp.plot, output.format = "common")
     facpan   <- batz.batusa_recode.names(facpan, output.format = "common")
 
-    # ---- filter plot.data to this job's ARU + species list ----
-    pd <- plot.data
+    # ---- filter data to this job's ARU + species list ----
+    pd <- data
     pd$spp.common <- batz.batusa_recode.names(pd$spp.id, output.format = "common")
 
     plot.set.val <- trimws(job$plot.set)
@@ -472,7 +515,7 @@ batz.plotdetections_first.last <- function(plot.data, aru.metadata.db, suntimes.
     tz <- get.setting(job, "time.zone")
 
     if (nrow(pd) == 0) {
-      cat(sprintf("NOTE: aru.metadata.db row for '%s' (plot.set = '%s', %s to %s) matched 0 rows of plot.data - no plot generated. Check that $aru.groupby/$date in plot.data actually overlap this row's $plot.set/$date.start/$date.end.\n",
+      cat(sprintf("NOTE: fig.list row for '%s' (plot.set = '%s', %s to %s) matched 0 rows of data - no plot generated. Check that $aru.groupby/$date in data actually overlap this row's $plot.set/$date.start/$date.end.\n",
                    job.label, plot.set.val, date.start, date.end))
       next
     }
@@ -500,7 +543,7 @@ batz.plotdetections_first.last <- function(plot.data, aru.metadata.db, suntimes.
 
     # ---- suntimes reference lines: one row per date, no facet column, so
     # ggplot2 repeats them across every panel ----
-    sdb <- suntimes.db
+    sdb <- suntimes
     sdb$date.parsed <- parse.flex.date(sdb$date)
     if (nzchar(plot.set.val)) {
       sdb <- sdb[tolower(trimws(sdb$aru)) == tolower(plot.set.val), , drop = FALSE]
@@ -508,7 +551,7 @@ batz.plotdetections_first.last <- function(plot.data, aru.metadata.db, suntimes.
     sdb <- sdb[!is.na(sdb$date.parsed) & sdb$date.parsed >= date.start & sdb$date.parsed <= date.end, , drop = FALSE]
 
     if (nrow(sdb) == 0) {
-      cat(sprintf("NOTE: aru.metadata.db row for '%s' matched 0 rows of suntimes.db for plot.set = '%s' between %s and %s - Dawn/Dusk/Midnight reference lines will be empty. Check that suntimes.db's $aru/$date actually cover this plot.set/date range.\n",
+      cat(sprintf("NOTE: fig.list row for '%s' matched 0 rows of suntimes for plot.set = '%s' between %s and %s - Dawn/Dusk/Midnight reference lines will be empty. Check that suntimes's $aru/$date actually cover this plot.set/date range.\n",
                    job.label, plot.set.val, date.start, date.end))
     }
 
@@ -543,7 +586,7 @@ batz.plotdetections_first.last <- function(plot.data, aru.metadata.db, suntimes.
     panel.labels <- batz.batusa_recode.names(panel.levels.raw, output.format = facet.label.fmt)
     names(panel.labels) <- panel.levels.raw
 
-    # panel drawing order, per default.plotaesthetics' $plot.order where possible
+    # panel drawing order, per aes.default' $plot.order where possible
     plot.order.raw <- strsplit(get.setting(job, "plot.order"), ";", fixed = TRUE)[[1]]
     ordered.levels <- intersect(trimws(plot.order.raw), panel.levels.raw)
     ordered.levels <- c(ordered.levels, setdiff(panel.levels.raw, ordered.levels))
@@ -555,8 +598,8 @@ batz.plotdetections_first.last <- function(plot.data, aru.metadata.db, suntimes.
     yaxe.limit.max <- get.setting(job, "yaxe.limit.max")
     if (!grepl("^[0-9]{1,2}:[0-9]{2}$", yaxe.limit.min) || !grepl("^[0-9]{1,2}:[0-9]{2}$", yaxe.limit.max)) {
       stop(sprintf(paste("$yaxe.limit.min/$yaxe.limit.max ('%s'/'%s') don't look like HH:MM time-of-day",
-                          "values - default.plotaesthetics may be an old, numeric-minutes-based copy of",
-                          "batactivity.plotoptions.csv. Please use the current time-of-day version",
+                          "values - aes.default may be an old, numeric-minutes-based copy of",
+                          "plotopts_first.last.csv. Please use the current time-of-day version",
                           "(see this function's dev-script header comment)."),
                     yaxe.limit.min, yaxe.limit.max))
     }
@@ -627,7 +670,7 @@ batz.plotdetections_first.last <- function(plot.data, aru.metadata.db, suntimes.
       # never get.setting(p$job, "xaxe.interval") - so a plot's OWN
       # $xaxe.interval value (e.g. Josh's real plot.meta.csv row) was
       # silently ignored no matter what it said, always falling through to
-      # default.plotaesthetics's generic value instead - the exact same
+      # aes.default's generic value instead - the exact same
       # class of settings-resolution bug as the "gome"/project.name mismatch
       # found earlier this session, just in a different call site that
       # never got updated when the get.setting()/get.default() split was
@@ -683,7 +726,7 @@ batz.plotdetections_first.last <- function(plot.data, aru.metadata.db, suntimes.
       #   "short" - the original behavior: a line connecting each real
       #             suntimes date's (constant) midnight value, which is
       #             visually a flat line but only spans from the first to
-      #             the last date actually present in suntimes.db for this
+      #             the last date actually present in suntimes for this
       #             plot - can fall short of the panel edges if that's
       #             narrower than the full date.start-date.end window.
       #   "dots"  - 2026-08-27, per Josh ("add an option to
@@ -716,7 +759,7 @@ batz.plotdetections_first.last <- function(plot.data, aru.metadata.db, suntimes.
       # shared reference date) regardless of any specific real calendar
       # date, so it's computed directly from p$y.start rather than from
       # p$sdb - this also means "long" mode still works even when
-      # suntimes.db has 0 matched rows for this plot (sdb would be empty).
+      # suntimes has 0 matched rows for this plot (sdb would be empty).
       midnight.const <- p$y.start + 12 * 3600
       # "dots" resolves its own grey color independent of $midnight.color
       # (which none/long/short keep using, default black, unchanged) - see
@@ -869,7 +912,7 @@ batz.plotdetections_first.last <- function(plot.data, aru.metadata.db, suntimes.
               # 2026-08-27, later still - a documentation correction, NOT a
               # behavior change: while investigating Josh's "eastern small
               # footed myotis is cut off" report, found that the
-              # default.plotaesthetics note on $axis.title.size has always
+              # aes.default note on $axis.title.size has always
               # incorrectly claimed strip.text (the facet panel title)
               # "reuses" $axis.title.size - confirmed via ggplot2's own
               # get_element_tree() and a minimal test plot that this was
@@ -960,15 +1003,15 @@ batz.plotdetections_first.last <- function(plot.data, aru.metadata.db, suntimes.
 cat("\n\n########## TEST 1: header checks catch real problems ##########\n")
 tryCatch(
   batz.plotdetections_first.last(
-    plot.data = plot.data.synth[, setdiff(names(plot.data.synth), "obs")],  # drop a required header
-    aru.metadata.db = aru.metadata.db.synth,
-    suntimes.db = suntimes.synth,
-    default.plotaesthetics = default.plotaesthetics.synth
+    data = plot.data.synth[, setdiff(names(plot.data.synth), "obs")],  # drop a required header
+    fig.list = aru.metadata.db.synth,
+    suntimes = suntimes.synth,
+    aes.default = default.plotaesthetics.synth
   ),
   error = function(e) cat("Got expected error:\n", conditionMessage(e), "\n")
 )
 
-cat("\n\n########## TEST 2: duplicate column name in aru.metadata.db is caught ##########\n")
+cat("\n\n########## TEST 2: duplicate column name in fig.list is caught ##########\n")
 # 2026-08-27: Josh fixed the real plot.meta.csv's duplicate "xaxe.title"
 # header himself (renamed the second one to "yaxe.title"), so the real file
 # no longer exercises this path. Construct a synthetic duplicate so the
@@ -978,10 +1021,10 @@ aru.metadata.db.dup <- aru.metadata.db.real
 names(aru.metadata.db.dup)[names(aru.metadata.db.dup) == "yaxe.title"] <- "xaxe.title"
 tryCatch(
   batz.plotdetections_first.last(
-    plot.data = plot.data.real,
-    aru.metadata.db = aru.metadata.db.dup,
-    suntimes.db = suntimes.db.real,
-    default.plotaesthetics = default.plotaesthetics.real
+    data = plot.data.real,
+    fig.list = aru.metadata.db.dup,
+    suntimes = suntimes.db.real,
+    aes.default = default.plotaesthetics.real
   ),
   error = function(e) cat("Got expected error:\n", conditionMessage(e), "\n")
 )
@@ -995,28 +1038,28 @@ cat("\n\n########## TEST 3: real files as-delivered, completely UNMODIFIED - the
 # Josh's own file edits, not by anything in this test script. This is the
 # actual milestone: what Josh's real files produce, run exactly as given.
 result3 <- batz.plotdetections_first.last(
-  plot.data = plot.data.real,
-  aru.metadata.db = aru.metadata.db.real,
-  suntimes.db = suntimes.db.real,
-  default.plotaesthetics = default.plotaesthetics.real
+  data = plot.data.real,
+  fig.list = aru.metadata.db.real,
+  suntimes = suntimes.db.real,
+  aes.default = default.plotaesthetics.real
 )
 cat("Number of plots produced:", length(result3$plots), "(expected 1 - a real, unmodified, end-to-end render straight from Josh's own files)\n")
 
 cat("\n\n########## TEST 3b: REAL data, narrower aligned window - now redundant with TEST 3 above (kept as an additional real-data window variant, not because it's still needed to prove alignment) ##########\n")
 result3b <- batz.plotdetections_first.last(
-  plot.data = plot.data.real,
-  aru.metadata.db = aru.metadata.db.real,
-  suntimes.db = suntimes.db.real,
-  default.plotaesthetics = default.plotaesthetics.real
+  data = plot.data.real,
+  fig.list = aru.metadata.db.real,
+  suntimes = suntimes.db.real,
+  aes.default = default.plotaesthetics.real
 )
 cat("Number of plots produced:", length(result3b$plots), "(expected 1)\n")
 
 cat("\n\n########## TEST 4: SYNTHETIC aligned data - full pipeline, default (NE) facet list ##########\n")
 result4 <- batz.plotdetections_first.last(
-  plot.data = plot.data.synth,
-  aru.metadata.db = aru.metadata.db.synth,
-  suntimes.db = suntimes.synth,
-  default.plotaesthetics = default.plotaesthetics.synth
+  data = plot.data.synth,
+  fig.list = aru.metadata.db.synth,
+  suntimes = suntimes.synth,
+  aes.default = default.plotaesthetics.synth
 )
 cat("Number of plots produced:", length(result4$plots), "\n")
 if (length(result4$plots) > 0) {
@@ -1033,10 +1076,10 @@ aru.metadata.db.test5 <- aru.metadata.db.synth
 aru.metadata.db.test5$MYSO <- TRUE
 aru.metadata.db.test5$Alldect <- FALSE   # so 40khzmyo should get its OWN panel now
 result5 <- batz.plotdetections_first.last(
-  plot.data = plot.data.synth,
-  aru.metadata.db = aru.metadata.db.test5,
-  suntimes.db = suntimes.synth,
-  default.plotaesthetics = default.plotaesthetics.synth
+  data = plot.data.synth,
+  fig.list = aru.metadata.db.test5,
+  suntimes = suntimes.synth,
+  aes.default = default.plotaesthetics.synth
 )
 if (length(result5$plots) > 0) {
   cat("spp.plot included Indiana bat (canonicalized):",
@@ -1050,10 +1093,10 @@ default.plotaesthetics.override <- default.plotaesthetics.synth
 default.plotaesthetics.override$TestProject <- ""
 default.plotaesthetics.override$TestProject[default.plotaesthetics.override$parameter == "legend.position"] <- "top"
 result6 <- batz.plotdetections_first.last(
-  plot.data = plot.data.synth,
-  aru.metadata.db = aru.metadata.db.synth,
-  suntimes.db = suntimes.synth,
-  default.plotaesthetics = default.plotaesthetics.override,
+  data = plot.data.synth,
+  fig.list = aru.metadata.db.synth,
+  suntimes = suntimes.synth,
+  aes.default = default.plotaesthetics.override,
   project.name = "TestProject"
 )
 if (length(result6$plots) > 0) {
@@ -1085,10 +1128,10 @@ if (requireNamespace("ggplot2", quietly = TRUE)) {
     aru.metadata.db.mid <- aru.metadata.db.synth
     aru.metadata.db.mid$midnight <- mode
     result.mid <- batz.plotdetections_first.last(
-      plot.data = plot.data.synth,
-      aru.metadata.db = aru.metadata.db.mid,
-      suntimes.db = suntimes.synth,
-      default.plotaesthetics = default.plotaesthetics.synth
+      data = plot.data.synth,
+      fig.list = aru.metadata.db.mid,
+      suntimes = suntimes.synth,
+      aes.default = default.plotaesthetics.synth
     )
     if (length(result.mid$ggplots) > 0) check.midnight.layer(result.mid, mode)
   }
@@ -1103,10 +1146,10 @@ if (requireNamespace("ggplot2", quietly = TRUE)) {
     aru.metadata.db.midcol <- aru.metadata.db.synth
     aru.metadata.db.midcol$midnight <- mode.check
     result.midcol <- batz.plotdetections_first.last(
-      plot.data = plot.data.synth,
-      aru.metadata.db = aru.metadata.db.midcol,
-      suntimes.db = suntimes.synth,
-      default.plotaesthetics = default.plotaesthetics.synth
+      data = plot.data.synth,
+      fig.list = aru.metadata.db.midcol,
+      suntimes = suntimes.synth,
+      aes.default = default.plotaesthetics.synth
     )
     g.midcol <- result.midcol$ggplots[[1]]
     geom.classes.midcol <- sapply(g.midcol$layers, function(l) class(l$geom)[1])
@@ -1166,10 +1209,10 @@ if (requireNamespace("ggplot2", quietly = TRUE)) {
       aru.metadata.db.khz <- aru.metadata.db.synth
       aru.metadata.db.khz[["40khzmyo"]] <- khz.flag.val
       result.khz <- batz.plotdetections_first.last(
-        plot.data = plot.data.khz,
-        aru.metadata.db = aru.metadata.db.khz,
-        suntimes.db = suntimes.synth,
-        default.plotaesthetics = default.plotaesthetics.synth
+        data = plot.data.khz,
+        fig.list = aru.metadata.db.khz,
+        suntimes = suntimes.synth,
+        aes.default = default.plotaesthetics.synth
       )
       expected.breaks <- if (khz.flag.val) "40kHzMyo" else "(none)"
       if (length(result.khz$ggplots) > 0) {
@@ -1182,7 +1225,7 @@ if (requireNamespace("ggplot2", quietly = TRUE)) {
       }
     }
   }
-  cat("  40kHzMyo fill color (from default.plotaesthetics):",
+  cat("  40kHzMyo fill color (from aes.default):",
       default.plotaesthetics.synth$default.value[default.plotaesthetics.synth$parameter == "crossbar.40khzmyo.fill"],
       "(expected: black)\n")
 } else {
@@ -1190,56 +1233,56 @@ if (requireNamespace("ggplot2", quietly = TRUE)) {
 }
 
 cat("\n\n########## TEST 9: settings-resolution precedence with project.name = 'gome' ##########\n")
-# Per Josh, 2026-08-27: confirm the code checks aru.metadata.db (plot.meta.csv)
-# FIRST, then default.plotaesthetics' column matching project.name (now
+# Per Josh, 2026-08-27: confirm the code checks fig.list (plot.meta.csv)
+# FIRST, then aes.default' column matching project.name (now
 # literally named "gome" - see the note in build_merged_plotoptions.R about
 # why a column named "project.name" never matched any real project.name
 # value), THEN falls back to default.value.
 default.plotaesthetics.gome <- default.plotaesthetics.synth
 default.plotaesthetics.gome$gome[default.plotaesthetics.gome$parameter == "yaxe.title"] <- "Hour of Monitoring (gome override)"
 default.plotaesthetics.gome$gome[default.plotaesthetics.gome$parameter == "legend.position"] <- "top"
-# dawn.color is left blank in both aru.metadata.db and the gome column, so
+# dawn.color is left blank in both fig.list and the gome column, so
 # it should fall all the way through to default.value ("blue").
 
-# Case (a): aru.metadata.db's OWN $yaxe.title ("Hour of mointoring", the real
+# Case (a): fig.list's OWN $yaxe.title ("Hour of mointoring", the real
 # typo'd value from the renamed duplicate xaxe.title column) is non-blank, so
 # it must win over BOTH the gome column and the default - even though both
 # of those also have a value defined for this same parameter.
 result9a <- batz.plotdetections_first.last(
-  plot.data = plot.data.synth,
-  aru.metadata.db = aru.metadata.db.synth,
-  suntimes.db = suntimes.synth,
-  default.plotaesthetics = default.plotaesthetics.gome,
+  data = plot.data.synth,
+  fig.list = aru.metadata.db.synth,
+  suntimes = suntimes.synth,
+  aes.default = default.plotaesthetics.gome,
   project.name = "gome"
 )
-cat("Case (a) plot.meta.csv value present -> y-axis label:",
+cat("Case (a) fig.list.csv value present -> y-axis label:",
     if (length(result9a$ggplots) > 0) result9a$ggplots[[1]]$scales$get_scales("y")$name else "(no plot)",
     "(expected: '\\nHour of mointoring' - job's own value wins)\n")
 
-# Case (b): remove aru.metadata.db's $yaxe.title entirely for this row (as if
+# Case (b): remove fig.list's $yaxe.title entirely for this row (as if
 # Josh's plot.meta.csv never had that column at all) - the gome column's
 # override should now win over the default.
 aru.metadata.db.nojob <- aru.metadata.db.synth
 aru.metadata.db.nojob$yaxe.title <- NULL
 result9b <- batz.plotdetections_first.last(
-  plot.data = plot.data.synth,
-  aru.metadata.db = aru.metadata.db.nojob,
-  suntimes.db = suntimes.synth,
-  default.plotaesthetics = default.plotaesthetics.gome,
+  data = plot.data.synth,
+  fig.list = aru.metadata.db.nojob,
+  suntimes = suntimes.synth,
+  aes.default = default.plotaesthetics.gome,
   project.name = "gome"
 )
-cat("Case (b) plot.meta.csv value ABSENT -> y-axis label:",
+cat("Case (b) fig.list.csv value ABSENT -> y-axis label:",
     if (length(result9b$ggplots) > 0) result9b$ggplots[[1]]$scales$get_scales("y")$name else "(no plot)",
     "(expected: '\\nHour of Monitoring (gome override)' - gome column wins over default)\n")
-cat("Case (b) legend.position (no aru.metadata.db column at all):",
+cat("Case (b) legend.position (no fig.list column at all):",
     if (length(result9b$plots) > 0) result9b$plots[[1]]$resolved.legend.position else "(no plot)",
     "(expected: 'top' - gome column wins over default 'bottom')\n")
 
-# Case (c): neither aru.metadata.db nor the gome column has a value for
+# Case (c): neither fig.list nor the gome column has a value for
 # dawn.color - should fall all the way through to default.value.
-cat("Case (c) dawn.color (blank in both aru.metadata.db and the gome column):",
+cat("Case (c) dawn.color (blank in both fig.list and the gome column):",
     if (length(result9b$plots) > 0) result9b$plots[[1]]$resolved.dawn.color else "(no plot)",
-    "(expected: 'blue' - default.value, since neither plot.meta.csv nor gome define it)\n")
+    "(expected: 'blue' - default.value, since neither fig.list.csv nor gome define it)\n")
 
 cat("\n\n########## TEST 10: $xaxe.interval is read per-plot and produces exactly N evenly-spaced x-axis labels ##########\n")
 # 2026-08-27, per Josh ("plot.meta$xaxe.interval = 4 which should make
@@ -1271,24 +1314,47 @@ if (requireNamespace("ggplot2", quietly = TRUE)) {
   aru.metadata.db.xa7 <- aru.metadata.db.synth
   aru.metadata.db.xa7$xaxe.interval <- 7
   result.xa7 <- batz.plotdetections_first.last(
-    plot.data = plot.data.synth,
-    aru.metadata.db = aru.metadata.db.xa7,
-    suntimes.db = suntimes.synth,
-    default.plotaesthetics = default.plotaesthetics.synth
+    data = plot.data.synth,
+    fig.list = aru.metadata.db.xa7,
+    suntimes = suntimes.synth,
+    aes.default = default.plotaesthetics.synth
   )
   check.xaxe.breaks(result.xa7, "override $xaxe.interval = 7", 7)
 
   aru.metadata.db.xabad <- aru.metadata.db.synth
   aru.metadata.db.xabad$xaxe.interval <- "not-a-number"
   result.xabad <- batz.plotdetections_first.last(
-    plot.data = plot.data.synth,
-    aru.metadata.db = aru.metadata.db.xabad,
-    suntimes.db = suntimes.synth,
-    default.plotaesthetics = default.plotaesthetics.synth
+    data = plot.data.synth,
+    fig.list = aru.metadata.db.xabad,
+    suntimes = suntimes.synth,
+    aes.default = default.plotaesthetics.synth
   )
   check.xaxe.breaks(result.xabad, "invalid $xaxe.interval = 'not-a-number' (expect fallback to 2)", 2)
 } else {
   cat("ggplot2 not available - skipping TEST 10\n")
 }
+
+cat("\n\n########## TEST 11: an aes.default missing a required $parameter row stops with a clear message, not a cryptic grid crash ##########\n")
+# 2026-08-27, later still - reproduces the real error Josh hit on his own
+# machine: an older aes.default (missing $panel.spacing.x, added
+# earlier this same round) let get.default("panel.spacing.x") silently
+# return NA, which only surfaced deep inside grid's own rendering code as
+# "Error in grid.Call.graphics(C_setviewport, vp, TRUE): non-finite
+# location and/or size for viewport" - no mention of which setting was the
+# real cause. Confirms the new check.parameters() guard catches this up
+# front instead, with a message naming the actual missing row.
+default.plotaesthetics.missingparam <- default.plotaesthetics.synth[
+  default.plotaesthetics.synth$parameter != "panel.spacing.x", , drop = FALSE]
+result.missingparam <- tryCatch({
+  batz.plotdetections_first.last(
+    data = plot.data.synth,
+    fig.list = aru.metadata.db.synth,
+    suntimes = suntimes.synth,
+    aes.default = default.plotaesthetics.missingparam
+  )
+  "NO ERROR - this should have stopped"
+}, error = function(e) conditionMessage(e))
+cat("Result with $panel.spacing.x row removed:\n", result.missingparam, "\n")
+cat("(expected: a clear message naming 'panel.spacing.x' as a missing required $parameter row, not a grid/viewport error)\n")
 
 cat("\n\n########## ALL TESTS COMPLETED ##########\n")
