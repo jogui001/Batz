@@ -30,10 +30,12 @@
 #     state.soc, fed.proposed. No blank rows, no duplicate keys in latin/
 #     common/code4/code6 (checked programmatically before building this).
 #     On 2026-08-25 three more columns were added (hibernation.strat,
-#     phonic.group, notes - see add_bat_traits.R), making it 54 x 15. This
-#     dev script reads the CSV from disk each run, so it always reflects
-#     whatever's currently in NAbat.names.csv - only new *test* coverage
-#     needed to be added below, no data-loading change was required.
+#     phonic.group, notes - see add_bat_traits.R), making it 54 x 15. On
+#     2026-08-27, 8 more ROWS were added (non-species detection/category
+#     labels, see point 10 below), making it 62 x 15. This dev script reads
+#     the CSV from disk each run, so it always reflects whatever's currently
+#     in NAbat.names.csv - only new *test* coverage needed to be added below,
+#     no data-loading change was required.
 #   - "NAbat.namestest" (the actual test-input file named in the spec) was
 #     NOT supplied and could not be found anywhere in this session or via
 #     the connected-device folders (the "hildas" folder-access prompt timed
@@ -101,6 +103,34 @@
 #      once across the WHOLE data frame (all columns flattened together),
 #      not per column - consistent with how batz.datawrangler_rename's
 #      missing.count/missing.list behave for data frame input.
+#   10. ADDED 2026-08-27, per Josh's request ("update batz.batusa_recode.names
+#      with new entries of All detections, 40KHzMyo, HiF, LoF, HiFrag,
+#      LoFrag, Multiple, Social - ignore case when matching and use these
+#      formats"): these 8 non-species detection/category labels are now
+#      recognized. They are NOT a separate lookup mechanism - they're 8
+#      ordinary new ROWS appended to the same nabat.names reference table,
+#      so they go through the exact same match.cols/normalize() logic as
+#      every species row (no new code path needed). For each new row,
+#      latin/common/code4/code6 are all set to the identical literal string
+#      (e.g. all four = "40KHzMyo") - this means (a) matching works no
+#      matter which of the four "kinds" of identifier an input looks like,
+#      and (b) output.format = any of latin/common/code4/code6 all return
+#      the exact literal casing Josh gave, never a re-cased variant. The
+#      other 11 output.format columns (fedstatus, iucnstatus, states.*,
+#      state.soc, fed.proposed, hibernation.strat, phonic.group) are set to
+#      "" for these 8 rows, since none of them semantically apply to a
+#      non-species label; notes carries a short explanatory string instead
+#      of "" for these rows only. These values live in NAbat.names.csv
+#      itself now (updated 2026-08-27), not just in the function - see the
+#      csv's own row count (62, was 54) and the 8 new rows appended at the
+#      end. Matching is case-insensitive by the SAME mechanism already used
+#      for species (normalize()'s tolower()) - no separate case-insensitivity
+#      logic was needed or added. Internal dashes/underscores in an input
+#      (e.g. "hi-f", "hi_f") do NOT match "HiF", since "HiF" itself has no
+#      internal separator to normalize away - consistent with how e.g.
+#      "silverhairedbat" (no separator) would not match "Silver-haired bat"
+#      either; only whitespace/dash/underscore *equivalence* is assumed, not
+#      their removal.
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -115,6 +145,7 @@ nabat.names[] <- lapply(nabat.names, function(col) trimws(as.character(col)))
 cat("=== nabat.names (real reference database) ===\n")
 cat("dim:", dim(nabat.names), "\n")
 print(head(nabat.names[, c("latin", "common", "code4", "code6")], 10))
+print(tail(nabat.names[, c("latin", "common", "code4", "code6")], 8))
 
 # SYNTHETIC test vector (NAbat.namestest stand-in - see caveat above) built
 # from real species in the reference file, mixing formats/case/punctuation,
@@ -126,7 +157,18 @@ nabat.namestest <- c(
   "not.a.real.bat", "COTOIN", "eastern small-footed myotis"
 )
 
-cat("\n=== nabat.namestest (synthetic input vector) ===\n"); print(nabat.namestest)
+# ADDED 2026-08-27: synthetic test vector covering the 8 new category-label
+# rows, mixing case (and, for a couple, dash/underscore where the label has
+# no internal separator to normalize - deliberately included as a
+# should-NOT-match check per assumption 10 above).
+nabat.categorytest <- c(
+  "all detections", "ALL DETECTIONS", "40khzmyo", "40KHZMYO", "hif", "HIF",
+  "lof", "LOF", "hifrag", "HIFRAG", "lofrag", "LOFRAG", "multiple", "MULTIPLE",
+  "social", "SOCIAL", "  Hif  ", "hi-f", "hi_f"
+)
+
+cat("\n=== nabat.namestest (synthetic species input vector) ===\n"); print(nabat.namestest)
+cat("\n=== nabat.categorytest (synthetic category-label input vector) ===\n"); print(nabat.categorytest)
 
 # -----------------------------------------------------------------------------
 # normalize(): matching-only normalization - trims, folds case, and treats
@@ -275,3 +317,39 @@ print(batz.batusa_recode.names(c("nole", "maca"), output.format = "notes"))
 cat("\n=== data frame input recoded to 'hibernation.strat' (regression check\n",
     "that the new columns work through the data-frame path too) ===\n", sep = "")
 print(batz.batusa_recode.names(test.df, output.format = "hibernation.strat"))
+
+# -----------------------------------------------------------------------------
+# NEW tests, added 2026-08-27, for the 8 non-species category-label rows
+# -----------------------------------------------------------------------------
+cat("\n=== NEW 2026-08-27: category labels match case-insensitively, default\n",
+    "output.format = 'common' ===\n", sep = "")
+print(batz.batusa_recode.names(nabat.categorytest))
+
+cat("\n=== NEW 2026-08-27: 'hi-f'/'hi_f' do NOT match 'HiF' (no internal\n",
+    "separator in the reference value to normalize away - see assumption 10)\n",
+    "=> both should print unchanged in the tail of the vector above, and this\n",
+    "single-element call should trigger the WARNING path ===\n", sep = "")
+print(batz.batusa_recode.names("hi-f"))
+
+cat("\n=== NEW 2026-08-27: output.format = latin/code4/code6 for a category\n",
+    "label all return the identical literal casing given ===\n", sep = "")
+print(batz.batusa_recode.names("hifrag", output.format = "latin"))
+print(batz.batusa_recode.names("hifrag", output.format = "code4"))
+print(batz.batusa_recode.names("hifrag", output.format = "code6"))
+
+cat("\n=== NEW 2026-08-27: species-only output.format columns return '' for\n",
+    "category-label rows ===\n", sep = "")
+print(batz.batusa_recode.names(c("hif", "social", "multiple"), output.format = "fedstatus"))
+print(batz.batusa_recode.names(c("hif", "social", "multiple"), output.format = "phonic.group"))
+
+cat("\n=== NEW 2026-08-27: species and category labels mixed in one call ===\n")
+print(batz.batusa_recode.names(c("epfu", "LoF", "Hoary_Bat", "Social", "not.a.real.bat")))
+
+cat("\n=== NEW 2026-08-27: species and category labels mixed in a data frame ===\n")
+test.df2 <- data.frame(
+  col.a = c("epfu", "HIF", "not.a.real.bat"),
+  col.b = c("Hoary_Bat", "lofrag", "Social"),
+  stringsAsFactors = FALSE
+)
+print(test.df2)
+print(batz.batusa_recode.names(test.df2, output.format = "code4"))

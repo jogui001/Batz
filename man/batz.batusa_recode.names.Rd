@@ -37,7 +37,20 @@ is one of \code{"Lof"} (echolocation calls below 35 kHz), \code{"Hif"}
 acoustics literature, not a source file Josh supplied for these two
 columns specifically - see \code{NAbat.names.csv}'s own \code{$notes}
 column (also selectable via \code{output.format = "notes"}) for the
-species where a call is genuinely split or lower-confidence.}
+species where a call is genuinely split or lower-confidence.
+
+Eight non-species detection/category labels are also recognized as
+ordinary rows in the same reference table (added 2026-08-27, per
+Josh): \code{"All detections"}, \code{"40KHzMyo"}, \code{"HiF"},
+\code{"LoF"}, \code{"HiFrag"}, \code{"LoFrag"}, \code{"Multiple"},
+\code{"Social"}. They match the same case-insensitive way as species
+names (e.g. \code{"hif"}, \code{"HIF"}, \code{"Hif"} all match), and
+\code{output.format} values of \code{"latin"}/\code{"common"}/
+\code{"code4"}/\code{"code6"} all return the exact literal casing shown
+above. Every other \code{output.format} (\code{"fedstatus"},
+\code{"states.present"}, \code{"phonic.group"}, etc.) returns
+\code{""} for these eight, since those columns don't apply to a
+non-species label.}
 
 \item{grammar.dash}{Logical, default \code{TRUE}. Hyphens are ignored
 (treated the same as a space) when MATCHING an input value regardless of
@@ -49,10 +62,10 @@ every hyphen in a matched value with a space instead (e.g.
 }
 \value{
 A vector (if \code{data} is a vector) or data frame (if
-\code{data} is a data frame) of the same length/dimensions as
-\code{data}, with every element re-expressed in \code{output.format}.
-An input element with no match anywhere in the reference table is
-returned unchanged (not \code{NA}, no error).
+  \code{data} is a data frame) of the same length/dimensions as
+  \code{data}, with every element re-expressed in \code{output.format}.
+  An input element with no match anywhere in the reference table is
+  returned unchanged (not \code{NA}, no error).
 }
 \description{
 Given a vector or data frame containing any mix of common name, latin
@@ -76,12 +89,13 @@ list).
 
 The reference table (54 North American bat species, as supplied in
 Josh's \code{NAbat.names.csv}, now including \code{$hibernation.strat}/
-\code{$phonic.group}/\code{$notes} added 2026-08-25) is embedded directly
-in this function - there is no reference-file-path argument, since the
-spec's inputs are just \code{data}/\code{output.format}/\code{grammar.dash}.
-To update the species list later, replace the \code{nabat.names} data
-frame inside this function with a newer export of the same 15-column
-format.
+\code{$phonic.group}/\code{$notes} added 2026-08-25, plus 8 non-species
+detection/category label rows added 2026-08-27 - see \code{output.format}
+above) is embedded directly in this function - there is no
+reference-file-path argument, since the spec's inputs are just
+\code{data}/\code{output.format}/\code{grammar.dash}. To update the
+species list later, replace the \code{nabat.names} data frame inside
+this function with a newer export of the same 15-column format.
 }
 \examples{
 \dontrun{
@@ -102,6 +116,9 @@ batz.batusa_recode.names("tabr", output.format = "hibernation.strat")
 
 batz.batusa_recode.names("mylu", output.format = "phonic.group")
 # -> "Hif"
+
+batz.batusa_recode.names(c("hif", "LOFRAG", "40khzmyo"))
+# -> "HiF"      "LoFrag"   "40KHzMyo"
 }
 
 }
