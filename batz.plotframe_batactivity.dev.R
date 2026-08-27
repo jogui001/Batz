@@ -40,11 +40,12 @@
 #  2. **$sunregion isn't produced by any existing batz function at all** -
 #     it has to come from a separate join (e.g. against an *arulist.csv
 #     via $aru.name, the way WTG.arulist.csv relates $aru to $sunregion).
-#     This function just requires the column to already be present in
-#     `data` - it doesn't do any joining itself. Flagging so it's clear
-#     this function expects a FULLY ASSEMBLED input (vetted data + a
-#     call-datetime column + a sunregion join), not raw output from any
-#     one upstream function by itself.
+#     ORIGINALLY (2026-08-27) this function just required the column to
+#     already be present in `data` - it did no joining itself. **This has
+#     since changed - see assumption #13 below: the function now loads the
+#     arulist and does this join itself.** Left this note as-is (historical
+#     - it was true when written) rather than rewritten, per this file's
+#     usual convention.
 #
 #  3. **Parameter renamed: "date" -> "date.groupby".** The spec's Optional
 #     Inputs literally name this parameter "date" (default $date.mon) -
@@ -165,6 +166,41 @@
 #     line up 1:1 with $sunregion the way $aru.name does) now stops with
 #     a message naming the exact group and the conflicting values,
 #     instead of silently picking one. See TEST 9/TEST 10 below.
+#
+# 13. **Follow-up (2026-08-27, later still, per Josh: new dir.load/
+#     load.pattern/dir.sub params, "load arulist from the file ending
+#     with 'arulist.csv'", "append the $sunregion to the bioactivity file
+#     by matching the $aru or $aru.name between the two files") -
+#     $sunregion is no longer a required column of `data` at all (removed
+#     from required.headers - see assumption #2 above, left as historical
+#     since it was true when written).** This function now loads its own
+#     arulist file(s) and joins $sunregion internally, matching the
+#     directory-scanning pattern already used by
+#     batz.vettedacoustics_merge.format() (dir.load/load.pattern/dir.sub,
+#     glob2rx()-based regex, per-file tryCatch(read.csv()) with
+#     header-normalization, skip-with-message for an invalid file) - three
+#     new params: dir.load (default getwd()), load.pattern (default
+#     "*.arulist.csv"), dir.sub (default TRUE - note this default is TRUE
+#     here, unlike that function's own dir.sub = FALSE default, per
+#     Josh's explicit spec for this parameter). The join is always
+#     data$aru.name vs arulist$aru specifically (never whatever
+#     aru.groupby happens to be set to, since aru.groupby can be
+#     overridden to something like "serial" that has no relationship to
+#     the arulist's $aru values). No arulist file found at all, or file(s)
+#     found but none with both $aru and $sunregion columns, is a hard
+#     stop() - there'd be no way to populate $sunregion. An unmatched
+#     $aru.name value gets $sunregion = NA with a warning() listing every
+#     such value (not a hard stop, matching this function's existing
+#     tolerant-but-vocal style elsewhere). Two interpretive calls flagged
+#     for Josh to confirm: (1) any $sunregion already present in the
+#     `data` passed in is silently OVERWRITTEN by this fresh join, not
+#     preserved or checked for agreement - see TEST 15; (2) multiple files
+#     matching load.pattern are all loaded and row-bound together rather
+#     than treated as an error - see TEST 13. Verified against the real
+#     WTG.arulist.csv (every real test-data $aru.name resolves to
+#     "penobscotbay", matching exactly) plus new synthetic-file tests for
+#     the loading mechanics themselves - see TEST 4/6/9/10 (reworked) and
+#     TEST 11-15 (new) below.
 # ---------------------------------------------------------------------------
 
 ## ===========================================================================
@@ -184,13 +220,20 @@ batz.plotframe_batactivity <- function(data,
                                         aru.groupby = "aru.name",
                                         alldetections = TRUE,
                                         trim.noise = TRUE,
-                                        trim.noid = TRUE) {
+                                        trim.noid = TRUE,
+                                        dir.load = getwd(),
+                                        load.pattern = c("*.arulist.csv"),
+                                        dir.sub = TRUE) {
 
   if (!is.data.frame(data)) stop("`data` must be a data frame.")
 
+  ## $sunregion is NOT in this list (and no longer needs to already be a
+  ## column of `data`) - it's now loaded from an *arulist.csv file and
+  ## joined on below, replacing the old "join it in yourself first"
+  ## requirement - see assumption #13.
   required.headers <- c("filename", "date.mon", "manid", "autoid.kp",
                          "autoid.sb", "lat", "serial", "lon", "aru.name",
-                         "date", "time", "call.datetime", "sunregion")
+                         "date", "time", "call.datetime")
   missing.headers <- setdiff(required.headers, names(data))
   if (length(missing.headers) > 0) {
     stop("`data` is missing required header(s): ",
@@ -202,6 +245,50 @@ batz.plotframe_batactivity <- function(data,
       stop("`", colname, "` (from spp.id/date.groupby/aru.groupby) is not ",
            "a column of `data`.")
     }
+  }
+
+  ## --- load $sunregion from an *arulist.csv file and join it onto `data`
+  ## by matching `data$aru.name` against the arulist file's own `$aru`
+  ## column (always $aru.name specifically, regardless of what aru.groupby
+  ## points to - aru.groupby can be overridden to an unrelated column like
+  ## "serial", which wouldn't correspond to the arulist's $aru values at
+  ## all) - see assumption #13 ---------------------------------------------
+  normalize.header <- function(x) tolower(gsub("[^[:alnum:]]", "", x))
+  arulist.regex <- paste(utils::glob2rx(load.pattern), collapse = "|")
+  arulist.files <- list.files(dir.load, pattern = arulist.regex, recursive = dir.sub,
+                               full.names = TRUE, ignore.case = TRUE)
+  if (length(arulist.files) == 0) {
+    stop("No file matching `load.pattern` (\"", paste(load.pattern, collapse = ", "),
+         "\") found in `dir.load` (\"", dir.load, "\", dir.sub = ", dir.sub, ") - ",
+         "an arulist file is required to look up $sunregion.")
+  }
+
+  arulist <- data.frame(aru = character(0), sunregion = character(0), stringsAsFactors = FALSE)
+  arulist.skipped <- character(0)
+  for (f in arulist.files) {
+    tmp <- tryCatch(read.csv(f, stringsAsFactors = FALSE, check.names = FALSE),
+                     error = function(e) NULL)
+    if (is.null(tmp)) { arulist.skipped <- c(arulist.skipped, paste0(f, " (could not read file)")); next }
+    names(tmp) <- normalize.header(names(tmp))
+    if (!all(c("aru", "sunregion") %in% names(tmp))) {
+      arulist.skipped <- c(arulist.skipped, paste0(f, " (missing $aru and/or $sunregion column)")); next
+    }
+    arulist <- rbind(arulist, tmp[, c("aru", "sunregion"), drop = FALSE])
+  }
+  if (length(arulist.skipped) > 0) {
+    message("batz.plotframe_batactivity: skipped arulist file(s) that didn't have ",
+            "both an $aru and $sunregion column: ", paste(arulist.skipped, collapse = "; "))
+  }
+  if (nrow(arulist) == 0) {
+    stop("Found ", length(arulist.files), " file(s) matching `load.pattern` in `dir.load`, ",
+         "but none had both an `$aru` and `$sunregion` column - cannot look up $sunregion.")
+  }
+
+  data$sunregion <- arulist$sunregion[match(data$aru.name, arulist$aru)]
+  unmatched.arus <- unique(data$aru.name[is.na(data$sunregion)])
+  if (length(unmatched.arus) > 0) {
+    warning("$aru.name value(s) not found in the loaded arulist - $sunregion will be NA for: ",
+            paste(unmatched.arus, collapse = ", "))
   }
 
   if (duplicates.remove) {
@@ -255,10 +342,11 @@ batz.plotframe_batactivity <- function(data,
   safe.min <- function(x) if (all(is.na(x))) NA_real_ else min(x, na.rm = TRUE)
   safe.max <- function(x) if (all(is.na(x))) NA_real_ else max(x, na.rm = TRUE)
 
-  ## $sunregion is expected to be a per-detector attribute (joined in via
-  ## $aru.name before this function ever sees `data` - see Details/@param
-  ## data), so every row within a single spp.id/date.groupby/aru.groupby
-  ## group should already agree on it. Collapsed with a consistency check
+  ## $sunregion is a per-detector attribute (now joined onto `data` above,
+  ## from the loaded arulist, by $aru.name - see assumption #13), so every
+  ## row within a single spp.id/date.groupby/aru.groupby group should
+  ## already agree on it whenever aru.groupby == "aru.name" (the default).
+  ## Collapsed with a consistency check
   ## rather than silently taking the first value, so a real data problem
   ## (e.g. aru.groupby overridden to a column that doesn't line up 1:1
   ## with $sunregion) surfaces as a clear error instead of a silently
@@ -346,11 +434,14 @@ batz.plotframe_batactivity <- function(data,
 ## ===========================================================================
 ## SECTION 2: build a realistic test input by running the ACTUAL,
 ## already-built batz.vettedacoustics_merge.format() against a real raw
-## vetted file, then bolting on the one extra column this new function
-## needs beyond that function's own output ($sunregion, joined from the
-## real WTG.arulist.csv per assumption #2) - no $call.datetime rename
-## step needed since batz.vettedacoustics_merge.format() already outputs
-## a column with that exact name (see assumption #1)
+## vetted file. Unlike before assumption #13, test.data is NOT manually
+## bolted with a $sunregion column here anymore - the function under test
+## now loads and joins $sunregion itself (from the real WTG.arulist.csv,
+## via the new dir.load/load.pattern/dir.sub params), so every call below
+## passes dir.load = arulist.dir (the folder the real WTG.arulist.csv
+## lives in) instead. No $call.datetime rename step needed since
+## batz.vettedacoustics_merge.format() already outputs a column with that
+## exact name (see assumption #1).
 ## ===========================================================================
 source("/home/claude/vettedacoustics_work2/batz.batusa_recode.names.R")
 source("/home/claude/vettedacoustics_work2/batz.vettedacoustics_merge.format.R")
@@ -361,19 +452,28 @@ res <- batz.vettedacoustics_merge.format(dir.load = vetted.dir,
                                           trim.noise = FALSE)   # keep NOISE rows in this test set on purpose
 test.data <- res$vetted.merged
 
-arulist <- read.csv("/mnt/user-data/uploads/4 Current  test data/WTG.arulist.csv",
-                     stringsAsFactors = FALSE, check.names = FALSE)
-test.data$sunregion <- arulist$sunregion[match(test.data$aru.name, arulist$aru)]
+## the folder the real WTG.arulist.csv lives in - passed as dir.load to
+## every test call below so the function under test can find it (its
+## default dir.load = getwd() would look in this script's own working
+## directory instead, which doesn't have it)
+arulist.dir <- "/mnt/user-data/uploads/4 Current  test data"
 
-cat("Built test.data:", nrow(test.data), "rows,", ncol(test.data), "cols\n")
+## loaded here too (independently of the function under test) purely so
+## TEST 9 below has something to cross-check the function's OWN internal
+## join against
+real.arulist <- read.csv(file.path(arulist.dir, "WTG.arulist.csv"),
+                          stringsAsFactors = FALSE, check.names = FALSE)
+
+cat("Built test.data:", nrow(test.data), "rows,", ncol(test.data), "cols (no $sunregion column yet - ",
+    "the function under test loads/joins that itself now)\n")
 print(names(test.data))
-cat("any NA sunregion?", any(is.na(test.data$sunregion)), "\n\n")
+cat("\n")
 
 ## ===========================================================================
 ## SECTION 3: tests
 ## ===========================================================================
 cat("=== TEST 1: defaults (spp.id = manid.sb, alldetections = TRUE) ===\n")
-r1 <- batz.plotframe_batactivity(test.data)
+r1 <- batz.plotframe_batactivity(test.data, dir.load = arulist.dir)
 print(head(r1, 8))
 cat("n rows total:", nrow(r1), "\n")
 cat("has 'All Detections' rows?", any(r1$spp.id == "All Detections"), "\n")
@@ -381,22 +481,25 @@ cat("$vetting.type unique:", paste(unique(r1$vetting.type), collapse=", "), "\n"
 cat("mins2.noon range:", range(c(r1$mins2.noon.min, r1$mins2.noon.max), na.rm = TRUE), "(sanity: should be within roughly 0-1440)\n\n")
 
 cat("=== TEST 2: alldetections = FALSE (species breakdown only) ===\n")
-r2 <- batz.plotframe_batactivity(test.data, alldetections = FALSE)
+r2 <- batz.plotframe_batactivity(test.data, alldetections = FALSE, dir.load = arulist.dir)
 print(head(r2, 5))
 cat("has 'All Detections' rows (should be FALSE)?", any(r2$spp.id == "All Detections"), "\n\n")
 
 cat("=== TEST 3: custom spp.id = 'manid.kp', custom aru.groupby = 'serial' ===\n")
-r3 <- batz.plotframe_batactivity(test.data, spp.id = "manid.kp", aru.groupby = "serial")
+r3 <- batz.plotframe_batactivity(test.data, spp.id = "manid.kp", aru.groupby = "serial", dir.load = arulist.dir)
 print(head(r3, 5))
 cat("$vetting.type:", unique(r3$vetting.type), "\n\n")
 
 cat("=== TEST 4: missing-header error ===\n")
-bad.data <- test.data[, setdiff(names(test.data), c("sunregion", "lat"))]
-tryCatch(batz.plotframe_batactivity(bad.data),
+## $sunregion is no longer in required.headers (assumption #13) so this
+## no longer strips it - just $lat, the remaining required column that's
+## cheapest to drop for this check
+bad.data <- test.data[, setdiff(names(test.data), c("lat"))]
+tryCatch(batz.plotframe_batactivity(bad.data, dir.load = arulist.dir),
          error = function(e) cat("Correctly errored:", conditionMessage(e), "\n\n"))
 
 cat("=== TEST 5: invalid spp.id column ===\n")
-tryCatch(batz.plotframe_batactivity(test.data, spp.id = "not.a.real.column"),
+tryCatch(batz.plotframe_batactivity(test.data, spp.id = "not.a.real.column", dir.load = arulist.dir),
          error = function(e) cat("Correctly errored:", conditionMessage(e), "\n\n"))
 
 cat("=== TEST 6: trim.noise/trim.noid on a bigger, real dataset with actual NOISE/blank rows ===\n")
@@ -404,9 +507,20 @@ res.big <- batz.vettedacoustics_merge.format(dir.load = "/mnt/user-data/uploads/
                                               load.pattern = "*FinalVetted.csv", dir.sub = FALSE,
                                               trim.noise = FALSE, bat.names = "common")
 big.data <- res.big$vetted.merged
-big.data$sunregion <- "test.region"   # FinalVetted.csv's ARUs aren't in WTG.arulist.csv - stub for this test only
-r6.notrim  <- batz.plotframe_batactivity(big.data, trim.noise = FALSE, trim.noid = FALSE)
-r6.trim    <- batz.plotframe_batactivity(big.data, trim.noise = TRUE,  trim.noid = TRUE)
+## FinalVetted.csv's ARUs aren't in the real WTG.arulist.csv, so this is
+## also exercising the unmatched-$aru.name warning path (see assumption
+## #13) - every row should come back with $sunregion = NA here, on
+## purpose, rather than being manually stubbed like before #13
+r6.notrim <- withCallingHandlers(
+  batz.plotframe_batactivity(big.data, trim.noise = FALSE, trim.noid = FALSE, dir.load = arulist.dir),
+  warning = function(w) {
+    cat("Got expected unmatched-$aru.name warning:", substr(conditionMessage(w), 1, 90), "...\n")
+    invokeRestart("muffleWarning")
+  })
+r6.trim <- suppressWarnings(
+  batz.plotframe_batactivity(big.data, trim.noise = TRUE, trim.noid = TRUE, dir.load = arulist.dir))
+cat("all $sunregion NA in TEST 6 output (expected, since big.data's ARUs aren't in the real arulist)?",
+    all(is.na(r6.notrim$sunregion)), "\n")
 all.notrim <- sum(r6.notrim[r6.notrim$spp.id == "All Detections", "obs"])
 all.trim   <- sum(r6.trim[r6.trim$spp.id == "All Detections", "obs"])
 species.noise.count <- sum(r6.notrim[tolower(r6.notrim$spp.id) == "noise" & r6.notrim$spp.id != "All Detections", "obs"])
@@ -417,8 +531,8 @@ cat("noise still present in per-species breakdown even when trimmed for All Dete
 
 cat("=== TEST 7: duplicates.remove ===\n")
 dup.data <- rbind(test.data, test.data[1:5, ])
-r7.dedup   <- batz.plotframe_batactivity(dup.data, duplicates.remove = TRUE)
-r7.nodedup <- batz.plotframe_batactivity(dup.data, duplicates.remove = FALSE)
+r7.dedup   <- batz.plotframe_batactivity(dup.data, duplicates.remove = TRUE, dir.load = arulist.dir)
+r7.nodedup <- batz.plotframe_batactivity(dup.data, duplicates.remove = FALSE, dir.load = arulist.dir)
 cat("obs sum with dedup:", sum(r7.dedup[r7.dedup$spp.id=="All Detections","obs"]),
     " vs without:", sum(r7.nodedup[r7.nodedup$spp.id=="All Detections","obs"]), "\n\n")
 
@@ -433,26 +547,101 @@ names(small)[names(small) == "sppaccp"]                <- "autoid.sb"
 ## unaffected by the code-level $call.datetime standardization, so it
 ## still needs adapting here to match the function's required header
 names(small)[names(small) == "call.time"]              <- "call.datetime"
-r8 <- batz.plotframe_batactivity(small, spp.id = "autoid.sb")
+r8 <- suppressWarnings(batz.plotframe_batactivity(small, spp.id = "autoid.sb", dir.load = arulist.dir))
 print(r8)
 
-cat("\n=== TEST 9: $sunregion is carried through into plfr.batsummary ===\n")
+cat("\n=== TEST 9: $sunregion is loaded/joined internally and carried through into plfr.batsummary ===\n")
 cat("has $sunregion column?", "sunregion" %in% names(r1), "\n")
 print(head(r1[, c("aru.groupby", "sunregion")], 8))
 ## cross-check: for defaults (aru.groupby = aru.name), every output row's
-## $sunregion should match the arulist join used to build test.data
-check.sun <- merge(r1, unique(test.data[, c("aru.name", "sunregion")]),
-                    by.x = "aru.groupby", by.y = "aru.name", suffixes = c("", ".expected"))
-cat("any mismatch vs arulist join?", any(check.sun$sunregion != check.sun$sunregion.expected), "\n")
-cat("any NA sunregion in output (should be FALSE - test.data's join left none blank)?",
+## $sunregion should match real.arulist (loaded independently in SECTION 2,
+## purely for this check) - NOT test.data, which no longer carries its own
+## pre-joined $sunregion column now that the function loads it internally
+check.sun <- merge(r1, unique(real.arulist[, c("aru", "sunregion")]),
+                    by.x = "aru.groupby", by.y = "aru", suffixes = c("", ".expected"))
+cat("any mismatch vs real.arulist?", any(check.sun$sunregion != check.sun$sunregion.expected), "\n")
+cat("any NA sunregion in output (should be FALSE - every real test-data $aru.name is in WTG.arulist.csv)?",
     any(is.na(r1$sunregion)), "\n\n")
 
 cat("=== TEST 10: inconsistent $sunregion within one spp.id/date.groupby/aru.groupby group stops with a clear error ===\n")
-conflict.data <- test.data
-dup.row <- conflict.data[1, , drop = FALSE]
-dup.row$sunregion <- paste0(dup.row$sunregion, "_CONFLICT")   # same spp.id/date.mon/aru.name as row 1, different sunregion
-conflict.data <- rbind(conflict.data, dup.row)
-tryCatch(batz.plotframe_batactivity(conflict.data),
+## the real WTG.arulist.csv has NO variation in $sunregion (both its ARUs
+## map to "penobscotbay"), so a genuine conflict can't be produced against
+## it - built a small synthetic arulist (2 distinct sunregion values) and
+## synthetic data with two rows sharing one $serial value (the
+## aru.groupby used here) but different $aru.name values that resolve to
+## those two different sunregions
+conflict.dir <- tempfile("arulist_conflict_")
+dir.create(conflict.dir)
+write.csv(data.frame(aru = c("CONFLICT_ARU_A", "CONFLICT_ARU_B"),
+                      sunregion = c("north.region", "south.region"),
+                      stringsAsFactors = FALSE),
+          file.path(conflict.dir, "conflict.arulist.csv"), row.names = FALSE)
+
+conflict.data <- test.data[1:2, ]
+conflict.data$aru.name <- c("CONFLICT_ARU_A", "CONFLICT_ARU_B")
+conflict.data$serial   <- "SHARED_SERIAL"     # forces both rows into one aru.groupby = "serial" group
+conflict.data$manid.sb <- conflict.data$manid.sb[1]   # same spp.id value for both rows
+conflict.data$date.mon <- conflict.data$date.mon[1]   # same date.groupby value for both rows
+
+tryCatch(batz.plotframe_batactivity(conflict.data, aru.groupby = "serial", dir.load = conflict.dir),
          error = function(e) cat("Correctly errored:", conditionMessage(e), "\n\n"))
+
+cat("=== TEST 11: no file matching load.pattern found in dir.load -> hard stop ===\n")
+empty.dir <- tempfile("empty_arulist_dir_")
+dir.create(empty.dir)
+tryCatch(batz.plotframe_batactivity(test.data, dir.load = empty.dir),
+         error = function(e) cat("Correctly errored:", conditionMessage(e), "\n\n"))
+
+cat("=== TEST 12: arulist file found but missing $aru/$sunregion columns -> skipped (message), then hard stop (no usable file) ===\n")
+badcols.dir <- tempfile("badcols_arulist_dir_")
+dir.create(badcols.dir)
+write.csv(data.frame(notaru = "X", notsunregion = "Y", stringsAsFactors = FALSE),
+          file.path(badcols.dir, "bad.arulist.csv"), row.names = FALSE)
+tryCatch(
+  withCallingHandlers(
+    batz.plotframe_batactivity(test.data, dir.load = badcols.dir),
+    message = function(m) {
+      cat("Got expected skip-message:", substr(conditionMessage(m), 1, 90), "...\n")
+      invokeRestart("muffleMessage")
+    }),
+  error = function(e) cat("Correctly errored (hard stop, no usable arulist file):", conditionMessage(e), "\n\n"))
+
+cat("=== TEST 13: multiple valid arulist files matching load.pattern are merged (row-bound) together ===\n")
+multi.dir <- tempfile("multi_arulist_dir_")
+dir.create(multi.dir)
+write.csv(data.frame(aru = "MULTI_ARU_A", sunregion = "regionA", stringsAsFactors = FALSE),
+          file.path(multi.dir, "part1.arulist.csv"), row.names = FALSE)
+write.csv(data.frame(aru = "MULTI_ARU_B", sunregion = "regionB", stringsAsFactors = FALSE),
+          file.path(multi.dir, "part2.arulist.csv"), row.names = FALSE)
+multi.data <- test.data[1:2, ]
+multi.data$aru.name <- c("MULTI_ARU_A", "MULTI_ARU_B")
+multi.data$manid.sb <- multi.data$manid.sb[1]
+multi.data$date.mon <- multi.data$date.mon[1]
+r13 <- batz.plotframe_batactivity(multi.data, dir.load = multi.dir)
+cat("both files' sunregion values present in output (regionA and regionB)?",
+    all(c("regionA", "regionB") %in% r13$sunregion), "\n\n")
+
+cat("=== TEST 14: dir.sub = TRUE (default) finds a nested arulist file; dir.sub = FALSE does not ===\n")
+nested.parent <- tempfile("nested_arulist_parent_")
+dir.create(nested.parent)
+nested.sub <- file.path(nested.parent, "subdir")
+dir.create(nested.sub)
+write.csv(data.frame(aru = "NESTED_ARU", sunregion = "nested.region", stringsAsFactors = FALSE),
+          file.path(nested.sub, "nested.arulist.csv"), row.names = FALSE)
+nest.data <- test.data[1, , drop = FALSE]
+nest.data$aru.name <- "NESTED_ARU"
+r14.sub <- batz.plotframe_batactivity(nest.data, dir.load = nested.parent, dir.sub = TRUE)
+cat("dir.sub = TRUE finds the nested file, sunregion resolved?",
+    "nested.region" %in% r14.sub$sunregion, "\n")
+tryCatch(batz.plotframe_batactivity(nest.data, dir.load = nested.parent, dir.sub = FALSE),
+         error = function(e) cat("dir.sub = FALSE correctly can't find the nested file, errors:",
+                                  conditionMessage(e), "\n\n"))
+
+cat("=== TEST 15: a pre-existing $sunregion column in the input data is silently overwritten by the fresh join ===\n")
+overwrite.data <- test.data
+overwrite.data$sunregion <- "BOGUS_PRESET_VALUE"
+r15 <- batz.plotframe_batactivity(overwrite.data, dir.load = arulist.dir)
+cat("bogus preset value survived (should be FALSE)?", any(r15$sunregion == "BOGUS_PRESET_VALUE"), "\n")
+cat("real arulist value present instead (should be TRUE)?", any(r15$sunregion == "penobscotbay"), "\n\n")
 
 cat("\nAll dev-script tests completed.\n")
