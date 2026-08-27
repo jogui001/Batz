@@ -4,18 +4,10 @@
 \alias{batz.vettedacoustics_merge.format}
 \title{Merge vetted bat-acoustic-call files (k-Pro/Kaleidoscope or SonoBat) into one master table}
 \usage{
-batz.vettedacoustics_merge.format(
-  dir.load = getwd(),
-  load.pattern = c("*vetted.csv"),
-  dir.sub = FALSE,
-  duplicates.remove = TRUE,
-  log.file = FALSE,
-  bat.names = "code4",
-  manid.kp = TRUE,
-  manid.sb = TRUE,
-  trim.noise = TRUE,
-  trim.noid = FALSE
-)
+batz.vettedacoustics_merge.format(dir.load = getwd(), load.pattern = c("*vetted.csv"),
+  dir.sub = FALSE, duplicates.remove = TRUE, log.file = FALSE,
+  bat.names = "code4", manid.kp = TRUE, manid.sb = TRUE, trim.noise = TRUE,
+  trim.noid = FALSE)
 }
 \arguments{
 \item{dir.load}{Character, default \code{getwd()}. Directory to scan.}
@@ -63,12 +55,12 @@ SonoBat's auto ID). See Details.}
 }
 \value{
 Invisibly, a named list: \code{vetted.merged} (always), and
-\code{vetted.merged_log.file} (only if \code{log.file = TRUE}). As a
-side effect, the same object(s) are also assigned directly into the
-calling environment (same auto-assign convention as
-\code{batz.arumeta_merge.format}/\code{batz.datawrangler_load.files}),
-so a bare call with no assignment populates \code{vetted.merged}
-(and \code{vetted.merged_log.file}) directly.
+  \code{vetted.merged_log.file} (only if \code{log.file = TRUE}). As a
+  side effect, the same object(s) are also assigned directly into the
+  calling environment (same auto-assign convention as
+  \code{batz.arumeta_merge.format}/\code{batz.datawrangler_load.files}),
+  so a bare call with no assignment populates \code{vetted.merged}
+  (and \code{vetted.merged_log.file}) directly.
 }
 \description{
 Searches a directory (and its subdirectories, if \code{dir.sub = TRUE})
@@ -134,48 +126,48 @@ spec itself calls it "military time"). The trailing junk
 pipeline.} Once the steps above finish, the (still 11-column) table is
 put through a further pipeline:
 \enumerate{
-\item \strong{Positional rename.} Josh's own rename list, given
-verbatim, was missing a comma between \code{"autoid.sb"} and
-\code{"lat"} - read as a typo, not a real 10-element list. The 11
-existing columns (in the order produced by the steps above:
-\code{filename, monitoringnight, speciesmanualid,
+  \item \strong{Positional rename.} Josh's own rename list, given
+    verbatim, was missing a comma between \code{"autoid.sb"} and
+    \code{"lat"} - read as a typo, not a real 10-element list. The 11
+    existing columns (in the order produced by the steps above:
+    \code{filename, monitoringnight, speciesmanualid,
     wakaleidoscopeautoid, sppaccp, lat, serial, lon, aru.name, date,
     time}) are renamed POSITIONALLY to \code{filename, date.mon, manid,
     autoid.kp, autoid.sb, lat, serial, lon, aru.name, date, time}.
-\code{"wakaleidoscopeautoid"} becomes \code{"autoid.kp"} and
-\code{"sppaccp"} becomes \code{"autoid.sb"} - this makes sense once
-you notice the function merges files from either k-Pro/Kaleidoscope
-("kp") or SonoBat ("sb") vetting software: Kaleidoscope's own auto
-ID column becomes \code{$autoid.kp}, SonoBat's "accepted species"
-column becomes \code{$autoid.sb}.
-\item \strong{Reorder} to \code{filename, date.mon, aru.name, serial,
+    \code{"wakaleidoscopeautoid"} becomes \code{"autoid.kp"} and
+    \code{"sppaccp"} becomes \code{"autoid.sb"} - this makes sense once
+    you notice the function merges files from either k-Pro/Kaleidoscope
+    ("kp") or SonoBat ("sb") vetting software: Kaleidoscope's own auto
+    ID column becomes \code{$autoid.kp}, SonoBat's "accepted species"
+    column becomes \code{$autoid.sb}.
+  \item \strong{Reorder} to \code{filename, date.mon, aru.name, serial,
     lat, lon, manid, autoid.kp, autoid.sb, date, time}.
-\item \code{\link{batz.datawrangler_call.datetime}} is run on
-\code{$date}/\code{$time} to add \code{$call.datetime}.
-\item \code{\link{batz.batusa_recode.names}} is run on \code{$manid},
-\code{$autoid.kp}, and \code{$autoid.sb} in place, using
-\code{output.format = bat.names} (default \code{grammar.dash =
+  \item \code{\link{batz.datawrangler_call.datetime}} is run on
+    \code{$date}/\code{$time} to add \code{$call.datetime}.
+  \item \code{\link{batz.batusa_recode.names}} is run on \code{$manid},
+    \code{$autoid.kp}, and \code{$autoid.sb} in place, using
+    \code{output.format = bat.names} (default \code{grammar.dash =
     TRUE}) - any value not recognized as a species name/code (e.g.
-\code{"NOISE"}, \code{"NoID"}, or a blank) passes through
-unchanged.
-\item If \code{manid.kp = TRUE} (default), \code{$manid.kp} is created
-as a copy of (the now-recoded) \code{$manid}; every blank/NA element
-of \code{$manid.kp} is overwritten with that row's \code{$autoid.kp}
-value. ("Blank" means \code{NA} or a blank/whitespace-only string -
-not specified either way, same convention already used in
-\code{batz.datawrangler_call.datetime}.) The spec's fill-in prose
-names the source column \code{"$auto.kp"}, which doesn't exist
-anywhere - read as shorthand for \code{$autoid.kp}, matching the
-rest of the spec's own naming.
-\item If \code{manid.sb = TRUE} (default), the same thing happens for
-\code{$manid.sb}, filled from \code{$autoid.sb} ("$auto.sb" in the
-spec's prose, read the same way).
-\item If \code{trim.noise = TRUE} (default), every row whose
-\code{$manid} equals \code{"noise"} (case-insensitive, whitespace-
-trimmed) is removed.
-\item If \code{trim.noid = TRUE} (default \code{FALSE}), every row
-whose \code{$manid} equals \code{"NoID"} (case-insensitive,
-whitespace-trimmed) is removed.
+    \code{"NOISE"}, \code{"NoID"}, or a blank) passes through
+    unchanged.
+  \item If \code{manid.kp = TRUE} (default), \code{$manid.kp} is created
+    as a copy of (the now-recoded) \code{$manid}; every blank/NA element
+    of \code{$manid.kp} is overwritten with that row's \code{$autoid.kp}
+    value. ("Blank" means \code{NA} or a blank/whitespace-only string -
+    not specified either way, same convention already used in
+    \code{batz.datawrangler_call.datetime}.) The spec's fill-in prose
+    names the source column \code{"$auto.kp"}, which doesn't exist
+    anywhere - read as shorthand for \code{$autoid.kp}, matching the
+    rest of the spec's own naming.
+  \item If \code{manid.sb = TRUE} (default), the same thing happens for
+    \code{$manid.sb}, filled from \code{$autoid.sb} ("$auto.sb" in the
+    spec's prose, read the same way).
+  \item If \code{trim.noise = TRUE} (default), every row whose
+    \code{$manid} equals \code{"noise"} (case-insensitive, whitespace-
+    trimmed) is removed.
+  \item If \code{trim.noid = TRUE} (default \code{FALSE}), every row
+    whose \code{$manid} equals \code{"NoID"} (case-insensitive,
+    whitespace-trimmed) is removed.
 }
 \code{$manid.kp}/\code{$manid.sb} (when created) and \code{$call.datetime}
 are appended at the very end of the column order (not specified where
@@ -203,6 +195,33 @@ reading (leave \code{batz.batusa_recode.names()} at its own built-in
 default of \code{"common"} whenever \code{bat.names == "code4"}, making
 the new parameter inert for its default value) was considered and
 rejected as a strange thing to add a whole new parameter for.
+
+\strong{Follow-up, 2026-08-27, later still, per Josh ("update
+batz.vettedacoustics_merge.format() to include copying over $sunregion
+from input data"): $sunregion is now copied through when a raw input
+file already has it.} Read as OPTIONAL pass-through, not a new required
+header: \code{$sunregion} is NOT added to the expected-headers list
+above, so a file that lacks it is still merged normally exactly as
+before - its rows just get \code{NA} for \code{$sunregion} - matching
+this function's existing tolerant, skip-only-on-genuinely-missing-
+required-headers design. A file whose (normalized) headers DO include
+\code{sunregion} has that column carried straight through, unchanged,
+into \code{vetted.merged}, placed next to \code{$serial}/\code{$aru.name}
+(the other detector-level columns) in the final column order rather
+than at the very end. This does NOT make the function itself perform
+the join described in \code{\link{batz.plotframe_batactivity}}'s own
+documentation (matching \code{$aru.name} against an \code{*arulist.csv})
+- it only preserves \code{$sunregion} when the raw per-file input
+already carries it (e.g. a future export, or a file Josh has manually
+augmented). Verified with two new files added to a small synthetic
+fixture (one WITH a \code{sunregion}-named header in varying
+case/punctuation, one entirely WITHOUT), merged together in one call:
+the file that had it comes through with its real value, the file that
+didn't gets \code{NA}, and the real \code{FinalVetted.csv} test data
+(which has no \code{sunregion} column at all) is unaffected - still
+merges the same row count as before, just with an all-\code{NA}
+\code{$sunregion} column added. Full existing test suite (10 tests)
+re-run clean, no regressions.
 }
 \examples{
 \dontrun{

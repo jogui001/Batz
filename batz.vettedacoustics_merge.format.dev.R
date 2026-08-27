@@ -80,6 +80,24 @@
 #     $manid.kp/$manid.sb would also have been filled from the auto ID
 #     columns before being dropped - harmless, since the whole row is
 #     removed anyway.
+#
+#  7. **Follow-up (2026-08-27, later still, per Josh: "update
+#     batz.vettedacoustics_merge.format() to include copying over
+#     $sunregion from input data") - $sunregion is now copied through when
+#     a raw input file already has it.** Read as OPTIONAL pass-through, not
+#     a new required header: $sunregion is not added to expected.headers,
+#     so a file that lacks it is still merged normally (its rows just get
+#     NA for $sunregion), matching this function's existing tolerant,
+#     skip-only-on-genuinely-missing-required-headers design. A file whose
+#     (normalized) headers DO include "sunregion" has that column carried
+#     straight through, unchanged, into the merged output - placed next to
+#     $serial/$aru.name (the other detector-level columns) rather than at
+#     the very end. This still doesn't make the function itself DO the
+#     join described in batz.plotframe_batactivity's own docs (matching
+#     $aru.name against an *arulist.csv) - it only preserves $sunregion
+#     when the raw per-file input already has it, e.g. if a future export
+#     or a manually-augmented file already carries the column. See TEST 11
+#     below.
 # ---------------------------------------------------------------------------
 
 ## ===========================================================================
@@ -133,7 +151,17 @@ batz.vettedacoustics_merge.format <- function(dir.load = getwd(),
       add.log(f, "mismatched headers", paste(missing.headers, collapse = ", ")); next
     }
     if (nrow(tmp) == 0) { add.log(f, "no records", "none"); next }
+    ## $sunregion is OPTIONAL, not one of the required expected.headers - a
+    ## file is never skipped for lacking it. If a file's own (normalized)
+    ## headers happen to include it, copy those values straight through;
+    ## otherwise this file's rows get NA for $sunregion (still needs to be
+    ## joined in separately, exactly as before, for files that don't already
+    ## carry it). Captured BEFORE trimming to expected.headers below, since
+    ## that trim would otherwise silently drop it.
+    sunregion.vals <- if ("sunregion" %in% names(tmp)) as.character(tmp$sunregion) else
+      rep(NA_character_, nrow(tmp))
     tmp <- tmp[, expected.headers, drop = FALSE]
+    tmp$sunregion <- sunregion.vals
     vetted.merged <- rbind(vetted.merged, tmp)
   }
 
@@ -157,15 +185,19 @@ batz.vettedacoustics_merge.format <- function(dir.load = getwd(),
     ## --- NEW (2026-08-26): rename, reorder, call.datetime, recode.names,
     ## manid.kp/manid.sb fill-in, trim.noise/trim.noid -------------------
 
-    ## positional rename - see assumption #1 above
+    ## positional rename - see assumption #1 above ($sunregion, appended
+    ## right after $serial back in the per-file loop above, keeps its own
+    ## name here - no rename needed - see assumption #7)
     names(vetted.merged) <- c("filename", "date.mon", "manid", "autoid.kp",
-                               "autoid.sb", "lat", "serial", "lon", "aru.name",
-                               "date", "time")
+                               "autoid.sb", "lat", "serial", "sunregion", "lon",
+                               "aru.name", "date", "time")
 
-    ## reorder
+    ## reorder ($sunregion placed with the other detector-level columns,
+    ## next to $serial/$aru.name - see assumption #7)
     vetted.merged <- vetted.merged[, c("filename", "date.mon", "aru.name",
-                                        "serial", "lat", "lon", "manid",
-                                        "autoid.kp", "autoid.sb", "date", "time")]
+                                        "serial", "sunregion", "lat", "lon",
+                                        "manid", "autoid.kp", "autoid.sb",
+                                        "date", "time")]
 
     ## $call.datetime
     vetted.merged$call.datetime <- batz.datawrangler_call.datetime(
@@ -328,5 +360,61 @@ res10 <- batz.vettedacoustics_merge.format(dir.load = dir.load,
                                             dir.sub = FALSE,
                                             bat.names = "common")
 print(head(res10$vetted.merged[, c("manid", "autoid.kp", "autoid.sb")], 3))
+
+## ===========================================================================
+## SECTION 5: $sunregion pass-through (2026-08-27, per Josh - assumption #7)
+## ===========================================================================
+dir.create("testdata/sunregion", showWarnings = FALSE, recursive = TRUE)
+
+## file A: HAS a $sunregion column (any-case/punctuation header variant,
+## to confirm normalize.header() picks it up the same way it does every
+## other expected header)
+synth.with.sun <- data.frame(
+  Filename = c("SYN-B_20260601_010101_000.wav", "SYN-B_20260601_020202_000.wav"),
+  MonitoringNight = c("6/1/2026", "6/1/2026"),
+  `Species Manual ID` = c("Epfu", "Laci"),
+  `WA|Kaleidoscope|Auto ID` = c("EPTFUS", "LASNOC"),
+  SppAccp = c("Epfu", "Laci"),
+  Lat = rep("44.00000 -68.00000", 2),
+  Serial = rep("S4U00002", 2),
+  `Sun_Region` = c("penobscotbay", "penobscotbay"),
+  check.names = FALSE, stringsAsFactors = FALSE
+)
+write.csv(synth.with.sun, "testdata/sunregion/withsun_vetted.csv", row.names = FALSE)
+
+## file B: does NOT have a $sunregion column at all (same shape as the
+## original synth fixture)
+synth.no.sun <- data.frame(
+  Filename = c("SYN-C_20260601_010101_000.wav"),
+  MonitoringNight = c("6/1/2026"),
+  `Species Manual ID` = c("Epfu"),
+  `WA|Kaleidoscope|Auto ID` = c("EPTFUS"),
+  SppAccp = c("Epfu"),
+  Lat = c("45.00000 -69.00000"),
+  Serial = c("S4U00003"),
+  check.names = FALSE, stringsAsFactors = FALSE
+)
+write.csv(synth.no.sun, "testdata/sunregion/nosun_vetted.csv", row.names = FALSE)
+
+cat("\n=== TEST 11: $sunregion pass-through - present in one file, absent in another, merged together ===\n")
+res11 <- batz.vettedacoustics_merge.format(dir.load = "testdata/sunregion",
+                                            load.pattern = "*vetted.csv",
+                                            duplicates.remove = FALSE)
+print(res11$vetted.merged[, c("aru.name", "serial", "sunregion")])
+cat("has $sunregion column at all?", "sunregion" %in% names(res11$vetted.merged), "\n")
+cat("SYN-B rows (had a real $sunregion column) got 'penobscotbay'?",
+    all(res11$vetted.merged$sunregion[res11$vetted.merged$aru.name == "SYN-B"] == "penobscotbay"), "\n")
+cat("SYN-C row (no $sunregion column in its source file) got NA?",
+    is.na(res11$vetted.merged$sunregion[res11$vetted.merged$aru.name == "SYN-C"]), "\n")
+cat("column position - sunregion lands right after $serial?",
+    which(names(res11$vetted.merged) == "sunregion") == which(names(res11$vetted.merged) == "serial") + 1, "\n\n")
+
+cat("=== TEST 12: real FinalVetted.csv (no $sunregion column in the raw file) still merges fine, $sunregion all NA ===\n")
+res12 <- batz.vettedacoustics_merge.format(dir.load = dir.load,
+                                            load.pattern = "*FinalVetted.csv",
+                                            dir.sub = FALSE)
+cat("has $sunregion column?", "sunregion" %in% names(res12$vetted.merged), "\n")
+cat("all NA (no file supplied it)?", all(is.na(res12$vetted.merged$sunregion)), "\n")
+cat("row count unaffected by this change?", nrow(res12$vetted.merged) == nrow(res1$vetted.merged), "\n\n")
 
 cat("\nAll dev-script tests completed.\n")

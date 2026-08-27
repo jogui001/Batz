@@ -4,9 +4,16 @@
 \alias{batz.plotframe_batactivity}
 \title{Summarize vetted bat-acoustic detections into a plotting-ready frame}
 \usage{
-batz.plotframe_batactivity(data, duplicates.remove = TRUE,
-  spp.id = "manid.sb", date.groupby = "date.mon", aru.groupby = "aru.name",
-  alldetections = TRUE, trim.noise = TRUE, trim.noid = TRUE)
+batz.plotframe_batactivity(
+  data,
+  duplicates.remove = TRUE,
+  spp.id = "manid.sb",
+  date.groupby = "date.mon",
+  aru.groupby = "aru.name",
+  alldetections = TRUE,
+  trim.noise = TRUE,
+  trim.noid = TRUE
+)
 }
 \arguments{
 \item{data}{A data frame with every column listed above already
@@ -44,9 +51,9 @@ already shipped in \code{\link{batz.vettedacoustics_merge.format}}.)}
 }
 \value{
 A data frame, \code{plfr.batsummary}, with columns
-  \code{$spp.id}, \code{$date}, \code{$aru.groupby}, \code{$sunregion},
-  \code{$obs}, \code{$mins2.noon.min}, \code{$mins2.noon.max},
-  \code{$vetting.type}.
+\code{$spp.id}, \code{$date}, \code{$aru.groupby}, \code{$sunregion},
+\code{$obs}, \code{$mins2.noon.min}, \code{$mins2.noon.max},
+\code{$vetting.type}.
 }
 \description{
 Given a fully-assembled data frame of vetted bat-acoustic detections
@@ -58,7 +65,7 @@ monitoring night) per species, monitoring night, and detector - the
 shape you'd feed straight into a plotting function.
 }
 \details{
-\strong{Required input columns.} `data` must have every one of:
+\strong{Required input columns.} \code{data} must have every one of:
 \code{filename}, \code{date.mon}, \code{manid}, \code{autoid.kp},
 \code{autoid.sb}, \code{lat}, \code{serial}, \code{lon},
 \code{aru.name}, \code{date}, \code{time}, \code{call.datetime},
@@ -145,8 +152,8 @@ REQUIRED input column (see above) but, before this change, was
 validated and then silently dropped - never appearing anywhere in the
 output. It's collapsed the same way as every other summary column,
 one value per \code{spp.id}/\code{date.groupby}/\code{aru.groupby}
-group, and placed right after \code{$aru.groupby} in the output (it's
-a detector-level attribute, so it reads naturally grouped with
+group, and placed right after \code{$aru.groupby} in the output
+(it's a detector-level attribute, so it reads naturally grouped with
 \code{$aru.groupby} rather than at the end). Since \code{$sunregion}
 is expected to be constant for a given detector (it's joined in via
 \code{$aru.name} upstream of this function - see the required-columns
@@ -159,10 +166,10 @@ that doesn't line up 1:1 with \code{$sunregion} the way \code{$aru.name}
 does), the function now stops with a message naming the exact group
 and the conflicting values, rather than silently picking one. A group
 with no non-blank \code{$sunregion} value at all (shouldn't happen
-given the required-column check, but defensive) gets \code{NA} rather
-than erroring. No other column, ordering, or behavior changed; full
-dev-script test suite re-run against real data, plus a new test for
-the inconsistent-\code{$sunregion} error path.
+given the required-column check, but defensive) gets \code{NA}
+rather than erroring. No other column, ordering, or behavior changed;
+full dev-script test suite re-run against real data, plus a new test
+for the inconsistent-\code{$sunregion} error path.
 }
 \examples{
 \dontrun{

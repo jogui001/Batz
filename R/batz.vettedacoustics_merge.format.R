@@ -132,6 +132,33 @@
 #' the new parameter inert for its default value) was considered and
 #' rejected as a strange thing to add a whole new parameter for.
 #'
+#' \strong{Follow-up, 2026-08-27, later still, per Josh ("update
+#' batz.vettedacoustics_merge.format() to include copying over $sunregion
+#' from input data"): $sunregion is now copied through when a raw input
+#' file already has it.} Read as OPTIONAL pass-through, not a new required
+#' header: \code{$sunregion} is NOT added to the expected-headers list
+#' above, so a file that lacks it is still merged normally exactly as
+#' before - its rows just get \code{NA} for \code{$sunregion} - matching
+#' this function's existing tolerant, skip-only-on-genuinely-missing-
+#' required-headers design. A file whose (normalized) headers DO include
+#' \code{sunregion} has that column carried straight through, unchanged,
+#' into \code{vetted.merged}, placed next to \code{$serial}/\code{
+#' $aru.name} (the other detector-level columns) in the final column
+#' order rather than at the very end. This does NOT make the function
+#' itself perform the join described in \code{\link{batz.plotframe_batactivity}}'s
+#' own documentation (matching \code{$aru.name} against an
+#' \code{*arulist.csv}) - it only preserves \code{$sunregion} when the raw
+#' per-file input already carries it (e.g. a future export, or a file
+#' Josh has manually augmented). Verified with two new files added to a
+#' small synthetic fixture (one WITH a \code{sunregion}-named header in
+#' varying case/punctuation, one entirely WITHOUT), merged together in one
+#' call: the file that had it comes through with its real value, the file
+#' that didn't gets \code{NA}, and the real \code{FinalVetted.csv} test
+#' data (which has no \code{sunregion} column at all) is unaffected -
+#' still merges the same row count as before, just with an all-\code{NA}
+#' \code{$sunregion} column added. Full existing test suite (10 tests)
+#' re-run clean, no regressions.
+#'
 #' @param dir.load Character, default \code{getwd()}. Directory to scan.
 #' @param load.pattern Character vector, default \code{c("*vetted.csv")}. A
 #'   wildcard/glob pattern (or vector of patterns) identifying which files to
@@ -224,7 +251,17 @@ batz.vettedacoustics_merge.format <- function(dir.load = getwd(),
       add.log(f, "mismatched headers", paste(missing.headers, collapse = ", ")); next
     }
     if (nrow(tmp) == 0) { add.log(f, "no records", "none"); next }
+    ## $sunregion is OPTIONAL, not one of the required expected.headers - a
+    ## file is never skipped for lacking it. If a file's own (normalized)
+    ## headers happen to include it, copy those values straight through;
+    ## otherwise this file's rows get NA for $sunregion (still needs to be
+    ## joined in separately, exactly as before, for files that don't already
+    ## carry it). Captured BEFORE trimming to expected.headers below, since
+    ## that trim would otherwise silently drop it.
+    sunregion.vals <- if ("sunregion" %in% names(tmp)) as.character(tmp$sunregion) else
+      rep(NA_character_, nrow(tmp))
     tmp <- tmp[, expected.headers, drop = FALSE]
+    tmp$sunregion <- sunregion.vals
     vetted.merged <- rbind(vetted.merged, tmp)
   }
 
@@ -248,15 +285,18 @@ batz.vettedacoustics_merge.format <- function(dir.load = getwd(),
     ## --- rename, reorder, call.datetime, recode.names, manid.kp/sb
     ## fill-in, trim.noise/trim.noid - see @details above -----------------
 
-    ## positional rename
+    ## positional rename ($sunregion, appended right after $serial back in
+    ## the per-file loop above, keeps its own name here - no rename needed)
     names(vetted.merged) <- c("filename", "date.mon", "manid", "autoid.kp",
-                               "autoid.sb", "lat", "serial", "lon", "aru.name",
-                               "date", "time")
+                               "autoid.sb", "lat", "serial", "sunregion", "lon",
+                               "aru.name", "date", "time")
 
-    ## reorder
+    ## reorder ($sunregion placed with the other detector-level columns,
+    ## next to $serial/$aru.name)
     vetted.merged <- vetted.merged[, c("filename", "date.mon", "aru.name",
-                                        "serial", "lat", "lon", "manid",
-                                        "autoid.kp", "autoid.sb", "date", "time")]
+                                        "serial", "sunregion", "lat", "lon",
+                                        "manid", "autoid.kp", "autoid.sb",
+                                        "date", "time")]
 
     ## $call.datetime
     vetted.merged$call.datetime <- batz.datawrangler_call.datetime(
