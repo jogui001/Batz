@@ -4,16 +4,9 @@
 \alias{batz.plotframe_batactivity}
 \title{Summarize vetted bat-acoustic detections into a plotting-ready frame}
 \usage{
-batz.plotframe_batactivity(
-  data,
-  duplicates.remove = TRUE,
-  spp.id = "manid.sb",
-  date.groupby = "date.mon",
-  aru.groupby = "aru.name",
-  alldetections = TRUE,
-  trim.noise = TRUE,
-  trim.noid = TRUE
-)
+batz.plotframe_batactivity(data, duplicates.remove = TRUE,
+  spp.id = "manid.sb", date.groupby = "date.mon", aru.groupby = "aru.name",
+  alldetections = TRUE, trim.noise = TRUE, trim.noid = TRUE)
 }
 \arguments{
 \item{data}{A data frame with every column listed above already
@@ -51,8 +44,9 @@ already shipped in \code{\link{batz.vettedacoustics_merge.format}}.)}
 }
 \value{
 A data frame, \code{plfr.batsummary}, with columns
-\code{$spp.id}, \code{$date}, \code{$aru.groupby}, \code{$obs},
-\code{$mins2.noon.min}, \code{$mins2.noon.max}, \code{$vetting.type}.
+  \code{$spp.id}, \code{$date}, \code{$aru.groupby}, \code{$sunregion},
+  \code{$obs}, \code{$mins2.noon.min}, \code{$mins2.noon.max},
+  \code{$vetting.type}.
 }
 \description{
 Given a fully-assembled data frame of vetted bat-acoustic detections
@@ -64,7 +58,7 @@ monitoring night) per species, monitoring night, and detector - the
 shape you'd feed straight into a plotting function.
 }
 \details{
-\strong{Required input columns.} \code{data} must have every one of:
+\strong{Required input columns.} `data` must have every one of:
 \code{filename}, \code{date.mon}, \code{manid}, \code{autoid.kp},
 \code{autoid.sb}, \code{lat}, \code{serial}, \code{lon},
 \code{aru.name}, \code{date}, \code{time}, \code{call.datetime},
@@ -96,9 +90,11 @@ A per-\code{spp.id}/\code{date.groupby}/\code{aru.groupby} summary
 \code{$spp.id} (the VALUES of whichever column \code{spp.id} names),
 \code{$date} (the values of the \code{date.groupby} column),
 \code{$aru.groupby} (the values of the \code{aru.groupby} column),
-\code{$obs} (count of detections in that group), and
-\code{$mins2.noon.min}/\code{$mins2.noon.max} (the smallest/largest
-\code{$mins2.noon} in that group).
+\code{$sunregion} (the \code{data}'s own \code{$sunregion} value for
+that group - see \strong{Follow-up} below), \code{$obs} (count of
+detections in that group), and \code{$mins2.noon.min}/
+\code{$mins2.noon.max} (the smallest/largest \code{$mins2.noon} in
+that group).
 
 If \code{alldetections = FALSE}, \code{$vetting.type} (the literal
 NAME of the column \code{spp.id} points at, e.g. \code{"manid.sb"}) is
@@ -141,6 +137,32 @@ Unlike the merge/load-style \code{batz} functions, this one has no
 bare-call auto-assign side effect and writes nothing to disk - the
 original spec's own wording just says "return plfr.batsummary" (one
 data frame), so it's returned directly.
+
+\strong{Follow-up, 2026-08-27, later still, per Josh ("include
+$sunregion from the merged data"): \code{$sunregion} is now carried
+through into \code{plfr.batsummary}.} \code{$sunregion} was already a
+REQUIRED input column (see above) but, before this change, was
+validated and then silently dropped - never appearing anywhere in the
+output. It's collapsed the same way as every other summary column,
+one value per \code{spp.id}/\code{date.groupby}/\code{aru.groupby}
+group, and placed right after \code{$aru.groupby} in the output (it's
+a detector-level attribute, so it reads naturally grouped with
+\code{$aru.groupby} rather than at the end). Since \code{$sunregion}
+is expected to be constant for a given detector (it's joined in via
+\code{$aru.name} upstream of this function - see the required-columns
+paragraph above), each group is checked for internal consistency
+rather than just taking the first value seen: if a single
+\code{spp.id}/\code{date.groupby}/\code{aru.groupby} group somehow
+contains more than one distinct \code{$sunregion} value (e.g.
+\code{aru.groupby} overridden to a column, such as \code{"serial"},
+that doesn't line up 1:1 with \code{$sunregion} the way \code{$aru.name}
+does), the function now stops with a message naming the exact group
+and the conflicting values, rather than silently picking one. A group
+with no non-blank \code{$sunregion} value at all (shouldn't happen
+given the required-column check, but defensive) gets \code{NA} rather
+than erroring. No other column, ordering, or behavior changed; full
+dev-script test suite re-run against real data, plus a new test for
+the inconsistent-\code{$sunregion} error path.
 }
 \examples{
 \dontrun{

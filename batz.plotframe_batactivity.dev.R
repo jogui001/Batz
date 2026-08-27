@@ -149,6 +149,22 @@
 # 11. **No write.output/dir.save/file-writing step** - "Final output" in
 #     the spec was left blank and nothing in Steps mentions writing to
 #     disk, so this function just returns an R object.
+#
+# 12. **Follow-up (2026-08-27, later still, per Josh: "include $sunregion
+#     from the merged data") - $sunregion now carried through into
+#     plfr.batsummary, placed right after $aru.groupby.** $sunregion was
+#     already a REQUIRED input column (assumption #2 above) but was
+#     validated and then silently dropped - never appearing in the
+#     output. Collapsed the same way as every other summary column, one
+#     value per spp.id/date.groupby/aru.groupby group. Since $sunregion
+#     is expected to be constant for a given detector (joined in via
+#     $aru.name upstream - assumption #2), each group is checked for
+#     internal consistency rather than just taking the first value: a
+#     group containing more than one distinct $sunregion value (e.g. if
+#     aru.groupby is overridden to a column, like "serial", that doesn't
+#     line up 1:1 with $sunregion the way $aru.name does) now stops with
+#     a message naming the exact group and the conflicting values,
+#     instead of silently picking one. See TEST 9/TEST 10 below.
 # ---------------------------------------------------------------------------
 
 ## ===========================================================================
@@ -239,10 +255,31 @@ batz.plotframe_batactivity <- function(data,
   safe.min <- function(x) if (all(is.na(x))) NA_real_ else min(x, na.rm = TRUE)
   safe.max <- function(x) if (all(is.na(x))) NA_real_ else max(x, na.rm = TRUE)
 
+  ## $sunregion is expected to be a per-detector attribute (joined in via
+  ## $aru.name before this function ever sees `data` - see Details/@param
+  ## data), so every row within a single spp.id/date.groupby/aru.groupby
+  ## group should already agree on it. Collapsed with a consistency check
+  ## rather than silently taking the first value, so a real data problem
+  ## (e.g. aru.groupby overridden to a column that doesn't line up 1:1
+  ## with $sunregion) surfaces as a clear error instead of a silently
+  ## arbitrary pick.
+  safe.sunregion <- function(x, group.label) {
+    present <- unique(x[!is.na(x) & nzchar(trimws(x))])
+    if (length(present) == 0) return(NA_character_)
+    if (length(present) > 1) {
+      stop("`$sunregion` has more than one distinct value (",
+           paste(present, collapse = ", "), ") within a single ",
+           "spp.id/date.groupby/aru.groupby group (", group.label, ") - ",
+           "sunregion is expected to be constant per aru.groupby.")
+    }
+    present[[1]]
+  }
+
   build.summary <- function(df, spp.override = NULL) {
     spp.vals <- if (!is.null(spp.override)) rep(spp.override, nrow(df)) else as.character(df[[spp.id]])
     date.vals <- as.character(df[[date.groupby]])
     aru.vals  <- as.character(df[[aru.groupby]])
+    sun.vals  <- as.character(df$sunregion)
 
     key <- paste(spp.vals, date.vals, aru.vals, sep = "\r")
     ag.obs <- tapply(df$obs, key, sum)
@@ -252,10 +289,20 @@ batz.plotframe_batactivity <- function(data,
     keys  <- names(ag.obs)
     parts <- strsplit(keys, "\r", fixed = TRUE)
 
+    ## computed per-key (not via tapply) so a stop() from safe.sunregion()
+    ## names the actual offending spp.id/date/aru.groupby combination in a
+    ## human-readable form (the raw key itself is \r-joined and unreadable
+    ## if ever printed)
+    group.labels <- vapply(parts, function(p) sprintf("spp.id=%s, date=%s, aru.groupby=%s", p[1], p[2], p[3]), character(1))
+    names(group.labels) <- keys
+    ag.sun <- vapply(keys, function(k) safe.sunregion(sun.vals[key == k], group.label = group.labels[[k]]),
+                      character(1))
+
     out <- data.frame(
       spp.id         = vapply(parts, `[`, character(1), 1),
       date           = vapply(parts, `[`, character(1), 2),
       aru.groupby    = vapply(parts, `[`, character(1), 3),
+      sunregion      = as.character(ag.sun[keys]),
       obs            = as.numeric(ag.obs[keys]),
       mins2.noon.min = as.numeric(ag.min[keys]),
       mins2.noon.max = as.numeric(ag.max[keys]),
@@ -388,5 +435,24 @@ names(small)[names(small) == "sppaccp"]                <- "autoid.sb"
 names(small)[names(small) == "call.time"]              <- "call.datetime"
 r8 <- batz.plotframe_batactivity(small, spp.id = "autoid.sb")
 print(r8)
+
+cat("\n=== TEST 9: $sunregion is carried through into plfr.batsummary ===\n")
+cat("has $sunregion column?", "sunregion" %in% names(r1), "\n")
+print(head(r1[, c("aru.groupby", "sunregion")], 8))
+## cross-check: for defaults (aru.groupby = aru.name), every output row's
+## $sunregion should match the arulist join used to build test.data
+check.sun <- merge(r1, unique(test.data[, c("aru.name", "sunregion")]),
+                    by.x = "aru.groupby", by.y = "aru.name", suffixes = c("", ".expected"))
+cat("any mismatch vs arulist join?", any(check.sun$sunregion != check.sun$sunregion.expected), "\n")
+cat("any NA sunregion in output (should be FALSE - test.data's join left none blank)?",
+    any(is.na(r1$sunregion)), "\n\n")
+
+cat("=== TEST 10: inconsistent $sunregion within one spp.id/date.groupby/aru.groupby group stops with a clear error ===\n")
+conflict.data <- test.data
+dup.row <- conflict.data[1, , drop = FALSE]
+dup.row$sunregion <- paste0(dup.row$sunregion, "_CONFLICT")   # same spp.id/date.mon/aru.name as row 1, different sunregion
+conflict.data <- rbind(conflict.data, dup.row)
+tryCatch(batz.plotframe_batactivity(conflict.data),
+         error = function(e) cat("Correctly errored:", conditionMessage(e), "\n\n"))
 
 cat("\nAll dev-script tests completed.\n")

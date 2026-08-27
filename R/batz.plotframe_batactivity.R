@@ -40,9 +40,11 @@
 #' \code{$spp.id} (the VALUES of whichever column \code{spp.id} names),
 #' \code{$date} (the values of the \code{date.groupby} column),
 #' \code{$aru.groupby} (the values of the \code{aru.groupby} column),
-#' \code{$obs} (count of detections in that group), and
-#' \code{$mins2.noon.min}/\code{$mins2.noon.max} (the smallest/largest
-#' \code{$mins2.noon} in that group).
+#' \code{$sunregion} (the \code{data}'s own \code{$sunregion} value for
+#' that group - see \strong{Follow-up} below), \code{$obs} (count of
+#' detections in that group), and \code{$mins2.noon.min}/
+#' \code{$mins2.noon.max} (the smallest/largest \code{$mins2.noon} in
+#' that group).
 #'
 #' If \code{alldetections = FALSE}, \code{$vetting.type} (the literal
 #' NAME of the column \code{spp.id} points at, e.g. \code{"manid.sb"}) is
@@ -86,6 +88,32 @@
 #' original spec's own wording just says "return plfr.batsummary" (one
 #' data frame), so it's returned directly.
 #'
+#' \strong{Follow-up, 2026-08-27, later still, per Josh ("include
+#' $sunregion from the merged data"): \code{$sunregion} is now carried
+#' through into \code{plfr.batsummary}.} \code{$sunregion} was already a
+#' REQUIRED input column (see above) but, before this change, was
+#' validated and then silently dropped - never appearing anywhere in the
+#' output. It's collapsed the same way as every other summary column,
+#' one value per \code{spp.id}/\code{date.groupby}/\code{aru.groupby}
+#' group, and placed right after \code{$aru.groupby} in the output
+#' (it's a detector-level attribute, so it reads naturally grouped with
+#' \code{$aru.groupby} rather than at the end). Since \code{$sunregion}
+#' is expected to be constant for a given detector (it's joined in via
+#' \code{$aru.name} upstream of this function - see the required-columns
+#' paragraph above), each group is checked for internal consistency
+#' rather than just taking the first value seen: if a single
+#' \code{spp.id}/\code{date.groupby}/\code{aru.groupby} group somehow
+#' contains more than one distinct \code{$sunregion} value (e.g.
+#' \code{aru.groupby} overridden to a column, such as \code{"serial"},
+#' that doesn't line up 1:1 with \code{$sunregion} the way \code{$aru.name}
+#' does), the function now stops with a message naming the exact group
+#' and the conflicting values, rather than silently picking one. A group
+#' with no non-blank \code{$sunregion} value at all (shouldn't happen
+#' given the required-column check, but defensive) gets \code{NA}
+#' rather than erroring. No other column, ordering, or behavior changed;
+#' full dev-script test suite re-run against real data, plus a new test
+#' for the inconsistent-\code{$sunregion} error path.
+#'
 #' @param data A data frame with every column listed above already
 #'   present (see Details for how to assemble one).
 #' @param duplicates.remove Logical, default \code{TRUE}. Drop exact
@@ -113,8 +141,9 @@
 #'   already shipped in \code{\link{batz.vettedacoustics_merge.format}}.)
 #'
 #' @return A data frame, \code{plfr.batsummary}, with columns
-#'   \code{$spp.id}, \code{$date}, \code{$aru.groupby}, \code{$obs},
-#'   \code{$mins2.noon.min}, \code{$mins2.noon.max}, \code{$vetting.type}.
+#'   \code{$spp.id}, \code{$date}, \code{$aru.groupby}, \code{$sunregion},
+#'   \code{$obs}, \code{$mins2.noon.min}, \code{$mins2.noon.max},
+#'   \code{$vetting.type}.
 #'
 #' @examples
 #' \dontrun{
@@ -201,10 +230,31 @@ batz.plotframe_batactivity <- function(data,
   safe.min <- function(x) if (all(is.na(x))) NA_real_ else min(x, na.rm = TRUE)
   safe.max <- function(x) if (all(is.na(x))) NA_real_ else max(x, na.rm = TRUE)
 
+  ## $sunregion is expected to be a per-detector attribute (joined in via
+  ## $aru.name before this function ever sees `data` - see Details/@param
+  ## data), so every row within a single spp.id/date.groupby/aru.groupby
+  ## group should already agree on it. Collapsed with a consistency check
+  ## rather than silently taking the first value, so a real data problem
+  ## (e.g. aru.groupby overridden to a column that doesn't line up 1:1
+  ## with $sunregion) surfaces as a clear error instead of a silently
+  ## arbitrary pick.
+  safe.sunregion <- function(x, group.label) {
+    present <- unique(x[!is.na(x) & nzchar(trimws(x))])
+    if (length(present) == 0) return(NA_character_)
+    if (length(present) > 1) {
+      stop("`$sunregion` has more than one distinct value (",
+           paste(present, collapse = ", "), ") within a single ",
+           "spp.id/date.groupby/aru.groupby group (", group.label, ") - ",
+           "sunregion is expected to be constant per aru.groupby.")
+    }
+    present[[1]]
+  }
+
   build.summary <- function(df, spp.override = NULL) {
     spp.vals <- if (!is.null(spp.override)) rep(spp.override, nrow(df)) else as.character(df[[spp.id]])
     date.vals <- as.character(df[[date.groupby]])
     aru.vals  <- as.character(df[[aru.groupby]])
+    sun.vals  <- as.character(df$sunregion)
 
     key <- paste(spp.vals, date.vals, aru.vals, sep = "\r")
     ag.obs <- tapply(df$obs, key, sum)
@@ -214,10 +264,20 @@ batz.plotframe_batactivity <- function(data,
     keys  <- names(ag.obs)
     parts <- strsplit(keys, "\r", fixed = TRUE)
 
+    ## computed per-key (not via tapply) so a stop() from safe.sunregion()
+    ## names the actual offending spp.id/date/aru.groupby combination in a
+    ## human-readable form (the raw key itself is \r-joined and unreadable
+    ## if ever printed)
+    group.labels <- vapply(parts, function(p) sprintf("spp.id=%s, date=%s, aru.groupby=%s", p[1], p[2], p[3]), character(1))
+    names(group.labels) <- keys
+    ag.sun <- vapply(keys, function(k) safe.sunregion(sun.vals[key == k], group.label = group.labels[[k]]),
+                      character(1))
+
     out <- data.frame(
       spp.id         = vapply(parts, `[`, character(1), 1),
       date           = vapply(parts, `[`, character(1), 2),
       aru.groupby    = vapply(parts, `[`, character(1), 3),
+      sunregion      = as.character(ag.sun[keys]),
       obs            = as.numeric(ag.obs[keys]),
       mins2.noon.min = as.numeric(ag.min[keys]),
       mins2.noon.max = as.numeric(ag.max[keys]),
