@@ -4,13 +4,8 @@
 \alias{batz.plotdetections_first.last}
 \title{Plot each species' earliest and latest nightly detections}
 \usage{
-batz.plotdetections_first.last(
-  data,
-  fig.list,
-  suntimes,
-  aes.default,
-  project.name = ""
-)
+batz.plotdetections_first.last(data, fig.list, suntimes,
+  aes.default, project.name = "", dir.save = getwd())
 }
 \arguments{
 \item{data}{A data frame of already-summarized per-species,
@@ -54,20 +49,24 @@ matching parameters. A given plot row's OWN value in
 \code{fig.list} (when that column exists there and is non-blank)
 takes priority over both. See Details for the full three-tier
 precedence and a real bug this caught.}
+
+\item{dir.save}{Character, default \code{getwd()}. Directory every
+generated PNG is saved into (each file's own name still comes from
+\code{aes.default}'s \code{$output.filename.pattern} - see Details).}
 }
 \value{
 Invisibly, a list with \code{plots} (one entry per generated
-plot's prepared data - detection rows, suntimes rows, panel labels,
-resolved settings) and \code{ggplots} (the corresponding ggplot objects,
-only populated when the \code{ggplot2} package is available - see
-Details).
+  plot's prepared data - detection rows, suntimes rows, panel labels,
+  resolved settings) and \code{ggplots} (the corresponding ggplot objects,
+  only populated when the \code{ggplot2} package is available - see
+  Details).
 }
 \description{
 Generates the standard report plot showing, for every species (plus an
 "All detections" panel and an optional overlaid 40kHzMyo indicator), the
 earliest-to-latest detection window for each monitoring night, with
 Dawn/Dusk/Midnight reference lines. One plot is produced per row of
-\code{aru.metadata.db} whose \code{$plot.type} is \code{"bat.detection"}.
+\code{fig.list} whose \code{$plot.type} is \code{"bat.detection"}.
 }
 \details{
 \strong{Iteration 1 ("basic layout") - per Josh's own framing that this
@@ -315,21 +314,22 @@ legend key was previously shown only when a 40kHzMyo row actually
 survived into that plot's filtered data (an actual detection that
 period) - MY OWN interpretive judgment call from earlier this session,
 not Josh's own original wording ("40kHzMyo if on species list should
-be [on the legend] and colored black"). Fixed to key off \verb{$40khzmyo}
-itself (now carried through per-plot as \verb{$khz.flag}) rather than data
-presence - exactly Josh's real \code{plot.meta.csv} (\verb{$40khzmyo = TRUE})
+be [on the legend] and colored black"). Fixed to key off \code{$40khzmyo}
+itself (now carried through per-plot as \code{$khz.flag}) rather than data
+presence - exactly Josh's real \code{plot.meta.csv} (\code{$40khzmyo = TRUE})
 plus \code{vetted.processed.csv} (zero actual 40kHzMyo detections)
 combination. \strong{The first fix attempt (just adding "40kHzMyo" to
-\code{scale_fill_manual()}'s \verb{breaks=}) looked right in code but was
-verified WRONG by actually rendering it}: a manual scale's \verb{breaks=}
+\code{scale_fill_manual()}'s \code{breaks=}) looked right in code but was
+verified WRONG by actually rendering it}: a manual scale's \code{breaks=}
 are silently dropped from the real legend for any level that never
-appears in the mapped data, no matter what's declared in \verb{breaks=} -
+appears in the mapped data, no matter what's declared in \code{breaks=} -
 confirmed with an isolated diagnostic (a bare \code{geom_col()} +
 \code{scale_fill_manual(breaks = "B", ...)} with zero rows using fill
-\code{"B"}: no legend key at all), the same lesson as \verb{$labels$y} earlier
+"B": no legend key at all), the same lesson as \code{$labels$y} earlier
 this session that a ggplot2 scale's declared settings can't always be
 trusted without actually building/rendering. The real fix adds an
-explicit \verb{limits=} to \code{scale_fill_manual()} (\code{c("All detections", "40kHzMyo")} when \verb{$40khzmyo} is TRUE for this plot, \code{"All detections"}
+explicit \code{limits=} to \code{scale_fill_manual()} (\code{c("All detections",
+"40kHzMyo")} when \code{$40khzmyo} is TRUE for this plot, \code{"All detections"}
 alone otherwise) so "40kHzMyo" is in the scale's domain independent of
 whether any row actually used that fill value that period - re-verified
 by rendering: the black swatch now shows correctly with zero 40kHzMyo
@@ -479,48 +479,48 @@ Re-verified visually: the midnight dash is now clearly heavier than
 before while still clearly thinner than the dusk line beside it, with
 \code{$dusk.color}/\code{$dusk.linetype} themselves unchanged.
 
-\strong{Follow-up, 2026-08-27, later still, per Josh ("that is worse, I
-only get a box now not a plot... Label for \"eastern small footed myotis\"
-is cut off and the size of the plot windows is too small... Revert back
-to the previous plot dimensions and reduce the size of the labels on the
-x and Y axis until there is no overlap with either"): the
-\code{$panel.spacing.x} fix above is reverted to a plain, dimension-neutral
-value, and the real x-axis fix now comes from smaller tick-label text
-instead.} The \code{$panel.spacing.x = 40} fix stopped the x-axis label
-collision, but this function's saved figure width is a FIXED size
-(\code{$plot.width + $ggsave.width.pad}, not something that grows with
-the number of panels/gaps) - so widening the gaps between panels shrank
-every panel's own width to make room, which in turn made the "Eastern
-small-footed myotis" facet title too wide for its new, narrower panel
-and cut it off. Per Josh's explicit correction, \code{$panel.spacing.x}
-is reverted to \code{"5.5"} - \code{theme_bw()}'s own built-in default,
-so this is a plain value revert that restores the original panel/figure
+\strong{Follow-up, 2026-08-27, later still, per Josh ("that is worse, I only
+get a box now not a plot... Label for \"eastern small footed myotis\" is
+cut off and the size of the plot windows is too small... Revert back to
+the previous plot dimensions and reduce the size of the labels on the x
+and Y axis until there is no overlap with either"): the \code{$panel.spacing.x}
+fix above is reverted to a plain, dimension-neutral value, and the real
+x-axis fix now comes from smaller tick-label text instead.} The
+\code{$panel.spacing.x = 40} fix stopped the x-axis label collision, but
+this function's saved figure width is a FIXED size
+(\code{$plot.width + $ggsave.width.pad}, not something that grows with the
+number of panels/gaps) - so widening the gaps between panels shrank every
+panel's own width to make room, which in turn made the "Eastern
+small-footed myotis" facet title too wide for its new, narrower panel and
+cut it off. Per Josh's explicit correction, \code{$panel.spacing.x} is
+reverted to \code{"5.5"} - \code{theme_bw()}'s own built-in default, so
+this is a plain value revert that restores the original panel/figure
 dimensions exactly, not a removal of the setting (it stays available to
 override later). The actual label-collision fix now comes from
 \code{$axis.text.size} instead, reduced from \code{"8"} to \code{"6"}:
 smaller tick-label text needs less horizontal room, so the two-line date
 labels clear each other even at the original tight panel spacing. Tuned
 empirically, not guessed: pixel-cropped the rendered panel boundary at
-several candidate sizes (8, 7, 6.5, 6) and found 8/7/6.5 still show
-visible character-level overlap between adjacent panels' date labels
-(e.g. the "8" of "May-28" touching the "M" of "May-07"), while 6 is the
-first size with a clean, non-overlapping gap.
+several candidate sizes (8, 7, 6.5, 6) and found 8/7/6.5 still show visible
+character-level overlap between adjacent panels' date labels (e.g. the "8"
+of "May-28" touching the "M" of "May-07"), while 6 is the first size with a
+clean, non-overlapping gap.
 
 \strong{A second, separate issue was found and corrected while
 investigating the cut-off species title - a stale/incorrect
-default.plotaesthetics documentation note, not a code bug, but an
-attempted fix for it introduced a real regression that was caught before
-shipping.} The existing note on \code{$axis.title.size} claimed it is
-"also reused directly for facet strip text (strip.text)" - checked
-directly via ggplot2's own \code{get_element_tree()} and confirmed FALSE:
-\code{strip.text} inherits from the base \code{"text"} element, not from
-\code{"title"}/\code{axis.title}, so changing \code{$axis.title.size} has
-never actually had any effect on facet panel titles. An explicit
-\code{strip.text = element_text(size = axis.title.size)} was added to
-make the documented behavior real - but re-rendering showed this made
-the cutoff WORSE, not better: ggplot2's actual fixed \code{strip.text}
-size (\code{rel(0.8)} of \code{theme_bw()}'s \code{base_size} 11 = 8.8pt)
-is SMALLER than \code{$axis.title.size}'s default of 10, so binding them
+default.plotaesthetics documentation note, not a code bug, but an attempted
+fix for it introduced a real regression that was caught before shipping.}
+The existing note on \code{$axis.title.size} claimed it is "also reused
+directly for facet strip text (strip.text)" - checked directly via
+ggplot2's own \code{get_element_tree()} and confirmed FALSE: \code{strip.text}
+inherits from the base \code{"text"} element, not from \code{"title"}/
+\code{axis.title}, so changing \code{$axis.title.size} has never actually
+had any effect on facet panel titles. An explicit
+\code{strip.text = element_text(size = axis.title.size)} was added to make
+the documented behavior real - but re-rendering showed this made the
+cutoff WORSE, not better: ggplot2's actual fixed \code{strip.text} size
+(\code{rel(0.8)} of \code{theme_bw()}'s \code{base_size} 11 = 8.8pt) is
+SMALLER than \code{$axis.title.size}'s default of 10, so binding them
 enlarged the title instead of shrinking it - caught by re-rendering and
 comparing before/after, not assumed safe from the code alone. Reverted:
 \code{strip.text} is left at ggplot2's native, non-configurable size, and
@@ -530,37 +530,40 @@ instead of changing the code to match a stale, inaccurate note.
 Re-verified with both changes together (\code{$panel.spacing.x = "5.5"},
 \code{$axis.text.size = "6"}, no \code{strip.text} override): the panel
 grid is back to its original size, "Eastern small-footed myotis" renders
-in full with no truncation, and the x-axis date labels still show a
-clean gap at every panel boundary.
+in full with no truncation, and the x-axis date labels still show a clean
+gap at every panel boundary.
 
-\strong{Follow-up, 2026-08-27, later still - real error Josh hit on his
-own machine: \code{devtools::document()} succeeded, but calling the function
-against his own real, current objects crashed deep inside grid
-graphics, not in this function's own code.} The actual error was
-\verb{Error in grid.Call.graphics(C_setviewport, vp, TRUE): non-finite location and/or size for viewport} - naming no setting and giving no
-hint of the real cause. Root cause: Josh's loaded
-\code{default.plotaesthetics} (his own on-disk \code{batactivity.plotoptions.csv})
-was an OLDER copy from before \verb{$panel.spacing.x} was added earlier this
-same round - \code{get.default("panel.spacing.x")} silently returns \code{NA} for
-any parameter not present as a row (its own documented, intentional
-fallback behavior), \code{as.numeric(NA)} stayed \code{NA}, and
-\code{grid::unit(NA, "pt")} only actually failed once ggplot2 tried to use it
-to lay out the plot - three layers of code away from the real, fixable
-cause (a stale CSV). \strong{Fixed defensively, not just by telling Josh
-to update his file}: every \code{default.plotaesthetics} parameter this
-function depends on ONLY via \code{get.default()} (no \code{aru.metadata.db}
-per-job override path) is now checked up front, the same way
-\code{plot.data}/\code{suntimes.db}/\code{aru.metadata.db}'s own required COLUMNS
-already were - a missing row (e.g. an older \code{batactivity.plotoptions.csv}
-that predates a newly-added setting) now stops immediately with a clear
-message naming exactly which parameter row is missing, instead of
-crashing unrecognizably deep in \code{grid}. Verified with a dedicated test:
-a synthetic \code{default.plotaesthetics} with its \verb{$panel.spacing.x} row
-removed now stops with \code{"default.plotaesthetics is missing these required $parameter rows: panel.spacing.x..."} instead of the
-grid/viewport error. Immediate fix for Josh: re-save the current
-\code{batactivity.plotoptions.csv} (already sent, with \verb{$panel.spacing.x} and
-the reduced \verb{$axis.text.size}) into his test-data folder and reload it
-before calling this function again.
+\strong{Follow-up, 2026-08-27, later still - real error Josh hit on his own
+machine: \code{devtools::document()} succeeded, but calling the function
+against his own real, current objects crashed deep inside grid graphics,
+not in this function's own code.} The actual error was
+\code{Error in grid.Call.graphics(C_setviewport, vp, TRUE): non-finite
+location and/or size for viewport} - naming no setting and giving no hint
+of the real cause. Root cause: Josh's loaded \code{default.plotaesthetics}
+(his own on-disk \code{batactivity.plotoptions.csv}) was an OLDER copy
+from before \code{$panel.spacing.x} was added earlier this same round -
+\code{get.default("panel.spacing.x")} silently returns \code{NA} for any
+parameter not present as a row (its own documented, intentional fallback
+behavior), \code{as.numeric(NA)} stayed \code{NA}, and
+\code{grid::unit(NA, "pt")} only actually failed once ggplot2 tried to use
+it to lay out the plot - three layers of code away from the real,
+fixable cause (a stale CSV). \strong{Fixed defensively, not just by telling
+Josh to update his file}: every \code{default.plotaesthetics} parameter
+this function depends on ONLY via \code{get.default()} (no
+\code{aru.metadata.db} per-job override path) is now checked up front,
+the same way \code{plot.data}/\code{suntimes.db}/\code{aru.metadata.db}'s
+own required COLUMNS already were - a missing row (e.g. an older
+\code{batactivity.plotoptions.csv} that predates a newly-added setting)
+now stops immediately with a clear message naming exactly which parameter
+row is missing, instead of crashing unrecognizably deep in \code{grid}.
+Verified with a dedicated test: a synthetic \code{default.plotaesthetics}
+with its \code{$panel.spacing.x} row removed now stops with
+\code{"default.plotaesthetics is missing these required $parameter rows:
+panel.spacing.x..."} instead of the grid/viewport error. Immediate fix
+for Josh: re-save the current \code{batactivity.plotoptions.csv} (already
+sent, with \code{$panel.spacing.x} and the reduced \code{$axis.text.size})
+into his test-data folder and reload it before calling this function
+again.
 
 \strong{Follow-up, 2026-08-27, later still, per Josh ("clean up
 batz.plotdect_first.last()... change identifiers to"): the four main
@@ -569,8 +572,8 @@ argument names were shortened/renamed, with no change in behavior.}
 \code{suntimes.db} -> \code{suntimes}, \code{default.plotaesthetics} ->
 \code{aes.default} (\code{project.name} is unchanged). Every reference to
 these four names inside the function body, the internal
-\verb{*.REQUIRED}/\verb{*.REQUIRED.PARAMETERS} constant names, the
-\verb{@param}/\verb{@examples} documentation, and every call site in the
+\code{*.REQUIRED}/\code{*.REQUIRED.PARAMETERS} constant names, the
+\code{@param}/\code{@examples} documentation, and every call site in the
 \code{.dev.R} test script were updated together (verified with a
 whole-file identifier search after the rename: zero remaining references
 to any of the four old names as bare identifiers). \strong{The \code{Details}
@@ -578,54 +581,86 @@ entries ABOVE this one are left exactly as originally written, still
 using the OLD parameter names throughout} - they are a dated history of
 what was true and named at the time each entry was written, not a
 description of the current interface; only this entry, the
-\verb{@param}/\code{usage}/\code{examples} sections above, and the actual
+\code{@param}/\code{usage}/\code{examples} sections above, and the actual
 code describe the CURRENT (renamed) interface. Full test suite re-run
 clean (all 11 scenarios, no regressions) after the rename - no functional
 change, purely an identifier rename.
 
 \strong{Follow-up, 2026-08-27, later still, per Josh ("change the pattern
 from \"batactivity.plotoptions.csv\" to \"plotopts_first.last.csv\""):
-the on-disk file name this function's \code{aes.default} input is expected to
-be loaded from was renamed - purely a file-naming change, not a
+the on-disk file name this function's \code{aes.default} input is expected
+to be loaded from was renamed - purely a file-naming change, not a
 parameter/argument rename (that was the entry above) and not a change to
-any column/row inside the file itself.} \code{batactivity.plotoptions.csv} ->
-\code{plotopts_first.last.csv}, chosen to tie the file name to this specific
-function (\code{first.last}) rather than the more generic "batactivity" name,
-since the project has other \code{batz} plotting functions with their own,
-separate settings files. Updated everywhere this file name appears as a
-CURRENT, forward-looking reference: the \verb{$yaxe.limit.min}/
-\verb{$yaxe.limit.max} HH:MM-format error message below (now names
-\code{plotopts_first.last.csv}), \code{.dev.R}'s \code{read.csv()} call, and
-\code{build_merged_plotoptions.R}'s \code{write.csv()} call. \strong{The dated
-\code{Details} entries ABOVE this one are left exactly as originally
-written, still naming the file \code{batactivity.plotoptions.csv}}, since
-that was its actual name at the time each of those entries was written;
-they are a historical record, not current guidance. The project's own
-saved master copy (\code{claude/plotoptions.batactivity.default.csv}) keeps
-its existing, separate name - only the merged file Josh loads as
-\code{aes.default} was renamed. Full test suite re-run clean (all 11
-scenarios, no regressions) after the rename - no functional change,
-purely a file-naming change.
+any column/row inside the file itself.} \code{batactivity.plotoptions.csv}
+-> \code{plotopts_first.last.csv}, chosen to tie the file name to this
+specific function (\code{first.last}) rather than the more generic
+"batactivity" name, since the project has other \code{batz} plotting
+functions with their own, separate settings files. Updated everywhere
+this file name appears as a CURRENT, forward-looking reference: the
+\code{$yaxe.limit.min}/\code{$yaxe.limit.max} HH:MM-format error message,
+\code{.dev.R}'s \code{read.csv()} call, and
+\code{build_merged_plotoptions.R}'s \code{write.csv()} call.
+\strong{The dated \code{Details} entries ABOVE this one are left exactly
+as originally written, still naming the file
+\code{batactivity.plotoptions.csv}}, since that was its actual name at the
+time each of those entries was written; they are a historical record, not
+current guidance. The project's own saved master copy
+(\code{claude/plotoptions.batactivity.default.csv}) keeps its existing,
+separate name - only the merged file Josh loads as \code{aes.default} was
+renamed. Full test suite re-run clean (all 11 scenarios, no regressions)
+after the rename - no functional change, purely a file-naming change.
 
 \strong{Follow-up, 2026-08-27, later still, per Josh ("change 'aru.meta.csv'
-to 'fig.list.csv'"): the \code{.dev.R} test script's on-disk test file for the
-\code{fig.list} argument was renamed to match a file Josh had already renamed
-on his own machine.} No file literally named \code{aru.meta.csv} ever existed
-in this project - read as referring to the test file this script loads
-as \code{fig.list} (previously \code{plot.meta.csv}), the name apparently garbled
-the same way \code{aru.metadata.db} (the OLD parameter name for \code{fig.list},
-renamed two entries above) was garbled as "aru.matadata.db" earlier; if
-this reading is wrong, flag it and it'll be corrected. \code{plot.meta.csv} ->
-\code{fig.list.csv}, purely a file-naming change in \code{.dev.R} (this package
-function itself takes a data frame, not a file path, so nothing in \code{.R}
-actually reads this file) - \code{.dev.R}'s \code{read.csv()} call and its TEST 9
-diagnostic \code{cat()} labels (which print this file's name as part of their
-output) were updated; every OTHER mention of \code{plot.meta.csv} in \code{.dev.R}'s
+to 'fig.list.csv'"): the \code{.dev.R} test script's on-disk test file for
+the \code{fig.list} argument was renamed to match a file Josh had already
+renamed on his own machine.} No file literally named \code{aru.meta.csv}
+ever existed in this project - read as referring to the test file this
+script loads as \code{fig.list} (previously \code{plot.meta.csv}), the name
+apparently garbled the same way \code{aru.metadata.db} (the OLD parameter
+name for \code{fig.list}, renamed two entries above) was garbled as
+"aru.matadata.db" earlier; if this reading is wrong, flag it and it'll be
+corrected. \code{plot.meta.csv} -> \code{fig.list.csv}, purely a
+file-naming change in \code{.dev.R} (this package function itself takes a
+data frame, not a file path, so nothing in \code{.R} actually reads this
+file) - \code{.dev.R}'s \code{read.csv()} call and its TEST 9 diagnostic
+\code{cat()} labels (which print this file's name as part of their output)
+were updated; every OTHER mention of \code{plot.meta.csv} in \code{.dev.R}'s
 own header comments is dated narrative describing a specific past
-investigation (e.g. the duplicate \code{xaxe.title} bug) and was left alone,
-same convention as every other historical entry in this file. Full test
-suite re-run clean (all 11 scenarios, no regressions) - confirmed it
+investigation (e.g. the duplicate \code{xaxe.title} bug) and was left
+alone, same convention as every other historical entry in this file. Full
+test suite re-run clean (all 11 scenarios, no regressions) - confirmed it
 actually reads \code{fig.list.csv} off disk with no complaint.
+
+\strong{Follow-up, 2026-08-27, later still, per Josh ("add in a dir.save =
+getwd()"): a new \code{dir.save} parameter (default \code{getwd()}) now
+controls where every generated PNG is saved.} The "Iteration 1" scope
+paragraph near the top of Details lists a \code{dir.save}-style
+output-location argument as explicitly NOT YET implemented ("plots
+currently save to the working directory") - that was true when written
+and is left as historical, per this project's own never-rewrite-history
+convention; it's implemented now. Each plot's own file NAME is still
+entirely driven by \code{aes.default}'s \code{$output.filename.pattern}
+(unchanged); \code{dir.save} only changes which DIRECTORY that name is
+written into (\code{file.path(dir.save, fname)}, right before the
+\code{ggsave()} call). Default \code{getwd()} matches the directory
+every prior call already implicitly saved into (a bare relative file
+name passed to \code{ggsave()} resolves against the working directory),
+so omitting \code{dir.save} changes nothing for existing callers.
+
+Same Follow-up, second part, per Josh ("change 'Earlies and lastest
+ball' in the save name to 'Earliest and latest bat'"): the probable
+typo in \code{aes.default}'s own \code{$output.filename.pattern}
+DEFAULT VALUE - flagged, not silently fixed, when this function was
+first built (see the \code{aes.default} settings file's own
+\code{$notes} column) - is now corrected at Josh's explicit request.
+This is a change to the DATA (the default \code{output.filename.pattern}
+value shipped in \code{plotopts_first.last.csv}/the project's reference
+copies of that settings file), not to this function's code - this
+function only ever reads whatever pattern \code{aes.default} gives it
+and does no string-literal matching/fixing of its own. Anyone whose own
+local settings CSV still has the old, misspelled pattern value will keep
+getting the old (misspelled) file names until they update that CSV too -
+this function has no way to detect or correct that on its own.
 
 Naming convention (per project preferences):
 \code{package.family_action.subject()}. This function is
@@ -638,6 +673,8 @@ species' first and last nightly detection). Requested as
 }
 \examples{
 \dontrun{
+# default dir.save = getwd() - saves into the current working directory,
+# same as every call before dir.save existed
 result <- batz.plotdetections_first.last(
   data = vetted.processed,
   fig.list = plot.meta,
@@ -645,6 +682,15 @@ result <- batz.plotdetections_first.last(
   aes.default = batactivity.plotoptions
 )
 result$ggplots[[1]]
+
+# explicit dir.save, if the PNGs should land somewhere else
+result <- batz.plotdetections_first.last(
+  data = vetted.processed,
+  fig.list = plot.meta,
+  suntimes = aru.suntimes,
+  aes.default = batactivity.plotoptions,
+  dir.save = "C:/path/to/output/folder"
+)
 }
 
 }

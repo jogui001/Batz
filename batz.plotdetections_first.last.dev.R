@@ -344,7 +344,8 @@ check.parameters <- function(df, required, label) {
 # batz.plotdetections_first.last()
 # -----------------------------------------------------------------------------
 batz.plotdetections_first.last <- function(data, fig.list, suntimes,
-                                            aes.default, project.name = "") {
+                                            aes.default, project.name = "",
+                                            dir.save = getwd()) {
 
   problems <- c(
     check.headers(data, DATA.REQUIRED, "data"),
@@ -982,6 +983,13 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
       fname <- gsub("<date.start>", as.character(min(p$pd$date.parsed)), fname, fixed = TRUE)
       fname <- gsub("<date.end>", as.character(max(p$pd$date.parsed)), fname, fixed = TRUE)
       fname <- gsub("<timestamp>", format(Sys.time(), "%Y%m%d%H%M%S"), fname, fixed = TRUE)
+      ## 2026-08-27, later still, per Josh ("add in a dir.save = getwd()"):
+      ## every prior call implicitly saved into the working directory (a
+      ## bare relative file name passed to ggsave() resolves against
+      ## getwd()) - dir.save (new parameter, default getwd()) now makes
+      ## that explicit and overridable, with no change in behavior for
+      ## anyone who doesn't pass it. See TEST 12 below.
+      fname <- file.path(dir.save, fname)
 
       ggsave(fname, plot = g,
              width = as.numeric(get.default("plot.width")) + as.numeric(get.default("ggsave.width.pad")),
@@ -1356,5 +1364,60 @@ result.missingparam <- tryCatch({
 }, error = function(e) conditionMessage(e))
 cat("Result with $panel.spacing.x row removed:\n", result.missingparam, "\n")
 cat("(expected: a clear message naming 'panel.spacing.x' as a missing required $parameter row, not a grid/viewport error)\n")
+
+cat("\n\n########## TEST 12: dir.save controls where the PNG is written (per Josh, \"add in a dir.save = getwd()\") ##########\n")
+if (requireNamespace("ggplot2", quietly = TRUE)) {
+  library(ggplot2)
+
+  dir.save.test <- file.path(tempdir(), paste0("plotdetections_dirsave_test_", format(Sys.time(), "%Y%m%d%H%M%OS3")))
+  dir.create(dir.save.test)
+  pngs.before.cwd  <- list.files(getwd(), pattern = "\\.png$")
+  pngs.before.save <- list.files(dir.save.test, pattern = "\\.png$")
+
+  result.dirsave <- batz.plotdetections_first.last(
+    data = plot.data.synth,
+    fig.list = aru.metadata.db.synth,
+    suntimes = suntimes.synth,
+    aes.default = default.plotaesthetics.synth,
+    dir.save = dir.save.test
+  )
+
+  pngs.after.cwd  <- list.files(getwd(), pattern = "\\.png$")
+  pngs.after.save <- list.files(dir.save.test, pattern = "\\.png$")
+  cat("new PNG(s) written into dir.save (expected >= 1):", length(pngs.after.save) - length(pngs.before.save), "\n")
+  cat("new PNG(s) written into getwd() instead (expected 0 - dir.save should be the ONLY destination):",
+      length(pngs.after.cwd) - length(pngs.before.cwd), "\n")
+
+  # default dir.save = getwd() - confirm omitting it still saves into the
+  # working directory exactly like every call before dir.save existed
+  pngs.before.default <- list.files(getwd(), pattern = "\\.png$")
+  result.dirsave.default <- batz.plotdetections_first.last(
+    data = plot.data.synth,
+    fig.list = aru.metadata.db.synth,
+    suntimes = suntimes.synth,
+    aes.default = default.plotaesthetics.synth
+  )
+  pngs.after.default <- list.files(getwd(), pattern = "\\.png$")
+  cat("omitting dir.save still writes into getwd() (expected >= 1 new PNG there):",
+      length(pngs.after.default) - length(pngs.before.default), "\n")
+} else {
+  cat("ggplot2 not available - skipping TEST 12\n")
+}
+
+cat("\n\n########## TEST 13: $output.filename.pattern's typo fix (\"Earlies and lastest ball\" -> \"Earliest and latest bat\") ##########\n")
+# 2026-08-27, per Josh ("change 'Earlies and lastest ball' in the save name
+# to 'Earliest and latest bat'"): this is a DATA change (aes.default's own
+# $output.filename.pattern default.value, in plotopts_first.last.csv), not
+# a code change - this function has no hardcoded copy of the pattern text
+# to fix, it just reads whatever aes.default gives it. Spot-checking the
+# loaded default.plotaesthetics.synth (read straight off disk above, same
+# file the real function's callers use) confirms the CSV itself was fixed.
+pattern.now <- default.plotaesthetics.synth$default.value[
+  default.plotaesthetics.synth$parameter == "output.filename.pattern"]
+cat("current $output.filename.pattern default.value:", pattern.now, "\n")
+cat("old typo ('Earlies and lastest ball') still present (expected FALSE)?",
+    grepl("Earlies and lastest ball", pattern.now, fixed = TRUE), "\n")
+cat("corrected text ('Earliest and latest bat') present (expected TRUE)?",
+    grepl("Earliest and latest bat", pattern.now, fixed = TRUE), "\n")
 
 cat("\n\n########## ALL TESTS COMPLETED ##########\n")

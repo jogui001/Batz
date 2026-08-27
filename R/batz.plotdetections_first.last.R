@@ -43,6 +43,9 @@
 #'   \code{fig.list} (when that column exists there and is non-blank)
 #'   takes priority over both. See Details for the full three-tier
 #'   precedence and a real bug this caught.
+#' @param dir.save Character, default \code{getwd()}. Directory every
+#'   generated PNG is saved into (each file's own name still comes from
+#'   \code{aes.default}'s \code{$output.filename.pattern} - see Details).
 #'
 #' @return Invisibly, a list with \code{plots} (one entry per generated
 #'   plot's prepared data - detection rows, suntimes rows, panel labels,
@@ -611,6 +614,37 @@
 #' suite re-run clean (all 11 scenarios, no regressions) - confirmed it
 #' actually reads `fig.list.csv` off disk with no complaint.
 #'
+#' \strong{Follow-up, 2026-08-27, later still, per Josh ("add in a dir.save =
+#' getwd()"): a new \code{dir.save} parameter (default \code{getwd()}) now
+#' controls where every generated PNG is saved.} The "Iteration 1" scope
+#' paragraph near the top of Details lists a \code{dir.save}-style
+#' output-location argument as explicitly NOT YET implemented ("plots
+#' currently save to the working directory") - that was true when written
+#' and is left as historical, per this project's own never-rewrite-history
+#' convention; it's implemented now. Each plot's own file NAME is still
+#' entirely driven by \code{aes.default}'s \code{$output.filename.pattern}
+#' (unchanged); \code{dir.save} only changes which DIRECTORY that name is
+#' written into (\code{file.path(dir.save, fname)}, right before the
+#' \code{ggsave()} call). Default \code{getwd()} matches the directory
+#' every prior call already implicitly saved into (a bare relative file
+#' name passed to \code{ggsave()} resolves against the working directory),
+#' so omitting \code{dir.save} changes nothing for existing callers.
+#'
+#' Same Follow-up, second part, per Josh ("change 'Earlies and lastest
+#' ball' in the save name to 'Earliest and latest bat'"): the probable
+#' typo in \code{aes.default}'s own \code{$output.filename.pattern}
+#' DEFAULT VALUE - flagged, not silently fixed, when this function was
+#' first built (see the \code{aes.default} settings file's own
+#' \code{$notes} column) - is now corrected at Josh's explicit request.
+#' This is a change to the DATA (the default \code{output.filename.pattern}
+#' value shipped in \code{plotopts_first.last.csv}/the project's reference
+#' copies of that settings file), not to this function's code - this
+#' function only ever reads whatever pattern \code{aes.default} gives it
+#' and does no string-literal matching/fixing of its own. Anyone whose own
+#' local settings CSV still has the old, misspelled pattern value will keep
+#' getting the old (misspelled) file names until they update that CSV too -
+#' this function has no way to detect or correct that on its own.
+#'
 #' Naming convention (per project preferences):
 #' \code{package.family_action.subject()}. This function is
 #' \code{batz.plotdetections_first.last()}: family = "plotdetections" (the
@@ -622,6 +656,8 @@
 #'
 #' @examples
 #' \dontrun{
+#' # default dir.save = getwd() - saves into the current working directory,
+#' # same as every call before dir.save existed
 #' result <- batz.plotdetections_first.last(
 #'   data = vetted.processed,
 #'   fig.list = plot.meta,
@@ -629,11 +665,21 @@
 #'   aes.default = batactivity.plotoptions
 #' )
 #' result$ggplots[[1]]
+#'
+#' # explicit dir.save, if the PNGs should land somewhere else
+#' result <- batz.plotdetections_first.last(
+#'   data = vetted.processed,
+#'   fig.list = plot.meta,
+#'   suntimes = aru.suntimes,
+#'   aes.default = batactivity.plotoptions,
+#'   dir.save = "C:/path/to/output/folder"
+#' )
 #' }
 #'
 #' @export
 batz.plotdetections_first.last <- function(data, fig.list, suntimes,
-                                            aes.default, project.name = "") {
+                                            aes.default, project.name = "",
+                                            dir.save = getwd()) {
 
   DATA.REQUIRED <- c("spp.id", "date", "aru.groupby", "obs",
                            "mins2.noon.min", "mins2.noon.max", "vetting.type")
@@ -1327,6 +1373,10 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
       fname <- gsub("<date.start>", as.character(min(p$pd$date.parsed)), fname, fixed = TRUE)
       fname <- gsub("<date.end>", as.character(max(p$pd$date.parsed)), fname, fixed = TRUE)
       fname <- gsub("<timestamp>", format(Sys.time(), "%Y%m%d%H%M%S"), fname, fixed = TRUE)
+      ## save into dir.save (default getwd(), i.e. unchanged behavior for
+      ## existing callers) rather than always the working directory - see
+      ## Details/Follow-up
+      fname <- file.path(dir.save, fname)
 
       ggplot2::ggsave(fname, plot = g,
                         width = as.numeric(get.default("plot.width")) + as.numeric(get.default("ggsave.width.pad")),
