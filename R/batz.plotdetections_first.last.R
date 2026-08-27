@@ -296,7 +296,7 @@
 #' survived into that plot's filtered data (an actual detection that
 #' period) - MY OWN interpretive judgment call from earlier this session,
 #' not Josh's own original wording ("40kHzMyo if on species list should
-#' be [on the legend] and colored black"). Fixed to key off `$40khzmyo`
+#' be \[on the legend\] and colored black"). Fixed to key off `$40khzmyo`
 #' itself (now carried through per-plot as `$khz.flag`) rather than data
 #' presence - exactly Josh's real \code{plot.meta.csv} (`$40khzmyo = TRUE`)
 #' plus \code{vetted.processed.csv} (zero actual 40kHzMyo detections)

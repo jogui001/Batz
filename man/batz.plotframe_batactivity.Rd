@@ -4,9 +4,16 @@
 \alias{batz.plotframe_batactivity}
 \title{Summarize vetted bat-acoustic detections into a plotting-ready frame}
 \usage{
-batz.plotframe_batactivity(data, duplicates.remove = TRUE,
-  spp.id = "manid.sb", date.groupby = "date.mon", aru.groupby = "aru.name",
-  alldetections = TRUE, trim.noise = TRUE, trim.noid = TRUE)
+batz.plotframe_batactivity(
+  data,
+  duplicates.remove = TRUE,
+  spp.id = "manid.sb",
+  date.groupby = "date.mon",
+  aru.groupby = "aru.name",
+  alldetections = TRUE,
+  trim.noise = TRUE,
+  trim.noid = TRUE
+)
 }
 \arguments{
 \item{data}{A data frame with every column listed above already
@@ -44,8 +51,8 @@ already shipped in \code{\link{batz.vettedacoustics_merge.format}}.)}
 }
 \value{
 A data frame, \code{plfr.batsummary}, with columns
-  \code{$spp.id}, \code{$date}, \code{$aru.groupby}, \code{$obs},
-  \code{$mins2.noon.min}, \code{$mins2.noon.max}, \code{$vetting.type}.
+\code{$spp.id}, \code{$date}, \code{$aru.groupby}, \code{$obs},
+\code{$mins2.noon.min}, \code{$mins2.noon.max}, \code{$vetting.type}.
 }
 \description{
 Given a fully-assembled data frame of vetted bat-acoustic detections
@@ -57,7 +64,7 @@ monitoring night) per species, monitoring night, and detector - the
 shape you'd feed straight into a plotting function.
 }
 \details{
-\strong{Required input columns.} `data` must have every one of:
+\strong{Required input columns.} \code{data} must have every one of:
 \code{filename}, \code{date.mon}, \code{manid}, \code{autoid.kp},
 \code{autoid.sb}, \code{lat}, \code{serial}, \code{lon},
 \code{aru.name}, \code{date}, \code{time}, \code{call.datetime},

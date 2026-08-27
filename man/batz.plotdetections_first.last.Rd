@@ -4,8 +4,13 @@
 \alias{batz.plotdetections_first.last}
 \title{Plot each species' earliest and latest nightly detections}
 \usage{
-batz.plotdetections_first.last(plot.data, aru.metadata.db, suntimes.db,
-  default.plotaesthetics, project.name = "")
+batz.plotdetections_first.last(
+  plot.data,
+  aru.metadata.db,
+  suntimes.db,
+  default.plotaesthetics,
+  project.name = ""
+)
 }
 \arguments{
 \item{plot.data}{A data frame of already-summarized per-species,
@@ -52,10 +57,10 @@ precedence and a real bug this caught.}
 }
 \value{
 Invisibly, a list with \code{plots} (one entry per generated
-  plot's prepared data - detection rows, suntimes rows, panel labels,
-  resolved settings) and \code{ggplots} (the corresponding ggplot objects,
-  only populated when the \code{ggplot2} package is available - see
-  Details).
+plot's prepared data - detection rows, suntimes rows, panel labels,
+resolved settings) and \code{ggplots} (the corresponding ggplot objects,
+only populated when the \code{ggplot2} package is available - see
+Details).
 }
 \description{
 Generates the standard report plot showing, for every species (plus an
@@ -310,22 +315,21 @@ legend key was previously shown only when a 40kHzMyo row actually
 survived into that plot's filtered data (an actual detection that
 period) - MY OWN interpretive judgment call from earlier this session,
 not Josh's own original wording ("40kHzMyo if on species list should
-be [on the legend] and colored black"). Fixed to key off \code{$40khzmyo}
-itself (now carried through per-plot as \code{$khz.flag}) rather than data
-presence - exactly Josh's real \code{plot.meta.csv} (\code{$40khzmyo = TRUE})
+be \link{on the legend} and colored black"). Fixed to key off \verb{$40khzmyo}
+itself (now carried through per-plot as \verb{$khz.flag}) rather than data
+presence - exactly Josh's real \code{plot.meta.csv} (\verb{$40khzmyo = TRUE})
 plus \code{vetted.processed.csv} (zero actual 40kHzMyo detections)
 combination. \strong{The first fix attempt (just adding "40kHzMyo" to
-\code{scale_fill_manual()}'s \code{breaks=}) looked right in code but was
-verified WRONG by actually rendering it}: a manual scale's \code{breaks=}
+\code{scale_fill_manual()}'s \verb{breaks=}) looked right in code but was
+verified WRONG by actually rendering it}: a manual scale's \verb{breaks=}
 are silently dropped from the real legend for any level that never
-appears in the mapped data, no matter what's declared in \code{breaks=} -
+appears in the mapped data, no matter what's declared in \verb{breaks=} -
 confirmed with an isolated diagnostic (a bare \code{geom_col()} +
 \code{scale_fill_manual(breaks = "B", ...)} with zero rows using fill
-"B": no legend key at all), the same lesson as \code{$labels$y} earlier
+\code{"B"}: no legend key at all), the same lesson as \verb{$labels$y} earlier
 this session that a ggplot2 scale's declared settings can't always be
 trusted without actually building/rendering. The real fix adds an
-explicit \code{limits=} to \code{scale_fill_manual()} (\code{c("All detections",
-"40kHzMyo")} when \code{$40khzmyo} is TRUE for this plot, \code{"All detections"}
+explicit \verb{limits=} to \code{scale_fill_manual()} (\code{c("All detections", "40kHzMyo")} when \verb{$40khzmyo} is TRUE for this plot, \code{"All detections"}
 alone otherwise) so "40kHzMyo" is in the scale's domain independent of
 whether any row actually used that fill value that period - re-verified
 by rendering: the black swatch now shows correctly with zero 40kHzMyo
@@ -475,48 +479,48 @@ Re-verified visually: the midnight dash is now clearly heavier than
 before while still clearly thinner than the dusk line beside it, with
 \code{$dusk.color}/\code{$dusk.linetype} themselves unchanged.
 
-\strong{Follow-up, 2026-08-27, later still, per Josh ("that is worse, I only
-get a box now not a plot... Label for \"eastern small footed myotis\" is
-cut off and the size of the plot windows is too small... Revert back to
-the previous plot dimensions and reduce the size of the labels on the x
-and Y axis until there is no overlap with either"): the \code{$panel.spacing.x}
-fix above is reverted to a plain, dimension-neutral value, and the real
-x-axis fix now comes from smaller tick-label text instead.} The
-\code{$panel.spacing.x = 40} fix stopped the x-axis label collision, but
-this function's saved figure width is a FIXED size
-(\code{$plot.width + $ggsave.width.pad}, not something that grows with the
-number of panels/gaps) - so widening the gaps between panels shrank every
-panel's own width to make room, which in turn made the "Eastern
-small-footed myotis" facet title too wide for its new, narrower panel and
-cut it off. Per Josh's explicit correction, \code{$panel.spacing.x} is
-reverted to \code{"5.5"} - \code{theme_bw()}'s own built-in default, so
-this is a plain value revert that restores the original panel/figure
+\strong{Follow-up, 2026-08-27, later still, per Josh ("that is worse, I
+only get a box now not a plot... Label for \"eastern small footed myotis\"
+is cut off and the size of the plot windows is too small... Revert back
+to the previous plot dimensions and reduce the size of the labels on the
+x and Y axis until there is no overlap with either"): the
+\code{$panel.spacing.x} fix above is reverted to a plain, dimension-neutral
+value, and the real x-axis fix now comes from smaller tick-label text
+instead.} The \code{$panel.spacing.x = 40} fix stopped the x-axis label
+collision, but this function's saved figure width is a FIXED size
+(\code{$plot.width + $ggsave.width.pad}, not something that grows with
+the number of panels/gaps) - so widening the gaps between panels shrank
+every panel's own width to make room, which in turn made the "Eastern
+small-footed myotis" facet title too wide for its new, narrower panel
+and cut it off. Per Josh's explicit correction, \code{$panel.spacing.x}
+is reverted to \code{"5.5"} - \code{theme_bw()}'s own built-in default,
+so this is a plain value revert that restores the original panel/figure
 dimensions exactly, not a removal of the setting (it stays available to
 override later). The actual label-collision fix now comes from
 \code{$axis.text.size} instead, reduced from \code{"8"} to \code{"6"}:
 smaller tick-label text needs less horizontal room, so the two-line date
 labels clear each other even at the original tight panel spacing. Tuned
 empirically, not guessed: pixel-cropped the rendered panel boundary at
-several candidate sizes (8, 7, 6.5, 6) and found 8/7/6.5 still show visible
-character-level overlap between adjacent panels' date labels (e.g. the "8"
-of "May-28" touching the "M" of "May-07"), while 6 is the first size with a
-clean, non-overlapping gap.
+several candidate sizes (8, 7, 6.5, 6) and found 8/7/6.5 still show
+visible character-level overlap between adjacent panels' date labels
+(e.g. the "8" of "May-28" touching the "M" of "May-07"), while 6 is the
+first size with a clean, non-overlapping gap.
 
 \strong{A second, separate issue was found and corrected while
 investigating the cut-off species title - a stale/incorrect
-default.plotaesthetics documentation note, not a code bug, but an attempted
-fix for it introduced a real regression that was caught before shipping.}
-The existing note on \code{$axis.title.size} claimed it is "also reused
-directly for facet strip text (strip.text)" - checked directly via
-ggplot2's own \code{get_element_tree()} and confirmed FALSE: \code{strip.text}
-inherits from the base \code{"text"} element, not from \code{"title"}/
-\code{axis.title}, so changing \code{$axis.title.size} has never actually
-had any effect on facet panel titles. An explicit
-\code{strip.text = element_text(size = axis.title.size)} was added to make
-the documented behavior real - but re-rendering showed this made the
-cutoff WORSE, not better: ggplot2's actual fixed \code{strip.text} size
-(\code{rel(0.8)} of \code{theme_bw()}'s \code{base_size} 11 = 8.8pt) is
-SMALLER than \code{$axis.title.size}'s default of 10, so binding them
+default.plotaesthetics documentation note, not a code bug, but an
+attempted fix for it introduced a real regression that was caught before
+shipping.} The existing note on \code{$axis.title.size} claimed it is
+"also reused directly for facet strip text (strip.text)" - checked
+directly via ggplot2's own \code{get_element_tree()} and confirmed FALSE:
+\code{strip.text} inherits from the base \code{"text"} element, not from
+\code{"title"}/\code{axis.title}, so changing \code{$axis.title.size} has
+never actually had any effect on facet panel titles. An explicit
+\code{strip.text = element_text(size = axis.title.size)} was added to
+make the documented behavior real - but re-rendering showed this made
+the cutoff WORSE, not better: ggplot2's actual fixed \code{strip.text}
+size (\code{rel(0.8)} of \code{theme_bw()}'s \code{base_size} 11 = 8.8pt)
+is SMALLER than \code{$axis.title.size}'s default of 10, so binding them
 enlarged the title instead of shrinking it - caught by re-rendering and
 comparing before/after, not assumed safe from the code alone. Reverted:
 \code{strip.text} is left at ggplot2's native, non-configurable size, and
@@ -526,8 +530,8 @@ instead of changing the code to match a stale, inaccurate note.
 Re-verified with both changes together (\code{$panel.spacing.x = "5.5"},
 \code{$axis.text.size = "6"}, no \code{strip.text} override): the panel
 grid is back to its original size, "Eastern small-footed myotis" renders
-in full with no truncation, and the x-axis date labels still show a clean
-gap at every panel boundary.
+in full with no truncation, and the x-axis date labels still show a
+clean gap at every panel boundary.
 
 Naming convention (per project preferences):
 \code{package.family_action.subject()}. This function is
