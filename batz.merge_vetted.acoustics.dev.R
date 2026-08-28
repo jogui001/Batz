@@ -1,4 +1,4 @@
-# batz.merge&format_vetted.acoustics.dev.R
+# batz.merge_vetted.acoustics.dev.R
 #
 # DEV / TEST VERSION - Batz project
 #
@@ -82,7 +82,7 @@
 #     removed anyway.
 #
 #  7. **Follow-up (2026-08-27, later still, per Josh: "update
-#     batz.merge&format_vetted.acoustics() to include copying over
+#     batz.merge_vetted.acoustics() to include copying over
 #     $sunregion from input data") - $sunregion is now copied through when
 #     a raw input file already has it.** Read as OPTIONAL pass-through, not
 #     a new required header: $sunregion is not added to expected.headers,
@@ -111,7 +111,7 @@ source("/home/claude/vettedacoustics_work2/batz.batusa_recode.names.R")
 ## ===========================================================================
 ## SECTION 1: function under test (same body as the final .R file)
 ## ===========================================================================
-`batz.merge&format_vetted.acoustics` <- function(dir.load = getwd(),
+batz.merge_vetted.acoustics <- function(dir.load = getwd(),
                                                load.pattern = c("*vetted.csv"),
                                                dir.sub = FALSE,
                                                duplicates.remove = TRUE,
@@ -276,7 +276,7 @@ write.csv(synth, "testdata/synth_vetted.csv", row.names = FALSE)
 dir.load <- "/mnt/user-data/uploads/4 Current  test data"
 
 cat("=== TEST 1: real FinalVetted.csv, defaults ===\n")
-res1 <- `batz.merge&format_vetted.acoustics`(dir.load = dir.load,
+res1 <- batz.merge_vetted.acoustics(dir.load = dir.load,
                                            load.pattern = "*FinalVetted.csv",
                                            dir.sub = FALSE)
 cat("rows:", nrow(res1$vetted.merged), " cols:", ncol(res1$vetted.merged), "\n")
@@ -290,7 +290,7 @@ blank.both <- with(res1$vetted.merged, (is.na(manid.kp) | !nzchar(trimws(manid.k
 cat(sum(blank.both), "\n\n")
 
 cat("=== TEST 2: real data, trim.noise = FALSE (keep noise rows) ===\n")
-res2 <- `batz.merge&format_vetted.acoustics`(dir.load = dir.load,
+res2 <- batz.merge_vetted.acoustics(dir.load = dir.load,
                                            load.pattern = "*FinalVetted.csv",
                                            dir.sub = FALSE,
                                            trim.noise = FALSE)
@@ -303,7 +303,7 @@ cat("n rows with blank $manid (post-recode):", length(blank.rows), "\n")
 print(head(res2$vetted.merged[blank.rows, c("manid","autoid.kp","autoid.sb","manid.kp","manid.sb")], 5))
 
 cat("\n=== TEST 4: manid.kp = FALSE / manid.sb = FALSE (columns should not exist) ===\n")
-res4 <- `batz.merge&format_vetted.acoustics`(dir.load = dir.load,
+res4 <- batz.merge_vetted.acoustics(dir.load = dir.load,
                                            load.pattern = "*FinalVetted.csv",
                                            dir.sub = FALSE,
                                            manid.kp = FALSE, manid.sb = FALSE)
@@ -315,7 +315,7 @@ cat("has manid.sb col?", "manid.sb" %in% names(res4$vetted.merged), "\n\n")
 ## autoid.sb-driven manid.sb fill, and the "NoID" pass-through
 ## ===========================================================================
 cat("=== TEST 5: synthetic fixture, trim.noid = TRUE, trim.noise = TRUE ===\n")
-res5 <- `batz.merge&format_vetted.acoustics`(dir.load = "testdata",
+res5 <- batz.merge_vetted.acoustics(dir.load = "testdata",
                                            load.pattern = "*synth_vetted.csv",
                                            trim.noise = TRUE, trim.noid = TRUE,
                                            duplicates.remove = FALSE)
@@ -324,7 +324,7 @@ cat("rows remaining (started at 4, should drop the 'NoID' and 'noise' rows -> 2 
     nrow(res5$vetted.merged), "\n\n")
 
 cat("=== TEST 6: synthetic fixture, trim.noid = FALSE (default), trim.noise = TRUE (default) ===\n")
-res6 <- `batz.merge&format_vetted.acoustics`(dir.load = "testdata",
+res6 <- batz.merge_vetted.acoustics(dir.load = "testdata",
                                            load.pattern = "*synth_vetted.csv",
                                            duplicates.remove = FALSE)
 print(res6$vetted.merged[, c("manid","autoid.kp","autoid.sb","manid.kp","manid.sb")])
@@ -334,20 +334,20 @@ cat("rows remaining (should keep the 'NoID' row, drop only 'noise' -> 3 left):",
 cat("=== TEST 7: bare call auto-assign into caller's environment ===\n")
 rm(list = c("vetted.merged"), envir = .GlobalEnv)
 suppressWarnings(rm(vetted.merged))
-`batz.merge&format_vetted.acoustics`(dir.load = "testdata", load.pattern = "*synth_vetted.csv",
+batz.merge_vetted.acoustics(dir.load = "testdata", load.pattern = "*synth_vetted.csv",
                                    duplicates.remove = FALSE)
 cat("vetted.merged exists after bare call?", exists("vetted.merged"), "\n")
 cat("rows:", nrow(vetted.merged), "\n\n")
 
 cat("=== TEST 8: log.file = TRUE still works alongside the new pipeline ===\n")
-res8 <- `batz.merge&format_vetted.acoustics`(dir.load = dir.load,
+res8 <- batz.merge_vetted.acoustics(dir.load = dir.load,
                                            load.pattern = "*FinalVetted.csv",
                                            log.file = TRUE)
 cat("has vetted.merged_log.file?", "vetted.merged_log.file" %in% names(res8), "\n")
 print(res8$vetted.merged_log.file)
 
 cat("=== TEST 9: bat.names default ('code4') - real data spot check ===\n")
-res9 <- `batz.merge&format_vetted.acoustics`(dir.load = dir.load,
+res9 <- batz.merge_vetted.acoustics(dir.load = dir.load,
                                            load.pattern = "*FinalVetted.csv",
                                            dir.sub = FALSE)
 print(head(res9$vetted.merged[, c("manid", "autoid.kp", "autoid.sb")], 3))
@@ -355,7 +355,7 @@ cat("manid values look like 4-letter codes (lowercase)?",
     all(grepl("^[a-z]{4}$|^$", res9$vetted.merged$manid[nzchar(res9$vetted.merged$manid)] [1:5])), "\n\n")
 
 cat("=== TEST 10: bat.names = 'common' explicitly (old behavior, still available) ===\n")
-res10 <- `batz.merge&format_vetted.acoustics`(dir.load = dir.load,
+res10 <- batz.merge_vetted.acoustics(dir.load = dir.load,
                                             load.pattern = "*FinalVetted.csv",
                                             dir.sub = FALSE,
                                             bat.names = "common")
@@ -397,7 +397,7 @@ synth.no.sun <- data.frame(
 write.csv(synth.no.sun, "testdata/sunregion/nosun_vetted.csv", row.names = FALSE)
 
 cat("\n=== TEST 11: $sunregion pass-through - present in one file, absent in another, merged together ===\n")
-res11 <- `batz.merge&format_vetted.acoustics`(dir.load = "testdata/sunregion",
+res11 <- batz.merge_vetted.acoustics(dir.load = "testdata/sunregion",
                                             load.pattern = "*vetted.csv",
                                             duplicates.remove = FALSE)
 print(res11$vetted.merged[, c("aru.name", "serial", "sunregion")])
@@ -410,7 +410,7 @@ cat("column position - sunregion lands right after $serial?",
     which(names(res11$vetted.merged) == "sunregion") == which(names(res11$vetted.merged) == "serial") + 1, "\n\n")
 
 cat("=== TEST 12: real FinalVetted.csv (no $sunregion column in the raw file) still merges fine, $sunregion all NA ===\n")
-res12 <- `batz.merge&format_vetted.acoustics`(dir.load = dir.load,
+res12 <- batz.merge_vetted.acoustics(dir.load = dir.load,
                                             load.pattern = "*FinalVetted.csv",
                                             dir.sub = FALSE)
 cat("has $sunregion column?", "sunregion" %in% names(res12$vetted.merged), "\n")

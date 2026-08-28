@@ -1,9 +1,9 @@
 # =============================================================================
-# batz.merge&format_sm4.logfile.dev.R
+# batz.merge_sm4.logfile.dev.R
 # -----------------------------------------------------------------------------
-# Dev script for batz.merge&format_sm4.logfile() - tested against real test
+# Dev script for batz.merge_sm4.logfile() - tested against real test
 # data before being wrapped into the final function
-# (batz.merge&format_sm4.logfile.R).
+# (batz.merge_sm4.logfile.R).
 #
 # Purpose (per spec): merge all SM4 ARU activity-log summary files
 # ("*_A_Summary.txt"/"*_B_Summary.txt") in a directory (and, optionally, its
@@ -12,7 +12,7 @@
 # decimal degrees).
 #
 # NAME: Josh's given name was "batz.sm4logfile_merge&format" - normalized to
-# "batz.merge&format_sm4.logfile" ("&" isn't one of the two separator
+# "batz.merge_sm4.logfile" ("&" isn't one of the two separator
 # characters Josh's own convention defines - "_" between family/action, "."
 # within the action - same normalization already applied to
 # "batz.arumeta.merge&format" -> "batz.arumeta_merge.format" earlier in this
@@ -159,10 +159,10 @@ process.one.file <- function(f) {
 }
 
 # -----------------------------------------------------------------------------
-# batz.merge&format_sm4.logfile(dir.load, dir.sub, load.pattern,
+# batz.merge_sm4.logfile(dir.load, dir.sub, load.pattern,
 #                               duplicates.remove, log.file)
 # -----------------------------------------------------------------------------
-`batz.merge&format_sm4.logfile` <- function(dir.load = getwd(),
+batz.merge_sm4.logfile <- function(dir.load = getwd(),
                                           dir.sub           = FALSE,
                                           load.pattern      = c("*_A_Summary.txt", "*_B_Summary.txt"),
                                           duplicates.remove = TRUE,
@@ -223,7 +223,7 @@ process.one.file <- function(f) {
 # tests
 # -----------------------------------------------------------------------------
 cat("=== dir.sub = FALSE, log.file = TRUE (real data, top-level only) ===\n")
-res1 <- `batz.merge&format_sm4.logfile`("/home/claude/sm4_work", dir.sub = FALSE, log.file = TRUE)
+res1 <- batz.merge_sm4.logfile("/home/claude/sm4_work", dir.sub = FALSE, log.file = TRUE)
 cat("\ndim sm4logs.merged:", paste(dim(sm4logs.merged), collapse = " x "), "\n")
 cat("aru.name values:", paste(unique(sm4logs.merged$aru.name), collapse = ", "), "\n")
 print(head(sm4logs.merged[, c("aru.name", "DATE", "TIME", "LAT", "NS", "Y", "LON", "EW", "X")], 3))
@@ -231,15 +231,15 @@ print(sm4logs.merged_log.file)
 
 cat("\n\n=== dir.sub = TRUE (should also pick up subfolders, incl. the real\n",
     " duplicate file and the two synthetic edge-case files) ===\n", sep = "")
-res2 <- `batz.merge&format_sm4.logfile`("/home/claude/sm4_work", dir.sub = TRUE, log.file = TRUE)
+res2 <- batz.merge_sm4.logfile("/home/claude/sm4_work", dir.sub = TRUE, log.file = TRUE)
 cat("\ndim sm4logs.merged:", paste(dim(sm4logs.merged), collapse = " x "), "\n")
 print(sm4logs.merged_log.file)
 
 cat("\n\n=== duplicates.remove = FALSE (dup CEMETERY rows should survive) ===\n")
-res3 <- `batz.merge&format_sm4.logfile`("/home/claude/sm4_work", dir.sub = TRUE, duplicates.remove = FALSE)
+res3 <- batz.merge_sm4.logfile("/home/claude/sm4_work", dir.sub = TRUE, duplicates.remove = FALSE)
 cat("dim with duplicates.remove = FALSE:", paste(dim(sm4logs.merged), collapse = " x "), "\n")
 
 cat("\n\n=== empty directory ===\n")
 empty.dir <- tempfile(); dir.create(empty.dir)
-res4 <- `batz.merge&format_sm4.logfile`(empty.dir, log.file = TRUE)
+res4 <- batz.merge_sm4.logfile(empty.dir, log.file = TRUE)
 cat("dim:", paste(dim(sm4logs.merged), collapse = " x "), " log rows:", nrow(sm4logs.merged_log.file), "\n")

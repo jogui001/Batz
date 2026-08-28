@@ -133,7 +133,7 @@
 #' rejected as a strange thing to add a whole new parameter for.
 #'
 #' \strong{Follow-up, 2026-08-27, later still, per Josh ("update
-#' batz.merge&format_vetted.acoustics() to include copying over $sunregion
+#' batz.merge_vetted.acoustics() to include copying over $sunregion
 #' from input data"): $sunregion is now copied through when a raw input
 #' file already has it.} Read as OPTIONAL pass-through, not a new required
 #' header: \code{$sunregion} is NOT added to the expected-headers list
@@ -197,7 +197,7 @@
 #'   \code{vetted.merged_log.file} (only if \code{log.file = TRUE}). As a
 #'   side effect, the same object(s) are also assigned directly into the
 #'   calling environment (same auto-assign convention as
-#'   \code{batz.arumeta_merge.format}/\code{batz.datawrangler_load.files}),
+#'   \code{batz.merge_aru.meta}/\code{batz.datawrangler_load.files}),
 #'   so a bare call with no assignment populates \code{vetted.merged}
 #'   (and \code{vetted.merged_log.file}) directly.
 #'
@@ -205,13 +205,13 @@
 #' \dontrun{
 #' # bare call - creates `vetted.merged` (and `vetted.merged_log.file`, if
 #' # log.file = TRUE) directly in the calling environment
-#' `batz.merge&format_vetted.acoustics`(dir.sub = TRUE, log.file = TRUE)
+#' batz.merge_vetted.acoustics(dir.sub = TRUE, log.file = TRUE)
 #' head(vetted.merged)
 #' vetted.merged_log.file
 #' }
 #'
 #' @export
-`batz.merge&format_vetted.acoustics` <- function(dir.load = getwd(),
+batz.merge_vetted.acoustics <- function(dir.load = getwd(),
                                                load.pattern = c("*vetted.csv"),
                                                dir.sub = FALSE,
                                                duplicates.remove = TRUE,

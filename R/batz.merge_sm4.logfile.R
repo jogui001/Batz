@@ -28,7 +28,7 @@
 #' @return Invisibly, a named list: \code{sm4logs.merged} (always), plus
 #'   \code{sm4logs.merged_log.file} when \code{log.file = TRUE}. Every
 #'   element is also auto-assigned into the calling environment (same
-#'   pattern already used in \code{batz.arumeta_merge.format},
+#'   pattern already used in \code{batz.merge_aru.meta},
 #'   \code{batz.datawrangler_load.files}, and
 #'   \code{batz.arumeta_generate.eventlog}), so a bare call with no
 #'   assignment creates \code{sm4logs.merged} (and the log table, if
@@ -64,15 +64,15 @@
 #'
 #' @examples
 #' \dontrun{
-#' `batz.merge&format_sm4.logfile`()
+#' batz.merge_sm4.logfile()
 #' # sm4logs.merged is now in your workspace
 #'
-#' `batz.merge&format_sm4.logfile`(dir.sub = TRUE, log.file = TRUE)
+#' batz.merge_sm4.logfile(dir.sub = TRUE, log.file = TRUE)
 #' # sm4logs.merged and sm4logs.merged_log.file both created
 #' }
 #'
 #' @export
-`batz.merge&format_sm4.logfile` <- function(dir.load = getwd(),
+batz.merge_sm4.logfile <- function(dir.load = getwd(),
                                           dir.sub           = FALSE,
                                           load.pattern      = c("*_A_Summary.txt", "*_B_Summary.txt"),
                                           duplicates.remove = TRUE,

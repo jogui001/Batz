@@ -1,4 +1,4 @@
-# batz.merge&format_temp.logger.dev.R
+# batz.merge_temp.logger.dev.R
 #
 # DEV / TEST VERSION - Batz project
 #
@@ -9,7 +9,7 @@
 #
 # This is the procedural script used to develop and test the logic against
 # real sample files before it gets wrapped into the reusable function
-# batz.merge&format_temp.logger() (see batz.merge&format_temp.logger.R).
+# batz.merge_temp.logger() (see batz.merge_temp.logger.R).
 #
 # UPDATE (latest, per Josh): RH is back, but now strictly gated on the
 # matched templog.meta.csv $logger.type - not on header text or any other
