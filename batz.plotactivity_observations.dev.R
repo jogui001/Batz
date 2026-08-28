@@ -40,6 +40,26 @@
 #    console WARNING. Flagging in case this blank-species bucket should
 #    actually be folded into "All detections" or a specific category.
 #
+# FOLLOW-UP (2026-08-28), per Josh - $plot.group/$plot.sets/$pool added,
+# built and tested using his two newly-attached files (see @details in the
+# .R file for the full design and the flagged assumption around dodged,
+# same-colored bars when $pool = FALSE):
+#  - fig.list.csv (Josh's real file, 1 row) already uses the new column
+#    names (plot.group = "aru.name", plot.sets = a triple-quoted 3-value
+#    field, pool = FALSE) - used directly in TEST 17 below, unmodified.
+#  - processed.csv (Josh's real file, 1963 data rows: spp.id/date/aru.name/
+#    sunregion/obs/mins2.noon.min/mins2.noon.max/vetting.type) is used as
+#    `data` in TEST 15-17 - it does NOT have a column called "aru.groupby"
+#    at all, only "aru.name" - exactly the scenario $plot.group generalizes
+#    for (this data was very likely never produced by
+#    batz.generate_plotframe.bat() itself, e.g. it may be a hand-summarized
+#    sheet - $plot.group = "aru.name" tells this function to filter/group on
+#    that column directly, with no renaming needed).
+#  - TEST 15-16 build their own small synthetic fig.list rows (like the rest
+#    of this file) against processed.csv to isolate plot.group/plot.sets/
+#    pool one at a time; TEST 17 uses Josh's real fig.list.csv row as-is,
+#    end-to-end, against processed.csv.
+#
 # =============================================================================
 
 setwd("/home/claude/plotactivity_work")
@@ -63,13 +83,21 @@ suntimes.synth <- data.frame(
   stringsAsFactors = FALSE
 )
 
-make.job <- function(plot.set = "WTG-GOM102", date.start = "6/20/2026", date.end = "7/3/2026",
+## plot.group/plot.sets/pool (2026-08-28 follow-up - see @details in the .R
+## file): plot.data.real (plfr.bats.csv) still has its column literally
+## named "aru.groupby" (predates the batz.generate_plotframe.bat() rename
+## of that column to $group), so plot.group defaults to "aru.groupby" here
+## to match it - see TEST 15+ below for plot.group actually generalized to
+## a DIFFERENT column, using Josh's new processed.csv/fig.list.csv fixtures.
+make.job <- function(plot.group = "aru.groupby", plot.sets = "WTG-GOM102", pool = FALSE,
+                      date.start = "6/20/2026", date.end = "7/3/2026",
                       Yaxe.trans = "", y.scale = "", y.custom = "", ymax = "",
                       loglabels = "", plot.name = "University of  Maine WTG turbine - Call Observations") {
   data.frame(
     plot.type = "call.observations", plot.name = plot.name, facet = "sppid", facet.set = "NE",
     MYSO = FALSE, Alldect = TRUE, facet.panel = "", `40khzmyo` = TRUE, facet.label = "",
-    plot.set = plot.set, date.format = "%b-%d/n%Y", date.start = date.start, date.end = date.end,
+    plot.group = plot.group, plot.sets = plot.sets, pool = pool,
+    date.format = "%b-%d/n%Y", date.start = date.start, date.end = date.end,
     xaxe.interval = 4, Yaxe.trans = Yaxe.trans, y.scale = y.scale, y.custom = y.custom, ymax = ymax,
     loglabels = loglabels,
     check.names = FALSE, stringsAsFactors = FALSE
@@ -250,5 +278,97 @@ cat("Consecutive gaps between breaks, in % of axis span (expected all ~25, i.e. 
 cat("All gaps equal within rounding tolerance (expected TRUE):", all(abs(gaps - gaps[1]) < 0.01), "\n")
 cat("Break labels show real (untransformed) counts, rounded to 1 decimal for readability (expected 0, 2.9, 14.2, 58.3, 230 - NOT 6-decimal raw values like 2.898549):",
     paste(trimws(p14$break.labels), collapse = ", "), "\n")
+
+cat("\n\n########## TEST 15: $plot.group generalizes away from the hardcoded $aru.groupby column - Josh's new processed.csv only has $aru.name, no $aru.groupby at all ##########\n")
+processed.real <- read.csv("josh_uploads/processed.csv", stringsAsFactors = FALSE, check.names = FALSE)
+processed.real <- processed.real[, names(processed.real) != "", drop = FALSE]
+cat("processed.csv has an $aru.name column but NOT an $aru.groupby column (confirms this is a genuine plot.group generalization test, not a renamed pass-through)?",
+    "aru.name" %in% names(processed.real) && !("aru.groupby" %in% names(processed.real)), "\n")
+
+job15 <- make.job(plot.group = "aru.name", plot.sets = "105059-NW3",
+                   date.start = "7/7/2026", date.end = "8/18/2026")
+result15 <- batz.plotactivity_observations(processed.real, job15, suntimes.synth, aes.default.real)
+cat("$plots entries produced (expected 1):", length(result15$plots), "\n")
+cat("every row of prepared data's $group.val is the selected plot.sets value ('105059-NW3')?",
+    length(result15$plots) == 1 && all(result15$plots[[1]]$pd$group.val == "105059-NW3"), "\n")
+
+job15b <- make.job(plot.group = "not.a.real.column", plot.sets = "105059-NW3",
+                    date.start = "7/7/2026", date.end = "8/18/2026")
+result15b <- batz.plotactivity_observations(processed.real, job15b, suntimes.synth, aes.default.real)
+cat("$plot.group naming a column that doesn't exist in `data` is skipped, not an error (expected 0 plots):",
+    length(result15b$plots), "\n")
+
+job15c <- make.job(plot.group = "", plot.sets = "105059-NW3",
+                    date.start = "7/7/2026", date.end = "8/18/2026")
+result15c <- batz.plotactivity_observations(processed.real, job15c, suntimes.synth, aes.default.real)
+cat("blank $plot.group is skipped, not an error (expected 0 plots):", length(result15c$plots), "\n")
+
+cat("\n\n########## TEST 16: $plot.sets multi-value parsing + $pool TRUE/FALSE ##########\n")
+job16.multi <- make.job(plot.group = "aru.name",
+                         plot.sets = '"105059-NW3" "105059-SE3" "105059-SW3"',
+                         date.start = "7/7/2026", date.end = "8/18/2026", pool = FALSE)
+result16.multi <- batz.plotactivity_observations(processed.real, job16.multi, suntimes.synth, aes.default.real)
+pd16 <- result16.multi$plots[[1]]$pd
+cat("all 3 selected $plot.sets values present in the prepared (unpooled) data?",
+    setequal(unique(pd16$group.val), c("105059-NW3", "105059-SE3", "105059-SW3")), "\n")
+## row count unpooled should equal running each of the 3 detectors alone and
+## summing their row counts (pool=FALSE just concatenates, never collapses) -
+## NOT simply 3x a single detector's count, since different detectors don't
+## necessarily have the same number of species/date combinations present
+n.each <- sapply(c("105059-NW3", "105059-SE3", "105059-SW3"), function(v) {
+  jv <- make.job(plot.group = "aru.name", plot.sets = v, date.start = "7/7/2026", date.end = "8/18/2026")
+  nrow(batz.plotactivity_observations(processed.real, jv, suntimes.synth, aes.default.real)$plots[[1]]$pd)
+})
+cat("row count unpooled equals the sum of running each of the 3 detectors separately (nothing got summed/dropped)?",
+    nrow(pd16) == sum(n.each), "\n")
+
+job16.pool <- make.job(plot.group = "aru.name",
+                        plot.sets = '"105059-NW3" "105059-SE3" "105059-SW3"',
+                        date.start = "7/7/2026", date.end = "8/18/2026", pool = TRUE)
+result16.pool <- batz.plotactivity_observations(processed.real, job16.pool, suntimes.synth, aes.default.real)
+pd16.pool <- result16.pool$plots[[1]]$pd
+cat("pooled data collapses to a single $group.val ('pooled')?",
+    length(unique(pd16.pool$group.val)) == 1 && unique(pd16.pool$group.val) == "pooled", "\n")
+
+## cross-check: pooled $obs for one date/panel should equal the sum of the
+## 3 individual detectors' $obs for that same date/panel, unpooled
+chk.panel <- pd16$facet.panel.value[1]
+chk.date  <- pd16$date.parsed[1]
+sum.unpooled <- sum(pd16$obs[pd16$facet.panel.value == chk.panel & pd16$date.parsed == chk.date])
+sum.pooled   <- sum(pd16.pool$obs[pd16.pool$facet.panel.value == chk.panel & pd16.pool$date.parsed == chk.date])
+cat("pooled $obs for one date/panel equals the sum of the 3 unpooled detectors' $obs for that same date/panel?",
+    isTRUE(all.equal(sum.pooled, sum.unpooled)), "\n")
+
+## a single selected $plot.sets value should behave identically pooled or not (nothing to sum/dodge)
+job16.single.pool   <- make.job(plot.group = "aru.name", plot.sets = "105059-NW3",
+                                 date.start = "7/7/2026", date.end = "8/18/2026", pool = TRUE)
+result16.single.pool <- batz.plotactivity_observations(processed.real, job16.single.pool, suntimes.synth, aes.default.real)
+cat("single-value $plot.sets: pooled total $obs equals unpooled total $obs (expected TRUE, nothing to pool)?",
+    isTRUE(all.equal(sum(result16.single.pool$plots[[1]]$pd$obs), sum(result15$plots[[1]]$pd$obs))), "\n")
+
+## dodge rendering check (ggplot2 layer, mirrors TEST 13's approach for the sibling overlay bug)
+if (length(result16.multi$ggplots) > 0) {
+  g16 <- result16.multi$ggplots[[1]]
+  cat("pool=FALSE with 3 plot.sets values uses position_dodge2 (not identity) for the geom_col layers?",
+       inherits(g16$layers[[1]]$position, "PositionDodge2"), "\n")
+}
+if (length(result16.pool$ggplots) > 0) {
+  g16p <- result16.pool$ggplots[[1]]
+  cat("pool=TRUE uses position 'identity' (one bar per date, nothing to dodge)?",
+       inherits(g16p$layers[[1]]$position, "PositionIdentity"), "\n")
+}
+
+cat("\n\n########## TEST 17: Josh's real fig.list.csv row, end-to-end against his real processed.csv ##########\n")
+fig.list.real <- read.csv("josh_uploads/fig.list.csv", stringsAsFactors = FALSE, check.names = FALSE)
+cat("real fig.list.csv row's $plot.group/$plot.sets/$pool as read:\n")
+print(fig.list.real[, c("plot.group", "plot.sets", "pool")])
+result17 <- batz.plotactivity_observations(processed.real, fig.list.real, suntimes.synth, aes.default.real)
+cat("$plots entries produced from Josh's real fig.list.csv row (expected 1):", length(result17$plots), "\n")
+if (length(result17$plots) == 1) {
+  pd17 <- result17$plots[[1]]$pd
+  cat("all 3 of Josh's real $plot.sets detectors present (105059-NW3/SE3/SW3), pool=FALSE so not collapsed?",
+       setequal(unique(pd17$group.val), c("105059-NW3", "105059-SE3", "105059-SW3")), "\n")
+}
+cat("$ggplots entries produced (expected 1):", length(result17$ggplots), "\n")
 
 cat("\n\nEXIT: 0\n")

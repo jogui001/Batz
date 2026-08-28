@@ -9,13 +9,15 @@
 #'
 #' @param data A data frame of already-summarized per-species, per-night
 #'   observation counts. Must have \code{$spp.id}, \code{$date},
-#'   \code{$aru.groupby}, \code{$obs}.
+#'   \code{$obs}, plus whatever column each \code{fig.list} row's own
+#'   \code{$plot.group} names (see Details - this is no longer a fixed,
+#'   hardcoded column).
 #' @param fig.list A data frame listing the plot(s) to generate - one row
 #'   per plot. Must have \code{$plot.type}, \code{$plot.name}, \code{$facet},
 #'   \code{$facet.set}, \code{$MYSO}, \code{$Alldect}, \code{$facet.panel},
-#'   \code{$40khzmyo}, \code{$facet.label}, \code{$plot.set},
-#'   \code{$date.format}, \code{$date.start}, \code{$date.end},
-#'   \code{$xaxe.interval}. Column names must be unique. Four further
+#'   \code{$40khzmyo}, \code{$facet.label}, \code{$plot.group},
+#'   \code{$plot.sets}, \code{$pool}, \code{$date.format}, \code{$date.start},
+#'   \code{$date.end}, \code{$xaxe.interval}. Column names must be unique. Four further
 #'   columns are read PER-ROW if present but are entirely optional (each
 #'   falls back to \code{aes.default} when blank or the column doesn't
 #'   exist at all - see Details): \code{$Yaxe.trans} (\code{"none"}/
@@ -105,6 +107,59 @@
 #' explicitly for Josh}: if \code{suntimes} should actually do something in
 #' this plot (e.g. gray out or omit un-monitored nights), say so and it can
 #' be wired in.
+#'
+#' \strong{Follow-up, 2026-08-28, per Josh: \code{$plot.group}/
+#' \code{$plot.sets}/\code{$pool} replace the old fixed \code{$aru.groupby}/
+#' \code{$plot.set} single-detector-column design.} Previously, this
+#' function always filtered \code{data} on a hardcoded \code{$aru.groupby}
+#' column, matched against a single \code{$plot.set} value. Three
+#' \code{fig.list} columns now generalize this:
+#' \itemize{
+#'   \item \code{$plot.group} names WHICH column of \code{data} to filter/
+#'     group by, per \code{fig.list} row - e.g. \code{"aru.name"} to plot by
+#'     detector (matching \code{\link{batz.generate_plotframe.bat}}'s own
+#'     \code{groupby} parameter and its \code{$groupedby} output column) or
+#'     \code{"deployment.type"} to plot by some other category entirely.
+#'     This is what gives a single \code{fig.list}/this function the
+#'     flexibility to plot other sheets/groupings without a code change -
+#'     \code{data} no longer needs a column literally called
+#'     \code{$aru.groupby} at all. A row with a blank \code{$plot.group}, or
+#'     one naming a column \code{data} doesn't actually have, is skipped
+#'     with a console \code{NOTE} (same tolerant, skip-don't-crash style
+#'     used for an unrecognized \code{$plot.type}/\code{$facet}).
+#'   \item \code{$plot.sets} (renamed from the old singular
+#'     \code{$plot.set}) lists every value of the \code{$plot.group} column
+#'     to include in this plot - now MULTIPLE values, not just one. Every
+#'     double-quote character in the raw value is treated as a token
+#'     delimiter (alongside whitespace) and stripped, so
+#'     \code{"105059-NW3" "105059-SE3" "105059-SW3"}-shaped values parse
+#'     into three tokens - this was deliberately NOT implemented as
+#'     matching well-formed quote PAIRS, because Josh's own real
+#'     \code{fig.list.csv} value for this column, once CSV-unescaped, comes
+#'     through missing the very first value's leading quote (the field's
+#'     own outer CSV quoting consumes it) - a quote-pair parser would
+#'     silently drop that first token on real data. A single bare,
+#'     unquoted value (e.g. \code{105059-NW3}, exactly like the old
+#'     \code{$plot.set}) or several bare whitespace-separated values with
+#'     no quoting at all also work. A blank \code{$plot.sets} matches every
+#'     value of the \code{$plot.group} column (same as the old
+#'     blank-\code{$plot.set} behavior). \strong{Limitation, flagged for
+#'     Josh}: a value containing a literal space would be split into two -
+#'     not expected for detector/group names, but worth knowing.
+#'   \item \code{$pool} (\code{TRUE}/\code{FALSE}) controls how the
+#'     (possibly several) selected \code{$plot.sets} values are combined:
+#'     \code{TRUE} sums \code{$obs} across all of them into ONE pooled bar
+#'     per date/panel (as if they were a single group); \code{FALSE} keeps
+#'     each selected value as its own bar, drawn side-by-side (dodged)
+#'     within the same date/panel. \strong{The dodge implementation is a
+#'     first-iteration design choice, flagged for Josh}: bars are dodged via
+#'     \code{ggplot2}'s own \code{position_dodge2()} at each date, colored
+#'     the same way regardless of \code{$plot.sets} value (fill still only
+#'     distinguishes \code{"All detections"} vs \code{"40kHzMyo"}, exactly
+#'     as before) - there is no separate legend distinguishing WHICH
+#'     \code{$plot.sets} value a given dodged bar is; say if that's needed
+#'     and a per-value color/label can be added.
+#' }
 #'
 #' \strong{Y-axis resolution - the newest, most detailed part of this
 #' function - implements Josh's spec as follows:} \code{$Yaxe.trans}
@@ -298,14 +353,18 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
   # See @details above for why this value was chosen and how to change it.
   PLOT.TYPE <- "call.observations"
 
-  DATA.REQUIRED <- c("spp.id", "date", "aru.groupby", "obs")
+  ## $aru.groupby is NOT in this list anymore - which column of `data` to
+  ## filter/group by is now named per fig.list row via $plot.group (see
+  ## Details/Follow-up 2026-08-28) rather than being a fixed, hardcoded
+  ## column data must always have.
+  DATA.REQUIRED <- c("spp.id", "date", "obs")
   SUNTIMES.REQUIRED <- c("aru", "date", "date.mon", "sunregion", "time.zone",
                           "sunregion.type", "schedual1", "schedual2", "suns",
                           "suns.unix", "sunr", "sunr.unix", "sunr.mon", "sunr.mon.unix")
   FIG.LIST.REQUIRED <- c("plot.type", "plot.name", "facet", "facet.set", "MYSO",
                           "Alldect", "facet.panel", "40khzmyo", "facet.label",
-                          "plot.set", "date.format", "date.start", "date.end",
-                          "xaxe.interval")
+                          "plot.group", "plot.sets", "pool", "date.format",
+                          "date.start", "date.end", "xaxe.interval")
   AES.DEFAULT.REQUIRED <- c("category", "parameter", "default.value")
 
   AES.DEFAULT.REQUIRED.PARAMETERS <- c(
@@ -365,6 +424,33 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
   unquote <- function(x) {
     x <- trimws(as.character(x))
     gsub('^"(.*)"$', "\\1", x)
+  }
+
+  # Parses $plot.sets (2026-08-28) into a character vector of one or more
+  # values. Real spreadsheet-exported $plot.sets values (Josh's own
+  # fig.list.csv, confirmed against the actual file) don't come through as
+  # cleanly double-quoted-and-escaped as `"105059-NW3" "105059-SE3"
+  # "105059-SW3"` might suggest - the CSV field's own OUTER quoting eats the
+  # very first value's leading quote, so after read.csv() unescapes it, the
+  # raw string actually looks like `105059-NW3" "105059-SE3" "105059-SW3"`
+  # (no leading quote on the first token). Rather than depend on
+  # well-formed quote PAIRS (which would silently drop the first token, or
+  # even the whole value, on real data), every double-quote character is
+  # simply treated as a token delimiter alongside whitespace: they're
+  # stripped out entirely, then the remainder is split on whitespace. This
+  # correctly recovers all N values from both the messy real file and a
+  # cleanly-quoted one, and also handles a single bare, unquoted value
+  # (e.g. `105059-NW3`, exactly like the old $plot.set) or several bare
+  # whitespace-separated values with no quoting at all. The one thing it
+  # can't handle is a value that itself contains a space (it would be
+  # split into two) - not expected for detector/group names, but flagging
+  # in case that's ever needed.
+  parse.plot.sets <- function(x) {
+    x <- trimws(as.character(x))
+    if (length(x) == 0 || is.na(x) || !nzchar(x)) return(character(0))
+    x <- gsub('"', " ", x, fixed = TRUE)
+    vals <- strsplit(trimws(x), "\\s+")[[1]]
+    vals[nzchar(vals)]
   }
 
   parse.flex.date <- function(x) {
@@ -482,9 +568,23 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     pd$spp.common <- batz.batusa_recode.names(pd$spp.id, output.format = "common")
     pd$spp.common[is.khz.raw] <- "40khzmyo"
 
-    plot.set.val <- trimws(job$plot.set)
-    if (nzchar(plot.set.val)) {
-      pd <- pd[tolower(trimws(pd$aru.groupby)) == tolower(plot.set.val), , drop = FALSE]
+    # --- $plot.group: which column of `data` to filter/group by (2026-08-28
+    # follow-up - see Details). Replaces the old hardcoded $aru.groupby. ---
+    group.col <- trimws(job$plot.group)
+    if (!nzchar(group.col)) {
+      cat(sprintf("NOTE: fig.list row for '%s' has a blank $plot.group - skipped (need the name of a column in `data` to filter/group by).\n",
+                   job.label))
+      next
+    }
+    if (!(group.col %in% names(pd))) {
+      cat(sprintf("NOTE: fig.list row for '%s' has $plot.group = '%s', which is not a column of `data` - skipped.\n",
+                   job.label, group.col))
+      next
+    }
+
+    plot.sets.vals <- parse.plot.sets(job$plot.sets)
+    if (length(plot.sets.vals) > 0) {
+      pd <- pd[tolower(trimws(as.character(pd[[group.col]]))) %in% tolower(plot.sets.vals), , drop = FALSE]
     }
     pd <- pd[tolower(trimws(pd$spp.common)) %in% tolower(spp.plot), , drop = FALSE]
 
@@ -494,14 +594,26 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     pd <- pd[!is.na(pd$date.parsed) & pd$date.parsed >= date.start & pd$date.parsed <= date.end, , drop = FALSE]
 
     if (nrow(pd) == 0) {
-      cat(sprintf("NOTE: fig.list row for '%s' (plot.set = '%s', %s to %s) matched 0 rows of data - no plot generated. Check that $aru.groupby/$date in data actually overlap this row's $plot.set/$date.start/$date.end.\n",
-                   job.label, plot.set.val, date.start, date.end))
+      cat(sprintf("NOTE: fig.list row for '%s' (plot.group = '%s', plot.sets = '%s', %s to %s) matched 0 rows of data - no plot generated. Check that $%s/$date in data actually overlap this row's $plot.sets/$date.start/$date.end.\n",
+                   job.label, group.col, paste(plot.sets.vals, collapse = ", "), date.start, date.end, group.col))
       next
     }
 
     khz.own.panel <- khz.flag && !alldect.flag
     pd$facet.panel.value <- ifelse(tolower(pd$spp.common) == "40khzmyo" & !khz.own.panel, "All detections", pd$spp.common)
     pd$bar.type <- ifelse(tolower(pd$spp.common) == "40khzmyo", "40kHzMyo", "All detections")
+    pd$group.val <- as.character(pd[[group.col]])
+
+    # --- $pool: TRUE sums $obs across every selected $plot.sets value into
+    # ONE pooled bar per date/panel; FALSE keeps each selected value as its
+    # own bar (drawn side-by-side/dodged at plotting time below) - see
+    # Details/Follow-up 2026-08-28. ---
+    pool.flag <- isTRUE(as.logical(job$pool))
+    if (pool.flag) {
+      pd <- stats::aggregate(obs ~ spp.common + facet.panel.value + bar.type + date.parsed,
+                              data = pd, FUN = sum)
+      pd$group.val <- "pooled"
+    }
 
     facet.label.fmt <- unquote(get.setting(job, "facet.label"))
     if (is.na(facet.label.fmt) || !nzchar(facet.label.fmt)) facet.label.fmt <- "common"
@@ -599,7 +711,8 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
       job.label = job.label, job = job, pd = pd, panel.labels = panel.labels,
       facpan = facpan, spp.plot = spp.plot, date.start = date.start, date.end = date.end,
       khz.flag = khz.flag, break.pos = break.pos, break.labels = break.labels,
-      y.upper.plot = trans.fn(y.upper)
+      y.upper.plot = trans.fn(y.upper), group.col = group.col,
+      plot.sets.vals = plot.sets.vals, pool.flag = pool.flag
     )
     cat(sprintf("Prepared plot data for '%s': %d observation row(s) across %d panel(s).\n",
                  job.label, nrow(pd), length(panel.levels.raw)))
@@ -642,14 +755,26 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
       # time, even though both bars' data rows were present and correct.
       # Two explicit layers, added to the plot in bottom-to-top order,
       # guarantee 40kHzMyo always draws on top regardless of factor order.
+      #
+      # $pool = FALSE (2026-08-28 follow-up - see Details): when more than
+      # one $plot.sets value is selected and not pooled, each is drawn as
+      # its own bar, dodged side-by-side within the same date (via
+      # position_dodge2(), grouped by $group.val - the raw $plot.group
+      # column's value for that row). $pool = TRUE (or only one selected
+      # value to begin with) draws a single bar per date, same as before.
       bar.width.val <- as.numeric(get.default("bar.width"))
+      bar.position <- if (isTRUE(p$pool.flag) || length(unique(p$pd$group.val)) <= 1) {
+        "identity"
+      } else {
+        ggplot2::position_dodge2(width = bar.width.val, padding = 0.1)
+      }
       g <- ggplot2::ggplot(p$pd, ggplot2::aes(x = date.parsed)) +
         ggplot2::geom_col(data = p$pd[p$pd$bar.type == "All detections", , drop = FALSE],
-                           ggplot2::aes(y = obs.plot, fill = bar.type),
-                           width = bar.width.val, position = "identity") +
+                           ggplot2::aes(y = obs.plot, fill = bar.type, group = group.val),
+                           width = bar.width.val, position = bar.position) +
         ggplot2::geom_col(data = p$pd[p$pd$bar.type == "40kHzMyo", , drop = FALSE],
-                           ggplot2::aes(y = obs.plot, fill = bar.type),
-                           width = bar.width.val, position = "identity") +
+                           ggplot2::aes(y = obs.plot, fill = bar.type, group = group.val),
+                           width = bar.width.val, position = bar.position) +
         ggplot2::scale_fill_manual(name = get.default("bar.fill.legend.title"),
           breaks = fill.legend.breaks, limits = fill.legend.limits,
           values = c(`All detections` = get.default("bar.alldetections.fill"),
@@ -680,7 +805,13 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
 
       pattern <- get.default("output.filename.pattern")
       fname <- pattern
-      fname <- gsub("<ARU>", trimws(p$job$plot.set), fname, fixed = TRUE)
+      # <ARU> token: the selected $plot.sets value(s), joined with "+" (was
+      # the single $plot.set value pre-2026-08-28); "-pooled" suffix added
+      # when $pool = TRUE, since that collapses them into one bar/value.
+      aru.token <- paste(p$plot.sets.vals, collapse = "+")
+      if (!nzchar(aru.token)) aru.token <- p$group.col
+      if (isTRUE(p$pool.flag)) aru.token <- paste0(aru.token, "-pooled")
+      fname <- gsub("<ARU>", aru.token, fname, fixed = TRUE)
       fname <- gsub("<date.start>", as.character(min(p$pd$date.parsed)), fname, fixed = TRUE)
       fname <- gsub("<date.end>", as.character(max(p$pd$date.parsed)), fname, fixed = TRUE)
       fname <- gsub("<timestamp>", format(Sys.time(), "%Y%m%d%H%M%S"), fname, fixed = TRUE)

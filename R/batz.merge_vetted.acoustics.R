@@ -145,7 +145,7 @@
 #' into \code{vetted.merged}, placed next to \code{$serial}/\code{
 #' $aru.name} (the other detector-level columns) in the final column
 #' order rather than at the very end. This does NOT make the function
-#' itself perform the join described in \code{\link{batz.plotframe_batactivity}}'s
+#' itself perform the join described in \code{\link{batz.generate_plotframe.bat}}'s
 #' own documentation (matching \code{$aru.name} against an
 #' \code{*arulist.csv}) - it only preserves \code{$sunregion} when the raw
 #' per-file input already carries it (e.g. a future export, or a file

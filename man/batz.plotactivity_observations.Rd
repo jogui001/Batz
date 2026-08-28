@@ -16,14 +16,16 @@ batz.plotactivity_observations(
 \arguments{
 \item{data}{A data frame of already-summarized per-species, per-night
 observation counts. Must have \code{$spp.id}, \code{$date},
-\code{$aru.groupby}, \code{$obs}.}
+\code{$obs}, plus whatever column each \code{fig.list} row's own
+\code{$plot.group} names (see Details - this is no longer a fixed,
+hardcoded column).}
 
 \item{fig.list}{A data frame listing the plot(s) to generate - one row
 per plot. Must have \code{$plot.type}, \code{$plot.name}, \code{$facet},
 \code{$facet.set}, \code{$MYSO}, \code{$Alldect}, \code{$facet.panel},
-\code{$40khzmyo}, \code{$facet.label}, \code{$plot.set},
-\code{$date.format}, \code{$date.start}, \code{$date.end},
-\code{$xaxe.interval}. Column names must be unique. Four further
+\code{$40khzmyo}, \code{$facet.label}, \code{$plot.group},
+\code{$plot.sets}, \code{$pool}, \code{$date.format}, \code{$date.start},
+\code{$date.end}, \code{$xaxe.interval}. Column names must be unique. Four further
 columns are read PER-ROW if present but are entirely optional (each
 falls back to \code{aes.default} when blank or the column doesn't
 exist at all - see Details): \code{$Yaxe.trans} (\code{"none"}/
@@ -59,8 +61,8 @@ generated PNG is saved into (each file's own name still comes from
 }
 \value{
 Invisibly, a list with \code{plots} (one entry per generated
-plot's prepared data) and \code{ggplots} (the corresponding ggplot
-objects, only populated when the \code{ggplot2} package is available).
+  plot's prepared data) and \code{ggplots} (the corresponding ggplot
+  objects, only populated when the \code{ggplot2} package is available).
 }
 \description{
 Generates the standard report plot showing, for every species (plus an
@@ -127,6 +129,59 @@ explicitly for Josh}: if \code{suntimes} should actually do something in
 this plot (e.g. gray out or omit un-monitored nights), say so and it can
 be wired in.
 
+\strong{Follow-up, 2026-08-28, per Josh: \code{$plot.group}/
+\code{$plot.sets}/\code{$pool} replace the old fixed \code{$aru.groupby}/
+\code{$plot.set} single-detector-column design.} Previously, this
+function always filtered \code{data} on a hardcoded \code{$aru.groupby}
+column, matched against a single \code{$plot.set} value. Three
+\code{fig.list} columns now generalize this:
+\itemize{
+  \item \code{$plot.group} names WHICH column of \code{data} to filter/
+    group by, per \code{fig.list} row - e.g. \code{"aru.name"} to plot by
+    detector (matching \code{\link{batz.generate_plotframe.bat}}'s own
+    \code{groupby} parameter and its \code{$groupedby} output column) or
+    \code{"deployment.type"} to plot by some other category entirely.
+    This is what gives a single \code{fig.list}/this function the
+    flexibility to plot other sheets/groupings without a code change -
+    \code{data} no longer needs a column literally called
+    \code{$aru.groupby} at all. A row with a blank \code{$plot.group}, or
+    one naming a column \code{data} doesn't actually have, is skipped
+    with a console \code{NOTE} (same tolerant, skip-don't-crash style
+    used for an unrecognized \code{$plot.type}/\code{$facet}).
+  \item \code{$plot.sets} (renamed from the old singular
+    \code{$plot.set}) lists every value of the \code{$plot.group} column
+    to include in this plot - now MULTIPLE values, not just one. Every
+    double-quote character in the raw value is treated as a token
+    delimiter (alongside whitespace) and stripped, so
+    \code{"105059-NW3" "105059-SE3" "105059-SW3"}-shaped values parse
+    into three tokens - this was deliberately NOT implemented as
+    matching well-formed quote PAIRS, because Josh's own real
+    \code{fig.list.csv} value for this column, once CSV-unescaped, comes
+    through missing the very first value's leading quote (the field's
+    own outer CSV quoting consumes it) - a quote-pair parser would
+    silently drop that first token on real data. A single bare,
+    unquoted value (e.g. \code{105059-NW3}, exactly like the old
+    \code{$plot.set}) or several bare whitespace-separated values with
+    no quoting at all also work. A blank \code{$plot.sets} matches every
+    value of the \code{$plot.group} column (same as the old
+    blank-\code{$plot.set} behavior). \strong{Limitation, flagged for
+    Josh}: a value containing a literal space would be split into two -
+    not expected for detector/group names, but worth knowing.
+  \item \code{$pool} (\code{TRUE}/\code{FALSE}) controls how the
+    (possibly several) selected \code{$plot.sets} values are combined:
+    \code{TRUE} sums \code{$obs} across all of them into ONE pooled bar
+    per date/panel (as if they were a single group); \code{FALSE} keeps
+    each selected value as its own bar, drawn side-by-side (dodged)
+    within the same date/panel. \strong{The dodge implementation is a
+    first-iteration design choice, flagged for Josh}: bars are dodged via
+    \code{ggplot2}'s own \code{position_dodge2()} at each date, colored
+    the same way regardless of \code{$plot.sets} value (fill still only
+    distinguishes \code{"All detections"} vs \code{"40kHzMyo"}, exactly
+    as before) - there is no separate legend distinguishing WHICH
+    \code{$plot.sets} value a given dodged bar is; say if that's needed
+    and a per-value color/label can be added.
+}
+
 \strong{Y-axis resolution - the newest, most detailed part of this
 function - implements Josh's spec as follows:} \code{$Yaxe.trans}
 (\code{"none"} default / \code{"log"} / \code{"log10"}) picks a transform
@@ -155,7 +210,7 @@ to a raw count for the label (see the BUGFIX entry below for why this
 matters); \code{"rounded"} places them at those same five axis positions
 but rounds each resulting raw value to the nearest whole number
 afterward (matters once the exact value isn't a whole number already,
-e.g. \code{$ymax = 230} with \code{$Yaxe.trans = "none"} gives a raw 25\\%
+e.g. \code{$ymax = 230} with \code{$Yaxe.trans = "none"} gives a raw 25\%
 point of \code{57.5}, which \code{"rounded"} shows as \code{58});
 \code{"custom"} ignores that computation entirely and uses whatever
 numbers are in \code{$y.custom} instead (semicolon-separated, e.g.
@@ -167,7 +222,7 @@ certainly a copy/paste slip, since only one can be the actual default.}
 \code{"regular"} was picked as the real default here (it's the option
 listed first, and is the more literal/simpler reading of "0,0.25,0.5,
 0.75,1"); \strong{Josh: please confirm this is the one you meant as the
-default}, since the two only visibly differ when the exact 25/50/75\\%
+default}, since the two only visibly differ when the exact 25/50/75\%
 axis positions don't land on whole numbers.
 
 \strong{BUGFIX, 2026-08-28, per Josh ("scale is not working as expected.
@@ -177,8 +232,8 @@ how \code{"regular"}/\code{"rounded"} computed break VALUES, found from
 Josh's own real render with \code{$Yaxe.trans = "log10"},
 \code{$y.scale = "regular"}, \code{$ymax = 230}.} The first version of
 this function computed \code{"regular"}/\code{"rounded"} breaks as 5
-values evenly spaced across the RAW count range (\code{0}, 25\\%, 50\\%,
-75\\%, 100\\% of \code{$ymax} - i.e. \code{0, 57.5, 115, 172.5, 230}), then
+values evenly spaced across the RAW count range (\code{0}, 25\%, 50\%,
+75\%, 100\% of \code{$ymax} - i.e. \code{0, 57.5, 115, 172.5, 230}), then
 transformed only their AXIS POSITIONS through \code{$Yaxe.trans}. That's
 fine when \code{$Yaxe.trans = "none"} (position and value are the same
 thing), but once a log-family transform is applied, evenly-spaced RAW
@@ -201,13 +256,13 @@ thing) - only \code{"log"}/\code{"log10"} renders differently now.
 nicely-spaced log axis on their own, without needing hand-picked
 \code{$y.custom} values} the way Josh's own target image did - though
 \code{"custom"} is still there for full manual control, e.g. round
-numbers instead of whatever the automatic 0/25/50/75/100\\% axis points
+numbers instead of whatever the automatic 0/25/50/75/100\% axis points
 happen to compute to. Verified by rendering Josh's own real
 \code{fig.list} row (\code{$Yaxe.trans = "log10"}, \code{$y.scale =
 "regular"}, \code{$ymax = 230}) before and after: before, the break
-positions computed to 0\\%/74.8\\%/87.3\\%/94.7\\%/100\\% of the axis height
+positions computed to 0\%/74.8\%/87.3\%/94.7\%/100\% of the axis height
 (all but the first crowded into the top quarter); after, they compute to
-exactly 0\\%/25\\%/50\\%/75\\%/100\\%, genuinely even.
+exactly 0\%/25\%/50\%/75\%/100\%, genuinely even.
 
 \strong{A second, related defect surfaced while adding a test for the fix
 above}: with \code{"regular"} (not \code{"rounded"}) and a log-family
@@ -229,7 +284,7 @@ filtered data, with a console \code{NOTE} reporting the value used -
 \strong{a placeholder for this first iteration, flagged for Josh}: this
 gives the axis exactly enough headroom to fit the tallest bar and no
 more, which may look visually tight; a fixed padding percentage (e.g.
-10\\% above the max) could be added in a later iteration if wanted. The
+10\% above the max) could be added in a later iteration if wanted. The
 actual plotted axis upper limit is never allowed to clip a real bar or a
 user-supplied \code{$y.custom} value even if \code{$ymax} itself is
 smaller than one of those (\code{max($ymax, $y.custom values, $obs)} is
@@ -256,11 +311,9 @@ whether \code{"40kMyo"} should be renamed to \code{"40KHzMyo"} at the
 source (in whatever produces \code{plfr.bats.csv}), or whether
 \code{"40kMyo"} should be added as a recognized alias directly in
 \code{batz.batusa_recode.names()}'s own reference table (\code{NAbat.names.csv})
-\itemize{
-\item either fix would make this function's own local workaround
+- either fix would make this function's own local workaround
 unnecessary, but isn't required for this function to work correctly as
 delivered.
-}
 
 \strong{\code{$output.filename.pattern}'s default value} in
 \code{plotopts_callobs.csv} (\code{"Number of bat calls detected at
