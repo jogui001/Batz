@@ -442,11 +442,32 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
     stop("fig.list has no plot rows (every row's $plot.type is blank) - nothing to plot.")
   }
 
+  ## per Josh ("I do not want 100% duplicate rows to produce multiple
+  ## graphs... remove duplicate rows then go row by row producing 1 graph
+  ## per row"): an exact full-row duplicate in fig.list (every column
+  ## identical, not just $plot.name) is collapsed down to its first
+  ## occurrence before any plotting happens. Order-preserving; a row that
+  ## merely SHARES $plot.name with another row but differs in any other
+  ## column is NOT a duplicate and is left alone - see TEST 14 vs TEST 15.
+  n.jobs.before.dedup <- nrow(jobs)
+  jobs <- jobs[!duplicated(jobs), , drop = FALSE]
+  n.fig.list.duplicates.removed <- n.jobs.before.dedup - nrow(jobs)
+  if (n.fig.list.duplicates.removed > 0) {
+    cat(sprintf("NOTE: removed %d exact duplicate row(s) from fig.list before plotting (%d distinct row(s) remain).\n",
+                 n.fig.list.duplicates.removed, nrow(jobs)))
+  }
+
   plots <- list()
 
   for (j in seq_len(nrow(jobs))) {
     job <- jobs[j, ]
     job.label <- if (nzchar(trimws(job$plot.name))) job$plot.name else sprintf("row %d", j)
+    ## 2026-08-27, later still - real bug caught on Josh's own real fig.list
+    ## (every row shares the identical $plot.name "University of  Maine WTG
+    ## turbine"): job.label is a DISPLAY string only, not guaranteed unique
+    ## across fig.list rows - job.key (the actual list key `plots`/`ggplots`
+    ## are stored under) is guaranteed unique per row instead. See TEST 14.
+    job.key <- as.character(j)
 
     if (!identical(tolower(trimws(job$plot.type)), "bat.detection")) {
       cat(sprintf("NOTE: fig.list row for '%s' has plot.type = '%s' - skipped (only 'bat.detection' is implemented so far).\n",
@@ -607,7 +628,8 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
     y.start <- as.POSIXct(paste(y.ref.date, yaxe.limit.min), tz = tz)
     y.end   <- y.start + 24 * 3600   # Noon-to-Noon, one full monitoring night
 
-    plots[[job.label]] <- list(
+    plots[[job.key]] <- list(
+      job.label = job.label,
       job = job,
       pd = pd,
       sdb = sdb,
@@ -640,8 +662,9 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
   ggplots <- list()
   if (requireNamespace("ggplot2", quietly = TRUE)) {
     library(ggplot2)
-    for (job.label in names(plots)) {
-      p <- plots[[job.label]]
+    for (job.key in names(plots)) {
+      p <- plots[[job.key]]
+      job.label <- p$job.label   # display name only - see job.key note above
 
       # Explicit y-axis breaks/labels (e.g. "Noon"/"Midnight" instead of
       # "12:00"/"00:00").
@@ -975,7 +998,7 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
               panel.spacing.x = unit(as.numeric(get.default("panel.spacing.x")), "pt"))
 
 
-      ggplots[[job.label]] <- g
+      ggplots[[job.key]] <- g
 
       pattern <- get.default("output.filename.pattern")
       fname <- pattern
@@ -1419,5 +1442,96 @@ cat("old typo ('Earlies and lastest ball') still present (expected FALSE)?",
     grepl("Earlies and lastest ball", pattern.now, fixed = TRUE), "\n")
 cat("corrected text ('Earliest and latest bat') present (expected TRUE)?",
     grepl("Earliest and latest bat", pattern.now, fixed = TRUE), "\n")
+
+cat("\n\n########## TEST 14: fig.list rows sharing the SAME $plot.name but otherwise DIFFERENT still each produce their own plot ##########\n")
+# 2026-08-27, later still - real bug Josh hit running his own real fig.list
+# (every one of its 10 rows shares the identical $plot.name "University of
+# Maine WTG turbine"): `plots`/`ggplots` were keyed BY job.label (the
+# display string, = $plot.name when non-blank) - so distinct fig.list rows
+# sharing a $plot.name silently OVERWROTE each other's entry in that list.
+# "Prepared plot data for '...'" printed once per matching row along the
+# way (proving each row's own data-filtering step ran fine), but only the
+# LAST such row's entry actually survived to the ggplot-rendering loop -
+# exactly matching what Josh saw (multiple "Prepared plot data"/"NOTE"
+# lines, but only ONE "Saved:" line at the very end). Root cause: nothing
+# in fig.list requires $plot.name to be unique across rows - it's a
+# human-readable project/site label, and Josh's real file quite reasonably
+# uses the same one for every monitoring-window row. Fixed by keying
+# `plots`/`ggplots` on a new `job.key` (the row's own loop index, always
+# unique) instead of `job.label` (kept as a pure DISPLAY string - still
+# used for messages/plot titles/file names, completely unchanged there).
+#
+# IMPORTANT: these 3 rows share $plot.name but are deliberately NOT full
+# duplicates (each has its own distinct $xaxe.interval) - per Josh's
+# follow-up request below (TEST 15), a TRUE full-row duplicate is now
+# supposed to collapse to one plot, so this test has to use rows that
+# differ in some other column to keep proving the original name-collision
+# fix without tripping the new dedup logic.
+if (requireNamespace("ggplot2", quietly = TRUE)) {
+  library(ggplot2)
+
+  row.base <- aru.metadata.db.real[aru.metadata.db.real$plot.type == "bat.detection", , drop = FALSE][1, , drop = FALSE]
+  row.a <- row.base; row.a$xaxe.interval <- 4
+  row.b <- row.base; row.b$xaxe.interval <- 5
+  row.c <- row.base; row.c$xaxe.interval <- 6
+  aru.metadata.db.dupname <- rbind(row.a, row.b, row.c)
+  cat("3 fig.list rows built, all sharing $plot.name =", unique(aru.metadata.db.dupname$plot.name),
+      "but each with its own distinct $xaxe.interval (not full duplicates)\n")
+
+  result.dupname <- batz.plotdetections_first.last(
+    data = plot.data.synth,
+    fig.list = aru.metadata.db.dupname,
+    suntimes = suntimes.synth,
+    aes.default = default.plotaesthetics.synth
+  )
+  cat("$plots entries produced (expected 3, was silently collapsing to 1 before this fix):",
+      length(result.dupname$plots), "\n")
+  cat("$ggplots entries produced (expected 3):", length(result.dupname$ggplots), "\n")
+} else {
+  cat("ggplot2 not available - skipping TEST 14\n")
+}
+
+cat("\n\n########## TEST 15: exact full-row duplicates in fig.list are removed before plotting - 1 graph per DISTINCT row, per Josh ##########\n")
+# 2026-08-27, later still, per Josh ("I do not want 100% duplicate rows to
+# produce multiple graphs. Instead remove duplicate rows then go row by row
+# producing 1 graph per row"): a genuinely exact duplicate row (every
+# column identical, not just $plot.name - the TEST 14 rows above are
+# deliberately NOT this, since their $xaxe.interval differs) is now
+# collapsed to its first occurrence before any plotting happens, with a
+# console NOTE reporting how many were removed.
+if (requireNamespace("ggplot2", quietly = TRUE)) {
+  library(ggplot2)
+
+  row.for.dup <- aru.metadata.db.real[aru.metadata.db.real$plot.type == "bat.detection", , drop = FALSE][1, , drop = FALSE]
+  aru.metadata.db.exactdup <- rbind(row.for.dup, row.for.dup, row.for.dup)   # 3 IDENTICAL rows, every column
+  cat("3 fig.list rows built, EXACT duplicates of one another (every column identical)\n")
+
+  result.exactdup <- batz.plotdetections_first.last(
+    data = plot.data.synth,
+    fig.list = aru.metadata.db.exactdup,
+    suntimes = suntimes.synth,
+    aes.default = default.plotaesthetics.synth
+  )
+  cat("$plots entries produced (expected 1 - 2 duplicates should have been removed before plotting):",
+      length(result.exactdup$plots), "\n")
+  cat("$ggplots entries produced (expected 1):", length(result.exactdup$ggplots), "\n")
+
+  # a MIXED set: 2 exact duplicates of row A, plus 1 distinct row B (a
+  # different $plot.set/date window that also has matching data) - expect
+  # exactly 2 plots (1 for A, 1 for B), not 3 and not 1
+  row.b.for.dup <- row.for.dup
+  row.b.for.dup$xaxe.interval <- 7   # differs from row.for.dup - NOT a duplicate of it
+  aru.metadata.db.mixeddup <- rbind(row.for.dup, row.for.dup, row.b.for.dup)
+  result.mixeddup <- batz.plotdetections_first.last(
+    data = plot.data.synth,
+    fig.list = aru.metadata.db.mixeddup,
+    suntimes = suntimes.synth,
+    aes.default = default.plotaesthetics.synth
+  )
+  cat("mixed set (2 exact duplicates of row A + 1 distinct row B) -> $plots entries (expected 2):",
+      length(result.mixeddup$plots), "\n")
+} else {
+  cat("ggplot2 not available - skipping TEST 15\n")
+}
 
 cat("\n\n########## ALL TESTS COMPLETED ##########\n")

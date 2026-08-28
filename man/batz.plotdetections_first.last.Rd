@@ -662,6 +662,75 @@ local settings CSV still has the old, misspelled pattern value will keep
 getting the old (misspelled) file names until they update that CSV too -
 this function has no way to detect or correct that on its own.
 
+\strong{BUGFIX, 2026-08-27, later still - real bug Josh hit running his
+own real \code{fig.list}: only 1 plot was produced when 9-10 rows should
+have matched data.} Root cause: \code{plots} and \code{ggplots} were
+keyed BY \code{job.label} (the display string - \code{$plot.name} when
+non-blank, e.g. \code{plots[[job.label]] <- list(...)}), but nothing
+requires \code{$plot.name} to be unique across \code{fig.list} rows -
+it's a human-readable project/site label, and Josh's real file quite
+reasonably uses the identical name for every one of its 10 monitoring-
+window rows. Rows sharing a \code{$plot.name} therefore silently
+OVERWROTE each other's entry in \code{plots} (plain R named-list
+assignment - \code{x[["k"]] <- v} replaces any existing entry under
+\code{"k"}, it doesn't add a second one), so only the LAST matching row's
+entry survived to the rendering loop - even though "Prepared plot data
+for '...'" printed once per matching row along the way (proving each
+row's own data-filtering step ran fine up to that point). This exactly
+matches what Josh saw both times: multiple "Prepared plot data"/"NOTE"
+lines, but only one final "Saved:" line. No existing test had ever
+exercised more than one \code{"bat.detection"} row matching data in the
+same call, so this had gone uncaught until real data with this exact
+(very reasonable) shape hit it. \strong{Fixed} by introducing a separate
+\code{job.key} (each row's own loop index, always unique) as the actual
+list key for \code{plots}/\code{ggplots}; \code{job.label} is kept,
+unchanged, as a pure DISPLAY string (still used for console messages,
+the plot title, and nowhere else) - rows sharing a \code{$plot.name} now
+each get their own entry and their own saved PNG, same as rows with
+distinct names always did. Verified with a new test: three
+\code{fig.list} rows built as identical copies of one real row
+(guaranteeing all three match the exact same data, so any shortfall
+below 3 plots could only be this naming-collision bug, not a real
+data-overlap difference) now correctly produce 3 entries in both
+\code{$plots} and \code{$ggplots} (previously collapsed to 1). Full
+dev-script test suite re-run clean (14 scenarios, no regressions).
+
+\strong{Follow-up, 2026-08-28, per Josh ("I do not want 100\% duplicate
+rows to produced multiple graphs. Instead remove duplicate rows then go
+row by row producing 1 graph per row"):} the \code{job.key} fix directly
+above guarantees that every \code{fig.list} row - even ones sharing the
+same \code{$plot.name} - gets its own \code{$plots}/\code{$ggplots}
+entry, but it doesn't address what happens when a row is repeated
+outright: two (or more) rows identical in EVERY column would each still
+get rendered and saved, and since the saved file's own name comes from
+\code{aes.default}'s \code{$output.filename.pattern} (typically built from
+the ARU/dates/a second-resolution timestamp - all identical for true
+duplicates), the later save can silently overwrite the earlier one's PNG
+on disk with no warning (confirmed empirically: counting actual files on
+disk after a duplicate-heavy run turned up fewer files than "Saved:"
+lines). Per Josh's explicit instruction, this is fixed at the source
+instead of by disambiguating filenames: exact full-row duplicates in
+\code{fig.list} (every column identical, not just \code{$plot.name}) are
+now collapsed down to their first occurrence - via
+\code{jobs <- jobs[!duplicated(jobs), , drop = FALSE]} - before any
+plotting happens, unconditionally (no new parameter to opt in/out). This
+is order-preserving (the first occurrence of each distinct row survives)
+and applies unconditionally, with a console \code{NOTE} reporting how many
+rows were removed and how many distinct rows remain when any are found.
+\strong{This does NOT affect rows that merely share \code{$plot.name}
+but differ in any other column} (e.g. a different \code{$date.start}) -
+those are not duplicates by this check and each still gets its own plot,
+exactly as the \code{job.key} fix above already guaranteed. Verified with
+two new tests: (1) three rows identical in every column produce exactly 1
+\code{$plots}/\code{$ggplots} entry (2 duplicates removed, reported via
+the console \code{NOTE}), and (2) a mixed set of two exact duplicates of
+one row plus one genuinely distinct row produces exactly 2 entries (1
+duplicate removed). The existing job-key-collision test (three rows
+sharing \code{$plot.name} but each with a distinct \code{$xaxe.interval})
+was re-checked to still produce 3 entries, confirming this new dedup step
+does not fold together rows that merely share a display name. Full
+dev-script test suite re-run clean (16 scenarios, no regressions).
+
 Naming convention (per project preferences):
 \code{package.family_action.subject()}. This function is
 \code{batz.plotdetections_first.last()}: family = "plotdetections" (the
