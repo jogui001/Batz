@@ -49,12 +49,12 @@
 #' Naming convention (per project preferences):
 #' \code{package.family_action.subject()}, e.g.
 #' \code{batz.sm4logfile_summ.activity()}. This function is
-#' \code{batz.templogger_merge.format()}: family = "templogger" (functions
+#' \code{batz.merge&format_temp.logger()}: family = "templogger" (functions
 #' that work on raw datalogger \verb{*templog.csv} exports), action =
 #' "merge.format" (merge many logger files into one sheet, standardize
 #' columns, calculate RH for H loggers, trim out-of-window records).
 #'
-#' See \code{dev-scripts/batz.templogger_merge.format.dev.R} in the package
+#' See \code{dev-scripts/batz.merge&format_temp.logger.dev.R} in the package
 #' source repo for the tested procedural version and the full list of
 #' assumptions made where the spec was ambiguous (dry/wet column mapping
 #' when unlabeled, date.end = max(), blank-row cleanup scope, RH formula,
@@ -95,13 +95,13 @@
 #'
 #' @examples
 #' \dontrun{
-#' result <- batz.templogger_merge.format(dir.load = "path/to/data", dir.sub = TRUE)
+#' result <- `batz.merge&format_temp.logger`(dir.load = "path/to/data", dir.sub = TRUE)
 #' result$templog.merged
 #' result$templog.notes
 #' }
 #'
 #' @export
-batz.templogger_merge.format <- function(dir.load = getwd(),
+`batz.merge&format_temp.logger` <- function(dir.load = getwd(),
                                           load.pattern = c("*templog.csv", "*templog.meta.csv"),
                                           dir.sub = FALSE,
                                           dir.save = dir.load,

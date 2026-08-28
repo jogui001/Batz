@@ -148,15 +148,18 @@ default) then controls whether each break is LABELED with the real
 (\code{TRUE}) - it only has any effect when \code{$Yaxe.trans} isn't
 \code{"none"}, per Josh's spec.
 
-\code{$y.scale} picks which raw (pre-transform) values become breaks:
-\code{"regular"} places them at the exact 0/25/50/75/100\\% points of
-\code{0}-\code{$ymax}; \code{"rounded"} places them at those same four
-points but rounds each to the nearest whole number first (matters once
-\code{$ymax} isn't a multiple of 4, e.g. \code{$ymax = 230} gives a raw
-25\\% point of \code{57.5}, which \code{"rounded"} shows as \code{58});
-\code{"custom"} ignores the 0/25/50/75/100\\% computation entirely and
-uses whatever numbers are in \code{$y.custom} instead (semicolon-
-separated, e.g. \code{"0;2;8;25;75;230"} - the same convention as
+\code{$y.scale} picks which values become breaks: \code{"regular"}
+places them at 5 points evenly spaced along the AXIS itself - i.e. evenly
+spaced in whatever space \code{$Yaxe.trans} plots in, then converted back
+to a raw count for the label (see the BUGFIX entry below for why this
+matters); \code{"rounded"} places them at those same five axis positions
+but rounds each resulting raw value to the nearest whole number
+afterward (matters once the exact value isn't a whole number already,
+e.g. \code{$ymax = 230} with \code{$Yaxe.trans = "none"} gives a raw 25\\%
+point of \code{57.5}, which \code{"rounded"} shows as \code{58});
+\code{"custom"} ignores that computation entirely and uses whatever
+numbers are in \code{$y.custom} instead (semicolon-separated, e.g.
+\code{"0;2;8;25;75;230"} - the same convention as
 \code{$yaxe.break.labels} in \code{batz.plotdetections_first.last()}),
 matching Josh's target image exactly. \strong{Josh's own spec text marked
 BOTH \code{"regular"} and \code{"rounded"} as \code{"(default)"} - almost
@@ -164,8 +167,60 @@ certainly a copy/paste slip, since only one can be the actual default.}
 \code{"regular"} was picked as the real default here (it's the option
 listed first, and is the more literal/simpler reading of "0,0.25,0.5,
 0.75,1"); \strong{Josh: please confirm this is the one you meant as the
-default}, since the two only visibly differ when \code{$ymax} isn't
-evenly divisible by 4.
+default}, since the two only visibly differ when the exact 25/50/75\\%
+axis positions don't land on whole numbers.
+
+\strong{BUGFIX, 2026-08-28, per Josh ("scale is not working as expected.
+The attached file scale jumps from the bottom of the Y axis to almost
+the top. It should be evenly spaced along the y axes"): a real bug in
+how \code{"regular"}/\code{"rounded"} computed break VALUES, found from
+Josh's own real render with \code{$Yaxe.trans = "log10"},
+\code{$y.scale = "regular"}, \code{$ymax = 230}.} The first version of
+this function computed \code{"regular"}/\code{"rounded"} breaks as 5
+values evenly spaced across the RAW count range (\code{0}, 25\\%, 50\\%,
+75\\%, 100\\% of \code{$ymax} - i.e. \code{0, 57.5, 115, 172.5, 230}), then
+transformed only their AXIS POSITIONS through \code{$Yaxe.trans}. That's
+fine when \code{$Yaxe.trans = "none"} (position and value are the same
+thing), but once a log-family transform is applied, evenly-spaced RAW
+values do NOT produce evenly-spaced POSITIONS - quite the opposite:
+\code{log10(1) = 0} but \code{log10(58.5) = 1.77}, already most of the
+way to \code{log10(231) = 2.36}, so the break from \code{0} to
+\code{57.5} visually spanned almost the entire axis while \code{57.5},
+\code{115}, \code{172.5}, and \code{230} all crowded into the remaining
+sliver at the top - exactly what Josh described. \strong{Fixed} by
+computing \code{"regular"}/\code{"rounded"} breaks the other way around:
+5 points evenly spaced along the TRANSFORMED axis itself (from
+\code{$Yaxe.trans} applied to \code{0} to \code{$Yaxe.trans} applied to
+\code{$ymax}), converted back to a raw count afterward for the label.
+This guarantees genuinely even spacing on the rendered axis regardless
+of \code{$Yaxe.trans}, and is a no-op change for \code{$Yaxe.trans =
+"none"} (where the transform is the identity function, so "evenly spaced
+in raw units" and "evenly spaced on the axis" were already the same
+thing) - only \code{"log"}/\code{"log10"} renders differently now.
+\strong{This means \code{"regular"}/\code{"rounded"} can now produce a
+nicely-spaced log axis on their own, without needing hand-picked
+\code{$y.custom} values} the way Josh's own target image did - though
+\code{"custom"} is still there for full manual control, e.g. round
+numbers instead of whatever the automatic 0/25/50/75/100\\% axis points
+happen to compute to. Verified by rendering Josh's own real
+\code{fig.list} row (\code{$Yaxe.trans = "log10"}, \code{$y.scale =
+"regular"}, \code{$ymax = 230}) before and after: before, the break
+positions computed to 0\\%/74.8\\%/87.3\\%/94.7\\%/100\\% of the axis height
+(all but the first crowded into the top quarter); after, they compute to
+exactly 0\\%/25\\%/50\\%/75\\%/100\\%, genuinely even.
+
+\strong{A second, related defect surfaced while adding a test for the fix
+above}: with \code{"regular"} (not \code{"rounded"}) and a log-family
+transform, the inverse-transformed break VALUES are essentially never
+round numbers (e.g. \code{2.898549...} for one of Josh's own breaks), and
+the axis LABELS were built straight from those un-rounded numbers, so
+\code{format()}'s default precision printed them out in full (e.g.
+\code{"2.898549"} instead of something readable). \strong{Fixed} by
+rounding to 1 decimal place for the LABEL text only (\code{2.9}); the
+break POSITION on the axis still comes from the exact, unrounded value,
+so this is purely cosmetic and does not reintroduce any unevenness.
+\code{"custom"} breaks are never rounded this way - a user's own
+hand-typed \code{$y.custom} numbers are always shown exactly as given.
 
 \code{$ymax} sets the top of the Y axis. When a \code{fig.list} row
 leaves it blank (or gives something that isn't a usable positive

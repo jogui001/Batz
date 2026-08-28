@@ -133,7 +133,7 @@
 #' rejected as a strange thing to add a whole new parameter for.
 #'
 #' \strong{Follow-up, 2026-08-27, later still, per Josh ("update
-#' batz.vettedacoustics_merge.format() to include copying over $sunregion
+#' batz.merge&format_vetted.acoustics() to include copying over $sunregion
 #' from input data"): $sunregion is now copied through when a raw input
 #' file already has it.} Read as OPTIONAL pass-through, not a new required
 #' header: \code{$sunregion} is NOT added to the expected-headers list
@@ -155,9 +155,9 @@
 #' call: the file that had it comes through with its real value, the file
 #' that didn't gets \code{NA}, and the real \code{FinalVetted.csv} test
 #' data (which has no \code{sunregion} column at all) is unaffected -
-#' still merges the same row count as before, just with an all-\code{NA}
-#' \code{$sunregion} column added. Full existing test suite (10 tests)
-#' re-run clean, no regressions.
+#' still merges the same row count as before, just with an all-
+#' \code{NA} \code{$sunregion} column added. Full existing test suite (10
+#' tests) re-run clean, no regressions.
 #'
 #' @param dir.load Character, default \code{getwd()}. Directory to scan.
 #' @param load.pattern Character vector, default \code{c("*vetted.csv")}. A
@@ -205,13 +205,13 @@
 #' \dontrun{
 #' # bare call - creates `vetted.merged` (and `vetted.merged_log.file`, if
 #' # log.file = TRUE) directly in the calling environment
-#' batz.vettedacoustics_merge.format(dir.sub = TRUE, log.file = TRUE)
+#' `batz.merge&format_vetted.acoustics`(dir.sub = TRUE, log.file = TRUE)
 #' head(vetted.merged)
 #' vetted.merged_log.file
 #' }
 #'
 #' @export
-batz.vettedacoustics_merge.format <- function(dir.load = getwd(),
+`batz.merge&format_vetted.acoustics` <- function(dir.load = getwd(),
                                                load.pattern = c("*vetted.csv"),
                                                dir.sub = FALSE,
                                                duplicates.remove = TRUE,

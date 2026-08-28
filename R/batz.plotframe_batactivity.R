@@ -1,7 +1,7 @@
 #' Summarize vetted bat-acoustic detections into a plotting-ready frame
 #'
 #' Given a fully-assembled data frame of vetted bat-acoustic detections
-#' (the output of \code{\link{batz.vettedacoustics_merge.format}}, further
+#' (the output of \code{\link{batz.merge&format_vetted.acoustics}}, further
 #' joined with a call-datetime column - see Details), builds a summary
 #' table of detection counts and the earliest/latest call time (in
 #' minutes since the start of that monitoring night) per species,
@@ -15,7 +15,7 @@
 #' \code{filename}, \code{date.mon}, \code{manid}, \code{autoid.kp},
 #' \code{autoid.sb}, \code{lat}, \code{serial}, \code{lon},
 #' \code{aru.name}, \code{date}, \code{time}, \code{call.datetime}. All
-#' twelve come straight out of \code{\link{batz.vettedacoustics_merge.format}}
+#' twelve come straight out of \code{\link{batz.merge&format_vetted.acoustics}}
 #' - no renaming needed (an earlier version of this function required
 #' \code{$call.time} instead, which didn't match that function's own
 #' \code{$call.datetime} output column; standardized on
@@ -24,7 +24,7 @@
 #' \strong{$sunregion lookup} below.
 #'
 #' \strong{$sunregion lookup.} \code{$sunregion} isn't produced by
-#' \code{\link{batz.vettedacoustics_merge.format}} (or any upstream
+#' \code{\link{batz.merge&format_vetted.acoustics}} (or any upstream
 #' \code{batz} function) as a column of \code{data} itself, so this
 #' function loads it separately: \code{dir.load} (searched recursively if
 #' \code{dir.sub = TRUE}, the default) is scanned for file(s) matching
@@ -148,7 +148,7 @@
 #' \code{load.pattern} (default \code{"*.arulist.csv"}), \code{dir.sub}
 #' (default \code{TRUE}) - matching the naming and \code{glob2rx()}-based
 #' matching style already used by
-#' \code{\link{batz.vettedacoustics_merge.format}}'s own \code{dir.load}/
+#' \code{\link{batz.merge&format_vetted.acoustics}}'s own \code{dir.load}/
 #' \code{load.pattern}/\code{dir.sub}, though \code{dir.sub} defaults to
 #' \code{TRUE} here (searching subdirectories by default) rather than that
 #' function's \code{FALSE}, per Josh's explicit spec for this update.
@@ -203,7 +203,7 @@
 #'   \code{"NoID"} (case-insensitive) from the \code{"All Detections"}
 #'   summary. (Named \code{"trim.noid"} rather than the originally-specced
 #'   \code{"trim.noID"}, to match the identically-purposed parameter
-#'   already shipped in \code{\link{batz.vettedacoustics_merge.format}}.)
+#'   already shipped in \code{\link{batz.merge&format_vetted.acoustics}}.)
 #' @param dir.load Character, default \code{getwd()}. Directory to search
 #'   for the \code{*arulist.csv} file(s) used to look up \code{$sunregion}.
 #'   See \strong{$sunregion lookup} in Details.
@@ -211,11 +211,11 @@
 #'   A wildcard/glob pattern (or vector of patterns) identifying which
 #'   file(s) in \code{dir.load} to load as the arulist, converted
 #'   internally to a regex via \code{utils::glob2rx()} (same mechanism
-#'   \code{\link{batz.vettedacoustics_merge.format}} uses for its own
+#'   \code{\link{batz.merge&format_vetted.acoustics}} uses for its own
 #'   \code{load.pattern}). Matching is CASE-INSENSITIVE.
 #' @param dir.sub Logical, default \code{TRUE}. Also search subdirectories
 #'   of \code{dir.load} for the arulist file(s). Defaults to \code{TRUE}
-#'   here (unlike \code{\link{batz.vettedacoustics_merge.format}}'s
+#'   here (unlike \code{\link{batz.merge&format_vetted.acoustics}}'s
 #'   \code{dir.sub = FALSE} default), per Josh's explicit spec for this
 #'   parameter.
 #'

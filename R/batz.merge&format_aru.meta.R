@@ -36,9 +36,9 @@
 #'   \code{NULL}) is also assigned as its own object - \code{aru.visit},
 #'   \code{aru.quad}, \code{aru.20m}, and (if requested) \code{arumeta.mergelog}
 #'   - directly into the environment the function was called from, so calling
-#'   \code{batz.arumeta_merge.format(...)} on its own (with no assignment)
+#'   \code{batz.merge&format_aru.meta(...)} on its own (with no assignment)
 #'   creates those data frames right in your workspace. You can still do
-#'   \code{result <- batz.arumeta_merge.format(...)} and access them as
+#'   \code{result <- batz.merge&format_aru.meta(...)} and access them as
 #'   \code{result$aru.visit} etc. if you'd rather work with the list.
 #'
 #' @details
@@ -88,17 +88,17 @@
 #'
 #' @examples
 #' \dontrun{
-#' result <- batz.arumeta_merge.format("path/to/raw/data", dir.sub = TRUE)
+#' result <- `batz.merge&format_aru.meta`("path/to/raw/data", dir.sub = TRUE)
 #' result$aru.visit
 #' result$aru.quad
 #' result$aru.20m
 #'
-#' result <- batz.arumeta_merge.format("path/to/raw/data", log.file = TRUE)
+#' result <- `batz.merge&format_aru.meta`("path/to/raw/data", log.file = TRUE)
 #' result$arumeta.mergelog
 #' }
 #'
 #' @export
-batz.arumeta_merge.format <- function(dir.load = getwd(),
+`batz.merge&format_aru.meta` <- function(dir.load = getwd(),
                                        load.pattern     = c("*.csv", "*.xlsx"),
                                        dir.sub          = FALSE,
                                        log.file         = FALSE) {

@@ -233,4 +233,22 @@ layer2.types <- unique(g13$layers[[2]]$data$bar.type)
 cat("Layer 1 (bottom) is all-detections only (expected TRUE):", identical(layer1.types, "All detections"), "\n")
 cat("Layer 2 (top) is 40kHzMyo only (expected TRUE):", identical(layer2.types, "40kHzMyo"), "\n")
 
+cat("\n\n########## TEST 14: BUGFIX 2026-08-28 - Yaxe.trans='log10' + y.scale='regular' breaks are evenly SPACED ALONG THE AXIS, not clustered near the top (Josh's exact real scenario: Yaxe.trans=log10, y.scale=regular, ymax=230) ##########\n")
+result14 <- batz.plotactivity_observations(
+  plot.data.real,
+  make.job(date.start = "6/20/2026", date.end = "6/25/2026", Yaxe.trans = "log10", y.scale = "regular", ymax = "230"),
+  suntimes.synth, aes.default.real
+)
+p14 <- result14$plots[[1]]
+break.pos.range <- max(p14$break.pos) - min(p14$break.pos)
+break.pos.frac <- (p14$break.pos - min(p14$break.pos)) / break.pos.range
+cat("Break positions as % of axis span (expected 0,25,50,75,100 - evenly spaced; OLD buggy code produced 0,74.8,87.3,94.7,100):",
+    paste(round(break.pos.frac * 100, 1), collapse = ", "), "\n")
+gaps <- diff(break.pos.frac * 100)
+cat("Consecutive gaps between breaks, in % of axis span (expected all ~25, i.e. equal - this is the actual 'evenly spaced along the axis' check):",
+    paste(round(gaps, 1), collapse = ", "), "\n")
+cat("All gaps equal within rounding tolerance (expected TRUE):", all(abs(gaps - gaps[1]) < 0.01), "\n")
+cat("Break labels show real (untransformed) counts, rounded to 1 decimal for readability (expected 0, 2.9, 14.2, 58.3, 230 - NOT 6-decimal raw values like 2.898549):",
+    paste(trimws(p14$break.labels), collapse = ", "), "\n")
+
 cat("\n\nEXIT: 0\n")

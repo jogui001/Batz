@@ -1,8 +1,8 @@
 # =============================================================================
-# batz.arumeta_merge.format.dev.R
+# batz.merge&format_aru.meta.dev.R
 # -----------------------------------------------------------------------------
-# Dev script for batz.arumeta_merge.format() - tested against real test data
-# before being wrapped into the final function (batz.arumeta_merge.format.R).
+# Dev script for batz.merge&format_aru.meta() - tested against real test data
+# before being wrapped into the final function (batz.merge&format_aru.meta.R).
 #
 # Purpose (per spec): search a directory (and its subdirectories, if
 # dir.sub = TRUE) for .csv / .xlsx files, sort them into three categories by
@@ -11,7 +11,7 @@
 # rows, and report how many were removed.
 #
 # NAME: renamed from Josh's "batz.arumeta.merge&format" to
-# batz.arumeta_merge.format() to match the project's established convention
+# batz.merge&format_aru.meta() to match the project's established convention
 # (family "arumeta", "_" before the action, "." separating multi-word
 # actions) - same pattern as the existing batz.templogger_merge.format().
 #
@@ -35,7 +35,7 @@
 #
 # NOTE (2026-08-18, later): Josh also confirmed first.match was never supposed
 # to be part of this function's spec either - removed from the signature too.
-# batz.arumeta_merge.format() now takes dir.load, load.pattern, dir.sub, and
+# batz.merge&format_aru.meta() now takes dir.load, load.pattern, dir.sub, and
 # log.file (see the 2026-08-20 note above for the load.pattern/dir.sub change).
 #
 # NOTE (2026-08-19, per Josh): dir.path renamed to dir.load, to match the
@@ -46,7 +46,7 @@
 # "sub.dir" renamed to "dir.sub" (default flipped TRUE -> FALSE, matching the
 # new project-wide default), and a new "load.pattern" input added
 # (default c("*.csv", "*.xlsx")) replacing the previously-hardwired
-# "\\.(csv|xlsx)$" pattern. batz.arumeta_merge.format() now takes dir.load,
+# "\\.(csv|xlsx)$" pattern. batz.merge&format_aru.meta() now takes dir.load,
 # load.pattern, dir.sub, and log.file.
 #
 # BUG FOUND AND FIXED (2026-08-18): the original version of this script called
@@ -80,7 +80,7 @@
 # arumeta.mergelog", i.e. a standalone object, not a list element). Now, in
 # addition to being returned, each non-NULL output is also assign()-ed
 # directly into the caller's environment under its own name, so simply
-# calling batz.arumeta_merge.format(...) - with no assignment needed -
+# calling batz.merge&format_aru.meta(...) - with no assignment needed -
 # creates aru.visit/aru.quad/aru.20m (and arumeta.mergelog if log.file=TRUE)
 # right in the workspace. The list is still returned too (invisibly), for
 # anyone who prefers result$aru.visit-style access. See assumption 13.
@@ -191,7 +191,7 @@
 #      environment if called from inside one. The list is still built and
 #      returned - just invisibly now (`invisible(result)` instead of a bare
 #      `result`) so it doesn't also print to the console on a bare call - so
-#      `result <- batz.arumeta_merge.format(...)` + `result$aru.visit` still
+#      `result <- batz.merge&format_aru.meta(...)` + `result$aru.visit` still
 #      works exactly as before for anyone who prefers that style.
 # =============================================================================
 
@@ -200,7 +200,7 @@ suppressMessages(library(readxl))
 # -----------------------------------------------------------------------------
 # core function
 # -----------------------------------------------------------------------------
-batz.arumeta_merge.format <- function(dir.load = getwd(),
+`batz.merge&format_aru.meta` <- function(dir.load = getwd(),
                                        load.pattern     = c("*.csv", "*.xlsx"),
                                        dir.sub          = FALSE,
                                        log.file         = FALSE) {
@@ -374,13 +374,13 @@ batz.arumeta_merge.format <- function(dir.load = getwd(),
 # tests
 # -----------------------------------------------------------------------------
 cat("=== dir.sub = FALSE (top-level only; nested copy should NOT appear) ===\n")
-res.top <- batz.arumeta_merge.format("/home/claude/arumeta_work/top", dir.sub = FALSE)
+res.top <- `batz.merge&format_aru.meta`("/home/claude/arumeta_work/top", dir.sub = FALSE)
 cat("\naru.visit rows:", nrow(res.top$aru.visit),
     "| aru.quad rows:", nrow(res.top$aru.quad),
     "| aru.20m rows:", nrow(res.top$aru.20m), "\n")
 
 cat("\n\n=== dir.sub = TRUE (should also pick up the nested 20m copy) ===\n")
-res.all <- batz.arumeta_merge.format("/home/claude/arumeta_work/top", dir.sub = TRUE)
+res.all <- `batz.merge&format_aru.meta`("/home/claude/arumeta_work/top", dir.sub = TRUE)
 cat("\naru.visit rows:", nrow(res.all$aru.visit),
     "| aru.quad rows:", nrow(res.all$aru.quad),
     "| aru.20m rows:", nrow(res.all$aru.20m), "\n")
@@ -390,11 +390,11 @@ print(sapply(res.all$aru.visit[c("Site Name", "Reason for site visit", "ARU Seri
              function(x) sum(!is.na(x) & x != "")))
 
 cat("\n\n=== log.file = FALSE (default) - result should have NO arumeta.mergelog element ===\n")
-res.nolog <- batz.arumeta_merge.format("/home/claude/arumeta_work/top", dir.sub = TRUE)
+res.nolog <- `batz.merge&format_aru.meta`("/home/claude/arumeta_work/top", dir.sub = TRUE)
 cat("has arumeta.mergelog:", !is.null(res.nolog$arumeta.mergelog), "\n")
 
 cat("\n\n=== log.file = TRUE - arumeta.mergelog contents ===\n")
-res.log <- batz.arumeta_merge.format("/home/claude/arumeta_work/top", dir.sub = TRUE, log.file = TRUE)
+res.log <- `batz.merge&format_aru.meta`("/home/claude/arumeta_work/top", dir.sub = TRUE, log.file = TRUE)
 print(res.log$arumeta.mergelog)
 
 cat("\n\n=== auto-assign - bare call (no assignment) should still create\n",
@@ -404,7 +404,7 @@ cat("before call - exist? aru.visit:", exists("aru.visit"),
     "| aru.quad:", exists("aru.quad"),
     "| aru.20m:", exists("aru.20m"),
     "| arumeta.mergelog:", exists("arumeta.mergelog"), "\n")
-batz.arumeta_merge.format("/home/claude/arumeta_work/top", dir.sub = TRUE, log.file = TRUE)
+`batz.merge&format_aru.meta`("/home/claude/arumeta_work/top", dir.sub = TRUE, log.file = TRUE)
 cat("after bare call - exist? aru.visit:", exists("aru.visit"),
     "| aru.quad:", exists("aru.quad"),
     "| aru.20m:", exists("aru.20m"),
