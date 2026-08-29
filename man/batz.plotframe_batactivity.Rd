@@ -41,12 +41,12 @@ column in \code{data} holding the detector unit to summarize by.}
 \item{alldetections}{Logical, default \code{TRUE}. See Details.}
 
 \item{trim.noise}{Logical, default \code{TRUE}. When \code{alldetections
-  = TRUE}, exclude rows where the \code{spp.id} column is
+= TRUE}, exclude rows where the \code{spp.id} column is
 \code{"noise"} (case-insensitive) from the \code{"All Detections"}
 summary.}
 
 \item{trim.noid}{Logical, default \code{TRUE}. When \code{alldetections
-  = TRUE}, exclude rows where the \code{spp.id} column is
+= TRUE}, exclude rows where the \code{spp.id} column is
 \code{"NoID"} (case-insensitive) from the \code{"All Detections"}
 summary. (Named \code{"trim.noid"} rather than the originally-specced
 \code{"trim.noID"}, to match the identically-purposed parameter

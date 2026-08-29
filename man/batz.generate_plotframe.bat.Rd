@@ -75,11 +75,11 @@ parameter.}
 }
 \value{
 A data frame, \code{plfr.batsummary}, with columns
-  \code{$spp.id}, \code{$date}, \code{$group}, \code{$groupedby},
-  \code{$groupby.date}, \code{$sunregion}, \code{$obs},
-  \code{$mins2.noon.min}, \code{$mins2.noon.max}, \code{$vetting.type}.
-  See \strong{$group vs $groupedby} in Details for what
-  \code{$group}/\code{$groupedby}/\code{$groupby.date} each hold.
+\code{$spp.id}, \code{$date}, \code{$group}, \code{$groupedby},
+\code{$groupby.date}, \code{$sunregion}, \code{$obs},
+\code{$mins2.noon.min}, \code{$mins2.noon.max}, \code{$vetting.type}.
+See \strong{$group vs $groupedby} in Details for what
+\code{$group}/\code{$groupedby}/\code{$groupby.date} each hold.
 }
 \description{
 Given a fully-assembled data frame of vetted bat-acoustic detections
@@ -94,17 +94,19 @@ joins its \code{$sunregion} column onto \code{data} itself (see
 \code{data} does NOT need to already have \code{$sunregion}.
 }
 \details{
-\strong{Required input columns.} `data` must have every one of:
+\strong{Required input columns.} \code{data} must have every one of:
 \code{filename}, \code{date.mon}, \code{manid}, \code{autoid.kp},
 \code{autoid.sb}, \code{lat}, \code{serial}, \code{lon},
 \code{aru.name}, \code{date}, \code{time}, \code{call.datetime}. All
 twelve come straight out of \code{\link{batz.merge_vetted.acoustics}}
-- no renaming needed (an earlier version of this function required
+\itemize{
+\item no renaming needed (an earlier version of this function required
 \code{$call.time} instead, which didn't match that function's own
 \code{$call.datetime} output column; standardized on
 \code{$call.datetime} across both, per Josh, 2026-08-26).
 \code{$sunregion} is deliberately NOT in this list - see
 \strong{$sunregion lookup} below.
+}
 
 \strong{$sunregion lookup.} \code{$sunregion} isn't produced by
 \code{\link{batz.merge_vetted.acoustics}} (or any upstream
@@ -263,7 +265,8 @@ matching style already used by
 \code{TRUE} here (searching subdirectories by default) rather than that
 function's \code{FALSE}, per Josh's explicit spec for this update.
 \code{$sunregion} is REMOVED from the required-input-columns list above
-- the previous entry (directly above this one) still describes it as
+\itemize{
+\item the previous entry (directly above this one) still describes it as
 required because that was true until this change; it no longer is. See
 the new \strong{$sunregion lookup} paragraph, near the top of Details,
 for the full join mechanism (skip-with-message for an arulist file
@@ -288,6 +291,7 @@ resolves to \code{"penobscotbay"}, matching the arulist's own values
 exactly, and a synthetic unmatched \code{$aru.name} correctly triggers
 the new unmatched-value warning with \code{$sunregion = NA}. Full
 dev-script test suite re-run, no regressions.
+}
 
 \strong{Follow-up, 2026-08-28, per Josh: function and two parameters
 renamed; three new/changed output columns added.} Renamed
