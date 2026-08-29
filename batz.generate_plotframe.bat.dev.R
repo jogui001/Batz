@@ -224,6 +224,20 @@
 #     wording ("what the data was grouped by") aren't simply duplicates of
 #     each other. **Please confirm** - flagged in the .R file's own Details
 #     too. See TEST 16 below for the new columns.
+#
+# 15. **Standardized (2026-08-29, per Josh): two parameter defaults changed
+#     for consistency, no other behavior change.** dir.sub's default
+#     changed from TRUE back to FALSE, matching every other batz
+#     function's dir.sub default (the earlier TRUE default, added in
+#     assumption #13 above, was per an explicit spec at the time - this
+#     reverses that for consistency). trim.noid's default changed from
+#     TRUE to FALSE. Function definition below updated to match; every
+#     test call in SECTION 3 either overrides these explicitly or is
+#     unaffected (arulist.dir has no subdirectories to search, so the
+#     dir.sub default flip doesn't change TEST 1/2/3/4/5/7/8/9/10/15/16's
+#     own results; TEST 6 already passes trim.noise/trim.noid explicitly
+#     both ways; TEST 14 already passes dir.sub = TRUE/FALSE explicitly
+#     both ways).
 # ---------------------------------------------------------------------------
 
 ## ===========================================================================
@@ -243,10 +257,10 @@ batz.generate_plotframe.bat <- function(data,
                                          groupby = "aru.name",
                                          alldetections = TRUE,
                                          trim.noise = TRUE,
-                                         trim.noid = TRUE,
+                                         trim.noid = FALSE,
                                          dir.load = getwd(),
                                          load.pattern = c("*.arulist.csv"),
-                                         dir.sub = TRUE) {
+                                         dir.sub = FALSE) {
 
   if (!is.data.frame(data)) stop("`data` must be a data frame.")
 

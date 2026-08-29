@@ -8,7 +8,7 @@ batz.merge_temp.logger(
   dir.load = getwd(),
   load.pattern = c("*templog.csv", "*templog.meta.csv"),
   dir.sub = FALSE,
-  dir.save = dir.load,
+  dir.save = getwd(),
   write.output = TRUE
 )
 }
@@ -30,7 +30,14 @@ unless you explicitly pass \code{dir.sub = TRUE}.}
 
 \item{dir.save}{Directory to write \code{templog.merged.csv} and
 \code{templog.notes.csv} into when \code{write.output = TRUE}. Default:
-same as \code{dir.load}.}
+the current working directory (\code{getwd()}) - set this separately if
+the output should be written somewhere other than where the input
+\verb{*templog.csv} files were loaded from. (Standardized 2026-08-29,
+per Josh: previously defaulted to \code{dir.load}, which silently
+mirrored whatever \code{dir.load} was rather than defaulting to a
+sensible location on its own - the same pattern already fixed as a bug
+in \code{batz.suntimes_generate()}; \code{dir.save} now always
+defaults to \code{getwd()} for consistency across the package.)}
 
 \item{write.output}{If \code{TRUE} (default), also write
 \code{templog.merged.csv} and \code{templog.notes.csv} into

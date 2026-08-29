@@ -68,6 +68,14 @@
 #     with no confident meta match at all, are left untrimmed. Trimmed
 #     count per file is in $templog.notes$rows.trimmed, and (when > 0) also
 #     called out in $templog.notes$notes.
+#
+#  7. **Standardized (2026-08-29, per Josh) - one default changed, no other
+#     behavior change.** dir.save's default changed from dir.load to
+#     getwd() - defaulting to dir.load silently mirrored whatever dir.load
+#     was rather than defaulting to a sensible location on its own;
+#     flagged as a bug and fixed (same standardization applied to
+#     batz.suntimes_generate()). See the "dir.save" config note further
+#     below for the original (now superseded-by-default) history.
 # ---------------------------------------------------------------------------
 
 ## base R only - no package dependencies required
@@ -101,7 +109,13 @@ rbind.fill <- function(a, b) {
 dir.load     <- "/root/batz_test"
 load.pattern <- c("*templog.csv", "*templog.meta.csv")
 dir.sub      <- TRUE
-dir.save     <- dir.load
+
+## NOTE (2026-08-29, per Josh - bugfix/standardization): dir.save's default
+## changed from dir.load to getwd() - defaulting to dir.load silently
+## mirrored whatever dir.load was rather than defaulting to a sensible
+## location on its own; flagged as a bug and fixed (same standardization
+## applied to batz.suntimes_generate()).
+dir.save     <- getwd()
 
 ## convert a plain wildcard/glob suffix pattern (or vector of them) into one
 ## combined regex suitable for list.files()'s pattern= argument

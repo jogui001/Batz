@@ -7,7 +7,7 @@
 # Purpose: given a vector or data frame of US bat species identifiers in ANY
 # mix of common name, latin (scientific) name, 4-letter species code, or
 # 6-letter species code, look each one up in a reference database and return
-# it re-expressed in a single chosen format (output.format).
+# it re-expressed in a single chosen format (batname.format.out).
 #
 # NAME NORMALIZATION (per Josh's naming conventions - see project preferences):
 #   - Requested name was "batz.batusa_names.recode()". Per the
@@ -52,14 +52,14 @@
 #      whitespace is stripped from EVERY column (not just the 4 match
 #      columns) on load, per spec step 1 - some of the real file's other
 #      columns (e.g. state lists) could plausibly pick up stray whitespace
-#      too, and output.format can return any of them (see next point).
-#   2. output.format can be ANY header found in the reference database - the
+#      too, and batname.format.out can return any of them (see next point).
+#   2. batname.format.out can be ANY header found in the reference database - the
 #      spec says so explicitly ("possible outputs are any one of the headers
 #      found in reference database"), so with the real file this means
-#      output.format also accepts e.g. "fedstatus", "iucnstatus",
+#      batname.format.out also accepts e.g. "fedstatus", "iucnstatus",
 #      "states.present", etc. - not just latin/common/code4/code6. Matching
 #      (finding the right row) is still restricted to just latin/common/
-#      code4/code6 per the spec's Steps section. An output.format that isn't
+#      code4/code6 per the spec's Steps section. A batname.format.out that isn't
 #      one of the reference table's headers is an error, not a silent
 #      fallback. Default remains "common".
 #   3. Matching ignores case and treats underscores/dashes as equivalent to
@@ -69,11 +69,11 @@
 #      reference row (real value: "Silver-haired bat"). This is applied only
 #      for the purpose of finding a match; the VALUE returned always comes
 #      from the reference table's original (untouched, just
-#      whitespace-trimmed) text for the requested output.format column -
+#      whitespace-trimmed) text for the requested batname.format.out column -
 #      input formatting is never echoed back for a matched element.
 #   4. A given input element is searched against all four match columns
 #      (latin, common, code4, code6) - whichever column it matches in, the
-#      same row's output.format column is returned. The real reference file
+#      same row's batname.format.out column is returned. The real reference file
 #      has no duplicate keys in any of the four match columns (confirmed
 #      programmatically), so first-vs-last-match tie-breaking never actually
 #      comes up on this data - if it ever did, the first matching row wins
@@ -114,9 +114,9 @@
 #      latin/common/code4/code6 are all set to the identical literal string
 #      (e.g. all four = "40KHzMyo") - this means (a) matching works no
 #      matter which of the four "kinds" of identifier an input looks like,
-#      and (b) output.format = any of latin/common/code4/code6 all return
+#      and (b) batname.format.out = any of latin/common/code4/code6 all return
 #      the exact literal casing Josh gave, never a re-cased variant. The
-#      other 11 output.format columns (fedstatus, iucnstatus, states.*,
+#      other 11 batname.format.out columns (fedstatus, iucnstatus, states.*,
 #      state.soc, fed.proposed, hibernation.strat, phonic.group) are set to
 #      "" for these 8 rows, since none of them semantically apply to a
 #      non-species label; notes carries a short explanatory string instead
@@ -187,7 +187,7 @@ normalize <- function(x) {
 # Returns list(values = <recoded vector>, unmatched = <original unmatched
 # values, in input order, WITH duplicates - i.e. every unmatched instance>).
 # -----------------------------------------------------------------------------
-recode.vec <- function(x, reference, output.format, grammar.dash = TRUE) {
+recode.vec <- function(x, reference, batname.format.out, grammar.dash = TRUE) {
 
   match.cols <- c("latin", "common", "code4", "code6")
 
@@ -203,7 +203,7 @@ recode.vec <- function(x, reference, output.format, grammar.dash = TRUE) {
   found     <- !is.na(row.idx)
 
   out <- x.chr
-  out[found] <- as.character(reference[[output.format]][row.idx[found]])
+  out[found] <- as.character(reference[[batname.format.out]][row.idx[found]])
 
   if (!grammar.dash) {
     out[found] <- gsub("-", " ", out[found])
@@ -213,29 +213,29 @@ recode.vec <- function(x, reference, output.format, grammar.dash = TRUE) {
 }
 
 # -----------------------------------------------------------------------------
-# batz.batusa_recode.names(data, output.format = "common", grammar.dash = TRUE)
+# batz.batusa_recode.names(data, batname.format.out = "common", grammar.dash = TRUE)
 # -----------------------------------------------------------------------------
-batz.batusa_recode.names <- function(data, output.format = "common", grammar.dash = TRUE) {
+batz.batusa_recode.names <- function(data, batname.format.out = "common", grammar.dash = TRUE) {
 
   match.cols <- c("latin", "common", "code4", "code6")
 
   reference <- nabat.names
   reference[] <- lapply(reference, function(col) trimws(as.character(col)))
 
-  if (!(output.format %in% names(reference))) {
-    stop(sprintf("output.format must be one of the reference database's headers: %s (got '%s')",
-                  paste(names(reference), collapse = ", "), output.format))
+  if (!(batname.format.out %in% names(reference))) {
+    stop(sprintf("batname.format.out must be one of the reference database's headers: %s (got '%s')",
+                  paste(names(reference), collapse = ", "), batname.format.out))
   }
 
   if (is.data.frame(data)) {
     results <- lapply(data, recode.vec, reference = reference,
-                       output.format = output.format, grammar.dash = grammar.dash)
+                       batname.format.out = batname.format.out, grammar.dash = grammar.dash)
     out <- as.data.frame(lapply(results, function(r) r$values),
                           stringsAsFactors = FALSE)
     names(out) <- names(data)
     unmatched.all <- unlist(lapply(results, function(r) r$unmatched), use.names = FALSE)
   } else {
-    result <- recode.vec(data, reference = reference, output.format = output.format,
+    result <- recode.vec(data, reference = reference, batname.format.out = batname.format.out,
                           grammar.dash = grammar.dash)
     out <- result$values
     unmatched.all <- result$unmatched
@@ -257,29 +257,29 @@ batz.batusa_recode.names <- function(data, output.format = "common", grammar.das
 # -----------------------------------------------------------------------------
 # tests
 # -----------------------------------------------------------------------------
-cat("\n=== default output.format = 'common' ===\n")
+cat("\n=== default batname.format.out = 'common' ===\n")
 print(batz.batusa_recode.names(nabat.namestest))
 
-cat("\n=== output.format = 'latin' ===\n")
-print(batz.batusa_recode.names(nabat.namestest, output.format = "latin"))
+cat("\n=== batname.format.out = 'latin' ===\n")
+print(batz.batusa_recode.names(nabat.namestest, batname.format.out = "latin"))
 
-cat("\n=== output.format = 'code4' ===\n")
-print(batz.batusa_recode.names(nabat.namestest, output.format = "code4"))
+cat("\n=== batname.format.out = 'code4' ===\n")
+print(batz.batusa_recode.names(nabat.namestest, batname.format.out = "code4"))
 
-cat("\n=== output.format = 'code6' ===\n")
-print(batz.batusa_recode.names(nabat.namestest, output.format = "code6"))
+cat("\n=== batname.format.out = 'code6' ===\n")
+print(batz.batusa_recode.names(nabat.namestest, batname.format.out = "code6"))
 
-cat("\n=== output.format beyond the 4 match columns - 'fedstatus' ===\n")
-print(batz.batusa_recode.names(nabat.namestest, output.format = "fedstatus"))
+cat("\n=== batname.format.out beyond the 4 match columns - 'fedstatus' ===\n")
+print(batz.batusa_recode.names(nabat.namestest, batname.format.out = "fedstatus"))
 
-cat("\n=== output.format = 'states.present' ===\n")
-print(batz.batusa_recode.names(c("epfu", "myse"), output.format = "states.present"))
+cat("\n=== batname.format.out = 'states.present' ===\n")
+print(batz.batusa_recode.names(c("epfu", "myse"), batname.format.out = "states.present"))
 
 cat("\n=== grammar.dash = FALSE (hyphens -> spaces in output only) ===\n")
-print(batz.batusa_recode.names(c("epfu", "lano", "coto"), output.format = "common",
+print(batz.batusa_recode.names(c("epfu", "lano", "coto"), batname.format.out = "common",
                                 grammar.dash = FALSE))
 cat("(compare to grammar.dash = TRUE, default, hyphens kept):\n")
-print(batz.batusa_recode.names(c("epfu", "lano", "coto"), output.format = "common"))
+print(batz.batusa_recode.names(c("epfu", "lano", "coto"), batname.format.out = "common"))
 
 cat("\n=== data frame input (every column recoded, same dims back) ===\n")
 test.df <- data.frame(
@@ -288,11 +288,11 @@ test.df <- data.frame(
   stringsAsFactors = FALSE
 )
 print(test.df)
-print(batz.batusa_recode.names(test.df, output.format = "code4"))
+print(batz.batusa_recode.names(test.df, batname.format.out = "code4"))
 
-cat("\n=== invalid output.format should error ===\n")
+cat("\n=== invalid batname.format.out should error ===\n")
 tryCatch(
-  batz.batusa_recode.names(nabat.namestest, output.format = "family"),
+  batz.batusa_recode.names(nabat.namestest, batname.format.out = "family"),
   error = function(e) cat("Got expected error:", conditionMessage(e), "\n")
 )
 
@@ -301,28 +301,28 @@ print(batz.batusa_recode.names("totally_unknown_bat"))
 
 cat("\n=== disambiguating similarly-spelled species (Corynorhinus townsendii vs.\n",
     "its two subspecies coti/cotv) still resolve to the right row ===\n", sep = "")
-print(batz.batusa_recode.names(c("coto", "coti", "cotv"), output.format = "common"))
+print(batz.batusa_recode.names(c("coto", "coti", "cotv"), batname.format.out = "common"))
 
-cat("\n=== output.format = 'hibernation.strat' (added 2026-08-25, 15-column\n",
+cat("\n=== batname.format.out = 'hibernation.strat' (added 2026-08-25, 15-column\n",
     "NAbat.names.csv) - 'tabr' has both migratory and resident populations ===\n", sep = "")
-print(batz.batusa_recode.names("tabr", output.format = "hibernation.strat"))
+print(batz.batusa_recode.names("tabr", batname.format.out = "hibernation.strat"))
 
-cat("\n=== output.format = 'phonic.group' (added 2026-08-25) - 'mylu' calls\n",
+cat("\n=== batname.format.out = 'phonic.group' (added 2026-08-25) - 'mylu' calls\n",
     "above 35 kHz ===\n", sep = "")
-print(batz.batusa_recode.names("mylu", output.format = "phonic.group"))
+print(batz.batusa_recode.names("mylu", batname.format.out = "phonic.group"))
 
-cat("\n=== output.format = 'notes' - flagged lower-confidence/caveat species ===\n")
-print(batz.batusa_recode.names(c("nole", "maca"), output.format = "notes"))
+cat("\n=== batname.format.out = 'notes' - flagged lower-confidence/caveat species ===\n")
+print(batz.batusa_recode.names(c("nole", "maca"), batname.format.out = "notes"))
 
 cat("\n=== data frame input recoded to 'hibernation.strat' (regression check\n",
     "that the new columns work through the data-frame path too) ===\n", sep = "")
-print(batz.batusa_recode.names(test.df, output.format = "hibernation.strat"))
+print(batz.batusa_recode.names(test.df, batname.format.out = "hibernation.strat"))
 
 # -----------------------------------------------------------------------------
 # NEW tests, added 2026-08-27, for the 8 non-species category-label rows
 # -----------------------------------------------------------------------------
 cat("\n=== NEW 2026-08-27: category labels match case-insensitively, default\n",
-    "output.format = 'common' ===\n", sep = "")
+    "batname.format.out = 'common' ===\n", sep = "")
 print(batz.batusa_recode.names(nabat.categorytest))
 
 cat("\n=== NEW 2026-08-27: 'hi-f'/'hi_f' do NOT match 'HiF' (no internal\n",
@@ -331,16 +331,16 @@ cat("\n=== NEW 2026-08-27: 'hi-f'/'hi_f' do NOT match 'HiF' (no internal\n",
     "single-element call should trigger the WARNING path ===\n", sep = "")
 print(batz.batusa_recode.names("hi-f"))
 
-cat("\n=== NEW 2026-08-27: output.format = latin/code4/code6 for a category\n",
+cat("\n=== NEW 2026-08-27: batname.format.out = latin/code4/code6 for a category\n",
     "label all return the identical literal casing given ===\n", sep = "")
-print(batz.batusa_recode.names("hifrag", output.format = "latin"))
-print(batz.batusa_recode.names("hifrag", output.format = "code4"))
-print(batz.batusa_recode.names("hifrag", output.format = "code6"))
+print(batz.batusa_recode.names("hifrag", batname.format.out = "latin"))
+print(batz.batusa_recode.names("hifrag", batname.format.out = "code4"))
+print(batz.batusa_recode.names("hifrag", batname.format.out = "code6"))
 
-cat("\n=== NEW 2026-08-27: species-only output.format columns return '' for\n",
+cat("\n=== NEW 2026-08-27: species-only batname.format.out columns return '' for\n",
     "category-label rows ===\n", sep = "")
-print(batz.batusa_recode.names(c("hif", "social", "multiple"), output.format = "fedstatus"))
-print(batz.batusa_recode.names(c("hif", "social", "multiple"), output.format = "phonic.group"))
+print(batz.batusa_recode.names(c("hif", "social", "multiple"), batname.format.out = "fedstatus"))
+print(batz.batusa_recode.names(c("hif", "social", "multiple"), batname.format.out = "phonic.group"))
 
 cat("\n=== NEW 2026-08-27: species and category labels mixed in one call ===\n")
 print(batz.batusa_recode.names(c("epfu", "LoF", "Hoary_Bat", "Social", "not.a.real.bat")))
@@ -352,4 +352,4 @@ test.df2 <- data.frame(
   stringsAsFactors = FALSE
 )
 print(test.df2)
-print(batz.batusa_recode.names(test.df2, output.format = "code4"))
+print(batz.batusa_recode.names(test.df2, batname.format.out = "code4"))

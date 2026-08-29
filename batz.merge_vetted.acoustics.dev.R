@@ -93,7 +93,7 @@
 #     straight through, unchanged, into the merged output - placed next to
 #     $serial/$aru.name (the other detector-level columns) rather than at
 #     the very end. This still doesn't make the function itself DO the
-#     join described in batz.plotframe_batactivity's own docs (matching
+#     join described in batz.generate_plotframe.bat's own docs (matching
 #     $aru.name against an *arulist.csv) - it only preserves $sunregion
 #     when the raw per-file input already has it, e.g. if a future export
 #     or a manually-augmented file already carries the column. See TEST 11
@@ -116,7 +116,7 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
                                                dir.sub = FALSE,
                                                duplicates.remove = TRUE,
                                                log.file = FALSE,
-                                               bat.names = "code4",
+                                               bat.names.out = "code4",
                                                manid.kp = TRUE,
                                                manid.sb = TRUE,
                                                trim.noise = TRUE,
@@ -203,10 +203,10 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
     vetted.merged$call.datetime <- batz.datawrangler_call.datetime(
       date = vetted.merged$date, time = vetted.merged$time)
 
-    ## recode manid/autoid.kp/autoid.sb (output.format = bat.names, default "code4")
-    vetted.merged$manid     <- batz.batusa_recode.names(vetted.merged$manid, output.format = bat.names)
-    vetted.merged$autoid.kp <- batz.batusa_recode.names(vetted.merged$autoid.kp, output.format = bat.names)
-    vetted.merged$autoid.sb <- batz.batusa_recode.names(vetted.merged$autoid.sb, output.format = bat.names)
+    ## recode manid/autoid.kp/autoid.sb (batname.format.out = bat.names.out, default "code4")
+    vetted.merged$manid     <- batz.batusa_recode.names(vetted.merged$manid, batname.format.out = bat.names.out)
+    vetted.merged$autoid.kp <- batz.batusa_recode.names(vetted.merged$autoid.kp, batname.format.out = bat.names.out)
+    vetted.merged$autoid.sb <- batz.batusa_recode.names(vetted.merged$autoid.sb, batname.format.out = bat.names.out)
 
     is.empty <- function(x) is.na(x) | !nzchar(trimws(x))
 
@@ -346,7 +346,7 @@ res8 <- batz.merge_vetted.acoustics(dir.load = dir.load,
 cat("has vetted.merged_log.file?", "vetted.merged_log.file" %in% names(res8), "\n")
 print(res8$vetted.merged_log.file)
 
-cat("=== TEST 9: bat.names default ('code4') - real data spot check ===\n")
+cat("=== TEST 9: bat.names.out default ('code4') - real data spot check ===\n")
 res9 <- batz.merge_vetted.acoustics(dir.load = dir.load,
                                            load.pattern = "*FinalVetted.csv",
                                            dir.sub = FALSE)
@@ -354,11 +354,11 @@ print(head(res9$vetted.merged[, c("manid", "autoid.kp", "autoid.sb")], 3))
 cat("manid values look like 4-letter codes (lowercase)?",
     all(grepl("^[a-z]{4}$|^$", res9$vetted.merged$manid[nzchar(res9$vetted.merged$manid)] [1:5])), "\n\n")
 
-cat("=== TEST 10: bat.names = 'common' explicitly (old behavior, still available) ===\n")
+cat("=== TEST 10: bat.names.out = 'common' explicitly (old behavior, still available) ===\n")
 res10 <- batz.merge_vetted.acoustics(dir.load = dir.load,
                                             load.pattern = "*FinalVetted.csv",
                                             dir.sub = FALSE,
-                                            bat.names = "common")
+                                            bat.names.out = "common")
 print(head(res10$vetted.merged[, c("manid", "autoid.kp", "autoid.sb")], 3))
 
 ## ===========================================================================

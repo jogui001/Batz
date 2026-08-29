@@ -13,7 +13,7 @@
 # columns batz.vettedacoustics_merge.format() parses out of a recording's
 # file name), auto-detect the format each is recorded in, parse them, paste
 # them back together, and return one combined date-time vector formatted
-# per `output.format`.
+# per `time.format.out`.
 #
 # ---------------------------------------------------------------------------
 # ASSUMPTIONS MADE (spec was open-ended on these - flag for review):
@@ -43,20 +43,20 @@
 #     more than one is viable AND they'd parse the data to DIFFERENT
 #     actual dates/times (e.g. "01/02/2025" as %m/%d/%Y vs %d/%m/%Y), that
 #     is genuine ambiguity - the viable candidates are printed and the
-#     script stops, UNLESS the currently-set date.format/time.format value
+#     script stops, UNLESS the currently-set date.format.in/time.format.in value
 #     is itself one of the viable candidates, in which case that one wins
 #     silently. (If more than one candidate is viable but they all agree
 #     on every value - which can happen incidentally - there's no real
 #     ambiguity and the first viable one is just used.)
 #
 #  4. **"Unless user defined date.format matches" is read loosely: it
-#     checks whatever value date.format/time.format currently holds -
+#     checks whatever value date.format.in/time.format.in currently holds -
 #     the built-in default (c("%Y%m%d")/c("%H%M%S")) counts as much as an
 #     explicit override.** A stricter reading (only count it if the caller
 #     literally passed the argument this call, via missing()) was
 #     considered and rejected as needless extra complexity here - flagging
 #     this reading in case Josh wants the stricter version instead.
-#     date.format/time.format may be a vector of more than one acceptable
+#     date.format.in/time.format.in may be a vector of more than one acceptable
 #     format (matches the c(...) style Josh gave for the defaults) - the
 #     first element that's actually one of the viable candidates wins.
 #
@@ -119,7 +119,7 @@ time.candidates <- list(
 
 ## Detects the single format that best describes every non-blank value in
 ## `x`, among `candidates`. `requested.format` is whatever value the
-## caller's date.format/time.format argument currently holds (default or
+## caller's date.format.in/time.format.in argument currently holds (default or
 ## explicit - see assumption #4 above); it's only consulted if genuine
 ## ambiguity is found. `parse.fun(x, fmt)` must return NA for any element
 ## that fails to parse under `fmt`. Returns list(format = <chosen fmt>,
@@ -147,7 +147,7 @@ detect.format <- function(x, label, candidates, requested.format, parse.fun) {
     stop("Could not detect a $", label, " format - none of the built-in candidate ",
          "formats matched every value of $", label, ". Candidates tried: ",
          paste(tried, collapse = ", "), ". Pass ", label,
-         ".format explicitly if your data uses a different format.")
+         ".format.in explicitly if your data uses a different format.")
   }
 
   chosen <- viable[1]
@@ -165,7 +165,7 @@ detect.format <- function(x, label, candidates, requested.format, parse.fun) {
         cat("Possible $", label, " formats (ambiguous - all fit your data but disagree ",
             "on at least one value):\n", sep = "")
         print(viable)
-        stop("$", label, " format is ambiguous - set ", label, ".format to one of the ",
+        stop("$", label, " format is ambiguous - set ", label, ".format.in to one of the ",
              "formats printed above to disambiguate.")
       }
     }
@@ -178,11 +178,11 @@ detect.format <- function(x, label, candidates, requested.format, parse.fun) {
 ## ===========================================================================
 ## SECTION 2: config for this test run
 ## ===========================================================================
-dir.load      <- getwd()
-load.pattern  <- "vetted.merged.csv"
-date.format   <- c("%Y%m%d")
-time.format   <- c("%H%M%S")
-output.format <- "%Y-%m-%d %H:%M:%S"
+dir.load         <- getwd()
+load.pattern     <- "vetted.merged.csv"
+date.format.in   <- c("%Y%m%d")
+time.format.in   <- c("%H%M%S")
+time.format.out  <- "%Y-%m-%d %H:%M:%S"
 
 ## ===========================================================================
 ## SECTION 3: load test data
@@ -205,22 +205,22 @@ if (length(date) != length(time)) {
   stop("$date and $time must be the same length (", length(date), " vs ", length(time), ").")
 }
 
-date.detect <- detect.format(date, "date", date.candidates, date.format,
+date.detect <- detect.format(date, "date", date.candidates, date.format.in,
                               function(x, fmt) as.Date(x, format = fmt))
 cat("Detected $date format:", date.detect$format, "\n")
 
-time.detect <- detect.format(time, "time", time.candidates, time.format,
+time.detect <- detect.format(time, "time", time.candidates, time.format.in,
                               function(x, fmt) strptime(x, format = fmt, tz = "UTC"))
 cat("Detected $time format:", time.detect$format, "\n\n")
 
 ## ===========================================================================
-## SECTION 5: paste date + time together per output.format
+## SECTION 5: paste date + time together per time.format.out
 ## ===========================================================================
 date.str <- format(date.detect$parsed, "%Y-%m-%d")
 time.str <- format(time.detect$parsed, "%H:%M:%S")
 
 combined  <- as.POSIXct(paste(date.str, time.str), format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
-date.time <- format(combined, output.format)
+date.time <- format(combined, time.format.out)
 
 cat("--- date.time (first 10) ---\n")
 print(head(date.time, 10))

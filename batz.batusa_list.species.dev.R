@@ -39,8 +39,8 @@
 #     state simply gets no row for that state at all (confirmed: the real
 #     model1.csv has no Indiana bat / MYSO row for ME, because MYSO isn't
 #     present there). Columns, in this exact order:
-#       "State"        - the state (statename.format)
-#       "Bat Species"  - see batname.format below
+#       "State"        - the state (statename.format.out)
+#       "Bat Species"  - see batname.format.out below
 #       "Species Code" - see bat.code below
 #       "Federal"      - federal listing status, ABBREVIATED (see below)
 #       "State"        - state-specific listing status, abbreviated (see
@@ -58,8 +58,8 @@
 #     one column per state - this part of the first build's guess was
 #     right. Columns, in this exact order: "Bat Species", "Species Code",
 #     "Phonic Group", "Federal", then one column per state (named per
-#     statename.format, in the order states were matched/given).
-#   - `batname.format = "full"` (default) is NOT just the common name (the
+#     statename.format.out, in the order states were matched/given).
+#   - `batname.format.out = "full"` (default) is NOT just the common name (the
 #     first build's guess) - the real "Bat Species" field is
 #     "<common name> (<latin name>)<hibernation.strat>", all concatenated
 #     into ONE string with NO separator before hibernation.strat (confirmed
@@ -67,7 +67,7 @@
 #     consistent feature of the model, not a stray typo). Replicated
 #     literally, including the no-space join, even though it reads a
 #     little cramped (e.g. "Big brown bat (Eptesicus fuscus)hibernating").
-#     `batname.format = "both"` (per Josh's own Steps-section definition,
+#     `batname.format.out = "both"` (per Josh's own Steps-section definition,
 #     still missing from his Optional Inputs enumeration - flagged in the
 #     first build, unchanged) is just "<common> (<latin>)", with NO
 #     hibernation.strat suffix - "full" and "both" are genuinely different
@@ -91,7 +91,7 @@
 #     column value (table.type = "matrix"): the model clearly wants a
 #     THREE-WAY per-(species,state) value - present-not-listed, absent, or
 #     the specific listing severity when listed (e.g. "E", "T", "SC") -
-#     richer than the two-symbol `presence.absence` description in Josh's
+#     richer than the two-symbol `symbol_presence.absence` description in Josh's
 #     own Optional Inputs ("the two symbols used to mark... present but not
 #     listed vs absent"). **This is the one place the current reference
 #     database genuinely lacks the needed detail**: `NAbat.names.csv` only
@@ -104,12 +104,12 @@
 #         "Listed" - NOT a real abbreviation from Josh's model; a stand-in
 #         since Endangered/Threatened/etc. per state isn't in the database
 #         yet)
-#       - present, in neither                        -> presence.absence[1]
+#       - present, in neither                        -> symbol_presence.absence[1]
 #         ("*" default) for matrix; blank for the "state" table.type (a
 #         species only gets a row there if it's present, so blank vs. a
 #         severity code is enough - no "*" needed when presence is already
 #         implied by the row existing)
-#       - absent                                      -> presence.absence[2]
+#       - absent                                      -> symbol_presence.absence[2]
 #         ("-" default) for matrix; no row at all for "state" table.type
 #     **Flagging prominently: if Josh has (or wants to build) real
 #     per-state Endangered/Threatened/Special-Concern data, the "L"
@@ -213,51 +213,51 @@ classify.inputs <- function(data, nabat, states) {
   )
 }
 
-format.bat.label <- function(row, batname.format, grammar.dash) {
-  name <- switch(batname.format,
+format.bat.label <- function(row, batname.format.out, grammar.dash) {
+  name <- switch(batname.format.out,
     "full"   = sprintf("%s (%s)%s", row[["common"]], row[["latin"]], row[["hibernation.strat"]]),
     "both"   = sprintf("%s (%s)", row[["common"]], row[["latin"]]),
     "common" = row[["common"]],
     "latin"  = row[["latin"]],
-    stop(sprintf("batname.format must be one of \"full\", \"both\", \"common\", \"latin\" (got '%s')", batname.format))
+    stop(sprintf("batname.format.out must be one of \"full\", \"both\", \"common\", \"latin\" (got '%s')", batname.format.out))
   )
   if (!grammar.dash) name <- gsub("-", " ", name)
   name
 }
 
-format.state.label <- function(row, statename.format, grammar.dash) {
-  label <- switch(statename.format,
+format.state.label <- function(row, statename.format.out, grammar.dash) {
+  label <- switch(statename.format.out,
     "code2"         = row[["code2"]],
     "official.name" = row[["official.name"]],
     "short.name"    = row[["short.name"]],
-    stop(sprintf("statename.format must be one of \"code2\", \"official.name\", \"short.name\" (got '%s')", statename.format))
+    stop(sprintf("statename.format.out must be one of \"code2\", \"official.name\", \"short.name\" (got '%s')", statename.format.out))
   )
   if (!grammar.dash) label <- gsub("-", " ", label)
   label
 }
 
 # status.value(): the per-(species,state) cell value.
-#   "present.not.listed" -> presence.absence[1] ("*")
-#   "absent"             -> presence.absence[2] ("-")
+#   "present.not.listed" -> symbol_presence.absence[1] ("*")
+#   "absent"             -> symbol_presence.absence[2] ("-")
 #   in $state.soc        -> "SC"
 #   in $states.listed (not soc) -> "L" (generic placeholder - see header note)
-status.value <- function(bat.row, state.code2, presence.absence) {
+status.value <- function(bat.row, state.code2, symbol_presence.absence) {
   present <- state.code2 %in% split.codes(bat.row[["states.present"]])
   soc     <- state.code2 %in% split.codes(bat.row[["state.soc"]])
   listed  <- state.code2 %in% split.codes(bat.row[["states.listed"]])
-  if (!present) return(presence.absence[2])
+  if (!present) return(symbol_presence.absence[2])
   if (soc) return("SC")
   if (listed) return("L")
-  presence.absence[1]
+  symbol_presence.absence[1]
 }
 
 batz.batusa_list.species <- function(data,
                                       grammar.dash = TRUE,
-                                      statename.format = "code2",
-                                      batname.format = "full",
+                                      statename.format.out = "code2",
+                                      batname.format.out = "full",
                                       bat.code = "code4",
                                       table.type = "state",
-                                      presence.absence = c("*", "-"),
+                                      symbol_presence.absence = c("*", "-"),
                                       phonic.group = TRUE,
                                       species.extirpated = TRUE) {
 
@@ -295,8 +295,8 @@ batz.batusa_list.species <- function(data,
     stop(sprintf("table.type must be one of \"state\", \"matrix\" (got '%s')", table.type))
   }
 
-  species.labels <- vapply(species.idx, function(i) format.bat.label(nabat[i, ], batname.format, grammar.dash), character(1))
-  state.labels   <- vapply(state.idx,   function(j) format.state.label(states[j, ], statename.format, grammar.dash), character(1))
+  species.labels <- vapply(species.idx, function(i) format.bat.label(nabat[i, ], batname.format.out, grammar.dash), character(1))
+  state.labels   <- vapply(state.idx,   function(j) format.state.label(states[j, ], statename.format.out, grammar.dash), character(1))
   code.col       <- if (bat.code %in% c("code4", "code6")) bat.code else if (bat.code == "none") NULL else
                        stop(sprintf("bat.code must be one of \"code4\", \"code6\", \"none\" (got '%s')", bat.code))
   federal.codes  <- vapply(nabat[species.idx, "fedstatus"], federal.abbrev, character(1))
@@ -312,7 +312,7 @@ batz.batusa_list.species <- function(data,
       j <- state.idx[k]
       state.code2 <- states[j, "code2"]
       col <- vapply(species.idx, function(i) {
-        val <- status.value(nabat[i, ], state.code2, presence.absence)
+        val <- status.value(nabat[i, ], state.code2, symbol_presence.absence)
         if (is.extirpated(nabat[i, ], state.code2)) val <- paste0(val, "#")
         val
       }, character(1))
@@ -332,8 +332,8 @@ batz.batusa_list.species <- function(data,
         i <- species.idx[m]
         present <- state.code2 %in% split.codes(nabat[i, "states.present"])
         if (!present) next
-        val <- status.value(nabat[i, ], state.code2, presence.absence)
-        if (val == presence.absence[1]) val <- ""   # implicit - a row existing already means "present"
+        val <- status.value(nabat[i, ], state.code2, symbol_presence.absence)
+        if (val == symbol_presence.absence[1]) val <- ""   # implicit - a row existing already means "present"
         if (is.extirpated(nabat[i, ], state.code2)) val <- paste0(val, "#")
         # NOTE: built POSITIONALLY (not as a named list) on purpose - Josh's
         # own model reuses the header "State" for both the row's state
@@ -380,12 +380,12 @@ print(batz.batusa_list.species(c(test.species, test.states), table.type = "state
 cat("\n=== table.type = 'matrix' (batlist model2 structure) ===\n")
 print(batz.batusa_list.species(c(test.species, test.states), table.type = "matrix"))
 
-cat("\n=== batname.format = 'both' (no hibernation.strat suffix, unlike 'full') ===\n")
-print(batz.batusa_list.species("epfu", table.type = "matrix", batname.format = "both"))
+cat("\n=== batname.format.out = 'both' (no hibernation.strat suffix, unlike 'full') ===\n")
+print(batz.batusa_list.species("epfu", table.type = "matrix", batname.format.out = "both"))
 
-cat("\n=== batname.format = 'latin' / 'common' ===\n")
-print(batz.batusa_list.species("epfu", table.type = "matrix", batname.format = "latin"))
-print(batz.batusa_list.species("epfu", table.type = "matrix", batname.format = "common"))
+cat("\n=== batname.format.out = 'latin' / 'common' ===\n")
+print(batz.batusa_list.species("epfu", table.type = "matrix", batname.format.out = "latin"))
+print(batz.batusa_list.species("epfu", table.type = "matrix", batname.format.out = "common"))
 
 cat("\n=== bat.code = 'code6' / 'none' ===\n")
 print(batz.batusa_list.species("epfu", table.type = "matrix", bat.code = "code6"))
@@ -406,8 +406,8 @@ print(head(batz.batusa_list.species("epfu"), 15))
 cat("\n=== state-driven query, table.type = 'matrix' - all 54 species x OH ===\n")
 print(head(batz.batusa_list.species("OH", table.type = "matrix")[, c("Bat Species", "OH")], 15))
 
-cat("\n=== custom presence.absence symbols ===\n")
-print(batz.batusa_list.species(c("epfu", "myse"), table.type = "matrix", presence.absence = c("Y", "N")))
+cat("\n=== custom symbol_presence.absence symbols ===\n")
+print(batz.batusa_list.species(c("epfu", "myse"), table.type = "matrix", symbol_presence.absence = c("Y", "N")))
 
 cat("\n=== grammar.dash = FALSE ===\n")
 print(batz.batusa_list.species("lano", table.type = "matrix", grammar.dash = FALSE))
@@ -426,4 +426,4 @@ cat("\n=== error: invalid table.type ===\n")
 tryCatch(batz.batusa_list.species("epfu", table.type = "bogus"), error = function(e) cat("Got expected error:", conditionMessage(e), "\n"))
 
 cat("\n=== Corynorhinus subspecies disambiguation still holds ===\n")
-print(batz.batusa_list.species(c("coto", "coti", "cotv"), table.type = "matrix", statename.format = "short.name"))
+print(batz.batusa_list.species(c("coto", "coti", "cotv"), table.type = "matrix", statename.format.out = "short.name"))

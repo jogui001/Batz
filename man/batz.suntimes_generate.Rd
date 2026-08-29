@@ -9,8 +9,8 @@ batz.suntimes_generate(
   load.pattern = "*arulist.csv",
   dir.sub = FALSE,
   write.output = TRUE,
-  dir.save = dir.load,
-  file = ""
+  dir.save = getwd(),
+  project.name = ""
 )
 }
 \arguments{
@@ -28,48 +28,52 @@ deployment-list file(s) to load.}
 \item{dir.sub}{Logical, default \code{FALSE}. If \code{TRUE}, also search
 every subdirectory of \code{dir.load}.}
 
-\item{write.output}{If \code{TRUE} (default), also write
-\code{aru.suntimes.csv} into \code{dir.save} (with the \verb{*.unix}
-columns rounded to whole seconds in the written CSV only).}
+\item{write.output}{If \code{TRUE} (default), also write the output CSV
+into \code{dir.save} (with the \verb{*.unix} columns rounded to whole
+seconds in the written CSV only).}
 
 \item{dir.save}{Directory to write the output CSV into when
-\code{write.output = TRUE}. Default: same as \code{dir.load} - set
-this separately if the output should be written somewhere other than
-where the input \verb{*arulist.csv} was loaded from.}
+\code{write.output = TRUE}. Default: the current working directory
+(\code{getwd()}) - set this separately if the output should be written
+somewhere other than where the input \verb{*arulist.csv} was loaded
+from. (Standardized 2026-08-29, per Josh: previously defaulted to
+\code{dir.load}, which silently mirrored whatever \code{dir.load} was
+rather than defaulting to a sensible location on its own - flagged as a
+bug and fixed.)}
 
-\item{file}{Character, default \code{""}: base name for the output CSV
-written when \code{write.output = TRUE}. Every output file name gets
-a date-range + save-time stamp appended automatically, so no two runs
-ever silently overwrite each other:
+\item{project.name}{Character, default \code{""}: base name for the
+output CSV written when \code{write.output = TRUE}. Every output file
+name gets a date-range + save-time stamp appended automatically, so no
+two runs ever silently overwrite each other:
 \verb{<base>_<DATE1>to<DATE2>_sav<timestamp>_suntimes.csv}, where
 \code{DATE1}/\code{DATE2} are the earliest/latest \code{$date} in the
 output (\code{YYYYMMDD}) and \code{<timestamp>} is when the file was
 written (\code{YYYYMMDDHHMMSS}, e.g. \code{sav20260826114426}).
-\code{""} (default) uses \code{"aru"} as \verb{<base>}. Any other
-value is used as \verb{<base>} instead - e.g. \code{file =
+\code{""} (default) uses \code{"aru"} as \verb{<base>}. Any other value
+is used as \verb{<base>} instead - e.g. \code{project.name =
 "projectname_suntimes.csv"} produces something like
 \code{"projectname_20250101to20250202_sav20260826113700_suntimes.csv"}.
 If the given value already ends in a previously-auto-generated suffix
-(e.g. you passed a prior run's output file name back in), that suffix
-is stripped back off first, so the file gets a fresh stamp instead of
-a second one stacked on top.}
+(e.g. you passed a prior run's output file name back in), that suffix is
+stripped back off first, so the file gets a fresh stamp instead of a
+second one stacked on top.}
 }
 \value{
 Invisibly, a list with:
-\describe{
-\item{aru.suntimes}{One row per (aru, date), \code{"fixed.unique"}/
-\code{"fixed.pooled"} rows only: \code{$aru}, \code{$date},
-\code{$date.mon}, \code{$sunregion}, \code{$sunregion.long},
-\code{$sunregion.lat}, \code{$date.start}, \code{$date.end},
-\code{$time.zone}, \code{$sunregion.type}, \code{$schedual1},
-\code{$schedual2}, \code{$lat}, \code{$long}, \code{$suns},
-\code{$suns.unix}, \code{$sunr}, \code{$sunr.unix},
-\code{$sunr.mon}, \code{$sunr.mon.unix}.}
-\item{efficiency}{One-row summary: \code{$aru.date.rows} (rows needed
-without de-duplication), \code{$site.date.rows} (unique site-date
-rows actually calculated), \code{$shared.sites} (count of sites
-with more than one ARU sharing the same calculation site).}
-}
+  \describe{
+    \item{aru.suntimes}{One row per (aru, date), \code{"fixed.unique"}/
+      \code{"fixed.pooled"} rows only: \code{$aru}, \code{$date},
+      \code{$date.mon}, \code{$sunregion}, \code{$sunregion.long},
+      \code{$sunregion.lat}, \code{$date.start}, \code{$date.end},
+      \code{$time.zone}, \code{$sunregion.type}, \code{$schedual1},
+      \code{$schedual2}, \code{$lat}, \code{$long}, \code{$suns},
+      \code{$suns.unix}, \code{$sunr}, \code{$sunr.unix},
+      \code{$sunr.mon}, \code{$sunr.mon.unix}.}
+    \item{efficiency}{One-row summary: \code{$aru.date.rows} (rows needed
+      without de-duplication), \code{$site.date.rows} (unique site-date
+      rows actually calculated), \code{$shared.sites} (count of sites
+      with more than one ARU sharing the same calculation site).}
+  }
 }
 \description{
 For every ARU in an \verb{*arulist.csv} deployment list, and for every
@@ -154,22 +158,22 @@ the run.
 \strong{Assumptions made (spec was ambiguous on these - flag for
 review):}
 \itemize{
-\item \code{$suns} is treated as SUNSET on \code{$date} (the shorthand
-"suns"/"sunr" strongly implies sunset vs. sunrise, and \code{$sunr}
-is separately and explicitly defined as sunrise - having both be
-sunrise would make \code{$suns} a pure duplicate).
-\item \code{$date.mon} is \code{$date} itself at noon (12:00:00), NOT
-\code{$date + 1} - taken literally from "date plus time of
-12:00:00", with no mention of the following day (unlike
-\code{$sunr.mon}, which explicitly says "for the following day").
-Noon (rather than midnight) is used so the timestamp can't drift to
-the wrong calendar day when read back in a different time zone.
-\item \code{[$date.start, $date.end]} is inclusive of both endpoints.
-\item Sunrise/sunset use the standard -0.833 degree solar-elevation
-threshold (atmospheric refraction + the sun's angular radius).
-\item Locations that would produce polar day/night (no sunrise or
-sunset on some date) are not expected in this data and are not
-specially handled beyond returning \code{NA}.
+  \item \code{$suns} is treated as SUNSET on \code{$date} (the shorthand
+    "suns"/"sunr" strongly implies sunset vs. sunrise, and \code{$sunr}
+    is separately and explicitly defined as sunrise - having both be
+    sunrise would make \code{$suns} a pure duplicate).
+  \item \code{$date.mon} is \code{$date} itself at noon (12:00:00), NOT
+    \code{$date + 1} - taken literally from "date plus time of
+    12:00:00", with no mention of the following day (unlike
+    \code{$sunr.mon}, which explicitly says "for the following day").
+    Noon (rather than midnight) is used so the timestamp can't drift to
+    the wrong calendar day when read back in a different time zone.
+  \item \code{[$date.start, $date.end]} is inclusive of both endpoints.
+  \item Sunrise/sunset use the standard -0.833 degree solar-elevation
+    threshold (atmospheric refraction + the sun's angular radius).
+  \item Locations that would produce polar day/night (no sunrise or
+    sunset on some date) are not expected in this data and are not
+    specially handled beyond returning \code{NA}.
 }
 
 See \code{batz.suntimes_generate.dev.R} in the package source repo for
