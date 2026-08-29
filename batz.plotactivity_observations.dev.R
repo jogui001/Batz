@@ -60,6 +60,17 @@
 #    pool one at a time; TEST 17 uses Josh's real fig.list.csv row as-is,
 #    end-to-end, against processed.csv.
 #
+# FOLLOW-UP (2026-08-29), per Josh ("add legend option to function, legend
+# = TRUE; add legend options to plotops file for things like size and
+# colors") - resolves the "no legend for dodged bars" gap flagged just
+# above/in the .R file's own @details: a new optional $legend fig.list
+# column (falls back to aes.default's own "legend" parameter, default
+# TRUE) and three new aes.default rows (legend.groupval.title/.colors/
+# .outline.linewidth, category "Legend") add a second, independent
+# outline-color legend distinguishing which $plot.sets value a dodged bar
+# is, whenever $pool = FALSE, >1 value is selected, and $legend is on.
+# TEST 18 below exercises this against processed.csv/plotopts_callobs.csv.
+#
 # =============================================================================
 
 setwd("/home/claude/plotactivity_work")
@@ -92,14 +103,15 @@ suntimes.synth <- data.frame(
 make.job <- function(plot.group = "aru.groupby", plot.sets = "WTG-GOM102", pool = FALSE,
                       date.start = "6/20/2026", date.end = "7/3/2026",
                       Yaxe.trans = "", y.scale = "", y.custom = "", ymax = "",
-                      loglabels = "", plot.name = "University of  Maine WTG turbine - Call Observations") {
+                      loglabels = "", legend = "",
+                      plot.name = "University of  Maine WTG turbine - Call Observations") {
   data.frame(
     plot.type = "call.observations", plot.name = plot.name, facet = "sppid", facet.set = "NE",
     MYSO = FALSE, Alldect = TRUE, facet.panel = "", `40khzmyo` = TRUE, facet.label = "",
     plot.group = plot.group, plot.sets = plot.sets, pool = pool,
     date.format = "%b-%d/n%Y", date.start = date.start, date.end = date.end,
     xaxe.interval = 4, Yaxe.trans = Yaxe.trans, y.scale = y.scale, y.custom = y.custom, ymax = ymax,
-    loglabels = loglabels,
+    loglabels = loglabels, legend = legend,
     check.names = FALSE, stringsAsFactors = FALSE
   )
 }
@@ -370,5 +382,62 @@ if (length(result17$plots) == 1) {
        setequal(unique(pd17$group.val), c("105059-NW3", "105059-SE3", "105059-SW3")), "\n")
 }
 cat("$ggplots entries produced (expected 1):", length(result17$ggplots), "\n")
+
+cat("\n\n########## TEST 18: $legend option - a second, independent outline-color legend for dodged $plot.sets values ##########\n")
+job18.on <- make.job(plot.group = "aru.name",
+                      plot.sets = '"105059-NW3" "105059-SE3" "105059-SW3"',
+                      date.start = "7/7/2026", date.end = "8/18/2026",
+                      pool = FALSE, legend = "TRUE")
+result18.on <- batz.plotactivity_observations(processed.real, job18.on, suntimes.synth, aes.default.real)
+g18.on <- result18.on$ggplots[[1]]
+colour.scale.18on <- ggplot2::ggplot_build(g18.on)$plot$scales$get_scales("colour")
+cat("colour scale is non-NULL (present) when legend=TRUE?", !is.null(colour.scale.18on), "\n")
+cat("colour scale's legend title matches aes.default's legend.groupval.title ('Detector')?",
+    identical(colour.scale.18on$name, "Detector"), "\n")
+cat("colour scale covers all 3 selected detector values?",
+    setequal(colour.scale.18on$get_breaks(), c("105059-NW3", "105059-SE3", "105059-SW3")), "\n")
+
+job18.off <- make.job(plot.group = "aru.name",
+                       plot.sets = '"105059-NW3" "105059-SE3" "105059-SW3"',
+                       date.start = "7/7/2026", date.end = "8/18/2026",
+                       pool = FALSE, legend = "FALSE")
+result18.off <- batz.plotactivity_observations(processed.real, job18.off, suntimes.synth, aes.default.real)
+colour.scale.18off <- ggplot2::ggplot_build(result18.off$ggplots[[1]])$plot$scales$get_scales("colour")
+cat("legend=FALSE -> no colour scale (matches pre-2026-08-29 appearance)?", is.null(colour.scale.18off), "\n")
+
+## legend has nothing to show when pooled, or when only one value is selected, regardless of $legend
+job18.pooled <- make.job(plot.group = "aru.name",
+                          plot.sets = '"105059-NW3" "105059-SE3" "105059-SW3"',
+                          date.start = "7/7/2026", date.end = "8/18/2026",
+                          pool = TRUE, legend = "TRUE")
+result18.pooled <- batz.plotactivity_observations(processed.real, job18.pooled, suntimes.synth, aes.default.real)
+colour.scale.18pooled <- ggplot2::ggplot_build(result18.pooled$ggplots[[1]])$plot$scales$get_scales("colour")
+cat("legend=TRUE but pool=TRUE (nothing to distinguish) -> no colour scale?", is.null(colour.scale.18pooled), "\n")
+
+job18.single <- make.job(plot.group = "aru.name", plot.sets = "105059-NW3",
+                          date.start = "7/7/2026", date.end = "8/18/2026",
+                          pool = FALSE, legend = "TRUE")
+result18.single <- batz.plotactivity_observations(processed.real, job18.single, suntimes.synth, aes.default.real)
+colour.scale.18single <- ggplot2::ggplot_build(result18.single$ggplots[[1]])$plot$scales$get_scales("colour")
+cat("legend=TRUE but only 1 selected value (nothing to distinguish) -> no colour scale?", is.null(colour.scale.18single), "\n")
+
+## blank $legend on the fig.list row falls back to aes.default's own "legend" parameter (TRUE)
+job18.blank <- make.job(plot.group = "aru.name",
+                         plot.sets = '"105059-NW3" "105059-SE3" "105059-SW3"',
+                         date.start = "7/7/2026", date.end = "8/18/2026",
+                         pool = FALSE, legend = "")
+result18.blank <- batz.plotactivity_observations(processed.real, job18.blank, suntimes.synth, aes.default.real)
+colour.scale.18blank <- ggplot2::ggplot_build(result18.blank$ggplots[[1]])$plot$scales$get_scales("colour")
+cat("blank $legend on the fig.list row falls back to aes.default's default (TRUE) -> colour scale present?",
+    !is.null(colour.scale.18blank), "\n")
+
+## fewer configured colors than selected values - cycling, not an error
+aes.default.fewcolors <- aes.default.real
+aes.default.fewcolors$default.value[aes.default.fewcolors$parameter == "legend.groupval.colors"] <- "#111111;#222222"
+result18.cycle <- batz.plotactivity_observations(processed.real, job18.on, suntimes.synth, aes.default.fewcolors)
+colour.scale.18cycle <- ggplot2::ggplot_build(result18.cycle$ggplots[[1]])$plot$scales$get_scales("colour")
+cycle.colors <- colour.scale.18cycle$palette(3)
+cat("only 2 colors configured for 3 values -> no crash, first color reused for the 3rd value (cycling)?",
+    length(cycle.colors) == 3 && cycle.colors[1] == cycle.colors[3] && cycle.colors[1] != cycle.colors[2], "\n")
 
 cat("\n\nEXIT: 0\n")

@@ -17,14 +17,18 @@
 #'   \code{$facet.set}, \code{$MYSO}, \code{$Alldect}, \code{$facet.panel},
 #'   \code{$40khzmyo}, \code{$facet.label}, \code{$plot.group},
 #'   \code{$plot.sets}, \code{$pool}, \code{$date.format}, \code{$date.start},
-#'   \code{$date.end}, \code{$xaxe.interval}. Column names must be unique. Four further
+#'   \code{$date.end}, \code{$xaxe.interval}. Column names must be unique. Five further
 #'   columns are read PER-ROW if present but are entirely optional (each
 #'   falls back to \code{aes.default} when blank or the column doesn't
 #'   exist at all - see Details): \code{$Yaxe.trans} (\code{"none"}/
 #'   \code{"log"}/\code{"log10"}), \code{$y.scale} (\code{"regular"}/
 #'   \code{"rounded"}/\code{"custom"}), \code{$y.custom} (semicolon-separated
-#'   break values, only read when \code{$y.scale = "custom"}), and
-#'   \code{$ymax} (the top value plotted on the Y axis).
+#'   break values, only read when \code{$y.scale = "custom"}),
+#'   \code{$ymax} (the top value plotted on the Y axis), and \code{$legend}
+#'   (\code{TRUE}/\code{FALSE} - whether to show a legend distinguishing
+#'   which \code{$plot.sets} value each dodged bar is, when \code{$pool =
+#'   FALSE} and more than one value is selected - see \strong{Follow-up,
+#'   2026-08-29} in Details).
 #' @param suntimes A data frame of sunrise/sunset times, e.g. the output of
 #'   \code{batz.suntimes_generate()}. Must have \code{$aru}, \code{$date},
 #'   \code{$date.mon}, \code{$sunregion}, \code{$time.zone},
@@ -151,15 +155,55 @@
 #'     \code{TRUE} sums \code{$obs} across all of them into ONE pooled bar
 #'     per date/panel (as if they were a single group); \code{FALSE} keeps
 #'     each selected value as its own bar, drawn side-by-side (dodged)
-#'     within the same date/panel. \strong{The dodge implementation is a
-#'     first-iteration design choice, flagged for Josh}: bars are dodged via
-#'     \code{ggplot2}'s own \code{position_dodge2()} at each date, colored
-#'     the same way regardless of \code{$plot.sets} value (fill still only
-#'     distinguishes \code{"All detections"} vs \code{"40kHzMyo"}, exactly
-#'     as before) - there is no separate legend distinguishing WHICH
-#'     \code{$plot.sets} value a given dodged bar is; say if that's needed
-#'     and a per-value color/label can be added.
+#'     within the same date/panel. Bars are dodged via \code{ggplot2}'s own
+#'     \code{position_dodge2()} at each date; fill still only distinguishes
+#'     \code{"All detections"} vs \code{"40kHzMyo"}, exactly as before -
+#'     WHICH \code{$plot.sets} value a given dodged bar is is now shown via
+#'     a separate outline-color legend, when \code{$legend} is on - see
+#'     \strong{Follow-up, 2026-08-29} below.
 #' }
+#'
+#' \strong{Follow-up, 2026-08-29, per Josh ("add legend option to
+#' function, legend = TRUE; add legend options to plotops file for things
+#' like size and colors"): a new \code{$legend} column (per-\code{fig.list}
+#' row, optional - falls back to \code{aes.default}'s own \code{legend}
+#' parameter, default \code{TRUE}), and three new \code{aes.default}
+#' parameters, resolve the "no legend for dodged bars" gap flagged
+#' above.} When \code{$pool = FALSE} and more than one \code{$plot.sets}
+#' value is actually selected (nothing to distinguish otherwise - a single
+#' value, or a pooled bar, never shows this legend regardless of
+#' \code{$legend}), every dodged bar's OUTLINE color is mapped to its own
+#' \code{$plot.group} value (the same raw value carried as \code{$group}
+#' by \code{\link{batz.generate_plotframe.bat}}, when \code{data} comes
+#' from there) via a second, independent \code{ggplot2} color scale -
+#' \code{fill} is already used for \code{"All detections"}/\code{"40kHzMyo"}
+#' and is left completely alone, so both legends coexist without
+#' conflict. Three new \code{aes.default} parameters, category
+#' \code{"Legend"} (alongside the existing \code{legend.position}),
+#' control it: \code{legend.groupval.title} (the new legend's title
+#' text), \code{legend.groupval.colors} (a semicolon-separated list of hex
+#' colors, e.g. \code{"#1b9e77;#d95f02;#7570b3"} - assigned to each
+#' distinct selected value in sorted order, CYCLING back to the first
+#' color if there are more selected values than colors given), and
+#' \code{legend.groupval.outline.linewidth} (how thick that outline stroke
+#' is drawn - "size" in Josh's own wording). \strong{Two interpretive
+#' calls, flagged for Josh}: (1) the new legend distinguishes
+#' \code{$plot.sets} values by bar OUTLINE color rather than fill, since
+#' \code{fill} was already spoken for by the all-detections/40kHzMyo
+#' distinction - a shared "fill" legend covering both dimensions at once
+#' isn't something \code{ggplot2} supports natively without extra
+#' packages; if a single combined legend is what's actually wanted instead,
+#' say so. (2) \code{legend.groupval.colors} cycling (rather than erroring,
+#' or auto-generating additional colors) when there are more selected
+#' \code{$plot.sets} values than colors listed was chosen to keep behavior
+#' predictable and non-fatal; a plot with more distinct values than
+#' distinct colors will have two values sharing a color, which is worth
+#' knowing about if it happens. Verified with a new test: 3 selected
+#' \code{$plot.sets} values, 3 configured colors, each value gets its own
+#' distinct outline color and shows up in the legend; \code{$legend =
+#' FALSE} (or a single selected value, or \code{$pool = TRUE}) renders
+#' exactly as before this change, with no outline-color mapping/legend at
+#' all.
 #'
 #' \strong{Y-axis resolution - the newest, most detailed part of this
 #' function - implements Josh's spec as follows:} \code{$Yaxe.trans}
@@ -374,6 +418,8 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     "xaxe.interval", "xaxe.title", "xaxe.date.buffer.days", "yaxe.title",
     "Yaxe.trans", "loglabels", "y.scale", "ymax", "bar.width",
     "bar.alldetections.fill", "bar.40khzmyo.fill", "bar.fill.legend.title",
+    "legend", "legend.groupval.title", "legend.groupval.colors",
+    "legend.groupval.outline.linewidth",
     "ggsave.dpi", "ggsave.units", "ggsave.width.pad", "ggsave.height.pad",
     "output.filename.pattern", "plot.width", "plot.height"
   )
@@ -615,6 +661,13 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
       pd$group.val <- "pooled"
     }
 
+    # --- $legend (2026-08-29 follow-up - see Details): whether to show the
+    # outline-color legend distinguishing which $plot.sets value a dodged
+    # bar is. Optional per-row, falls back to aes.default's own "legend"
+    # parameter (default TRUE) - same get.setting()/get.default() pattern
+    # as $Yaxe.trans/$y.scale/etc.
+    legend.flag <- isTRUE(as.logical(get.setting(job, "legend")))
+
     facet.label.fmt <- unquote(get.setting(job, "facet.label"))
     if (is.na(facet.label.fmt) || !nzchar(facet.label.fmt)) facet.label.fmt <- "common"
     panel.levels.raw <- facpan
@@ -712,7 +765,8 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
       facpan = facpan, spp.plot = spp.plot, date.start = date.start, date.end = date.end,
       khz.flag = khz.flag, break.pos = break.pos, break.labels = break.labels,
       y.upper.plot = trans.fn(y.upper), group.col = group.col,
-      plot.sets.vals = plot.sets.vals, pool.flag = pool.flag
+      plot.sets.vals = plot.sets.vals, pool.flag = pool.flag,
+      legend.flag = legend.flag
     )
     cat(sprintf("Prepared plot data for '%s': %d observation row(s) across %d panel(s).\n",
                  job.label, nrow(pd), length(panel.levels.raw)))
@@ -768,13 +822,55 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
       } else {
         ggplot2::position_dodge2(width = bar.width.val, padding = 0.1)
       }
-      g <- ggplot2::ggplot(p$pd, ggplot2::aes(x = date.parsed)) +
-        ggplot2::geom_col(data = p$pd[p$pd$bar.type == "All detections", , drop = FALSE],
-                           ggplot2::aes(y = obs.plot, fill = bar.type, group = group.val),
-                           width = bar.width.val, position = bar.position) +
-        ggplot2::geom_col(data = p$pd[p$pd$bar.type == "40kHzMyo", , drop = FALSE],
-                           ggplot2::aes(y = obs.plot, fill = bar.type, group = group.val),
-                           width = bar.width.val, position = bar.position) +
+
+      # $legend (2026-08-29 follow-up - see Details): when dodging (pool =
+      # FALSE, >1 selected $plot.sets value) AND $legend is on, every bar's
+      # OUTLINE color is mapped to its own $group.val via a second,
+      # independent colour scale - fill is left alone (still only "All
+      # detections"/"40kHzMyo"), so the two legends coexist. Built as two
+      # separate code paths (rather than conditionally omitting `colour`
+      # inside one aes() call) since ggplot2 aes() mappings are fixed at
+      # layer-construction time.
+      show.groupval.legend <- isTRUE(p$legend.flag) && !isTRUE(p$pool.flag) &&
+        length(unique(p$pd$group.val)) > 1
+
+      if (show.groupval.legend) {
+        groupval.levels <- sort(unique(p$pd$group.val))
+        groupval.palette <- strsplit(get.default("legend.groupval.colors"), ";", fixed = TRUE)[[1]]
+        groupval.palette <- trimws(groupval.palette[nzchar(trimws(groupval.palette))])
+        if (length(groupval.palette) == 0) {
+          # fallback palette (ColorBrewer "Dark2"-style) if aes.default's
+          # own $legend.groupval.colors is blank/unusable - never fatal.
+          groupval.palette <- c("#1b9e77", "#d95f02", "#7570b3", "#e7298a",
+                                 "#66a61e", "#e6ab02", "#a6761d", "#666666")
+        }
+        # cycles back to the first color if there are more selected values
+        # than colors configured - see Details for why this was chosen over
+        # erroring or auto-generating extra colors.
+        groupval.colors <- groupval.palette[((seq_along(groupval.levels) - 1) %% length(groupval.palette)) + 1]
+        names(groupval.colors) <- groupval.levels
+        groupval.lw <- suppressWarnings(as.numeric(get.default("legend.groupval.outline.linewidth")))
+        if (is.na(groupval.lw)) groupval.lw <- 1
+
+        g <- ggplot2::ggplot(p$pd, ggplot2::aes(x = date.parsed)) +
+          ggplot2::geom_col(data = p$pd[p$pd$bar.type == "All detections", , drop = FALSE],
+                             ggplot2::aes(y = obs.plot, fill = bar.type, group = group.val, colour = group.val),
+                             width = bar.width.val, position = bar.position, linewidth = groupval.lw) +
+          ggplot2::geom_col(data = p$pd[p$pd$bar.type == "40kHzMyo", , drop = FALSE],
+                             ggplot2::aes(y = obs.plot, fill = bar.type, group = group.val, colour = group.val),
+                             width = bar.width.val, position = bar.position, linewidth = groupval.lw) +
+          ggplot2::scale_colour_manual(name = get.default("legend.groupval.title"), values = groupval.colors)
+      } else {
+        g <- ggplot2::ggplot(p$pd, ggplot2::aes(x = date.parsed)) +
+          ggplot2::geom_col(data = p$pd[p$pd$bar.type == "All detections", , drop = FALSE],
+                             ggplot2::aes(y = obs.plot, fill = bar.type, group = group.val),
+                             width = bar.width.val, position = bar.position) +
+          ggplot2::geom_col(data = p$pd[p$pd$bar.type == "40kHzMyo", , drop = FALSE],
+                             ggplot2::aes(y = obs.plot, fill = bar.type, group = group.val),
+                             width = bar.width.val, position = bar.position)
+      }
+
+      g <- g +
         ggplot2::scale_fill_manual(name = get.default("bar.fill.legend.title"),
           breaks = fill.legend.breaks, limits = fill.legend.limits,
           values = c(`All detections` = get.default("bar.alldetections.fill"),
