@@ -98,6 +98,16 @@
 #     when the raw per-file input already has it, e.g. if a future export
 #     or a manually-augmented file already carries the column. See TEST 11
 #     below.
+#
+#  8. **Follow-up (2026-08-30, per Josh bug report: a real Mobile-transect
+#     vetted export was being silently skipped entirely) - $serial is now
+#     OPTIONAL, handled exactly like $sunregion (assumption #7).** The
+#     reported file (a Mobile-format export) has no Serial/similar header at
+#     all - confirmed directly, and confirmed the load.pattern matching
+#     itself was NOT the problem (both "*vetted.csv" and the exact file name
+#     match it via glob2rx()/list.files()). $serial is removed from
+#     expected.headers; a file lacking it is no longer skipped - it merges
+#     with NA for $serial instead. See TEST 13 below.
 # ---------------------------------------------------------------------------
 
 ## ===========================================================================
@@ -123,7 +133,7 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
                                                trim.noid = FALSE) {
 
   expected.headers <- c("filename", "monitoringnight", "speciesmanualid",
-                         "wakaleidoscopeautoid", "sppaccp", "lat", "serial")
+                         "wakaleidoscopeautoid", "sppaccp", "lat")
 
   normalize.header <- function(x) tolower(gsub("[^[:alnum:]]", "", x))
 
@@ -151,6 +161,13 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
       add.log(f, "mismatched headers", paste(missing.headers, collapse = ", ")); next
     }
     if (nrow(tmp) == 0) { add.log(f, "no records", "none"); next }
+    ## $serial is OPTIONAL (2026-08-30 follow-up), not one of the required
+    ## expected.headers - a file is never skipped for lacking it (e.g. a
+    ## Mobile-transect export, which has no fixed detector serial number at
+    ## all). Captured BEFORE trimming to expected.headers below, exactly like
+    ## $sunregion, since that trim would otherwise silently drop it.
+    serial.vals <- if ("serial" %in% names(tmp)) as.character(tmp$serial) else
+      rep(NA_character_, nrow(tmp))
     ## $sunregion is OPTIONAL, not one of the required expected.headers - a
     ## file is never skipped for lacking it. If a file's own (normalized)
     ## headers happen to include it, copy those values straight through;
@@ -161,6 +178,7 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
     sunregion.vals <- if ("sunregion" %in% names(tmp)) as.character(tmp$sunregion) else
       rep(NA_character_, nrow(tmp))
     tmp <- tmp[, expected.headers, drop = FALSE]
+    tmp$serial <- serial.vals
     tmp$sunregion <- sunregion.vals
     vetted.merged <- rbind(vetted.merged, tmp)
   }
@@ -416,5 +434,56 @@ res12 <- batz.merge_vetted.acoustics(dir.load = dir.load,
 cat("has $sunregion column?", "sunregion" %in% names(res12$vetted.merged), "\n")
 cat("all NA (no file supplied it)?", all(is.na(res12$vetted.merged$sunregion)), "\n")
 cat("row count unaffected by this change?", nrow(res12$vetted.merged) == nrow(res1$vetted.merged), "\n\n")
+
+## ===========================================================================
+## SECTION 6: $serial optional (2026-08-30, per Josh bug report) - a real
+## Mobile-transect vetted export with NO Serial column at all was being
+## silently skipped entirely ("mismatched headers"). Reproduced here with a
+## synthetic Mobile-style file (no Serial header) alongside a normal
+## stationary-style file (has Serial), merged together in one call.
+## ===========================================================================
+dir.create("testdata/mobile", showWarnings = FALSE, recursive = TRUE)
+
+## file A: stationary-style, HAS $serial
+synth.stationary <- data.frame(
+  Filename = c("SYN-D_20260601_010101_000.wav"),
+  MonitoringNight = c("6/1/2026"),
+  `Species Manual ID` = c("Epfu"),
+  `WA|Kaleidoscope|Auto ID` = c("EPTFUS"),
+  SppAccp = c("Epfu"),
+  Lat = c("44.00000 -68.00000"),
+  Serial = c("S4U00004"),
+  check.names = FALSE, stringsAsFactors = FALSE
+)
+write.csv(synth.stationary, "testdata/mobile/stationary_vetted.csv", row.names = FALSE)
+
+## file B: Mobile-style, NO $serial column anywhere (matches the real
+## reported file's shape - no Serial header at all)
+synth.mobile <- data.frame(
+  Filename = c("105059-MOB_20260716_220211_000.wav"),
+  Filename2 = c("MOBILE_20260716_220211_000.wav"),
+  MonitoringNight = c("7/16/2026"),
+  Lat = c("44.76230 -70.89998"),
+  `Species Manual ID` = c("2Bat"),
+  `WA|Kaleidoscope|Auto ID` = c("LASNOC"),
+  SppAccp = c("Lano"),
+  check.names = FALSE, stringsAsFactors = FALSE
+)
+write.csv(synth.mobile, "testdata/mobile/mobile_vetted.csv", row.names = FALSE)
+
+cat("=== TEST 13: $serial optional - Mobile file (no Serial column) merges instead of being skipped ===\n")
+res13 <- batz.merge_vetted.acoustics(dir.load = "testdata/mobile",
+                                            load.pattern = "*vetted.csv",
+                                            duplicates.remove = FALSE, log.file = TRUE)
+cat("rows merged (should be 2 - both files kept, neither skipped for 'serial'):",
+    nrow(res13$vetted.merged), "\n")
+print(res13$vetted.merged[, c("aru.name", "serial")])
+cat("stationary file kept its real $serial?",
+    res13$vetted.merged$serial[res13$vetted.merged$aru.name == "SYN-D"] == "S4U00004", "\n")
+cat("mobile file (no Serial column) got NA for $serial instead of being skipped?",
+    is.na(res13$vetted.merged$serial[res13$vetted.merged$aru.name == "105059-MOB"]), "\n")
+cat("log shows zero files skipped for 'mismatched headers' due to serial:\n")
+print(res13$vetted.merged_log.file)
+cat("\n")
 
 cat("\nAll dev-script tests completed.\n")

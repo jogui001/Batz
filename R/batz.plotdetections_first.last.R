@@ -571,7 +571,7 @@
 #' change, purely an identifier rename.
 #'
 #' \strong{Follow-up, 2026-08-27, later still, per Josh ("change the pattern
-#' from \"batactivity.plotoptions.csv\" to \"plotopts_first.last.csv\""):
+#' from \"batactivity.plotoptions.csv\" to \"plotopts_first.last.csv\"):
 #' the on-disk file name this function's `aes.default` input is expected to
 #' be loaded from was renamed - purely a file-naming change, not a
 #' parameter/argument rename (that was the entry above) and not a change to
@@ -985,12 +985,12 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
     # Canonicalize to the reference table's own spelling (see @details) -
     # keeps a slightly-off list (typed by hand, or from an older spec) lined
     # up with data$spp.common, which is always canonical.
-    spp.plot <- batz.batusa_recode.names(spp.plot, output.format = "common")
-    facpan   <- batz.batusa_recode.names(facpan, output.format = "common")
+    spp.plot <- batz.batusa_recode.names(spp.plot, batname.format.out = "common")
+    facpan   <- batz.batusa_recode.names(facpan, batname.format.out = "common")
 
     # ---- filter data to this job's ARU + species list ----
     pd <- data
-    pd$spp.common <- batz.batusa_recode.names(pd$spp.id, output.format = "common")
+    pd$spp.common <- batz.batusa_recode.names(pd$spp.id, batname.format.out = "common")
 
     plot.set.val <- trimws(job$plot.set)
     if (nzchar(plot.set.val)) {
@@ -1059,7 +1059,7 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
     if (!nzchar(facet.label.fmt)) facet.label.fmt <- "common"
 
     panel.levels.raw <- facpan
-    panel.labels <- batz.batusa_recode.names(panel.levels.raw, output.format = facet.label.fmt)
+    panel.labels <- batz.batusa_recode.names(panel.levels.raw, batname.format.out = facet.label.fmt)
     names(panel.labels) <- panel.levels.raw
 
     plot.order.raw <- strsplit(get.setting(job, "plot.order"), ";", fixed = TRUE)[[1]]
@@ -1317,9 +1317,9 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
       # with breaks="B" but no "B" rows: no legend at all. Real fix
       # needs limits= to explicitly put "40kHzMyo" into the scale's
       # domain whenever the flag is TRUE, independent of whether any row
-      # actually used that fill value - re-verified by rendering with
-      # limits= added: the key shows correctly even with zero 40kHzMyo
-      # detections.
+      # actually used that fill value that period - re-verified by
+      # rendering with limits= added: the key shows correctly even with
+      # zero 40kHzMyo detections.
       fill.legend.limits <- if (isTRUE(p$khz.flag)) c("All detections", "40kHzMyo") else "All detections"
       fill.legend.breaks <- if (isTRUE(p$khz.flag)) "40kHzMyo" else character(0)
 

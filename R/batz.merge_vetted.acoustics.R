@@ -26,7 +26,7 @@
 #'
 #' Expected (standardized) headers: \code{filename}, \code{monitoringnight},
 #' \code{speciesmanualid}, \code{wakaleidoscopeautoid}, \code{sppaccp},
-#' \code{lat}, \code{serial}. A file missing any of these (after
+#' \code{lat}. A file missing any of these (after
 #' standardization) is skipped with \code{$reason = "mismatched headers"}
 #' and \code{$headers.missing} listing which ones (comma-separated). A file
 #' with all expected headers but zero data rows is skipped with
@@ -82,7 +82,7 @@
 #'     \code{$date}/\code{$time} to add \code{$call.datetime}.
 #'   \item \code{\link{batz.batusa_recode.names}} is run on \code{$manid},
 #'     \code{$autoid.kp}, and \code{$autoid.sb} in place, using
-#'     \code{output.format = bat.names} (default \code{grammar.dash =
+#'     \code{batname.format.out = bat.names.out} (default \code{grammar.dash =
 #'     TRUE}) - any value not recognized as a species name/code (e.g.
 #'     \code{"NOISE"}, \code{"NoID"}, or a blank) passes through
 #'     unchanged.
@@ -113,24 +113,33 @@
 #' unrecognized values like \code{"noise"}/\code{"NoID"} through unchanged,
 #' so they're still there to match against.
 #'
-#' \strong{Update (2026-08-26, later) - \code{bat.names}.} Josh's own
+#' \strong{Update (2026-08-26, later) - \code{bat.names.out}.} Josh's own
 #' instruction for this input was terse ("If bat.names = 'code4' ... set
 #' the output name to default") and admits more than one reading - read
-#' here as: \code{bat.names} IS the \code{output.format} value passed to
+#' here as: \code{bat.names.out} IS the \code{batname.format.out} value passed to
 #' every \code{batz.batusa_recode.names()} call in the pipeline above
 #' (replacing the previously-hardcoded, unconfigurable \code{"common"}),
-#' and "default" refers to \code{bat.names}'s OWN default value
+#' and "default" refers to \code{bat.names.out}'s OWN default value
 #' (\code{"code4"}), not to \code{batz.batusa_recode.names()}'s internal
 #' default (\code{"common"}). Concretely: with the default
-#' \code{bat.names = "code4"}, \code{$manid}/\code{$autoid.kp}/
+#' \code{bat.names.out = "code4"}, \code{$manid}/\code{$autoid.kp}/
 #' \code{$autoid.sb} now come back as 4-letter codes (e.g.
 #' \code{"epfu"}) instead of common names (e.g. \code{"Big brown bat"}) -
 #' a real behavior change from the version delivered earlier the same day.
 #' \strong{Please confirm this is what was meant} - the alternative
 #' reading (leave \code{batz.batusa_recode.names()} at its own built-in
-#' default of \code{"common"} whenever \code{bat.names == "code4"}, making
+#' default of \code{"common"} whenever \code{bat.names.out == "code4"}, making
 #' the new parameter inert for its default value) was considered and
 #' rejected as a strange thing to add a whole new parameter for.
+#'
+#' (2026-08-29: \code{batz.batusa_recode.names()}'s \code{output.format}
+#' parameter was renamed to \code{batname.format.out}; call sites and this
+#' documentation updated to match.)
+#'
+#' (2026-08-29, later, per Josh: this function's own \code{bat.names}
+#' parameter was renamed to \code{bat.names.out}, since it too is an OUTPUT
+#' format passed straight through to \code{batname.format.out} - matching
+#' the package-wide \code{.in}/\code{.out} format-parameter convention.)
 #'
 #' \strong{Follow-up, 2026-08-27, later still, per Josh ("update
 #' batz.merge_vetted.acoustics() to include copying over $sunregion
@@ -159,6 +168,27 @@
 #' \code{NA} \code{$sunregion} column added. Full existing test suite (10
 #' tests) re-run clean, no regressions.
 #'
+#' \strong{Follow-up, 2026-08-30, per Josh (bug report: a real Mobile-transect
+#' vetted export - \code{FY26_SevenIslands_NABat_105059_Mobile_FinalVetted.csv}
+#' - was silently skipped entirely) - \code{$serial} is now OPTIONAL, handled
+#' exactly like \code{$sunregion} above.} Confirmed against the reported file:
+#' it has no \code{Serial}/similar header anywhere (Mobile-transect exports
+#' use a vehicle-mounted detector with no fixed instrument serial number, only
+#' a route/grid ID embedded in \code{$filename}, e.g.
+#' \code{"105059-MOB_..."}), so it was failing \code{expected.headers} on
+#' \code{serial} alone and being skipped with \code{$reason = "mismatched
+#' headers"} - silently, since \code{log.file} defaults to \code{FALSE}. Load-
+#' pattern matching was NOT the problem (verified directly: both
+#' \code{"*vetted.csv"} and the exact file name match this file's name via
+#' \code{glob2rx()}/\code{list.files()}). \code{serial} is now REMOVED from
+#' \code{expected.headers}, so a file is never skipped for lacking it; its
+#' value is instead captured (like \code{$sunregion}) before the
+#' \code{expected.headers} trim and carried through - a stationary-ARU file
+#' that has \code{Serial} keeps its real value, a Mobile file (or any file
+#' without it) gets \code{NA} for \code{$serial} instead of being dropped
+#' entirely. Column order is unaffected (\code{$serial} still lands in the
+#' same position it always did, immediately before \code{$sunregion}).
+#'
 #' @param dir.load Character, default \code{getwd()}. Directory to scan.
 #' @param load.pattern Character vector, default \code{c("*vetted.csv")}. A
 #'   wildcard/glob pattern (or vector of patterns) identifying which files to
@@ -174,14 +204,14 @@
 #' @param log.file Logical, default \code{FALSE}. When \code{TRUE}, also
 #'   creates \code{vetted.merged_log.file} (one row per SKIPPED file, with
 #'   \code{$filepath}, \code{$reason}, \code{$headers.missing}).
-#' @param bat.names Character, default \code{"code4"}. The
-#'   \code{output.format} passed to \code{\link{batz.batusa_recode.names}}
+#' @param bat.names.out Character, default \code{"code4"}. The
+#'   \code{batname.format.out} passed to \code{\link{batz.batusa_recode.names}}
 #'   when recoding \code{$manid}/\code{$autoid.kp}/\code{$autoid.sb} - must
-#'   be one of that function's valid \code{output.format} values (e.g.
+#'   be one of that function's valid \code{batname.format.out} values (e.g.
 #'   \code{"code4"}, \code{"common"}, \code{"code6"}, \code{"latin"}, ...).
 #'   Not specified in the original spec beyond its default; read as "the
 #'   format the recoded manual/auto ID columns end up in" and passed
-#'   straight through to \code{output.format} - see Details.
+#'   straight through to \code{batname.format.out} - see Details.
 #' @param manid.kp Logical, default \code{TRUE}. Create \code{$manid.kp}
 #'   (a copy of \code{$manid} with blanks filled from \code{$autoid.kp} -
 #'   Kaleidoscope's auto ID). See Details.
@@ -216,14 +246,14 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
                                                dir.sub = FALSE,
                                                duplicates.remove = TRUE,
                                                log.file = FALSE,
-                                               bat.names = "code4",
+                                               bat.names.out = "code4",
                                                manid.kp = TRUE,
                                                manid.sb = TRUE,
                                                trim.noise = TRUE,
                                                trim.noid = FALSE) {
 
   expected.headers <- c("filename", "monitoringnight", "speciesmanualid",
-                         "wakaleidoscopeautoid", "sppaccp", "lat", "serial")
+                         "wakaleidoscopeautoid", "sppaccp", "lat")
 
   normalize.header <- function(x) tolower(gsub("[^[:alnum:]]", "", x))
 
@@ -251,6 +281,13 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
       add.log(f, "mismatched headers", paste(missing.headers, collapse = ", ")); next
     }
     if (nrow(tmp) == 0) { add.log(f, "no records", "none"); next }
+    ## $serial is OPTIONAL (2026-08-30 follow-up), not one of the required
+    ## expected.headers - a file is never skipped for lacking it (e.g. a
+    ## Mobile-transect export, which has no fixed detector serial number at
+    ## all). Captured BEFORE trimming to expected.headers below, exactly like
+    ## $sunregion, since that trim would otherwise silently drop it.
+    serial.vals <- if ("serial" %in% names(tmp)) as.character(tmp$serial) else
+      rep(NA_character_, nrow(tmp))
     ## $sunregion is OPTIONAL, not one of the required expected.headers - a
     ## file is never skipped for lacking it. If a file's own (normalized)
     ## headers happen to include it, copy those values straight through;
@@ -261,6 +298,7 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
     sunregion.vals <- if ("sunregion" %in% names(tmp)) as.character(tmp$sunregion) else
       rep(NA_character_, nrow(tmp))
     tmp <- tmp[, expected.headers, drop = FALSE]
+    tmp$serial <- serial.vals
     tmp$sunregion <- sunregion.vals
     vetted.merged <- rbind(vetted.merged, tmp)
   }
@@ -302,10 +340,10 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
     vetted.merged$call.datetime <- batz.datawrangler_call.datetime(
       date = vetted.merged$date, time = vetted.merged$time)
 
-    ## recode manid/autoid.kp/autoid.sb (output.format = bat.names, default "code4")
-    vetted.merged$manid     <- batz.batusa_recode.names(vetted.merged$manid, output.format = bat.names)
-    vetted.merged$autoid.kp <- batz.batusa_recode.names(vetted.merged$autoid.kp, output.format = bat.names)
-    vetted.merged$autoid.sb <- batz.batusa_recode.names(vetted.merged$autoid.sb, output.format = bat.names)
+    ## recode manid/autoid.kp/autoid.sb (batname.format.out = bat.names.out, default "code4")
+    vetted.merged$manid     <- batz.batusa_recode.names(vetted.merged$manid, batname.format.out = bat.names.out)
+    vetted.merged$autoid.kp <- batz.batusa_recode.names(vetted.merged$autoid.kp, batname.format.out = bat.names.out)
+    vetted.merged$autoid.sb <- batz.batusa_recode.names(vetted.merged$autoid.sb, batname.format.out = bat.names.out)
 
     is.empty <- function(x) is.na(x) | !nzchar(trimws(x))
 
