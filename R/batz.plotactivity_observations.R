@@ -606,12 +606,12 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     spp.plot <- unique(trimws(spp.plot))
     facpan <- unique(trimws(facpan))
 
-    spp.plot <- batz.batusa_recode.names(spp.plot, output.format = "common")
-    facpan <- batz.batusa_recode.names(facpan, output.format = "common")
+    spp.plot <- batz.batusa_recode.names(spp.plot, batname.format.out = "common")
+    facpan <- batz.batusa_recode.names(facpan, batname.format.out = "common")
 
     pd <- data
     is.khz.raw <- norm.simple(pd$spp.id) %in% KHZ.ALIASES
-    pd$spp.common <- batz.batusa_recode.names(pd$spp.id, output.format = "common")
+    pd$spp.common <- batz.batusa_recode.names(pd$spp.id, batname.format.out = "common")
     pd$spp.common[is.khz.raw] <- "40khzmyo"
 
     # --- $plot.group: which column of `data` to filter/group by (2026-08-28
@@ -671,7 +671,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     facet.label.fmt <- unquote(get.setting(job, "facet.label"))
     if (is.na(facet.label.fmt) || !nzchar(facet.label.fmt)) facet.label.fmt <- "common"
     panel.levels.raw <- facpan
-    panel.labels <- batz.batusa_recode.names(panel.levels.raw, output.format = facet.label.fmt)
+    panel.labels <- batz.batusa_recode.names(panel.levels.raw, batname.format.out = facet.label.fmt)
     names(panel.labels) <- panel.levels.raw
     plot.order.raw <- strsplit(get.setting(job, "plot.order"), ";", fixed = TRUE)[[1]]
     ordered.levels <- intersect(trimws(plot.order.raw), panel.levels.raw)
