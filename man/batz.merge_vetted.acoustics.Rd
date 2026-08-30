@@ -10,7 +10,7 @@ batz.merge_vetted.acoustics(
   dir.sub = FALSE,
   duplicates.remove = TRUE,
   log.file = FALSE,
-  bat.names.out = "code4",
+  bat.names = "code4",
   manid.kp = TRUE,
   manid.sb = TRUE,
   trim.noise = TRUE,
@@ -38,14 +38,14 @@ pipeline runs).}
 creates \code{vetted.merged_log.file} (one row per SKIPPED file, with
 \code{$filepath}, \code{$reason}, \code{$headers.missing}).}
 
-\item{bat.names.out}{Character, default \code{"code4"}. The
-\code{batname.format.out} passed to \code{\link{batz.batusa_recode.names}}
+\item{bat.names}{Character, default \code{"code4"}. The
+\code{output.format} passed to \code{\link{batz.batusa_recode.names}}
 when recoding \code{$manid}/\code{$autoid.kp}/\code{$autoid.sb} - must
-be one of that function's valid \code{batname.format.out} values (e.g.
+be one of that function's valid \code{output.format} values (e.g.
 \code{"code4"}, \code{"common"}, \code{"code6"}, \code{"latin"}, ...).
 Not specified in the original spec beyond its default; read as "the
 format the recoded manual/auto ID columns end up in" and passed
-straight through to \code{batname.format.out} - see Details.}
+straight through to \code{output.format} - see Details.}
 
 \item{manid.kp}{Logical, default \code{TRUE}. Create \code{$manid.kp}
 (a copy of \code{$manid} with blanks filled from \code{$autoid.kp} -
@@ -63,12 +63,12 @@ SonoBat's auto ID). See Details.}
 }
 \value{
 Invisibly, a named list: \code{vetted.merged} (always), and
-  \code{vetted.merged_log.file} (only if \code{log.file = TRUE}). As a
-  side effect, the same object(s) are also assigned directly into the
-  calling environment (same auto-assign convention as
-  \code{batz.merge_aru.meta}/\code{batz.datawrangler_load.files}),
-  so a bare call with no assignment populates \code{vetted.merged}
-  (and \code{vetted.merged_log.file}) directly.
+\code{vetted.merged_log.file} (only if \code{log.file = TRUE}). As a
+side effect, the same object(s) are also assigned directly into the
+calling environment (same auto-assign convention as
+\code{batz.merge_aru.meta}/\code{batz.datawrangler_load.files}),
+so a bare call with no assignment populates \code{vetted.merged}
+(and \code{vetted.merged_log.file}) directly.
 }
 \description{
 Searches a directory (and its subdirectories, if \code{dir.sub = TRUE})
@@ -134,48 +134,48 @@ spec itself calls it "military time"). The trailing junk
 pipeline.} Once the steps above finish, the (still 11-column) table is
 put through a further pipeline:
 \enumerate{
-  \item \strong{Positional rename.} Josh's own rename list, given
-    verbatim, was missing a comma between \code{"autoid.sb"} and
-    \code{"lat"} - read as a typo, not a real 10-element list. The 11
-    existing columns (in the order produced by the steps above:
-    \code{filename, monitoringnight, speciesmanualid,
+\item \strong{Positional rename.} Josh's own rename list, given
+verbatim, was missing a comma between \code{"autoid.sb"} and
+\code{"lat"} - read as a typo, not a real 10-element list. The 11
+existing columns (in the order produced by the steps above:
+\code{filename, monitoringnight, speciesmanualid,
     wakaleidoscopeautoid, sppaccp, lat, serial, lon, aru.name, date,
     time}) are renamed POSITIONALLY to \code{filename, date.mon, manid,
     autoid.kp, autoid.sb, lat, serial, lon, aru.name, date, time}.
-    \code{"wakaleidoscopeautoid"} becomes \code{"autoid.kp"} and
-    \code{"sppaccp"} becomes \code{"autoid.sb"} - this makes sense once
-    you notice the function merges files from either k-Pro/Kaleidoscope
-    ("kp") or SonoBat ("sb") vetting software: Kaleidoscope's own auto
-    ID column becomes \code{$autoid.kp}, SonoBat's "accepted species"
-    column becomes \code{$autoid.sb}.
-  \item \strong{Reorder} to \code{filename, date.mon, aru.name, serial,
+\code{"wakaleidoscopeautoid"} becomes \code{"autoid.kp"} and
+\code{"sppaccp"} becomes \code{"autoid.sb"} - this makes sense once
+you notice the function merges files from either k-Pro/Kaleidoscope
+("kp") or SonoBat ("sb") vetting software: Kaleidoscope's own auto
+ID column becomes \code{$autoid.kp}, SonoBat's "accepted species"
+column becomes \code{$autoid.sb}.
+\item \strong{Reorder} to \code{filename, date.mon, aru.name, serial,
     lat, lon, manid, autoid.kp, autoid.sb, date, time}.
-  \item \code{\link{batz.datawrangler_call.datetime}} is run on
-    \code{$date}/\code{$time} to add \code{$call.datetime}.
-  \item \code{\link{batz.batusa_recode.names}} is run on \code{$manid},
-    \code{$autoid.kp}, and \code{$autoid.sb} in place, using
-    \code{batname.format.out = bat.names.out} (default \code{grammar.dash =
+\item \code{\link{batz.datawrangler_call.datetime}} is run on
+\code{$date}/\code{$time} to add \code{$call.datetime}.
+\item \code{\link{batz.batusa_recode.names}} is run on \code{$manid},
+\code{$autoid.kp}, and \code{$autoid.sb} in place, using
+\code{output.format = bat.names} (default \code{grammar.dash =
     TRUE}) - any value not recognized as a species name/code (e.g.
-    \code{"NOISE"}, \code{"NoID"}, or a blank) passes through
-    unchanged.
-  \item If \code{manid.kp = TRUE} (default), \code{$manid.kp} is created
-    as a copy of (the now-recoded) \code{$manid}; every blank/NA element
-    of \code{$manid.kp} is overwritten with that row's \code{$autoid.kp}
-    value. ("Blank" means \code{NA} or a blank/whitespace-only string -
-    not specified either way, same convention already used in
-    \code{batz.datawrangler_call.datetime}.) The spec's fill-in prose
-    names the source column \code{"$auto.kp"}, which doesn't exist
-    anywhere - read as shorthand for \code{$autoid.kp}, matching the
-    rest of the spec's own naming.
-  \item If \code{manid.sb = TRUE} (default), the same thing happens for
-    \code{$manid.sb}, filled from \code{$autoid.sb} ("$auto.sb" in the
-    spec's prose, read the same way).
-  \item If \code{trim.noise = TRUE} (default), every row whose
-    \code{$manid} equals \code{"noise"} (case-insensitive, whitespace-
-    trimmed) is removed.
-  \item If \code{trim.noid = TRUE} (default \code{FALSE}), every row
-    whose \code{$manid} equals \code{"NoID"} (case-insensitive,
-    whitespace-trimmed) is removed.
+\code{"NOISE"}, \code{"NoID"}, or a blank) passes through
+unchanged.
+\item If \code{manid.kp = TRUE} (default), \code{$manid.kp} is created
+as a copy of (the now-recoded) \code{$manid}; every blank/NA element
+of \code{$manid.kp} is overwritten with that row's \code{$autoid.kp}
+value. ("Blank" means \code{NA} or a blank/whitespace-only string -
+not specified either way, same convention already used in
+\code{batz.datawrangler_call.datetime}.) The spec's fill-in prose
+names the source column \code{"$auto.kp"}, which doesn't exist
+anywhere - read as shorthand for \code{$autoid.kp}, matching the
+rest of the spec's own naming.
+\item If \code{manid.sb = TRUE} (default), the same thing happens for
+\code{$manid.sb}, filled from \code{$autoid.sb} ("$auto.sb" in the
+spec's prose, read the same way).
+\item If \code{trim.noise = TRUE} (default), every row whose
+\code{$manid} equals \code{"noise"} (case-insensitive, whitespace-
+trimmed) is removed.
+\item If \code{trim.noid = TRUE} (default \code{FALSE}), every row
+whose \code{$manid} equals \code{"NoID"} (case-insensitive,
+whitespace-trimmed) is removed.
 }
 \code{$manid.kp}/\code{$manid.sb} (when created) and \code{$call.datetime}
 are appended at the very end of the column order (not specified where
@@ -185,33 +185,24 @@ itself (not \code{$manid.kp}/\code{$manid.sb}), AFTER the
 unrecognized values like \code{"noise"}/\code{"NoID"} through unchanged,
 so they're still there to match against.
 
-\strong{Update (2026-08-26, later) - \code{bat.names.out}.} Josh's own
+\strong{Update (2026-08-26, later) - \code{bat.names}.} Josh's own
 instruction for this input was terse ("If bat.names = 'code4' ... set
 the output name to default") and admits more than one reading - read
-here as: \code{bat.names.out} IS the \code{batname.format.out} value passed to
+here as: \code{bat.names} IS the \code{output.format} value passed to
 every \code{batz.batusa_recode.names()} call in the pipeline above
 (replacing the previously-hardcoded, unconfigurable \code{"common"}),
-and "default" refers to \code{bat.names.out}'s OWN default value
+and "default" refers to \code{bat.names}'s OWN default value
 (\code{"code4"}), not to \code{batz.batusa_recode.names()}'s internal
 default (\code{"common"}). Concretely: with the default
-\code{bat.names.out = "code4"}, \code{$manid}/\code{$autoid.kp}/
+\code{bat.names = "code4"}, \code{$manid}/\code{$autoid.kp}/
 \code{$autoid.sb} now come back as 4-letter codes (e.g.
 \code{"epfu"}) instead of common names (e.g. \code{"Big brown bat"}) -
 a real behavior change from the version delivered earlier the same day.
 \strong{Please confirm this is what was meant} - the alternative
 reading (leave \code{batz.batusa_recode.names()} at its own built-in
-default of \code{"common"} whenever \code{bat.names.out == "code4"}, making
+default of \code{"common"} whenever \code{bat.names == "code4"}, making
 the new parameter inert for its default value) was considered and
 rejected as a strange thing to add a whole new parameter for.
-
-(2026-08-29: \code{batz.batusa_recode.names()}'s \code{output.format}
-parameter was renamed to \code{batname.format.out}; call sites and this
-documentation updated to match.)
-
-(2026-08-29, later, per Josh: this function's own \code{bat.names}
-parameter was renamed to \code{bat.names.out}, since it too is an OUTPUT
-format passed straight through to \code{batname.format.out} - matching
-the package-wide \code{.in}/\code{.out} format-parameter convention.)
 
 \strong{Follow-up, 2026-08-27, later still, per Josh ("update
 batz.merge_vetted.acoustics() to include copying over $sunregion

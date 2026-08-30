@@ -12,10 +12,10 @@ batz.generate_plotframe.bat(
   groupby = "aru.name",
   alldetections = TRUE,
   trim.noise = TRUE,
-  trim.noid = FALSE,
+  trim.noid = TRUE,
   dir.load = getwd(),
   load.pattern = c("*.arulist.csv"),
-  dir.sub = FALSE
+  dir.sub = TRUE
 )
 }
 \arguments{
@@ -49,14 +49,12 @@ Josh's explicit request.)}
 \code{"noise"} (case-insensitive) from the \code{"All Detections"}
 summary.}
 
-\item{trim.noid}{Logical, default \code{FALSE}. When \code{alldetections
+\item{trim.noid}{Logical, default \code{TRUE}. When \code{alldetections
 = TRUE}, exclude rows where the \code{spp.id} column is
 \code{"NoID"} (case-insensitive) from the \code{"All Detections"}
 summary. (Named \code{"trim.noid"} rather than the originally-specced
 \code{"trim.noID"}, to match the identically-purposed parameter
-already shipped in \code{\link{batz.merge_vetted.acoustics}}.
-Standardized 2026-08-29, per Josh: default changed from \code{TRUE}
-to \code{FALSE}.)}
+already shipped in \code{\link{batz.merge_vetted.acoustics}}.)}
 
 \item{dir.load}{Character, default \code{getwd()}. Directory to search
 for the \code{*arulist.csv} file(s) used to look up \code{$sunregion}.
@@ -69,19 +67,19 @@ internally to a regex via \code{utils::glob2rx()} (same mechanism
 \code{\link{batz.merge_vetted.acoustics}} uses for its own
 \code{load.pattern}). Matching is CASE-INSENSITIVE.}
 
-\item{dir.sub}{Logical, default \code{FALSE}. Also search subdirectories
-of \code{dir.load}. (Standardized 2026-08-29, per Josh: default changed
-from \code{TRUE} back to \code{FALSE} to match every other \code{batz}
-function's \code{dir.sub} default - previously deliberately \code{TRUE}
-per an earlier explicit spec; this reverses that for consistency.)}
+\item{dir.sub}{Logical, default \code{TRUE}. Also search subdirectories
+of \code{dir.load} for the arulist file(s). Defaults to \code{TRUE}
+here (unlike \code{\link{batz.merge_vetted.acoustics}}'s
+\code{dir.sub = FALSE} default), per Josh's explicit spec for this
+parameter.}
 }
 \value{
 A data frame, \code{plfr.batsummary}, with columns
-  \code{$spp.id}, \code{$date}, \code{$group}, \code{$groupedby},
-  \code{$groupby.date}, \code{$sunregion}, \code{$obs},
-  \code{$mins2.noon.min}, \code{$mins2.noon.max}, \code{$vetting.type}.
-  See \strong{$group vs $groupedby} in Details for what
-  \code{$group}/\code{$groupedby}/\code{$groupby.date} each hold.
+\code{$spp.id}, \code{$date}, \code{$group}, \code{$groupedby},
+\code{$groupby.date}, \code{$sunregion}, \code{$obs},
+\code{$mins2.noon.min}, \code{$mins2.noon.max}, \code{$vetting.type}.
+See \strong{$group vs $groupedby} in Details for what
+\code{$group}/\code{$groupedby}/\code{$groupby.date} each hold.
 }
 \description{
 Given a fully-assembled data frame of vetted bat-acoustic detections
@@ -96,17 +94,19 @@ joins its \code{$sunregion} column onto \code{data} itself (see
 \code{data} does NOT need to already have \code{$sunregion}.
 }
 \details{
-\strong{Required input columns.} `data` must have every one of:
+\strong{Required input columns.} \code{data} must have every one of:
 \code{filename}, \code{date.mon}, \code{manid}, \code{autoid.kp},
 \code{autoid.sb}, \code{lat}, \code{serial}, \code{lon},
 \code{aru.name}, \code{date}, \code{time}, \code{call.datetime}. All
 twelve come straight out of \code{\link{batz.merge_vetted.acoustics}}
-- no renaming needed (an earlier version of this function required
+\itemize{
+\item no renaming needed (an earlier version of this function required
 \code{$call.time} instead, which didn't match that function's own
 \code{$call.datetime} output column; standardized on
 \code{$call.datetime} across both, per Josh, 2026-08-26).
 \code{$sunregion} is deliberately NOT in this list - see
 \strong{$sunregion lookup} below.
+}
 
 \strong{$sunregion lookup.} \code{$sunregion} isn't produced by
 \code{\link{batz.merge_vetted.acoustics}} (or any upstream
@@ -265,7 +265,8 @@ matching style already used by
 \code{TRUE} here (searching subdirectories by default) rather than that
 function's \code{FALSE}, per Josh's explicit spec for this update.
 \code{$sunregion} is REMOVED from the required-input-columns list above
-- the previous entry (directly above this one) still describes it as
+\itemize{
+\item the previous entry (directly above this one) still describes it as
 required because that was true until this change; it no longer is. See
 the new \strong{$sunregion lookup} paragraph, near the top of Details,
 for the full join mechanism (skip-with-message for an arulist file
@@ -290,6 +291,7 @@ resolves to \code{"penobscotbay"}, matching the arulist's own values
 exactly, and a synthetic unmatched \code{$aru.name} correctly triggers
 the new unmatched-value warning with \code{$sunregion = NA}. Full
 dev-script test suite re-run, no regressions.
+}
 
 \strong{Follow-up, 2026-08-28, per Josh: function and two parameters
 renamed; three new/changed output columns added.} Renamed
@@ -307,14 +309,6 @@ behavior (arulist loading/joining, sunregion consistency check,
 alldetections logic, date/time auto-detection) is unchanged; full
 dev-script test suite updated for the new names and re-run, no
 regressions.
-
-\strong{Standardized 2026-08-29, per Josh: two parameter defaults
-changed for consistency.} \code{dir.sub}'s default changed from
-\code{TRUE} back to \code{FALSE}, matching every other \code{batz}
-function's \code{dir.sub} default (the earlier \code{TRUE} default
-was per an explicit spec at the time - this reverses that for
-consistency). \code{trim.noid}'s default changed from \code{TRUE} to
-\code{FALSE}. No other behavior changed.
 }
 \examples{
 \dontrun{
