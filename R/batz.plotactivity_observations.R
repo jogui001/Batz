@@ -64,6 +64,22 @@
 #'   objects, only populated when the \code{ggplot2} package is available).
 #'
 #' @details
+#' \strong{Follow-up, 2026-08-30 - constant bar width across dates, and a
+#' \code{bsize} filename prefix.} \code{position_dodge2()}'s default
+#' \code{preserve = "total"} divides one fixed total width among however
+#' many \code{$group.val} bars are present at a given date - so dates
+#' with more detectors reporting got visibly thinner dodged bars than
+#' dates with fewer, even though \code{bar.width.val} itself hadn't
+#' changed. \code{preserve = "single"} is now passed instead, which fixes
+#' each individual bar's own width at \code{bar.width.val} regardless of
+#' how many detectors are present on that date. Separately, every saved
+#' PNG's filename now gets a \code{bsize<value>_} prefix (e.g.
+#' \code{"bsize0.8_..."}) using that job's own resolved
+#' \code{bar.width.val}, rounded to 2 decimal places - useful since
+#' \code{bar.width.val} can auto-size (see the \code{bar.width} follow-up
+#' below) and so can differ between jobs even when \code{$bar.width} is
+#' left blank for both.
+#'
 #' \strong{Follow-up, 2026-08-30 - \code{bar.border}, corrected.} A bar
 #' outline was ALWAYS only ever drawn in one place: the dodged-by-
 #' \code{$group.val} case (\code{$pool = FALSE}, \code{$legend = TRUE},
@@ -885,10 +901,18 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
           0.8
         }
       }
+      # preserve = "single" (2026-08-30 follow-up): position_dodge2()'s
+      # default preserve = "total" divides one fixed total width among
+      # however many $group.val bars are present at a given date, so
+      # nights with more detectors reporting got visibly thinner bars
+      # than nights with fewer - the bar size was tracking detector count
+      # instead of staying constant. preserve = "single" fixes each bar's
+      # own width at bar.width.val regardless of how many detectors are
+      # present on that date.
       bar.position <- if (isTRUE(p$pool.flag) || length(unique(p$pd$group.val)) <= 1) {
         "identity"
       } else {
-        ggplot2::position_dodge2(width = bar.width.val, padding = 0.1)
+        ggplot2::position_dodge2(width = bar.width.val, padding = 0.1, preserve = "single")
       }
 
       # $legend (2026-08-29 follow-up) / $bar.border (2026-08-30 follow-up -
@@ -1031,6 +1055,12 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
       fname <- gsub("<date.start>", as.character(min(p$pd$date.parsed)), fname, fixed = TRUE)
       fname <- gsub("<date.end>", as.character(max(p$pd$date.parsed)), fname, fixed = TRUE)
       fname <- gsub("<timestamp>", format(Sys.time(), "%Y%m%d%H%M%S"), fname, fixed = TRUE)
+      # Prefix the filename with the job's own resolved bar.width.val (e.g.
+      # "bsize0.8_..."), so plots made with different bar widths are easy
+      # to tell apart on disk. Rounded to 2 decimal places since
+      # auto-sized widths (median date-gap x 0.9) are rarely round numbers.
+      bsize.token <- paste0("bsize", round(bar.width.val, 2))
+      fname <- paste0(bsize.token, "_", fname)
       fname <- file.path(dir.save, fname)
 
       ggplot2::ggsave(fname, plot = g,
