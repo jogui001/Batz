@@ -50,12 +50,43 @@
 #' @param dir.save Character, default \code{getwd()}. Directory every
 #'   generated PNG is saved into (each file's own name still comes from
 #'   \code{aes.default}'s \code{$output.filename.pattern}).
+#' @param bar.border Logical, default \code{FALSE}. When \code{TRUE}, the
+#'   \"All detections\" bar's outline is removed and its fill switches from
+#'   its usual default (\code{aes.default}'s \code{$bar.alldetections.fill},
+#'   grey by default) to \code{aes.default}'s \code{$bar.border.color}
+#'   instead - see Details, \strong{Follow-up, 2026-08-30}.
 #'
 #' @return Invisibly, a list with \code{plots} (one entry per generated
 #'   plot's prepared data) and \code{ggplots} (the corresponding ggplot
 #'   objects, only populated when the \code{ggplot2} package is available).
 #'
 #' @details
+#' \strong{Follow-up, 2026-08-30 - \code{bar.border}.} New optional
+#' argument, default \code{FALSE} (no behavior change from before this was
+#' added). When \code{TRUE}: (1) no outline is drawn on the bars, and (2)
+#' the "All detections" bar's fill - normally \code{aes.default}'s
+#' \code{$bar.alldetections.fill}, grey by default (see the rendering-bug
+#' note below) - is replaced with \code{aes.default}'s new
+#' \code{$bar.border.color} setting instead, i.e. what would have been the
+#' border color becomes the fill color once there's no border left to draw
+#' it on. \code{$bar.40khzmyo.fill} is left untouched either way, since only
+#' the all-detections bar was ever the "default grey" one being referred to.
+#' \code{$bar.border.color} is read the same "never fatal" way as
+#' \code{$legend.groupval.colors} below (\code{aes.default}'s own value if
+#' present and non-blank, else a hardcoded \code{"black"} fallback) and was
+#' deliberately NOT added to \code{AES.DEFAULT.REQUIRED.PARAMETERS}, so
+#' existing \code{aes.default} files don't start failing header validation
+#' just because this new, default-off option now exists. \strong{Scoped to
+#' the main bar layers only} - when \code{$legend} dodging is active (see
+#' the \code{$legend} follow-up above), the dodged bars' outline color is
+#' already doing an unrelated job (a per-\code{$group.val} outline legend)
+#' and is left alone regardless of \code{bar.border}, rather than silently
+#' overridden. \strong{FLAGGED for Josh}: confirm this reading (strip the
+#' border, and replace only the all-detections bar's default grey fill with
+#' the border color) is what was meant, and confirm \code{"black"} is a
+#' reasonable fallback \code{$bar.border.color} for an \code{aes.default}
+#' file that doesn't have this row yet.
+#'
 #' \strong{Iteration 1 ("basic layout"), built 2026-08-28 per Josh's own
 #' framing that this function would be developed iteratively, copying the
 #' structure/steps of \code{batz.plotdetections_first.last()} and modifying
@@ -392,7 +423,7 @@
 #' @export
 batz.plotactivity_observations <- function(data, fig.list, suntimes,
                                             aes.default, project.name = "",
-                                            dir.save = getwd()) {
+                                            dir.save = getwd(), bar.border = FALSE) {
 
   # See @details above for why this value was chosen and how to change it.
   PLOT.TYPE <- "call.observations"
@@ -834,6 +865,20 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
       show.groupval.legend <- isTRUE(p$legend.flag) && !isTRUE(p$pool.flag) &&
         length(unique(p$pd$group.val)) > 1
 
+      # $bar.border (2026-08-30 follow-up - see Details): when TRUE, the
+      # "All detections" bar's fill switches from its usual default grey
+      # ($bar.alldetections.fill) to $bar.border.color instead, since the
+      # border is being removed rather than drawn. $bar.border.color falls
+      # back to a hardcoded "black" if aes.default doesn't have that row yet
+      # or it's blank - never fatal, same convention as $legend.groupval.colors
+      # just below. Deliberately does NOT touch the show.groupval.legend
+      # branch's own `colour = group.val` mapping (an unrelated, deliberate
+      # per-$group.val outline legend) - see Details.
+      border.flag <- isTRUE(bar.border)
+      border.color <- get.default("bar.border.color")
+      if (is.na(border.color) || !nzchar(trimws(border.color))) border.color <- "black"
+      alldetections.fill.val <- if (border.flag) border.color else get.default("bar.alldetections.fill")
+
       if (show.groupval.legend) {
         groupval.levels <- sort(unique(p$pd$group.val))
         groupval.palette <- strsplit(get.default("legend.groupval.colors"), ";", fixed = TRUE)[[1]]
@@ -864,16 +909,16 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
         g <- ggplot2::ggplot(p$pd, ggplot2::aes(x = date.parsed)) +
           ggplot2::geom_col(data = p$pd[p$pd$bar.type == "All detections", , drop = FALSE],
                              ggplot2::aes(y = obs.plot, fill = bar.type, group = group.val),
-                             width = bar.width.val, position = bar.position) +
+                             width = bar.width.val, position = bar.position, colour = NA) +
           ggplot2::geom_col(data = p$pd[p$pd$bar.type == "40kHzMyo", , drop = FALSE],
                              ggplot2::aes(y = obs.plot, fill = bar.type, group = group.val),
-                             width = bar.width.val, position = bar.position)
+                             width = bar.width.val, position = bar.position, colour = NA)
       }
 
       g <- g +
         ggplot2::scale_fill_manual(name = get.default("bar.fill.legend.title"),
           breaks = fill.legend.breaks, limits = fill.legend.limits,
-          values = c(`All detections` = get.default("bar.alldetections.fill"),
+          values = c(`All detections` = alldetections.fill.val,
                      `40kHzMyo` = get.default("bar.40khzmyo.fill"))) +
         ggplot2::scale_y_continuous(limits = c(0, p$y.upper.plot), breaks = p$break.pos, labels = p$break.labels,
           name = paste0("\n", get.setting(p$job, "yaxe.title"))) +
