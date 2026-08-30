@@ -50,42 +50,67 @@
 #' @param dir.save Character, default \code{getwd()}. Directory every
 #'   generated PNG is saved into (each file's own name still comes from
 #'   \code{aes.default}'s \code{$output.filename.pattern}).
-#' @param bar.border Logical, default \code{FALSE}. When \code{TRUE}, the
-#'   \"All detections\" bar's outline is removed and its fill switches from
-#'   its usual default (\code{aes.default}'s \code{$bar.alldetections.fill},
-#'   grey by default) to \code{aes.default}'s \code{$bar.border.color}
-#'   instead - see Details, \strong{Follow-up, 2026-08-30}.
+#' @param bar.border Logical, default \code{FALSE}. Only has any visible
+#'   effect when bars are being dodged by \code{$group.val} (see the
+#'   \code{$legend} follow-up below) - that is the only case where a bar
+#'   outline is ever drawn. \code{FALSE} (default) draws no outline there
+#'   either: each dodged bar's own \code{$group.val} color becomes its
+#'   FILL instead. \code{TRUE} restores the original bordered look (grey
+#'   fill + a separate outline-color legend) - see Details,
+#'   \strong{Follow-up, 2026-08-30}.
 #'
 #' @return Invisibly, a list with \code{plots} (one entry per generated
 #'   plot's prepared data) and \code{ggplots} (the corresponding ggplot
 #'   objects, only populated when the \code{ggplot2} package is available).
 #'
 #' @details
-#' \strong{Follow-up, 2026-08-30 - \code{bar.border}.} New optional
-#' argument, default \code{FALSE} (no behavior change from before this was
-#' added). When \code{TRUE}: (1) no outline is drawn on the bars, and (2)
-#' the "All detections" bar's fill - normally \code{aes.default}'s
-#' \code{$bar.alldetections.fill}, grey by default (see the rendering-bug
-#' note below) - is replaced with \code{aes.default}'s new
-#' \code{$bar.border.color} setting instead, i.e. what would have been the
-#' border color becomes the fill color once there's no border left to draw
-#' it on. \code{$bar.40khzmyo.fill} is left untouched either way, since only
-#' the all-detections bar was ever the "default grey" one being referred to.
-#' \code{$bar.border.color} is read the same "never fatal" way as
-#' \code{$legend.groupval.colors} below (\code{aes.default}'s own value if
-#' present and non-blank, else a hardcoded \code{"black"} fallback) and was
-#' deliberately NOT added to \code{AES.DEFAULT.REQUIRED.PARAMETERS}, so
-#' existing \code{aes.default} files don't start failing header validation
-#' just because this new, default-off option now exists. \strong{Scoped to
-#' the main bar layers only} - when \code{$legend} dodging is active (see
-#' the \code{$legend} follow-up above), the dodged bars' outline color is
-#' already doing an unrelated job (a per-\code{$group.val} outline legend)
-#' and is left alone regardless of \code{bar.border}, rather than silently
-#' overridden. \strong{FLAGGED for Josh}: confirm this reading (strip the
-#' border, and replace only the all-detections bar's default grey fill with
-#' the border color) is what was meant, and confirm \code{"black"} is a
-#' reasonable fallback \code{$bar.border.color} for an \code{aes.default}
-#' file that doesn't have this row yet.
+#' \strong{Follow-up, 2026-08-30 - \code{bar.border}, corrected.} A bar
+#' outline was ALWAYS only ever drawn in one place: the dodged-by-
+#' \code{$group.val} case (\code{$pool = FALSE}, \code{$legend = TRUE},
+#' more than one \code{$plot.sets} value selected - see the \code{$legend}
+#' follow-up below). The plain, non-dodged bars have never had an outline,
+#' with or without \code{bar.border}. A first pass at this option only
+#' swapped the plain bars' fill and deliberately left the dodge outline
+#' alone; real output showed that was the wrong scope - the dodge outline
+#' IS the border users see and want control over, so \code{bar.border} now
+#' governs it directly:
+#' \itemize{
+#'   \item \code{FALSE} (default): no outline is drawn on the dodged bars
+#'     either. Each dodged bar's own \code{$group.val} color - the same
+#'     \code{$legend.groupval.colors} palette that used to color the
+#'     outline - becomes its FILL instead, combined with the fixed
+#'     "40kHzMyo" black into one fill legend (ggplot2 only supports one
+#'     fill scale per plot, so this is a single combined key rather than a
+#'     second scale). \code{$bar.alldetections.fill} is not used in this
+#'     branch.
+#'   \item \code{TRUE}: restores the original bordered look - uniform grey
+#'     "All detections" fill (\code{$bar.alldetections.fill}) plus a
+#'     separate colour-mapped outline legend distinguishing
+#'     \code{$group.val} (titled from \code{$legend.groupval.title}).
+#' }
+#' \code{$bar.40khzmyo.fill} is a fixed color either way - it never varies
+#' by \code{$group.val} - and is always drawn as the second/top
+#' \code{geom_col()} layer (see the draw-order note below), in every
+#' branch. Non-dodged jobs (single \code{$plot.sets} value, \code{$pool =
+#' TRUE}, or \code{$legend = FALSE}) are unaffected by \code{bar.border} in
+#' either direction, since there was never a border there to begin with -
+#' \strong{FLAGGED for Josh}: confirm that scoping (no effect on non-dodged
+#' plots) is correct, or say if a plain single-color plot should also get a
+#' configurable border/fill-swap of its own.
+#'
+#' \strong{Follow-up, 2026-08-30 - \code{bar.width} auto-size.} A blank
+#' \code{$default.value} for \code{bar.width} (and no usable per-plot
+#' override) now means "auto-size to fit the plot window" instead of
+#' erroring out via \code{as.numeric("")}. Computed per job from that
+#' job's own actual plotted date spacing (the median gap between its
+#' sorted, unique dates, x0.9 to leave a visible gap between adjacent
+#' dates' bars) rather than one hardcoded guess, so it stays reasonable
+#' whether monitoring nights are daily, every-other-day, weekly, etc. -
+#' this also means bar width can now differ between two \code{fig.list}
+#' rows/plots if their date spacing differs, even with the same blank
+#' \code{$bar.width}. Falls back to the file's own prior flat \code{0.8}
+#' default if a job has fewer than two distinct dates to measure a gap
+#' from.
 #'
 #' \strong{Iteration 1 ("basic layout"), built 2026-08-28 per Josh's own
 #' framing that this function would be developed iteratively, copying the
@@ -841,45 +866,54 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
       # Two explicit layers, added to the plot in bottom-to-top order,
       # guarantee 40kHzMyo always draws on top regardless of factor order.
       #
-      # $pool = FALSE (2026-08-28 follow-up - see Details): when more than
-      # one $plot.sets value is selected and not pooled, each is drawn as
-      # its own bar, dodged side-by-side within the same date (via
-      # position_dodge2(), grouped by $group.val - the raw $plot.group
-      # column's value for that row). $pool = TRUE (or only one selected
-      # value to begin with) draws a single bar per date, same as before.
-      bar.width.val <- as.numeric(get.default("bar.width"))
+      # $bar.width (2026-08-30 follow-up - see Details): a blank
+      # $default.value (and no usable per-plot override) now means
+      # "auto-size to fit the plot window" instead of erroring out via
+      # as.numeric(""). Computed from this job's own actual plotted date
+      # spacing (median gap between its sorted, unique dates, x 0.9 to
+      # leave a visible gap) rather than one hardcoded guess, so it stays
+      # reasonable whether monitoring nights are daily, every-other-day,
+      # weekly, etc. Falls back to a flat 0.8 (the file's own prior fixed
+      # default) if a job has fewer than two distinct dates to measure a
+      # gap from.
+      bar.width.val <- suppressWarnings(as.numeric(get.default("bar.width")))
+      if (is.na(bar.width.val)) {
+        panel.dates <- sort(unique(p$pd$date.parsed))
+        bar.width.val <- if (length(panel.dates) >= 2) {
+          stats::median(diff(as.numeric(panel.dates))) * 0.9
+        } else {
+          0.8
+        }
+      }
       bar.position <- if (isTRUE(p$pool.flag) || length(unique(p$pd$group.val)) <= 1) {
         "identity"
       } else {
         ggplot2::position_dodge2(width = bar.width.val, padding = 0.1)
       }
 
-      # $legend (2026-08-29 follow-up - see Details): when dodging (pool =
-      # FALSE, >1 selected $plot.sets value) AND $legend is on, every bar's
-      # OUTLINE color is mapped to its own $group.val via a second,
-      # independent colour scale - fill is left alone (still only "All
-      # detections"/"40kHzMyo"), so the two legends coexist. Built as two
-      # separate code paths (rather than conditionally omitting `colour`
-      # inside one aes() call) since ggplot2 aes() mappings are fixed at
-      # layer-construction time.
-      show.groupval.legend <- isTRUE(p$legend.flag) && !isTRUE(p$pool.flag) &&
+      # $legend (2026-08-29 follow-up) / $bar.border (2026-08-30 follow-up -
+      # see Details): whether more than one selected $plot.sets value gets
+      # its own dodged bar per date is still controlled by $pool/$legend as
+      # before ("dodge.active"). What changed is $bar.border, default
+      # FALSE: a border was ONLY ever drawn in the dodge case to begin with
+      # (the plain, non-dodged bars never had one, with or without this
+      # option) - FALSE now means no outline is drawn even there, and each
+      # dodged bar's own $group.val color (the same $legend.groupval.colors
+      # palette previously used for the outline) becomes its FILL instead,
+      # combined with the fixed "40kHzMyo" black into one fill legend.
+      # TRUE restores the original look: uniform grey "All detections"
+      # fill plus a separate colour-mapped outline legend distinguishing
+      # $group.val. $bar.40khzmyo.fill is a fixed color either way - it
+      # never varies by $group.val - and is always the second/top
+      # geom_col() layer (see draw-order note above), in every branch.
+      # Non-dodge jobs are untouched by $bar.border in either direction,
+      # since there was never a border there to remove - FLAGGED for
+      # Josh to confirm that scoping is correct.
+      dodge.active <- isTRUE(p$legend.flag) && !isTRUE(p$pool.flag) &&
         length(unique(p$pd$group.val)) > 1
-
-      # $bar.border (2026-08-30 follow-up - see Details): when TRUE, the
-      # "All detections" bar's fill switches from its usual default grey
-      # ($bar.alldetections.fill) to $bar.border.color instead, since the
-      # border is being removed rather than drawn. $bar.border.color falls
-      # back to a hardcoded "black" if aes.default doesn't have that row yet
-      # or it's blank - never fatal, same convention as $legend.groupval.colors
-      # just below. Deliberately does NOT touch the show.groupval.legend
-      # branch's own `colour = group.val` mapping (an unrelated, deliberate
-      # per-$group.val outline legend) - see Details.
       border.flag <- isTRUE(bar.border)
-      border.color <- get.default("bar.border.color")
-      if (is.na(border.color) || !nzchar(trimws(border.color))) border.color <- "black"
-      alldetections.fill.val <- if (border.flag) border.color else get.default("bar.alldetections.fill")
 
-      if (show.groupval.legend) {
+      if (dodge.active) {
         groupval.levels <- sort(unique(p$pd$group.val))
         groupval.palette <- strsplit(get.default("legend.groupval.colors"), ";", fixed = TRUE)[[1]]
         groupval.palette <- trimws(groupval.palette[nzchar(trimws(groupval.palette))])
@@ -894,6 +928,12 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
         # erroring or auto-generating extra colors.
         groupval.colors <- groupval.palette[((seq_along(groupval.levels) - 1) %% length(groupval.palette)) + 1]
         names(groupval.colors) <- groupval.levels
+      }
+
+      if (dodge.active && border.flag) {
+        # ---- bordered look (original design, kept for $bar.border = TRUE):
+        # uniform grey/black fill + a separate colour-mapped outline legend
+        # distinguishing $group.val. ----
         groupval.lw <- suppressWarnings(as.numeric(get.default("legend.groupval.outline.linewidth")))
         if (is.na(groupval.lw)) groupval.lw <- 1
 
@@ -904,22 +944,57 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
           ggplot2::geom_col(data = p$pd[p$pd$bar.type == "40kHzMyo", , drop = FALSE],
                              ggplot2::aes(y = obs.plot, fill = bar.type, group = group.val, colour = group.val),
                              width = bar.width.val, position = bar.position, linewidth = groupval.lw) +
-          ggplot2::scale_colour_manual(name = get.default("legend.groupval.title"), values = groupval.colors)
+          ggplot2::scale_colour_manual(name = get.default("legend.groupval.title"), values = groupval.colors) +
+          ggplot2::scale_fill_manual(name = get.default("bar.fill.legend.title"),
+            breaks = fill.legend.breaks, limits = fill.legend.limits,
+            values = c(`All detections` = get.default("bar.alldetections.fill"),
+                       `40kHzMyo` = get.default("bar.40khzmyo.fill")))
+
+      } else if (dodge.active && !border.flag) {
+        # ---- borderless look (2026-08-30 follow-up, now the default): no
+        # outline anywhere; each dodged bar's own $group.val color becomes
+        # its FILL instead. ggplot2 only supports one fill scale per plot,
+        # so this uses a single combined key (each $group.val name, plus a
+        # fixed "40kHzMyo") rather than a second colour scale the way the
+        # bordered branch above does. $bar.alldetections.fill is not used
+        # in this branch - see Details, Follow-up 2026-08-30.
+        pd.fill <- p$pd
+        pd.fill$fill.key <- ifelse(pd.fill$bar.type == "40kHzMyo", "40kHzMyo", as.character(pd.fill$group.val))
+
+        fill.title <- get.default("bar.fill.legend.title")
+        if (is.na(fill.title) || !nzchar(trimws(fill.title))) fill.title <- get.default("legend.groupval.title")
+
+        fill.values <- c(groupval.colors, `40kHzMyo` = get.default("bar.40khzmyo.fill"))
+        fill.breaks <- c(groupval.levels, if (isTRUE(p$khz.flag)) "40kHzMyo" else NULL)
+
+        g <- ggplot2::ggplot(pd.fill, ggplot2::aes(x = date.parsed)) +
+          ggplot2::geom_col(data = pd.fill[pd.fill$bar.type == "All detections", , drop = FALSE],
+                             ggplot2::aes(y = obs.plot, fill = fill.key, group = group.val),
+                             width = bar.width.val, position = bar.position, colour = NA) +
+          ggplot2::geom_col(data = pd.fill[pd.fill$bar.type == "40kHzMyo", , drop = FALSE],
+                             ggplot2::aes(y = obs.plot, fill = fill.key, group = group.val),
+                             width = bar.width.val, position = bar.position, colour = NA) +
+          ggplot2::scale_fill_manual(name = fill.title, values = fill.values, breaks = fill.breaks)
+
       } else {
+        # ---- not dodging (single $plot.sets value selected, $pool = TRUE,
+        # or $legend = FALSE) - no border either way, since one was never
+        # drawn here regardless of $bar.border; fill is the plain
+        # $bar.alldetections.fill/$bar.40khzmyo.fill pair, unchanged. ----
         g <- ggplot2::ggplot(p$pd, ggplot2::aes(x = date.parsed)) +
           ggplot2::geom_col(data = p$pd[p$pd$bar.type == "All detections", , drop = FALSE],
                              ggplot2::aes(y = obs.plot, fill = bar.type, group = group.val),
                              width = bar.width.val, position = bar.position, colour = NA) +
           ggplot2::geom_col(data = p$pd[p$pd$bar.type == "40kHzMyo", , drop = FALSE],
                              ggplot2::aes(y = obs.plot, fill = bar.type, group = group.val),
-                             width = bar.width.val, position = bar.position, colour = NA)
+                             width = bar.width.val, position = bar.position, colour = NA) +
+          ggplot2::scale_fill_manual(name = get.default("bar.fill.legend.title"),
+            breaks = fill.legend.breaks, limits = fill.legend.limits,
+            values = c(`All detections` = get.default("bar.alldetections.fill"),
+                       `40kHzMyo` = get.default("bar.40khzmyo.fill")))
       }
 
       g <- g +
-        ggplot2::scale_fill_manual(name = get.default("bar.fill.legend.title"),
-          breaks = fill.legend.breaks, limits = fill.legend.limits,
-          values = c(`All detections` = alldetections.fill.val,
-                     `40kHzMyo` = get.default("bar.40khzmyo.fill"))) +
         ggplot2::scale_y_continuous(limits = c(0, p$y.upper.plot), breaks = p$break.pos, labels = p$break.labels,
           name = paste0("\n", get.setting(p$job, "yaxe.title"))) +
         ggplot2::scale_x_date(limits = c(p$date.start - xaxe.buffer, p$date.end + xaxe.buffer),
