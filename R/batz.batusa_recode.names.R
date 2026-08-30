@@ -4,7 +4,7 @@
 #' (scientific) name, 4-letter species code, or 6-letter species code for
 #' North American bat species, looks each value up in an internal reference
 #' table and returns it re-expressed in a single chosen format
-#' (\code{output.format}). Matching ignores case, underscores, dashes, and
+#' (\code{batname.format.out}). Matching ignores case, underscores, dashes, and
 #' leading/trailing/extra whitespace, so formatting differences between the
 #' input and the reference table (or between different inputs) don't cause a
 #' false mismatch.
@@ -14,7 +14,7 @@
 #'   way (there is no column-selection argument) and comes back as a data
 #'   frame of the same dimensions, with columns returned as character
 #'   vectors.
-#' @param output.format Character, default \code{"common"}. The desired
+#' @param batname.format.out Character, default \code{"common"}. The desired
 #'   output format - must be one of the reference table's own headers:
 #'   \code{"latin"}, \code{"common"}, \code{"code4"}, \code{"code6"},
 #'   \code{"fedstatus"}, \code{"iucnstatus"}, \code{"states.listed"},
@@ -22,8 +22,8 @@
 #'   \code{"state.soc"}, \code{"fed.proposed"}, \code{"hibernation.strat"},
 #'   \code{"phonic.group"}, or \code{"notes"}. Matching an input element
 #'   to a reference row always uses \code{latin}/\code{common}/\code{code4}/
-#'   \code{code6} only, regardless of \code{output.format} - so, for
-#'   example, \code{output.format = "fedstatus"} looks a species up by any
+#'   \code{code6} only, regardless of \code{batname.format.out} - so, for
+#'   example, \code{batname.format.out = "fedstatus"} looks a species up by any
 #'   of its four names/codes and returns its federal listing status instead
 #'   of another name/code. An unrecognized value is an error.
 #'
@@ -37,7 +37,7 @@
 #'   \code{"Unknown"}. Both are populated from general bat natural-history/
 #'   acoustics literature, not a source file Josh supplied for these two
 #'   columns specifically - see \code{NAbat.names.csv}'s own \code{$notes}
-#'   column (also selectable via \code{output.format = "notes"}) for the
+#'   column (also selectable via \code{batname.format.out = "notes"}) for the
 #'   species where a call is genuinely split or lower-confidence.
 #'
 #'   Eight non-species detection/category labels are also recognized as
@@ -46,9 +46,9 @@
 #'   \code{"LoF"}, \code{"HiFrag"}, \code{"LoFrag"}, \code{"Multiple"},
 #'   \code{"Social"}. They match the same case-insensitive way as species
 #'   names (e.g. \code{"hif"}, \code{"HIF"}, \code{"Hif"} all match), and
-#'   \code{output.format} values of \code{"latin"}/\code{"common"}/
+#'   \code{batname.format.out} values of \code{"latin"}/\code{"common"}/
 #'   \code{"code4"}/\code{"code6"} all return the exact literal casing shown
-#'   above. Every other \code{output.format} (\code{"fedstatus"},
+#'   above. Every other \code{batname.format.out} (\code{"fedstatus"},
 #'   \code{"states.present"}, \code{"phonic.group"}, etc.) returns
 #'   \code{""} for these eight, since those columns don't apply to a
 #'   non-species label.
@@ -62,7 +62,7 @@
 #'
 #' @return A vector (if \code{data} is a vector) or data frame (if
 #'   \code{data} is a data frame) of the same length/dimensions as
-#'   \code{data}, with every element re-expressed in \code{output.format}.
+#'   \code{data}, with every element re-expressed in \code{batname.format.out}.
 #'   An input element with no match anywhere in the reference table is
 #'   returned unchanged (not \code{NA}, no error).
 #'
@@ -79,10 +79,10 @@
 #' The reference table (54 North American bat species, as supplied in
 #' Josh's \code{NAbat.names.csv}, now including \code{$hibernation.strat}/
 #' \code{$phonic.group}/\code{$notes} added 2026-08-25, plus 8 non-species
-#' detection/category label rows added 2026-08-27 - see \code{output.format}
+#' detection/category label rows added 2026-08-27 - see \code{batname.format.out}
 #' above) is embedded directly in this function - there is no
 #' reference-file-path argument, since the spec's inputs are just
-#' \code{data}/\code{output.format}/\code{grammar.dash}. To update the
+#' \code{data}/\code{batname.format.out}/\code{grammar.dash}. To update the
 #' species list later, replace the \code{nabat.names} data frame inside
 #' this function with a newer export of the same 15-column format.
 #'
@@ -91,19 +91,19 @@
 #' batz.batusa_recode.names(c("epfu", "myotis_lucifugus", "Hoary bat"))
 #' # -> "Big brown bat"    "Little brown bat"    "Hoary bat"
 #'
-#' batz.batusa_recode.names("epfu", output.format = "latin")
+#' batz.batusa_recode.names("epfu", batname.format.out = "latin")
 #' # -> "Eptesicus fuscus"
 #'
-#' batz.batusa_recode.names("lano", output.format = "common", grammar.dash = FALSE)
+#' batz.batusa_recode.names("lano", batname.format.out = "common", grammar.dash = FALSE)
 #' # -> "Silver haired bat"   (hyphen replaced with a space)
 #'
-#' batz.batusa_recode.names("myse", output.format = "fedstatus")
+#' batz.batusa_recode.names("myse", batname.format.out = "fedstatus")
 #' # -> "Endangered"
 #'
-#' batz.batusa_recode.names("tabr", output.format = "hibernation.strat")
+#' batz.batusa_recode.names("tabr", batname.format.out = "hibernation.strat")
 #' # -> "mixed"   (most populations migrate to Mexico; Florida's is resident)
 #'
-#' batz.batusa_recode.names("mylu", output.format = "phonic.group")
+#' batz.batusa_recode.names("mylu", batname.format.out = "phonic.group")
 #' # -> "Hif"
 #'
 #' batz.batusa_recode.names(c("hif", "LOFRAG", "40khzmyo"))
@@ -111,7 +111,7 @@
 #' }
 #'
 #' @export
-batz.batusa_recode.names <- function(data, output.format = "common", grammar.dash = TRUE) {
+batz.batusa_recode.names <- function(data, batname.format.out = "common", grammar.dash = TRUE) {
 
   # ---------------------------------------------------------------------------
   # Reference database (Josh's real NAbat.names.csv, embedded as supplied -
@@ -283,21 +283,21 @@ batz.batusa_recode.names <- function(data, output.format = "common", grammar.das
 "no confirmed current PR/US-territory population per $states.present (blank) - hibernation.strat reflects lack of a documented US-range population, not species biology generally; $phonic.group instead reflects general species/family biology (a loud, high-frequency fishing bat) since call type is a fixed physical trait independent of range presence",
 "some populations migrate, southern populations may be more resident - classified migratory per general accounts, LOWER CONFIDENCE on the split",
 "", "", "", "", "", "very well-documented species-level mix: most populations (e.g. the famous Bracken Cave, TX colony) migrate to Mexico for winter, but Florida/Gulf coast populations are non-migratory and active year-round",
-"Category/detection-type label (not a species), added 2026-08-27 per Josh's request. latin/common/code4/code6 all hold this same literal string, so it matches case-insensitively (same normalize() rule as species rows) and any of those four output.format values return the exact given casing. Species-only output.format columns return \"\".",
-"Category/detection-type label (not a species), added 2026-08-27 per Josh's request. latin/common/code4/code6 all hold this same literal string, so it matches case-insensitively (same normalize() rule as species rows) and any of those four output.format values return the exact given casing. Species-only output.format columns return \"\".",
-"Category/detection-type label (not a species), added 2026-08-27 per Josh's request. latin/common/code4/code6 all hold this same literal string, so it matches case-insensitively (same normalize() rule as species rows) and any of those four output.format values return the exact given casing. Species-only output.format columns return \"\".",
-"Category/detection-type label (not a species), added 2026-08-27 per Josh's request. latin/common/code4/code6 all hold this same literal string, so it matches case-insensitively (same normalize() rule as species rows) and any of those four output.format values return the exact given casing. Species-only output.format columns return \"\".",
-"Category/detection-type label (not a species), added 2026-08-27 per Josh's request. latin/common/code4/code6 all hold this same literal string, so it matches case-insensitively (same normalize() rule as species rows) and any of those four output.format values return the exact given casing. Species-only output.format columns return \"\".",
-"Category/detection-type label (not a species), added 2026-08-27 per Josh's request. latin/common/code4/code6 all hold this same literal string, so it matches case-insensitively (same normalize() rule as species rows) and any of those four output.format values return the exact given casing. Species-only output.format columns return \"\".",
-"Category/detection-type label (not a species), added 2026-08-27 per Josh's request. latin/common/code4/code6 all hold this same literal string, so it matches case-insensitively (same normalize() rule as species rows) and any of those four output.format values return the exact given casing. Species-only output.format columns return \"\".",
-"Category/detection-type label (not a species), added 2026-08-27 per Josh's request. latin/common/code4/code6 all hold this same literal string, so it matches case-insensitively (same normalize() rule as species rows) and any of those four output.format values return the exact given casing. Species-only output.format columns return \"\"."
+"Category/detection-type label (not a species), added 2026-08-27 per Josh's request. latin/common/code4/code6 all hold this same literal string, so it matches case-insensitively (same normalize() rule as species rows) and any of those four batname.format.out values return the exact given casing. Species-only batname.format.out columns return \"\".",
+"Category/detection-type label (not a species), added 2026-08-27 per Josh's request. latin/common/code4/code6 all hold this same literal string, so it matches case-insensitively (same normalize() rule as species rows) and any of those four batname.format.out values return the exact given casing. Species-only batname.format.out columns return \"\".",
+"Category/detection-type label (not a species), added 2026-08-27 per Josh's request. latin/common/code4/code6 all hold this same literal string, so it matches case-insensitively (same normalize() rule as species rows) and any of those four batname.format.out values return the exact given casing. Species-only batname.format.out columns return \"\".",
+"Category/detection-type label (not a species), added 2026-08-27 per Josh's request. latin/common/code4/code6 all hold this same literal string, so it matches case-insensitively (same normalize() rule as species rows) and any of those four batname.format.out values return the exact given casing. Species-only batname.format.out columns return \"\".",
+"Category/detection-type label (not a species), added 2026-08-27 per Josh's request. latin/common/code4/code6 all hold this same literal string, so it matches case-insensitively (same normalize() rule as species rows) and any of those four batname.format.out values return the exact given casing. Species-only batname.format.out columns return \"\".",
+"Category/detection-type label (not a species), added 2026-08-27 per Josh's request. latin/common/code4/code6 all hold this same literal string, so it matches case-insensitively (same normalize() rule as species rows) and any of those four batname.format.out values return the exact given casing. Species-only batname.format.out columns return \"\".",
+"Category/detection-type label (not a species), added 2026-08-27 per Josh's request. latin/common/code4/code6 all hold this same literal string, so it matches case-insensitively (same normalize() rule as species rows) and any of those four batname.format.out values return the exact given casing. Species-only batname.format.out columns return \"\".",
+"Category/detection-type label (not a species), added 2026-08-27 per Josh's request. latin/common/code4/code6 all hold this same literal string, so it matches case-insensitively (same normalize() rule as species rows) and any of those four batname.format.out values return the exact given casing. Species-only batname.format.out columns return \"\"."
 )), row.names = c(NA, -62L), class = "data.frame")
 
   match.cols <- c("latin", "common", "code4", "code6")
 
-  if (!(output.format %in% names(nabat.names))) {
-    stop(sprintf("output.format must be one of the reference database's headers: %s (got '%s')",
-                  paste(names(nabat.names), collapse = ", "), output.format))
+  if (!(batname.format.out %in% names(nabat.names))) {
+    stop(sprintf("batname.format.out must be one of the reference database's headers: %s (got '%s')",
+                  paste(names(nabat.names), collapse = ", "), batname.format.out))
   }
 
   reference <- nabat.names
@@ -326,7 +326,7 @@ batz.batusa_recode.names <- function(data, output.format = "common", grammar.das
     found     <- !is.na(row.idx)
 
     out <- x.chr
-    out[found] <- as.character(reference[[output.format]][row.idx[found]])
+    out[found] <- as.character(reference[[batname.format.out]][row.idx[found]])
 
     if (!grammar.dash) {
       out[found] <- gsub("-", " ", out[found])
