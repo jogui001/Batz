@@ -39,7 +39,7 @@ FALSE} and more than one value is selected - see \strong{Follow-up,
 2026-08-29} in Details).}
 
 \item{suntimes}{A data frame of sunrise/sunset times, e.g. the output of
-\code{batz.suntimes_generate()}. Must have \code{$aru}, \code{$date},
+\code{batz.generate_suntimes.arulist()}. Must have \code{$aru}, \code{$date},
 \code{$date.mon}, \code{$sunregion}, \code{$time.zone},
 \code{$sunregion.type}, \code{$schedual1}, \code{$schedual2},
 \code{$suns}, \code{$suns.unix}, \code{$sunr}, \code{$sunr.unix},
@@ -65,8 +65,8 @@ generated PNG is saved into (each file's own name still comes from
 }
 \value{
 Invisibly, a list with \code{plots} (one entry per generated
-plot's prepared data) and \code{ggplots} (the corresponding ggplot
-objects, only populated when the \code{ggplot2} package is available).
+  plot's prepared data) and \code{ggplots} (the corresponding ggplot
+  objects, only populated when the \code{ggplot2} package is available).
 }
 \description{
 Generates the standard report plot showing, for every species (plus an
@@ -140,48 +140,48 @@ function always filtered \code{data} on a hardcoded \code{$aru.groupby}
 column, matched against a single \code{$plot.set} value. Three
 \code{fig.list} columns now generalize this:
 \itemize{
-\item \code{$plot.group} names WHICH column of \code{data} to filter/
-group by, per \code{fig.list} row - e.g. \code{"aru.name"} to plot by
-detector (matching \code{\link{batz.generate_plotframe.bat}}'s own
-\code{groupby} parameter and its \code{$groupedby} output column) or
-\code{"deployment.type"} to plot by some other category entirely.
-This is what gives a single \code{fig.list}/this function the
-flexibility to plot other sheets/groupings without a code change -
-\code{data} no longer needs a column literally called
-\code{$aru.groupby} at all. A row with a blank \code{$plot.group}, or
-one naming a column \code{data} doesn't actually have, is skipped
-with a console \code{NOTE} (same tolerant, skip-don't-crash style
-used for an unrecognized \code{$plot.type}/\code{$facet}).
-\item \code{$plot.sets} (renamed from the old singular
-\code{$plot.set}) lists every value of the \code{$plot.group} column
-to include in this plot - now MULTIPLE values, not just one. Every
-double-quote character in the raw value is treated as a token
-delimiter (alongside whitespace) and stripped, so
-\code{"105059-NW3" "105059-SE3" "105059-SW3"}-shaped values parse
-into three tokens - this was deliberately NOT implemented as
-matching well-formed quote PAIRS, because Josh's own real
-\code{fig.list.csv} value for this column, once CSV-unescaped, comes
-through missing the very first value's leading quote (the field's
-own outer CSV quoting consumes it) - a quote-pair parser would
-silently drop that first token on real data. A single bare,
-unquoted value (e.g. \code{105059-NW3}, exactly like the old
-\code{$plot.set}) or several bare whitespace-separated values with
-no quoting at all also work. A blank \code{$plot.sets} matches every
-value of the \code{$plot.group} column (same as the old
-blank-\code{$plot.set} behavior). \strong{Limitation, flagged for
-Josh}: a value containing a literal space would be split into two -
-not expected for detector/group names, but worth knowing.
-\item \code{$pool} (\code{TRUE}/\code{FALSE}) controls how the
-(possibly several) selected \code{$plot.sets} values are combined:
-\code{TRUE} sums \code{$obs} across all of them into ONE pooled bar
-per date/panel (as if they were a single group); \code{FALSE} keeps
-each selected value as its own bar, drawn side-by-side (dodged)
-within the same date/panel. Bars are dodged via \code{ggplot2}'s own
-\code{position_dodge2()} at each date; fill still only distinguishes
-\code{"All detections"} vs \code{"40kHzMyo"}, exactly as before -
-WHICH \code{$plot.sets} value a given dodged bar is is now shown via
-a separate outline-color legend, when \code{$legend} is on - see
-\strong{Follow-up, 2026-08-29} below.
+  \item \code{$plot.group} names WHICH column of \code{data} to filter/
+    group by, per \code{fig.list} row - e.g. \code{"aru.name"} to plot by
+    detector (matching \code{\link{batz.generate_plotframe.bat}}'s own
+    \code{groupby} parameter and its \code{$groupedby} output column) or
+    \code{"deployment.type"} to plot by some other category entirely.
+    This is what gives a single \code{fig.list}/this function the
+    flexibility to plot other sheets/groupings without a code change -
+    \code{data} no longer needs a column literally called
+    \code{$aru.groupby} at all. A row with a blank \code{$plot.group}, or
+    one naming a column \code{data} doesn't actually have, is skipped
+    with a console \code{NOTE} (same tolerant, skip-don't-crash style
+    used for an unrecognized \code{$plot.type}/\code{$facet}).
+  \item \code{$plot.sets} (renamed from the old singular
+    \code{$plot.set}) lists every value of the \code{$plot.group} column
+    to include in this plot - now MULTIPLE values, not just one. Every
+    double-quote character in the raw value is treated as a token
+    delimiter (alongside whitespace) and stripped, so
+    \code{"105059-NW3" "105059-SE3" "105059-SW3"}-shaped values parse
+    into three tokens - this was deliberately NOT implemented as
+    matching well-formed quote PAIRS, because Josh's own real
+    \code{fig.list.csv} value for this column, once CSV-unescaped, comes
+    through missing the very first value's leading quote (the field's
+    own outer CSV quoting consumes it) - a quote-pair parser would
+    silently drop that first token on real data. A single bare,
+    unquoted value (e.g. \code{105059-NW3}, exactly like the old
+    \code{$plot.set}) or several bare whitespace-separated values with
+    no quoting at all also work. A blank \code{$plot.sets} matches every
+    value of the \code{$plot.group} column (same as the old
+    blank-\code{$plot.set} behavior). \strong{Limitation, flagged for
+    Josh}: a value containing a literal space would be split into two -
+    not expected for detector/group names, but worth knowing.
+  \item \code{$pool} (\code{TRUE}/\code{FALSE}) controls how the
+    (possibly several) selected \code{$plot.sets} values are combined:
+    \code{TRUE} sums \code{$obs} across all of them into ONE pooled bar
+    per date/panel (as if they were a single group); \code{FALSE} keeps
+    each selected value as its own bar, drawn side-by-side (dodged)
+    within the same date/panel. Bars are dodged via \code{ggplot2}'s own
+    \code{position_dodge2()} at each date; WHICH \code{$plot.sets} value
+    a given dodged bar is is shown via bar color, when \code{$legend} is
+    on - see \strong{Follow-up, 2026-08-29 (round 2)} below for the
+    current design (an earlier round used an outline color instead;
+    see \strong{Follow-up, 2026-08-29} directly below for that history).
 }
 
 \strong{Follow-up, 2026-08-29, per Josh ("add legend option to
@@ -226,6 +226,65 @@ FALSE} (or a single selected value, or \code{$pool = TRUE}) renders
 exactly as before this change, with no outline-color mapping/legend at
 all.
 
+\strong{Follow-up, 2026-08-29 (dodge legibility), per Josh ("different
+groups plots on top of each other, add a dodge as default so they are
+side by side")}: \code{position_dodge2()} was already the default
+whenever \code{$pool = FALSE} and more than one \code{$plot.sets} value
+is selected (see the \strong{Follow-up, 2026-08-28} entry above) - this
+was verified directly (built-plot layer data shows each selected
+value's bars offset to distinct, non-overlapping x positions on the
+same date). The actual problem was legibility, not positioning: with 3
+selected values dodged into the same \code{bar.width}, each bar becomes
+narrow enough that the group-value legend's own outline
+(\code{legend.groupval.outline.linewidth}, previously defaulting to
+\code{1}) was thick enough to cover the ENTIRE narrow bar face, hiding
+the \code{gray70}/black \code{$bar.type} fill underneath it - so same-
+colored dodged bars visually read as one solid, tightly-packed mass
+rather than clearly-separated bars, even though they were genuinely
+side by side underneath. This round's fix (lowering
+\code{legend.groupval.outline.linewidth} to \code{0.3}) was superseded
+the same day by \strong{round 2} below, which drops the outline
+approach entirely.
+
+\strong{Follow-up, 2026-08-29 (round 2 - per Josh, "keep the bar sizes
+constant, get rid of the boarder and make each bar a differnet
+color")}: replaces round 1's thin-outline fix above with a different
+design entirely - \code{legend.groupval.outline.linewidth} is REMOVED
+(no longer an \code{aes.default} parameter at all; an older
+\code{plotopts_callobs.csv} that still has that row is unaffected, it's
+simply ignored now) and no border/outline is drawn on any bar. Instead,
+when dodging (\code{$pool = FALSE}, >1 selected \code{$plot.sets}
+value) and \code{$legend} is on, each bar's FILL itself is its own
+selected value's color (from \code{legend.groupval.colors}, same
+cycling behavior as before) - the \code{"40kHzMyo"} bar keeps its own
+fixed color (\code{bar.40khzmyo.fill}) regardless of which value's bar
+it overlays, so it still always reads as "the 40kHzMyo one". Both live
+in ONE combined \code{fill} legend/scale (titled via
+\code{legend.groupval.title}), since \code{fill} can only be mapped to
+one variable at a time - round 1's separate outline-color scale is
+gone, along with the plain \code{bar.alldetections.fill}/
+\code{bar.fill.legend.title}-driven gray fill for the "All detections"
+bar.type (that flat scheme is still used, unchanged, whenever there's
+nothing to distinguish - \code{$legend = FALSE}, a single selected
+value, or \code{$pool = TRUE}).
+
+Also per this same follow-up ("keep the bar sizes constant"):
+\code{position_dodge2()}'s \code{preserve} argument was changed from
+its default (\code{"total"}) to \code{"single"}. \code{"total"} keeps
+the OVERALL dodge cluster's width constant at every date, which means
+individual bars get WIDER on a night where fewer than the full set of
+selected values actually has data (e.g. 2 bars splitting the space
+meant for 3) - bar width would then vary from night to night depending
+on which values happened to have data. \code{"single"} instead keeps
+each individual bar's own width constant everywhere, sized as if the
+full set of selected values were always present, leaving a gap where a
+value has no data that night rather than stretching its neighbors to
+fill the space. \strong{Flagged for Josh}: this only changes anything
+on nights where not every selected \code{$plot.sets} value has data -
+if every night has all 3 values, \code{"total"} and \code{"single"}
+look identical; \code{"single"} was chosen since it's the reading that
+matches "keep the bar sizes constant" literally.
+
 \strong{Y-axis resolution - the newest, most detailed part of this
 function - implements Josh's spec as follows:} \code{$Yaxe.trans}
 (\code{"none"} default / \code{"log"} / \code{"log10"}) picks a transform
@@ -254,7 +313,7 @@ to a raw count for the label (see the BUGFIX entry below for why this
 matters); \code{"rounded"} places them at those same five axis positions
 but rounds each resulting raw value to the nearest whole number
 afterward (matters once the exact value isn't a whole number already,
-e.g. \code{$ymax = 230} with \code{$Yaxe.trans = "none"} gives a raw 25\\%
+e.g. \code{$ymax = 230} with \code{$Yaxe.trans = "none"} gives a raw 25\%
 point of \code{57.5}, which \code{"rounded"} shows as \code{58});
 \code{"custom"} ignores that computation entirely and uses whatever
 numbers are in \code{$y.custom} instead (semicolon-separated, e.g.
@@ -266,7 +325,7 @@ certainly a copy/paste slip, since only one can be the actual default.}
 \code{"regular"} was picked as the real default here (it's the option
 listed first, and is the more literal/simpler reading of "0,0.25,0.5,
 0.75,1"); \strong{Josh: please confirm this is the one you meant as the
-default}, since the two only visibly differ when the exact 25/50/75\\%
+default}, since the two only visibly differ when the exact 25/50/75\%
 axis positions don't land on whole numbers.
 
 \strong{BUGFIX, 2026-08-28, per Josh ("scale is not working as expected.
@@ -276,8 +335,8 @@ how \code{"regular"}/\code{"rounded"} computed break VALUES, found from
 Josh's own real render with \code{$Yaxe.trans = "log10"},
 \code{$y.scale = "regular"}, \code{$ymax = 230}.} The first version of
 this function computed \code{"regular"}/\code{"rounded"} breaks as 5
-values evenly spaced across the RAW count range (\code{0}, 25\\%, 50\\%,
-75\\%, 100\\% of \code{$ymax} - i.e. \code{0, 57.5, 115, 172.5, 230}), then
+values evenly spaced across the RAW count range (\code{0}, 25\%, 50\%,
+75\%, 100\% of \code{$ymax} - i.e. \code{0, 57.5, 115, 172.5, 230}), then
 transformed only their AXIS POSITIONS through \code{$Yaxe.trans}. That's
 fine when \code{$Yaxe.trans = "none"} (position and value are the same
 thing), but once a log-family transform is applied, evenly-spaced RAW
@@ -300,13 +359,13 @@ thing) - only \code{"log"}/\code{"log10"} renders differently now.
 nicely-spaced log axis on their own, without needing hand-picked
 \code{$y.custom} values} the way Josh's own target image did - though
 \code{"custom"} is still there for full manual control, e.g. round
-numbers instead of whatever the automatic 0/25/50/75/100\\% axis points
+numbers instead of whatever the automatic 0/25/50/75/100\% axis points
 happen to compute to. Verified by rendering Josh's own real
 \code{fig.list} row (\code{$Yaxe.trans = "log10"}, \code{$y.scale =
 "regular"}, \code{$ymax = 230}) before and after: before, the break
-positions computed to 0\\%/74.8\\%/87.3\\%/94.7\\%/100\\% of the axis height
+positions computed to 0\%/74.8\%/87.3\%/94.7\%/100\% of the axis height
 (all but the first crowded into the top quarter); after, they compute to
-exactly 0\\%/25\\%/50\\%/75\\%/100\\%, genuinely even.
+exactly 0\%/25\%/50\%/75\%/100\%, genuinely even.
 
 \strong{A second, related defect surfaced while adding a test for the fix
 above}: with \code{"regular"} (not \code{"rounded"}) and a log-family
@@ -328,7 +387,7 @@ filtered data, with a console \code{NOTE} reporting the value used -
 \strong{a placeholder for this first iteration, flagged for Josh}: this
 gives the axis exactly enough headroom to fit the tallest bar and no
 more, which may look visually tight; a fixed padding percentage (e.g.
-10\\% above the max) could be added in a later iteration if wanted. The
+10\% above the max) could be added in a later iteration if wanted. The
 actual plotted axis upper limit is never allowed to clip a real bar or a
 user-supplied \code{$y.custom} value even if \code{$ymax} itself is
 smaller than one of those (\code{max($ymax, $y.custom values, $obs)} is
@@ -355,11 +414,9 @@ whether \code{"40kMyo"} should be renamed to \code{"40KHzMyo"} at the
 source (in whatever produces \code{plfr.bats.csv}), or whether
 \code{"40kMyo"} should be added as a recognized alias directly in
 \code{batz.batusa_recode.names()}'s own reference table (\code{NAbat.names.csv})
-\itemize{
-\item either fix would make this function's own local workaround
+- either fix would make this function's own local workaround
 unnecessary, but isn't required for this function to work correctly as
 delivered.
-}
 
 \strong{\code{$output.filename.pattern}'s default value} in
 \code{plotopts_callobs.csv} (\code{"Number of bat calls detected at

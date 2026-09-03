@@ -22,7 +22,7 @@
 #'   \code{aes.default}'s \code{midnight} setting for this one
 #'   plot row - see Details.
 #' @param suntimes A data frame of sunrise/sunset times, e.g. the output
-#'   of \code{batz.suntimes_generate()}. Must have \code{$aru}, \code{$date},
+#'   of \code{batz.generate_suntimes.arulist()}. Must have \code{$aru}, \code{$date},
 #'   \code{$date.mon}, \code{$sunregion}, \code{$time.zone},
 #'   \code{$sunregion.type}, \code{$schedual1}, \code{$schedual2},
 #'   \code{$suns}, \code{$suns.unix}, \code{$sunr}, \code{$sunr.unix},
