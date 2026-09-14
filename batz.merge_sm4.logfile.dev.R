@@ -72,6 +72,26 @@
 #     field's trailing space is already stripped by read.csv itself before
 #     comparison.
 #
+#  9. **Standardized (2026-09-14, per Josh - project-wide header
+#     standardization preference) - real, documented output-schema change.**
+#     The 11-column expected-header list is a literal, uninvented copy of
+#     the SM4 device's own real export column text (not a batz-invented
+#     shorthand), so both it and every raw file's own headers are now run
+#     through standardize.headers() (trim whitespace, collapse every run of
+#     non-alphanumeric characters to a single underscore, lowercase) -
+#     inlined here since this is a standalone dev script (the package .R
+#     file calls the shared internal helper of the same name directly
+#     instead). Old -> new: DATE -> date, TIME -> time, LAT -> lat, NS -> ns,
+#     LON -> lon, EW -> ew, POWER(V) -> power_v, TEMP(C) -> temp_c,
+#     #FILES -> files, #SCRUBBED -> scrubbed, MIC0 TYPE -> mic0_type. This
+#     replaces the previous bare trimws(names(raw)) header-matching step
+#     with the full standardize.headers() transform on both sides of the
+#     header-validation check, and is a real, visible change to
+#     sm4logs.merged's own column names. It does NOT affect aru.name, X, or
+#     Y - none of the three is a header loaded from any file (aru.name is
+#     parsed from the file's own NAME; X/Y are this function's own
+#     derived/computed columns), so all three keep their existing names.
+#
 # Test data (staged from "3 All test data", NOT modifying Josh's real
 # files):
 #   /home/claude/sm4_work/AYERS_A_Summary.txt          (real, 3459 rows)
@@ -88,10 +108,26 @@
 #   /home/claude/sm4_work/synthetic/EMPTY_A_Summary.txt     (SYNTHETIC - no data rows)
 # =============================================================================
 
+## ---- helper: standardize.headers (per Josh, 2026-09-14 project
+## preference) - inlined here since this is a standalone dev script, not
+## part of the package (package .R files call the shared internal helper of
+## the same name directly instead). Trims whitespace, collapses every run of
+## non-alphanumeric characters to a single underscore, strips a
+## leading/trailing underscore, and lowercases. -----------------------------
+standardize.headers <- function(x) {
+  x <- trimws(as.character(x))
+  x <- gsub("[^A-Za-z0-9]+", "_", x)
+  x <- gsub("_+", "_", x)
+  x <- gsub("^_|_$", "", x)
+  tolower(x)
+}
+
 pattern.regex <- function(p) paste(vapply(p, utils::glob2rx, character(1)), collapse = "|")
 
-expected.headers <- c("DATE", "TIME", "LAT", "NS", "LON", "EW",
-                       "POWER(V)", "TEMP(C)", "#FILES", "#SCRUBBED", "MIC0 TYPE")
+## header standardization (per Josh, 2026-09-14 project preference): see
+## assumption/flagged-issue 9 above.
+expected.headers <- standardize.headers(c("DATE", "TIME", "LAT", "NS", "LON", "EW",
+                                           "POWER(V)", "TEMP(C)", "#FILES", "#SCRUBBED", "MIC0 TYPE"))
 
 month.lookup <- c(jan = "01", feb = "02", mar = "03", apr = "04", may = "05", jun = "06",
                    jul = "07", aug = "08", sep = "09", oct = "10", nov = "11", dec = "12")
@@ -128,7 +164,9 @@ process.one.file <- function(f) {
   )
   if (is.null(raw)) return(list(data = NULL, reason = "could not read file"))
 
-  names(raw) <- trimws(names(raw))
+  ## header standardization (per Josh, 2026-09-14 project preference) -
+  ## replaces the previous bare trimws(names(raw)); see assumption 9 above.
+  names(raw) <- standardize.headers(names(raw))
   present <- expected.headers %in% names(raw)
   if (!all(present)) {
     return(list(data = NULL, reason = paste0("mismatched headers (missing: ",
@@ -145,12 +183,12 @@ process.one.file <- function(f) {
   base.name <- basename(f)
   tmp$aru.name <- sub("_.*$", "", base.name)
 
-  tmp$DATE <- convert.date(tmp$DATE)
+  tmp$date <- convert.date(tmp$date)
 
-  ns <- tolower(trimws(tmp$NS))
-  ew <- tolower(trimws(tmp$EW))
-  tmp$Y <- ifelse(ns == "s", -as.numeric(tmp$LAT), as.numeric(tmp$LAT))
-  tmp$X <- ifelse(ew == "w", -as.numeric(tmp$LON), as.numeric(tmp$LON))
+  ns <- tolower(trimws(tmp$ns))
+  ew <- tolower(trimws(tmp$ew))
+  tmp$Y <- ifelse(ns == "s", -as.numeric(tmp$lat), as.numeric(tmp$lat))
+  tmp$X <- ifelse(ew == "w", -as.numeric(tmp$lon), as.numeric(tmp$lon))
 
   # aru.name first, then the 11 standardized raw columns, then derived X/Y
   tmp <- tmp[c("aru.name", expected.headers, "X", "Y")]
@@ -226,7 +264,7 @@ cat("=== dir.sub = FALSE, log.file = TRUE (real data, top-level only) ===\n")
 res1 <- batz.merge_sm4.logfile("/home/claude/sm4_work", dir.sub = FALSE, log.file = TRUE)
 cat("\ndim sm4logs.merged:", paste(dim(sm4logs.merged), collapse = " x "), "\n")
 cat("aru.name values:", paste(unique(sm4logs.merged$aru.name), collapse = ", "), "\n")
-print(head(sm4logs.merged[, c("aru.name", "DATE", "TIME", "LAT", "NS", "Y", "LON", "EW", "X")], 3))
+print(head(sm4logs.merged[, c("aru.name", "date", "time", "lat", "ns", "Y", "lon", "ew", "X")], 3))
 print(sm4logs.merged_log.file)
 
 cat("\n\n=== dir.sub = TRUE (should also pick up subfolders, incl. the real\n",

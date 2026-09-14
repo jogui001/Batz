@@ -23,6 +23,33 @@
 #' \code{$sunregion} is deliberately NOT in this list - see
 #' \strong{$sunregion lookup} below.
 #'
+#' \strong{Header standardization (per Josh, 2026-09-14 project
+#' preference) - two different things in this function, treated
+#' differently.} This function's \code{required.headers} list above
+#' (\code{filename}, \code{date.mon}, \code{manid}, ... \code{call.datetime})
+#' is \code{data}'s own already-established \code{batz} output schema -
+#' every one of those names comes straight out of
+#' \code{\link{batz.merge_vetted.acoustics}}'s own dot-separated,
+#' \code{batz}-invented column names, not raw text copied from some
+#' loaded file's real header row. Renaming these to snake_case would
+#' break the upstream/downstream contract with every function that
+#' produces or consumes them by exact name, so they are deliberately left
+#' untouched - out of scope for this preference, the same reasoning
+#' already applied elsewhere in this package. The \code{*arulist.csv}
+#' file loaded in \strong{$sunregion lookup} below is different: those
+#' are real, loaded-from-disk file headers, so they now go through the
+#' shared package helper \code{standardize.headers()} (trim whitespace,
+#' collapse non-alphanumeric runs to underscores, lowercase), replacing
+#' this function's prior local, more lenient ad hoc normalizer (which
+#' stripped every non-alphanumeric character with no separator instead of
+#' substituting an underscore). This is a no-op in practice against every
+#' real \code{WTG.arulist.csv} checked so far - \code{$aru}/\code{$sunregion}
+#' are already single lowercase words with nothing for either normalizer
+#' to differ on - but it brings this function's file-loading step in line
+#' with every other \code{batz} function that loads a file, and guards
+#' against a future arulist file whose headers pick up stray whitespace,
+#' mixed case, or punctuation.
+#'
 #' \strong{$sunregion lookup.} \code{$sunregion} isn't produced by
 #' \code{\link{batz.merge_vetted.acoustics}} (or any upstream
 #' \code{batz} function) as a column of \code{data} itself, so this
@@ -30,25 +57,25 @@
 #' \code{dir.sub = TRUE}, the default) is scanned for file(s) matching
 #' \code{load.pattern} (default \code{"*.arulist.csv"}, e.g. the real
 #' \code{WTG.arulist.csv}), each matching file is read and must have (after
-#' the same case/punctuation-insensitive header normalization used
-#' elsewhere in this package) both an \code{$aru} and a \code{$sunregion}
-#' column - a file missing either is skipped with a \code{message()}, not
-#' a hard stop, in case other unrelated files happen to also match
-#' \code{load.pattern}. Every valid file's \code{$aru}/\code{$sunregion}
-#' columns are row-bound together, then joined onto \code{data} by
-#' matching \code{data$aru.name} against the arulist's \code{$aru} (always
-#' \code{$aru.name} specifically, never whatever \code{groupby} is set
-#' to - \code{groupby} can be overridden to an unrelated column like
-#' \code{"serial"} that wouldn't correspond to the arulist's \code{$aru}
-#' values at all). Any \code{$aru.name} value with no match in the loaded
-#' arulist gets \code{NA} for \code{$sunregion}, with a \code{warning()}
-#' listing every such value (not a hard stop - matches this function's
-#' existing tolerant-but-vocal style elsewhere, e.g. \code{trim.noise}/
-#' \code{trim.noid}). No matching file found at all, or files found but
-#' none with the right columns, IS a hard stop - there'd be no way to
-#' populate \code{$sunregion} at all. Any \code{$sunregion} value already
-#' present in the \code{data} passed in is overwritten by this fresh join,
-#' not preserved.
+#' running its headers through \code{standardize.headers()} - see
+#' \strong{Header standardization} above) both an \code{$aru} and a
+#' \code{$sunregion} column - a file missing either is skipped with a
+#' \code{message()}, not a hard stop, in case other unrelated files happen
+#' to also match \code{load.pattern}. Every valid file's
+#' \code{$aru}/\code{$sunregion} columns are row-bound together, then
+#' joined onto \code{data} by matching \code{data$aru.name} against the
+#' arulist's \code{$aru} (always \code{$aru.name} specifically, never
+#' whatever \code{groupby} is set to - \code{groupby} can be overridden to
+#' an unrelated column like \code{"serial"} that wouldn't correspond to
+#' the arulist's \code{$aru} values at all). Any \code{$aru.name} value
+#' with no match in the loaded arulist gets \code{NA} for
+#' \code{$sunregion}, with a \code{warning()} listing every such value
+#' (not a hard stop - matches this function's existing tolerant-but-vocal
+#' style elsewhere, e.g. \code{trim.noise}/\code{trim.noid}). No matching
+#' file found at all, or files found but none with the right columns, IS
+#' a hard stop - there'd be no way to populate \code{$sunregion} at all.
+#' Any \code{$sunregion} value already present in the \code{data} passed
+#' in is overwritten by this fresh join, not preserved.
 #'
 #' \strong{Steps.} If any required header is missing, stops immediately
 #' and lists every missing header by name. If \code{duplicates.remove =
@@ -223,6 +250,14 @@
 #' dev-script test suite updated for the new names and re-run, no
 #' regressions.
 #'
+#' \strong{Standardized 2026-08-29, per Josh: two parameter defaults
+#' changed for consistency.} \code{dir.sub}'s default changed from
+#' \code{TRUE} back to \code{FALSE}, matching every other \code{batz}
+#' function's \code{dir.sub} default (the earlier \code{TRUE} default
+#' was per an explicit spec at the time - this reverses that for
+#' consistency). \code{trim.noid}'s default changed from \code{TRUE} to
+#' \code{FALSE}. No other behavior changed.
+#'
 #' @param data A data frame with every column listed above already
 #'   present (see Details for how to assemble one).
 #' @param duplicates.remove Logical, default \code{TRUE}. Drop exact
@@ -246,12 +281,14 @@
 #'   = TRUE}, exclude rows where the \code{spp.id} column is
 #'   \code{"noise"} (case-insensitive) from the \code{"All Detections"}
 #'   summary.
-#' @param trim.noid Logical, default \code{TRUE}. When \code{alldetections
+#' @param trim.noid Logical, default \code{FALSE}. When \code{alldetections
 #'   = TRUE}, exclude rows where the \code{spp.id} column is
 #'   \code{"NoID"} (case-insensitive) from the \code{"All Detections"}
 #'   summary. (Named \code{"trim.noid"} rather than the originally-specced
 #'   \code{"trim.noID"}, to match the identically-purposed parameter
-#'   already shipped in \code{\link{batz.merge_vetted.acoustics}}.)
+#'   already shipped in \code{\link{batz.merge_vetted.acoustics}}.
+#'   Standardized 2026-08-29, per Josh: default changed from \code{TRUE}
+#'   to \code{FALSE}.)
 #' @param dir.load Character, default \code{getwd()}. Directory to search
 #'   for the \code{*arulist.csv} file(s) used to look up \code{$sunregion}.
 #'   See \strong{$sunregion lookup} in Details.
@@ -261,11 +298,12 @@
 #'   internally to a regex via \code{utils::glob2rx()} (same mechanism
 #'   \code{\link{batz.merge_vetted.acoustics}} uses for its own
 #'   \code{load.pattern}). Matching is CASE-INSENSITIVE.
-#' @param dir.sub Logical, default \code{TRUE}. Also search subdirectories
-#'   of \code{dir.load} for the arulist file(s). Defaults to \code{TRUE}
-#'   here (unlike \code{\link{batz.merge_vetted.acoustics}}'s
-#'   \code{dir.sub = FALSE} default), per Josh's explicit spec for this
-#'   parameter.
+#' @param dir.sub Logical, default \code{FALSE}. Also search subdirectories
+#'   of \code{dir.load} for the arulist file(s). (Standardized 2026-08-29,
+#'   per Josh: default changed from \code{TRUE} back to \code{FALSE} to
+#'   match every other \code{batz} function's \code{dir.sub} default -
+#'   previously deliberately \code{TRUE} per an earlier explicit spec;
+#'   this reverses that for consistency.)
 #'
 #' @return A data frame, \code{plfr.batsummary}, with columns
 #'   \code{$spp.id}, \code{$date}, \code{$group}, \code{$groupedby},
@@ -298,17 +336,21 @@ batz.generate_plotframe.bat <- function(data,
                                          groupby = "aru.name",
                                          alldetections = TRUE,
                                          trim.noise = TRUE,
-                                         trim.noid = TRUE,
+                                         trim.noid = FALSE,
                                          dir.load = getwd(),
                                          load.pattern = c("*.arulist.csv"),
-                                         dir.sub = TRUE) {
+                                         dir.sub = FALSE) {
 
   if (!is.data.frame(data)) stop("`data` must be a data frame.")
 
   ## $sunregion is NOT in this list (and no longer needs to already be a
   ## column of `data`) - it's now loaded from an *arulist.csv file and
   ## joined on below, replacing the old "join it in yourself first"
-  ## requirement. See Details/Follow-up.
+  ## requirement. See Details/Follow-up. These twelve names are `data`'s
+  ## own already-established batz output schema (from
+  ## batz.merge_vetted.acoustics()), not raw loaded headers, so they are
+  ## NOT run through standardize.headers() - see Details/"Header
+  ## standardization".
   required.headers <- c("filename", "date.mon", "manid", "autoid.kp",
                          "autoid.sb", "lat", "serial", "lon", "aru.name",
                          "date", "time", "call.datetime")
@@ -331,7 +373,11 @@ batz.generate_plotframe.bat <- function(data,
   ## points to - groupby can be overridden to an unrelated column like
   ## "serial", which wouldn't correspond to the arulist's $aru values at
   ## all) - see Details/Follow-up ----------------------------------------
-  normalize.header <- function(x) tolower(gsub("[^[:alnum:]]", "", x))
+  ## header standardization (per Josh, 2026-09-14 project preference): the
+  ## arulist file's own headers are real loaded-file headers, so they're
+  ## run through the shared package helper standardize.headers() instead
+  ## of this function's prior local, more lenient ad hoc normalizer - see
+  ## @details "Header standardization" above.
   arulist.regex <- paste(utils::glob2rx(load.pattern), collapse = "|")
   arulist.files <- list.files(dir.load, pattern = arulist.regex, recursive = dir.sub,
                                full.names = TRUE, ignore.case = TRUE)
@@ -347,7 +393,7 @@ batz.generate_plotframe.bat <- function(data,
     tmp <- tryCatch(read.csv(f, stringsAsFactors = FALSE, check.names = FALSE),
                      error = function(e) NULL)
     if (is.null(tmp)) { arulist.skipped <- c(arulist.skipped, paste0(f, " (could not read file)")); next }
-    names(tmp) <- normalize.header(names(tmp))
+    names(tmp) <- standardize.headers(names(tmp))
     if (!all(c("aru", "sunregion") %in% names(tmp))) {
       arulist.skipped <- c(arulist.skipped, paste0(f, " (missing $aru and/or $sunregion column)")); next
     }

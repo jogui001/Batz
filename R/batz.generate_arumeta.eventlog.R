@@ -42,12 +42,27 @@
 #'   requested) directly in your workspace.
 #'
 #' @details
+#' \strong{Header standardization (added 2026-09-14, per project
+#' preference):} every loaded file's raw headers are first run through
+#' \code{standardize.headers()} (trim whitespace, replace runs of special
+#' characters with an underscore, lowercase - i.e. snake_case) before
+#' anything else touches them. Because \code{deployment.headers}/
+#' \code{service.headers} are themselves just the literal deployment/
+#' service form field text (not a \code{batz}-invented shorthand), those
+#' canonical lists are standardized the same way - so \code{aru.eventlog}'s
+#' own column names changed too (e.g. what used to be \code{$Client}/
+#' \code{$"Date of Deployment"}/\code{$"Project Code"} are now
+#' \code{$client}/\code{$date_of_deployment}/\code{$project_code}). This is
+#' a real, visible output-schema change from before this preference existed
+#' - please update any downstream script that referenced the old
+#' space/mixed-case column names.
+#'
 #' \strong{Auto-assign into caller's environment:} following the same
 #' pattern already used in \code{batz.arumeta_merge.format} and
 #' \code{batz.datawrangler_load.files}, every returned object is also
 #' \code{assign()}-ed into \code{parent.frame()}, so
-#' \code{batz.arumeta_generate.eventlog(...)} with no assignment populates
-#' the workspace directly; \code{result <- batz.arumeta_generate.eventlog(...)}
+#' \code{batz.generate_arumeta.eventlog(...)} with no assignment populates
+#' the workspace directly; \code{result <- batz.generate_arumeta.eventlog(...)}
 #' still works exactly the same for anyone who prefers \code{result$aru.eventlog}
 #' -style access.
 #'
@@ -100,15 +115,15 @@
 #'
 #' @examples
 #' \dontrun{
-#' batz.arumeta_generate.eventlog()
+#' batz.generate_arumeta.eventlog()
 #' # aru.eventlog is now in your workspace
 #'
-#' batz.arumeta_generate.eventlog(dir.sub = TRUE, log.file = TRUE, max.missing = 3)
+#' batz.generate_arumeta.eventlog(dir.sub = TRUE, log.file = TRUE, max.missing = 3)
 #' # aru.eventlog, aru.eventlog.filelog, aru.eventlog.sitelog all created
 #' }
 #'
 #' @export
-batz.arumeta_generate.eventlog <- function(dir.load = getwd(),
+batz.generate_arumeta.eventlog <- function(dir.load = getwd(),
                                             dir.sub           = FALSE,
                                             load.pattern      = c("*HabitatAssessments_20m.csv", "*Acoustic_SiteVisitARU.csv"),
                                             duplicates.remove = TRUE,
@@ -117,15 +132,26 @@ batz.arumeta_generate.eventlog <- function(dir.load = getwd(),
 
   pattern.regex <- function(p) paste(vapply(p, utils::glob2rx, character(1)), collapse = "|")
 
-  deployment.headers <- c("Client", "Project", "Project Code", "Date of Deployment",
-                           "Detector Model", "Detector Make", "Microphone Model", "Microphone Make",
-                           "Site", "Survey Type", "X", "Y", "Serial Number of Detector",
-                           "Serial Number of Microphone", "Personnel", "Date of Habitat Assessment")
+  ## Canonical header lists, standardized to snake_case (per project
+  ## preference, added 2026-09-14 - see preferences.md, "Header
+  ## standardization"). These lists ARE the literal deployment/service
+  ## form's own field text (not a batz-invented shorthand the way
+  ## $mon.ngh/$auto.kp are elsewhere), so both these canonical names AND
+  ## every incoming raw file's headers are standardized the same way via
+  ## standardize.headers() before matching - a real, visible change from
+  ## the previous space/mixed-case column names (e.g. $Client -> $client,
+  ## $Date of Deployment -> $date_of_deployment).
+  deployment.headers <- standardize.headers(c(
+    "Client", "Project", "Project Code", "Date of Deployment",
+    "Detector Model", "Detector Make", "Microphone Model", "Microphone Make",
+    "Site", "Survey Type", "X", "Y", "Serial Number of Detector",
+    "Serial Number of Microphone", "Personnel", "Date of Habitat Assessment"))
 
-  service.headers <- c("Client", "Project", "Project Code", "Date", "Site Name",
-                        "Reason for site visit", "Personnel", "Notes", "ARU Serial Number",
-                        "Mic Serial Number", "Power Kit/Solar Serial Number", "HOBO Sensor Serial Number",
-                        "Select all actions performed", "New mic serial number", "New ARU serial number")
+  service.headers <- standardize.headers(c(
+    "Client", "Project", "Project Code", "Date", "Site Name",
+    "Reason for site visit", "Personnel", "Notes", "ARU Serial Number",
+    "Mic Serial Number", "Power Kit/Solar Serial Number", "HOBO Sensor Serial Number",
+    "Select all actions performed", "New mic serial number", "New ARU serial number"))
 
   event.priority <- c(deployment = 1, status_check = 2, download = 3, aru_swap = 4, mic_swap = 5,
                        recovery = 6, service = 7)
@@ -157,8 +183,11 @@ batz.arumeta_generate.eventlog <- function(dir.load = getwd(),
   }
 
   match.headers <- function(tmp.names, master) {
+    ## tmp.names is standardized in process.one.file() before this is ever
+    ## called; master is already standardize.headers()-canonical (see
+    ## above), so a plain equality check is enough here.
     vapply(master, function(m) {
-      idx <- which(tolower(trimws(tmp.names)) == tolower(trimws(m)))
+      idx <- which(tmp.names == m)
       if (length(idx) >= 1) tmp.names[idx[1]] else NA_character_
     }, character(1))
   }
@@ -175,12 +204,16 @@ batz.arumeta_generate.eventlog <- function(dir.load = getwd(),
   process.one.file <- function(f) {
     raw <- read.csv(f, stringsAsFactors = FALSE, check.names = FALSE)
     names(raw) <- sub("^﻿", "", names(raw))
+    ## Standardize incoming raw headers to snake_case (trim whitespace,
+    ## replace special characters, lowercase) before anything else touches
+    ## them - per project preference, added 2026-09-14.
+    names(raw) <- standardize.headers(names(raw))
 
     dc <- resolve.duplicate.columns(raw)
     tmp <- dc$df
     dup.cols <- dc$dup.cols
 
-    is.deployment <- any(tolower(trimws(names(tmp))) == "date of deployment")
+    is.deployment <- any(names(tmp) == "date_of_deployment")
     master <- if (is.deployment) deployment.headers else service.headers
     file.type <- if (is.deployment) "deployment" else "service"
 
@@ -223,7 +256,7 @@ batz.arumeta_generate.eventlog <- function(dir.load = getwd(),
     out.rows <- vector("list", 0)
     for (i in seq_len(nrow(df))) {
       row <- df[i, , drop = FALSE]
-      actions <- trimws(unlist(strsplit(as.character(row[["Select all actions performed"]]), ",")))
+      actions <- trimws(unlist(strsplit(as.character(row[["select_all_actions_performed"]]), ",")))
       actions <- actions[!is.na(actions) & actions != ""]
 
       events <- if (length(actions) > 0) actions else "service"
@@ -276,16 +309,16 @@ batz.arumeta_generate.eventlog <- function(dir.load = getwd(),
 
   if (!is.null(deployment) && nrow(deployment) > 0) {
     deployment$event.type   <- "deployment"
-    deployment$ARU.serial   <- deployment[["Serial Number of Detector"]]
-    deployment$Site.unified <- deployment[["Site"]]
-    deployment$date.time    <- as.character(deployment[["Date of Deployment"]])
+    deployment$ARU.serial   <- deployment[["serial_number_of_detector"]]
+    deployment$Site.unified <- deployment[["site"]]
+    deployment$date.time    <- as.character(deployment[["date_of_deployment"]])
   }
 
   service.events <- explode.service.events(service)
   if (!is.null(service.events) && nrow(service.events) > 0) {
-    service.events$ARU.serial   <- service.events[["ARU Serial Number"]]
-    service.events$Site.unified <- service.events[["Site Name"]]
-    service.events$date.time    <- paste(service.events[["Date"]], service.events[["Time"]])
+    service.events$ARU.serial   <- service.events[["aru_serial_number"]]
+    service.events$Site.unified <- service.events[["site_name"]]
+    service.events$date.time    <- paste(service.events[["date"]], service.events[["time"]])
   }
 
   aru.eventlog <- full.outer.rbind(deployment, service.events)
@@ -359,9 +392,9 @@ batz.arumeta_generate.eventlog <- function(dir.load = getwd(),
     site.rows <- lapply(sites, function(s) {
       sub <- aru.eventlog[aru.eventlog$Site.unified == s, ]
       data.frame(
-        client       = first.nonblank(sub$Client),
-        project      = first.nonblank(sub$Project),
-        project.code = first.nonblank(sub[["Project Code"]]),
+        client       = first.nonblank(sub$client),
+        project      = first.nonblank(sub$project),
+        project.code = first.nonblank(sub[["project_code"]]),
         site         = s,
         deployment   = sum(sub$event.type == "deployment"),
         service      = sum(sub$event.type %in% c("status_check", "download", "aru_swap", "mic_swap", "service")),

@@ -61,6 +61,43 @@ merges each category's files into a single data frame, removes duplicate
 rows, and reports how many were removed.
 }
 \details{
+\strong{Header standardization (per Josh, 2026-09-14 project preference)
+- REVERSES a prior explicit design decision, flagged for review.} Every
+loaded file/sheet's own column names are now run through the shared
+package helper \code{standardize.headers()} (trim whitespace, collapse
+every run of non-alphanumeric characters to a single underscore,
+lowercase) immediately after the existing BOM-stripping step, before
+within-source duplicate-column resolution. \strong{This is a real reversal
+of this function's own previously-stated behavior}: earlier revisions of
+this function explicitly preserved "raw column names exactly (no automatic
+renaming of names with spaces/punctuation)" as a deliberate choice (see the
+dev script's assumption 5 and revision history) - that choice is
+superseded now, per the project-wide header-standardization preference,
+which applies to headers from every loaded file or externally-supplied
+data frame. A column like \code{"Site Name"} or \code{"ARU Serial Number"}
+is now returned as \code{site_name} / \code{aru_serial_number}; anyone
+with existing code that reads \code{result$aru.visit} (etc.) by the old
+raw/spaced column names will need to update it to the standardized
+snake_case names.
+
+\strong{Interaction with within-source duplicate-column resolution.}
+Standardization runs BEFORE \code{resolve.dup.columns()}, not after - two
+raw columns that used to be treated as distinct (because they differed
+only in case, whitespace, or punctuation) could now collapse to the same
+standardized name and get swept into the existing
+identical-content-drop / differing-content-merge logic that already
+handles the real \code{"Personnel"}-appears-twice case. This is a natural
+consequence of standardizing before merging, not a separate feature, but
+is called out here since it changes what counts as a "duplicate column"
+for a given source file/sheet.
+
+\strong{The internal \code{.source.file} tracking column is NOT
+standardized and is unaffected.} It is this function's own invented
+bookkeeping field (added after each source is loaded and standardized,
+purely to attribute rows/columns back to their source file for
+\code{log.file = TRUE} reporting) - never a column loaded from any file,
+so the header-standardization preference does not apply to it.
+
 Category matching uses a short, case-insensitive substring rather than an
 exact file-name pattern: \code{"sitevis"} for the site-visit category,
 \code{"quad"} for the quadrat habitat-assessment category, \code{"20m"} for
@@ -76,34 +113,39 @@ name, the same as a \code{.csv}.
 
 Column names have a leading UTF-8 byte-order-mark stripped if present (some
 exported CSVs carry one on their first column), so the same logical column
-from a CSV and an xlsx sheet lines up correctly instead of appearing twice.
+from a CSV and an xlsx sheet lines up correctly instead of appearing twice
+- this BOM-stripping step runs first, before header standardization.
 
-If a single file or sheet has the same column name more than once (a real
-issue in the source forms - e.g. "Personnel" appears twice on the site-visit
-form), every duplicate is compared row-by-row (treating \code{NA} and ""
-as equivalent): if all copies agree everywhere, the extra copy(ies) are
-dropped; if they differ anywhere, they are merged into ONE column - taking
-whichever copy is non-blank for a given row, and concatenating both with
-\code{"; "} where they conflict (both non-blank and different). This
-happens before columns are merged across sources.
+If a single file or sheet has the same (now-standardized) column name more
+than once (a real issue in the source forms - e.g. "Personnel" appears
+twice on the site-visit form), every duplicate is compared row-by-row
+(treating \code{NA} and "" as equivalent): if all copies agree everywhere,
+the extra copy(ies) are dropped; if they differ anywhere, they are merged
+into ONE column - taking whichever copy is non-blank for a given row, and
+concatenating both with \code{"; "} where they conflict (both non-blank
+and different). This happens before columns are merged across sources.
 
 All columns are then coerced to character before merging multiple sources
 within a category, and combining uses a fill-by-\code{NA} row bind (a
 source missing a column the others have gets that column filled with
-\code{NA} rather than the merge erroring) with raw column names preserved
-exactly (no automatic renaming of names with spaces/punctuation). "Duplicate
-rows" means exact full-row duplicates (base \code{duplicated()}) within a
-category's merged data frame; the name of each category and the number of
-duplicate rows removed from it is always printed to the console. Internally
-every row is tagged with which source file it came from before this check,
-so - when \code{log.file = TRUE} - removed duplicate rows can be attributed
-back to the specific file(s) they came from.
+\code{NA} rather than the merge erroring). \code{check.names = FALSE} is
+still used on every read/bind so R itself never mangles a name (e.g. via
+\code{make.names()}) independently of - and before - the explicit
+\code{standardize.headers()} step above. "Duplicate rows" means exact
+full-row duplicates (base \code{duplicated()}) within a category's merged
+data frame; the name of each category and the number of duplicate rows
+removed from it is always printed to the console. Internally every row is
+tagged with which source file it came from before this check, so - when
+\code{log.file = TRUE} - removed duplicate rows can be attributed back to
+the specific file(s) they came from.
 }
 \section{Known open items (not yet resolved - see project notes)}{
 
 \itemize{
-\item No "format" step (column/date standardization, etc.) has been
-specified yet - only search/merge/de-duplicate is implemented.
+\item No "format" step (date standardization, etc.) has been specified
+yet beyond the header-standardization step documented above - only
+search/merge/de-duplicate (plus header standardization) is
+implemented.
 }
 }
 

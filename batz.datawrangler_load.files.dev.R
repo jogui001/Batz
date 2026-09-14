@@ -64,8 +64,7 @@
 #      convention - if a file is named with underscores, spaces, or leading
 #      digits (e.g. "2HabitatAssessments_quad"), the created object keeps
 #      that exact name. A name like that isn't a syntactically "plain" R
-#      name, so accessing it back out requires backticks or get(), e.g.
-#      `` `2HabitatAssessments_quad` `` or get("2HabitatAssessments_quad") -
+#      name, so accessing it back out requires backticks or get() -
 #      assign() itself doesn't care, it accepts any string as a name.
 #   2. Following the auto-assign convention already established in
 #      batz.arumeta_merge.format() (per Josh: "can the function be structured
@@ -198,9 +197,49 @@
 # were already consistent with the target naming and are unchanged. The
 # $reason/$objectname column names inside log.file are unaffected - this
 # round only touched the function's own parameter names.
+#
+# STANDARDIZED (2026-09-14, per Josh - project-wide header standardization
+# preference). Every loaded data frame's own column names (plain .csv,
+# single-sheet .xlsx, or each sheet of a multi-sheet .xlsx) are now run
+# through standardize.headers() (trim whitespace, collapse every run of
+# non-alphanumeric characters to a single underscore, lowercase), inlined
+# here since this is a standalone dev script (package .R files call the
+# shared internal helper of the same name directly instead) - applied right
+# after a file/sheet is read, before any merge-matching logic sees its
+# names. This function never hardcodes a column name anywhere in its own
+# logic, so nothing else needed to change - but header.match's "100% column
+# set match" and the same-name "columns match" check now compare
+# STANDARDIZED names, meaning two files whose raw headers only differed by
+# case/whitespace/punctuation can now match where they wouldn't have
+# before. File names themselves (used for object names and the
+# name-based-duplicate check) are NOT touched - only the column headers
+# INSIDE each loaded file/sheet are standardized. See assumption 15 below.
+#
+#  15. Header standardization (2026-09-14, per Josh - project-wide
+#      preference, see STANDARDIZED note above): applied uniformly inside
+#      read.one() to every data frame this function produces, since this
+#      function's whole job is loading arbitrary files' headers into R
+#      objects - exactly the "headers from loaded files" the preference
+#      describes. Not flagged as a reversal (unlike batz.merge_aru.meta) -
+#      this function never took an explicit prior stance on preserving raw
+#      headers, it simply hadn't standardized them yet.
 # =============================================================================
 
 suppressMessages(library(readxl))
+
+## ---- helper: standardize.headers (per Josh, 2026-09-14 project
+## preference) - inlined here since this is a standalone dev script, not
+## part of the package (package .R files call the shared internal helper of
+## the same name directly instead). Trims whitespace, collapses every run of
+## non-alphanumeric characters to a single underscore, strips a
+## leading/trailing underscore, and lowercases. -----------------------------
+standardize.headers <- function(x) {
+  x <- trimws(as.character(x))
+  x <- gsub("[^A-Za-z0-9]+", "_", x)
+  x <- gsub("_+", "_", x)
+  x <- gsub("^_|_$", "", x)
+  tolower(x)
+}
 
 # -----------------------------------------------------------------------------
 # core function
@@ -213,22 +252,31 @@ batz.datawrangler_load.files <- function(dir.load = getwd(),
                                           duplicates.skip   = FALSE,
                                           objects.max       = 25) {
 
+  ## header standardization (per Josh, 2026-09-14 project preference) - see
+  ## the STANDARDIZED note above. Applied once, right after a data frame is
+  ## read, before any merge-matching logic sees its names.
+  standardize.df.headers <- function(df) {
+    names(df) <- standardize.headers(names(df))
+    df
+  }
+
   read.one <- function(f) {
     ext <- tolower(tools::file_ext(f))
     if (ext == "csv") {
-      return(read.csv(f, stringsAsFactors = FALSE, check.names = FALSE))
+      return(standardize.df.headers(
+        read.csv(f, stringsAsFactors = FALSE, check.names = FALSE)))
     }
     if (ext == "xlsx") {
       sheets <- readxl::excel_sheets(f)
       if (length(sheets) == 1) {
-        return(suppressMessages(as.data.frame(
+        return(standardize.df.headers(suppressMessages(as.data.frame(
           readxl::read_excel(f, .name_repair = "minimal"),
-          stringsAsFactors = FALSE, check.names = FALSE)))
+          stringsAsFactors = FALSE, check.names = FALSE))))
       }
       sheet.list <- lapply(sheets, function(s) {
-        suppressMessages(as.data.frame(
+        standardize.df.headers(suppressMessages(as.data.frame(
           readxl::read_excel(f, sheet = s, .name_repair = "minimal"),
-          stringsAsFactors = FALSE, check.names = FALSE))
+          stringsAsFactors = FALSE, check.names = FALSE)))
       })
       names(sheet.list) <- sheets
       return(sheet.list)

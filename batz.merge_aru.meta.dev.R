@@ -85,6 +85,24 @@
 # right in the workspace. The list is still returned too (invisibly), for
 # anyone who prefers result$aru.visit-style access. See assumption 13.
 #
+# STANDARDIZED (2026-09-14, per Josh - project-wide header standardization
+# preference) - REVERSES assumption 5's "raw column names preserved exactly"
+# design decision, flagged for review. Every loaded source's own column
+# names are now run through standardize.headers() (trim whitespace, collapse
+# every run of non-alphanumeric characters to a single underscore,
+# lowercase), inlined near the top of this script since it's a standalone
+# dev script (package .R files call the shared internal helper of the same
+# name directly instead). This runs right after the existing BOM-stripping
+# step and BEFORE within-source duplicate-column resolution (standardizing
+# can itself create new name collisions - e.g. two raw names differing only
+# in case/punctuation would now collapse to the same standardized name and
+# get swept into the existing resolve.dup.columns() logic). The internal
+# .source.file tracking column (added AFTER standardization, purely
+# invented bookkeeping, never a loaded header) is unaffected. See
+# assumption 14 below, and the real column-name checks in the "aru.visit
+# real data check" test section further down, which were updated to the new
+# standardized names (e.g. "Site Name" -> "site_name").
+#
 # ASSUMPTIONS / OPEN QUESTIONS (flagging per project convention - see the
 # message accompanying this script for the specific ones I'm asking Josh to
 # confirm before finalizing):
@@ -114,13 +132,16 @@
 #      as plain text from read.csv, and R's rbind/merge cannot combine
 #      differently-typed columns of the same name directly. Matches the
 #      character-based approach already used in batz.datawrangler_rename.
-#   5. Combining data frames within a category uses a fill-by-NA row bind (a
-#      small hand-written helper, not a package dependency): if one source has
-#      a column the others don't, the others get that column filled with NA
-#      rather than erroring. The union/select step now explicitly passes
-#      check.names = FALSE (this is the bug fix above) so raw column names
-#      (spaces, punctuation, etc.) are preserved exactly and correctly matched
-#      up across sources - no more silent mangling/NA-wipe.
+#   5. **Superseded 2026-09-14 (see STANDARDIZED note above) - was: raw
+#      column names preserved exactly, no automatic renaming.** Combining
+#      data frames within a category uses a fill-by-NA row bind (a small
+#      hand-written helper, not a package dependency): if one source has a
+#      column the others don't, the others get that column filled with NA
+#      rather than erroring. `check.names = FALSE` is still used on every
+#      read/bind so R itself never mangles a name independently of the
+#      explicit standardize.headers() step now applied instead (this is
+#      still the fix for the 2026-08-18 bug above - the difference is that
+#      names are deliberately standardized now, rather than left raw).
 #   6. "Remove duplicate rows" = exact full-row duplicates (base `duplicated()`
 #      across every real data column of the merged category data frame, i.e.
 #      excluding the internal `.source.file` tracking column - see 12), which
@@ -133,30 +154,32 @@
 #   8. (removed) first.match was dropped from the function entirely per Josh -
 #      it was never supposed to be part of this spec (same as the four
 #      count./list. flags above).
-#   9. No "format" step is implemented yet - the Steps section only covers
-#      search/load/merge and duplicate removal/reporting, nothing about
-#      standardizing columns, dates, etc. (which is what "format" meant in
-#      batz.templogger_merge.format). Left out until Josh specifies it.
+#   9. No "format" step is implemented yet beyond header standardization
+#      (see the STANDARDIZED note above) - date standardization etc. is
+#      still left out until Josh specifies it.
 #  10. Within-file duplicate columns (per Josh, 2026-08-18): both CSV reads
 #      (check.names = FALSE) and xlsx reads (.name_repair = "minimal") now
 #      preserve a file/sheet's raw column names AS-IS, including literal
 #      duplicates (e.g. the real site-visit form has "Personnel" twice, both
-#      in the .csv and in the xlsx "sitevist" sheet). For every duplicate
-#      name found in a single source: values are compared row-by-row treating
-#      NA and "" (blank) as equivalent; if every row matches, the extra
-#      copy(ies) are dropped and the name prints once with the number of
-#      copies removed; if any row differs, the columns are merged into ONE
-#      column by taking whichever copy is non-blank for that row, and where
-#      BOTH copies are non-blank and different, concatenating them with "; "
-#      (flagging a genuine conflict rather than picking one arbitrarily). On
-#      the real "Personnel" columns in both the .csv and the "sitevist" sheet,
-#      most rows match ("BRF"/"BRF") but one row has "BRF" vs "ECG" - merged
-#      to "BRF; ECG" for that row.
+#      in the .csv and in the xlsx "sitevist" sheet) - and, as of 2026-09-14,
+#      any new duplicates created by standardization (see STANDARDIZED note
+#      above). For every duplicate name found in a single source (post
+#      standardization): values are compared row-by-row treating NA and ""
+#      (blank) as equivalent; if every row matches, the extra copy(ies) are
+#      dropped and the name prints once with the number of copies removed;
+#      if any row differs, the columns are merged into ONE column by taking
+#      whichever copy is non-blank for that row, and where BOTH copies are
+#      non-blank and different, concatenating them with "; " (flagging a
+#      genuine conflict rather than picking one arbitrarily). On the real
+#      "personnel" columns (standardized from "Personnel") in both the .csv
+#      and the "sitevist" sheet, most rows match ("BRF"/"BRF") but one row
+#      has "BRF" vs "ECG" - merged to "BRF; ECG" for that row.
 #  11. Column names now also have a UTF-8 BOM character stripped if present
 #      (the real Acoustic_SiteVisitARU.csv's first column comes in as
 #      "﻿ObjectID" due to a byte-order-mark at the start of the file).
 #      Without this, "ObjectID" from the csv and "ObjectID" from the xlsx
-#      sheet would never line up as the same column across sources. Not
+#      sheet would never line up as the same column across sources. This
+#      BOM-stripping step runs first, before header standardization. Not
 #      explicitly requested, but an obviously-correct fix once noticed.
 #  12. log.file / arumeta.mergelog: interpreted "$inputfile = name of file the
 #      event happened to" literally, which required tracking row-level
@@ -193,9 +216,29 @@
 #      `result`) so it doesn't also print to the console on a bare call - so
 #      `result <- batz.merge_aru.meta(...)` + `result$aru.visit` still
 #      works exactly as before for anyone who prefers that style.
+#  14. Header standardization (2026-09-14, per Josh - project-wide
+#      preference, see STANDARDIZED note above): applied to every loaded
+#      source's own column names, reversing assumption 5's prior "preserve
+#      raw headers verbatim" decision. This was flagged for review rather
+#      than silently assumed, since it is a genuine behavior reversal on a
+#      point the function previously took an explicit, documented stance on.
 # =============================================================================
 
 suppressMessages(library(readxl))
+
+## ---- helper: standardize.headers (per Josh, 2026-09-14 project
+## preference) - inlined here since this is a standalone dev script, not
+## part of the package (package .R files call the shared internal helper of
+## the same name directly instead). Trims whitespace, collapses every run of
+## non-alphanumeric characters to a single underscore, strips a
+## leading/trailing underscore, and lowercases. -----------------------------
+standardize.headers <- function(x) {
+  x <- trimws(as.character(x))
+  x <- gsub("[^A-Za-z0-9]+", "_", x)
+  x <- gsub("_+", "_", x)
+  x <- gsub("^_|_$", "", x)
+  tolower(x)
+}
 
 # -----------------------------------------------------------------------------
 # core function
@@ -286,6 +329,13 @@ batz.merge_aru.meta <- function(dir.load = getwd(),
 
   add.to.bucket <- function(cat.name, df, source.label) {
     df <- strip.bom(df)
+    ## header standardization (per Josh, 2026-09-14 project preference) -
+    ## reverses assumption 5's prior "preserve raw headers verbatim" design
+    ## decision; see the STANDARDIZED note near the top of this script.
+    ## Runs after BOM stripping but BEFORE within-source duplicate-column
+    ## resolution, since standardizing can itself introduce new name
+    ## collisions to resolve.
+    names(df) <- standardize.headers(names(df))
     df <- resolve.dup.columns(df, source.label)
     df[[".source.file"]] <- source.label
     buckets[[cat.name]][[length(buckets[[cat.name]]) + 1]] <<- df
@@ -386,7 +436,8 @@ cat("\naru.visit rows:", nrow(res.all$aru.visit),
     "| aru.20m rows:", nrow(res.all$aru.20m), "\n")
 
 cat("\n\n=== aru.visit real data check - these should NOT be all-NA anymore ===\n")
-print(sapply(res.all$aru.visit[c("Site Name", "Reason for site visit", "ARU Serial Number", "Personnel")],
+cat("(column names standardized 2026-09-14: 'Site Name' -> 'site_name', etc.)\n")
+print(sapply(res.all$aru.visit[c("site_name", "reason_for_site_visit", "aru_serial_number", "personnel")],
              function(x) sum(!is.na(x) & x != "")))
 
 cat("\n\n=== log.file = FALSE (default) - result should have NO arumeta.mergelog element ===\n")

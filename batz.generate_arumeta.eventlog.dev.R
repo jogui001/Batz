@@ -1,9 +1,9 @@
 # =============================================================================
-# batz.arumeta_generate.eventlog.dev.R
+# batz.generate_arumeta.eventlog.dev.R
 # -----------------------------------------------------------------------------
-# Dev script for batz.arumeta_generate.eventlog() - tested against real test
+# Dev script for batz.generate_arumeta.eventlog() - tested against real test
 # data before being wrapped into the final function
-# (batz.arumeta_generate.eventlog.R).
+# (batz.generate_arumeta.eventlog.R).
 #
 # Purpose (per spec): load site-survey forms for ARU deployments from a
 # target folder (optional subfolders), classify each file/row as a
@@ -11,9 +11,18 @@
 # event log per ARU/site - date of every deployment, service visit, and
 # recovery, plus any equipment changes made along the way.
 #
-# NAMING: kept the family/action name exactly as given
-# (arumeta_generate.eventlog fits the "_" separates family from action, "."
-# separates words within the action" convention already in use).
+# NAMING (corrected 2026-09-14, per Josh): renamed from
+# `arumeta_generate.eventlog` to `generate_arumeta.eventlog`. Per the
+# `batz.<family>_<action>.<subject>()` convention (see preferences.md), the
+# part before "_" is the family and after is the action.subject - but the
+# family should be the operation VERB (as in `merge_temp.logger`,
+# `datawrangler_load.files`, and this function's own siblings
+# `generate_suntimes.arulist`/`generate_plotframe.bat`), not a noun. The
+# original name had `arumeta` (a noun - ARU metadata) as the family and
+# `generate.eventlog` as the action, which doesn't match that pattern.
+# Renamed so `generate` is the family (matching `generate_suntimes.arulist`/
+# `generate_plotframe.bat`) and `arumeta.eventlog` is the action.subject -
+# same real function, name only.
 #
 # =============================================================================
 # CORRECTIONS (2026-08-23, per Josh, after reviewing the first version):
@@ -161,7 +170,7 @@
 #         action token, if both apply) - a plain visit with reason =
 #         "sitevisit_maintenance" and no actions performed gets a fallback
 #         event type of "service" (not in the given priority list) so it
-#         isn't silently dropped from the log.
+#         isn't silently dropped.
 #     "recovery" and "service" aren't in the given 5-item ordering list -
 #     sorted them after the five named types (in that order) at same-
 #     timestamp ties, since the spec is silent on where they'd fall.
@@ -213,20 +222,43 @@
 #   this function at all - see point 1 above.)
 # =============================================================================
 
+# -----------------------------------------------------------------------------
+# Header standardization (added 2026-09-14, per project preference - see
+# preferences.md, "Header standardization"). standardize.headers() trims
+# whitespace, replaces runs of special characters with a single underscore,
+# and lowercases - i.e. converts to snake_case. Inlined here since this dev
+# script is standalone (the final .R function calls the shared package
+# helper of the same name, batz.util_standardize.headers.R).
+# -----------------------------------------------------------------------------
+standardize.headers <- function(x) {
+  x <- trimws(as.character(x))
+  x <- gsub("[^A-Za-z0-9]+", "_", x)
+  x <- gsub("_+", "_", x)
+  x <- gsub("^_|_$", "", x)
+  tolower(x)
+}
+
 pattern.regex <- function(p) paste(vapply(p, utils::glob2rx, character(1)), collapse = "|")
 
 # -----------------------------------------------------------------------------
 # master header lists (canonical column order + names for each event source)
 # -----------------------------------------------------------------------------
-deployment.headers <- c("Client", "Project", "Project Code", "Date of Deployment",
-                         "Detector Model", "Detector Make", "Microphone Model", "Microphone Make",
-                         "Site", "Survey Type", "X", "Y", "Serial Number of Detector",
-                         "Serial Number of Microphone", "Personnel", "Date of Habitat Assessment")
+# Standardized to snake_case (per project preference, added 2026-09-14) -
+# these lists ARE the literal deployment/service form field text, so both
+# they and every incoming raw file's headers get standardize.headers()'d
+# the same way before matching. Real, visible column-name change from
+# before this preference existed (e.g. $Client -> $client).
+deployment.headers <- standardize.headers(c(
+  "Client", "Project", "Project Code", "Date of Deployment",
+  "Detector Model", "Detector Make", "Microphone Model", "Microphone Make",
+  "Site", "Survey Type", "X", "Y", "Serial Number of Detector",
+  "Serial Number of Microphone", "Personnel", "Date of Habitat Assessment"))
 
-service.headers <- c("Client", "Project", "Project Code", "Date", "Site Name",
-                      "Reason for site visit", "Personnel", "Notes", "ARU Serial Number",
-                      "Mic Serial Number", "Power Kit/Solar Serial Number", "HOBO Sensor Serial Number",
-                      "Select all actions performed", "New mic serial number", "New ARU serial number")
+service.headers <- standardize.headers(c(
+  "Client", "Project", "Project Code", "Date", "Site Name",
+  "Reason for site visit", "Personnel", "Notes", "ARU Serial Number",
+  "Mic Serial Number", "Power Kit/Solar Serial Number", "HOBO Sensor Serial Number",
+  "Select all actions performed", "New mic serial number", "New ARU serial number"))
 
 # canonical same-timestamp ordering (per spec); anything else sorts after these
 event.priority <- c(deployment = 1, status_check = 2, download = 3, aru_swap = 4, mic_swap = 5,
@@ -282,8 +314,10 @@ resolve.duplicate.columns <- function(df) {
 # matching tmp column name (or NA if not found).
 # -----------------------------------------------------------------------------
 match.headers <- function(tmp.names, master) {
+  # tmp.names is standardized in process.one.file() before this runs; master
+  # is already standardize.headers()-canonical, so plain equality suffices.
   vapply(master, function(m) {
-    idx <- which(tolower(trimws(tmp.names)) == tolower(trimws(m)))
+    idx <- which(tmp.names == m)
     if (length(idx) >= 1) tmp.names[idx[1]] else NA_character_
   }, character(1))
 }
@@ -308,12 +342,13 @@ full.outer.rbind <- function(a, b) {
 process.one.file <- function(f, max.missing) {
   raw <- read.csv(f, stringsAsFactors = FALSE, check.names = FALSE)
   names(raw) <- sub("^﻿", "", names(raw))  # strip UTF-8 BOM (seen on real ObjectID header)
+  names(raw) <- standardize.headers(names(raw))  # per project preference, added 2026-09-14
 
   dc <- resolve.duplicate.columns(raw)
   tmp <- dc$df
   dup.cols <- dc$dup.cols
 
-  is.deployment <- any(tolower(trimws(names(tmp))) == "date of deployment")
+  is.deployment <- any(names(tmp) == "date_of_deployment")
   master <- if (is.deployment) deployment.headers else service.headers
   file.type <- if (is.deployment) "deployment" else "service"
 
@@ -361,7 +396,7 @@ explode.service.events <- function(df) {
   out.rows <- vector("list", 0)
   for (i in seq_len(nrow(df))) {
     row <- df[i, , drop = FALSE]
-    actions <- trimws(unlist(strsplit(as.character(row[["Select all actions performed"]]), ",")))
+    actions <- trimws(unlist(strsplit(as.character(row[["select_all_actions_performed"]]), ",")))
     actions <- actions[!is.na(actions) & actions != ""]
 
     events <- if (length(actions) > 0) actions else "service"
@@ -376,10 +411,10 @@ explode.service.events <- function(df) {
 }
 
 # -----------------------------------------------------------------------------
-# batz.arumeta_generate.eventlog(dir.load, dir.sub, load.pattern,
+# batz.generate_arumeta.eventlog(dir.load, dir.sub, load.pattern,
 #                                 duplicates.remove, log.file, max.missing)
 # -----------------------------------------------------------------------------
-batz.arumeta_generate.eventlog <- function(dir.load = getwd(),
+batz.generate_arumeta.eventlog <- function(dir.load = getwd(),
                                             dir.sub           = FALSE,
                                             load.pattern      = c("*HabitatAssessments_20m.csv", "*Acoustic_SiteVisitARU.csv"),
                                             duplicates.remove = TRUE,
@@ -426,16 +461,16 @@ batz.arumeta_generate.eventlog <- function(dir.load = getwd(),
   # ---- derive unified ARU / site / date-time columns + event.type ----
   if (!is.null(deployment) && nrow(deployment) > 0) {
     deployment$event.type   <- "deployment"
-    deployment$ARU.serial   <- deployment[["Serial Number of Detector"]]
-    deployment$Site.unified <- deployment[["Site"]]
-    deployment$date.time    <- as.character(deployment[["Date of Deployment"]])
+    deployment$ARU.serial   <- deployment[["serial_number_of_detector"]]
+    deployment$Site.unified <- deployment[["site"]]
+    deployment$date.time    <- as.character(deployment[["date_of_deployment"]])
   }
 
   service.events <- explode.service.events(service)
   if (!is.null(service.events) && nrow(service.events) > 0) {
-    service.events$ARU.serial   <- service.events[["ARU Serial Number"]]
-    service.events$Site.unified <- service.events[["Site Name"]]
-    service.events$date.time    <- paste(service.events[["Date"]], service.events[["Time"]])
+    service.events$ARU.serial   <- service.events[["aru_serial_number"]]
+    service.events$Site.unified <- service.events[["site_name"]]
+    service.events$date.time    <- paste(service.events[["date"]], service.events[["time"]])
   }
 
   aru.eventlog <- full.outer.rbind(deployment, service.events)
@@ -512,9 +547,9 @@ batz.arumeta_generate.eventlog <- function(dir.load = getwd(),
     site.rows <- lapply(sites, function(s) {
       sub <- aru.eventlog[aru.eventlog$Site.unified == s, ]
       data.frame(
-        client       = first.nonblank(sub$Client),
-        project      = first.nonblank(sub$Project),
-        project.code = first.nonblank(sub[["Project Code"]]),
+        client       = first.nonblank(sub$client),
+        project      = first.nonblank(sub$project),
+        project.code = first.nonblank(sub[["project_code"]]),
         site         = s,
         deployment   = sum(sub$event.type == "deployment"),
         service      = sum(sub$event.type %in% c("status_check", "download", "aru_swap", "mic_swap", "service")),
@@ -548,7 +583,7 @@ batz.arumeta_generate.eventlog <- function(dir.load = getwd(),
 # tests
 # -----------------------------------------------------------------------------
 cat("=== default call against real test data (log.file = TRUE) ===\n")
-res <- batz.arumeta_generate.eventlog("/home/claude/arumeta_work2", log.file = TRUE)
+res <- batz.generate_arumeta.eventlog("/home/claude/arumeta_work2", log.file = TRUE)
 
 cat("\n=== aru.eventlog dim ===\n"); print(dim(aru.eventlog))
 cat("\n=== aru.eventlog (key columns) ===\n")
@@ -558,15 +593,15 @@ cat("\n=== aru.eventlog.filelog ===\n"); print(aru.eventlog.filelog)
 cat("\n=== aru.eventlog.sitelog ===\n"); print(aru.eventlog.sitelog)
 
 cat("\n\n=== max.missing = 1 (should fail the 20m/deployment file - 4 missing > 1) ===\n")
-res2 <- batz.arumeta_generate.eventlog("/home/claude/arumeta_work2", log.file = TRUE, max.missing = 1)
+res2 <- batz.generate_arumeta.eventlog("/home/claude/arumeta_work2", log.file = TRUE, max.missing = 1)
 cat("\naru.eventlog2 dim:", paste(dim(aru.eventlog), collapse = " x "), "\n")
 print(aru.eventlog.filelog)
 
 cat("\n\n=== duplicates.remove = FALSE (row count should not shrink) ===\n")
-res3 <- batz.arumeta_generate.eventlog("/home/claude/arumeta_work2", duplicates.remove = FALSE)
+res3 <- batz.generate_arumeta.eventlog("/home/claude/arumeta_work2", duplicates.remove = FALSE)
 cat("nrow with duplicates.remove = FALSE:", nrow(aru.eventlog), "\n")
 
 cat("\n\n=== empty directory (no matching files) ===\n")
 empty.dir <- tempfile(); dir.create(empty.dir)
-res4 <- batz.arumeta_generate.eventlog(empty.dir, log.file = TRUE)
+res4 <- batz.generate_arumeta.eventlog(empty.dir, log.file = TRUE)
 cat("aru.eventlog rows:", nrow(aru.eventlog), " filelog rows:", nrow(aru.eventlog.filelog), "\n")

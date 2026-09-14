@@ -162,7 +162,7 @@
 #   5. $facet.label's real value is a doubly-quoted string ("\"common\"" -
 #      the CSV literally contains a quoted "common") - stripped of its
 #      literal wrapping quote characters before being used as
-#      batz.batusa_recode.names()'s output.format. Blank/missing
+#      batz.batusa_recode.names()'s batname.format.out. Blank/missing
 #      $facet.label falls back to "common".
 #   6. $spp.plot/$facpan special-case (New England/NE) list, MYSO/Alldect/
 #      40khzmyo flag handling, taken literally from the spec's pseudocode.
@@ -516,12 +516,12 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
     # "Tricolored bat" case above) still lines up with data$spp.common,
     # which is always the reference table's canonical spelling, rather than
     # silently failing a plain string match.
-    spp.plot <- batz.batusa_recode.names(spp.plot, output.format = "common")
-    facpan   <- batz.batusa_recode.names(facpan, output.format = "common")
+    spp.plot <- batz.batusa_recode.names(spp.plot, batname.format.out = "common")
+    facpan   <- batz.batusa_recode.names(facpan, batname.format.out = "common")
 
     # ---- filter data to this job's ARU + species list ----
     pd <- data
-    pd$spp.common <- batz.batusa_recode.names(pd$spp.id, output.format = "common")
+    pd$spp.common <- batz.batusa_recode.names(pd$spp.id, batname.format.out = "common")
 
     plot.set.val <- trimws(job$plot.set)
     if (nzchar(plot.set.val)) {
@@ -605,7 +605,7 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
     if (!nzchar(facet.label.fmt)) facet.label.fmt <- "common"
 
     panel.levels.raw <- facpan
-    panel.labels <- batz.batusa_recode.names(panel.levels.raw, output.format = facet.label.fmt)
+    panel.labels <- batz.batusa_recode.names(panel.levels.raw, batname.format.out = facet.label.fmt)
     names(panel.labels) <- panel.levels.raw
 
     # panel drawing order, per aes.default' $plot.order where possible

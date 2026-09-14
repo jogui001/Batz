@@ -77,6 +77,32 @@ whose \code{$plot.type} is \code{"call.observations"} (see Details for why
 this value was chosen and how to change it).
 }
 \details{
+\strong{Header standardization (per Josh, 2026-09-14 project preference) -
+does not mechanically apply to this function, flagged not silently
+skipped.} The project-wide preference is that headers coming from a
+loaded file or an externally-supplied data frame are run through the
+shared package helper \code{standardize.headers()} (trim whitespace,
+collapse non-alphanumeric runs to underscores, lowercase). This function
+does not load any file itself, and all four of its arguments
+(\code{data}, \code{fig.list}, \code{suntimes}, \code{aes.default}) are
+already-loaded data frames handed in by the caller - \code{data} in
+particular is expected to be \code{\link{batz.generate_plotframe.bat}}'s
+own output. \code{DATA.REQUIRED}/\code{SUNTIMES.REQUIRED}/
+\code{FIG.LIST.REQUIRED}/\code{AES.DEFAULT.REQUIRED}/
+\code{AES.DEFAULT.REQUIRED.PARAMETERS} in this function's code are its
+own hardcoded interface contracts with those upstream functions'/files'
+already-established output schemas (e.g. \code{$spp.id}/\code{$date}/
+\code{$obs} from \code{batz.generate_plotframe.bat()}), not raw text
+copied from a loaded file's real header row, so there is no raw-header
+step here for the preference to attach to and none of these names were
+renamed. If \code{fig.list}/\code{aes.default}/\code{suntimes} are ever
+built by reading a CSV/spreadsheet directly (rather than being handed to
+this function pre-loaded), that loading step - wherever it lives -
+should run \code{standardize.headers()} on its own raw headers, and this
+function's own required-header constants would need to be written to
+match those standardized spellings; no such loading step exists inside
+this function itself.
+
 \strong{Iteration 1 ("basic layout"), built 2026-08-28 per Josh's own
 framing that this function would be developed iteratively, copying the
 structure/steps of \code{batz.plotdetections_first.last()} and modifying

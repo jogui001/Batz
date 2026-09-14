@@ -4,17 +4,9 @@
 \alias{batz.batusa_list.species}
 \title{List bat species found in given US states/territories, or the states where given bat species are found}
 \usage{
-batz.batusa_list.species(
-  data,
-  grammar.dash = TRUE,
-  statename.format = "code2",
-  batname.format = "full",
-  bat.code = "code4",
-  table.type = "state",
-  presence.absence = c("*", "-"),
-  phonic.group = TRUE,
-  species.extirpated = TRUE
-)
+batz.batusa_list.species(data, grammar.dash = TRUE, statename.format.out = "code2",
+  batname.format.out = "full", bat.code = "code4", table.type = "state",
+  symbol_presence.absence = c("*", "-"), phonic.group = TRUE, species.extirpated = TRUE)
 }
 \arguments{
 \item{data}{A vector, or a data frame, of bat species identifiers and/or
@@ -30,11 +22,11 @@ this flag. This flag only controls OUTPUT labels: \code{TRUE} (default)
 keeps hyphens as written in the reference tables; \code{FALSE} replaces
 every hyphen in an output species/state label with a space instead.}
 
-\item{statename.format}{Character, default \code{"code2"}. How states are
-labeled in the output: \code{"code2"} (2-letter code), \code{"official.name"},
-or \code{"short.name"}.}
+\item{statename.format.out}{Character, default \code{"code2"}. How states are
+labeled in the output: \code{"code2"} (2-letter code),
+\code{"official.name"}, or \code{"short.name"}.}
 
-\item{batname.format}{Character, default \code{"full"}. How species are
+\item{batname.format.out}{Character, default \code{"full"}. How species are
 labeled in the output's \code{"Bat Species"} field:
 \code{"full"} - \code{"<common name> (<latin name>)<hibernation.strat>"},
 all concatenated with NO separator before \code{hibernation.strat}
@@ -48,9 +40,8 @@ the separate \code{"Species Code"} column: \code{"code4"},
 \code{"code6"}, or \code{"none"} (omits the column entirely).}
 
 \item{table.type}{Character, default \code{"state"}. The output table's
-shape:
-\code{"state"} (matches \code{"batlist model1.csv"}) - one row per
-(state, species) PRESENT pair (a species absent from a given state
+shape: \code{"state"} (matches \code{"batlist model1.csv"}) - one row
+per (state, species) PRESENT pair (a species absent from a given state
 simply has no row for that state). Columns, in order: \code{"State"},
 \code{"Bat Species"}, \code{"Species Code"} (if \code{bat.code !=
 "none"}), \code{"Federal"}, \code{"State"} (again - see Details),
@@ -58,13 +49,13 @@ simply has no row for that state). Columns, in order: \code{"State"},
 \code{"matrix"} (matches \code{"batlist model2.csv"}) - one row per
 requested/implied species, columns \code{"Bat Species"}, \code{"Species
 Code"}, \code{"Phonic Group"}, \code{"Federal"}, then one column per
-requested/implied state (named per \code{statename.format}), each cell
-per \code{presence.absence} (see Details).}
+requested/implied state (named per \code{statename.format.out}), each cell
+per \code{symbol_presence.absence} (see Details).}
 
-\item{presence.absence}{Character vector of length 2, default
+\item{symbol_presence.absence}{Character vector of length 2, default
 \code{c("*", "-")}. Used for a species that is present in a state but
-not listed there (symbol 1) or absent from a state entirely (symbol
-2). A LISTED species' cell/column shows its listing status instead of
+not listed there (symbol 1) or absent from a state entirely (symbol 2).
+A LISTED species' cell/column shows its listing status instead of
 symbol 1 - see Details.}
 
 \item{phonic.group}{Logical, default \code{TRUE}. Adds a
@@ -81,10 +72,10 @@ a one-time notice (not an error).}
 }
 \value{
 A data frame - one row per (state, species) present pair
-(\code{table.type = "state"}) or one row per species
-(\code{table.type = "matrix"}), with column headers matching Josh's own
-model files literally (not this project's usual \code{$collum.name}
-dot-convention - a deliberate, spec-driven exception).
+  (\code{table.type = "state"}) or one row per species
+  (\code{table.type = "matrix"}), with column headers matching Josh's own
+  model files literally (not this project's usual \code{$collum.name}
+  dot-convention - a deliberate, spec-driven exception).
 }
 \description{
 Given a vector or data frame containing any mix of bat species identifiers
@@ -100,6 +91,15 @@ that species. If both are supplied, only the specific species x specific
 states combination is returned.
 }
 \details{
+\strong{Header standardization (per Josh, 2026-09-14 project preference) - does not apply to this function, flagged not silently skipped.} The project-wide preference is that headers coming from a loaded file or an externally-supplied data frame are run through the shared package helper \code{standardize.headers()} (trim whitespace, collapse non-alphanumeric runs to underscores, lowercase). This function has no raw-header step for that preference to attach to: \code{data} is flattened and every element is matched as a VALUE (a species identifier or a state/territory identifier), never as a header - unlike \code{\link{batz.batusa_recode.names}}, this function does not even pass a data frame's column names through to its output (the flattening step, \code{unlist(lapply(data, as.character))}, discards them entirely). The two embedded reference tables' own column names (\code{nabat}'s \code{$latin}/\code{$common}/\code{$code4}/\code{$code6}/\code{$fedstatus}/etc., \code{states}'s \code{$official.name}/\code{$short.name}/\code{$code2}/etc.) are this function's fixed, already-established internal schema - not raw headers copied fresh from a file for this rollout - so neither is run through \code{standardize.headers()}, the same treatment already given to every other \code{batz} function's own output-schema column names. The OUTPUT column headers this function produces (\code{"Bat Species"}, \code{"Species Code"}, \code{"State"}, \code{"Federal"}, \code{"Phonic Group"}, and each requested state's own label in \code{table.type = "matrix"}) are also left untouched by \code{standardize.headers()} - they are a deliberate, spec-driven exception already documented below (matching Josh's own \code{"batlist model1.csv"}/\code{"batlist model2.csv"} template headers literally, including a duplicate \code{"State"} header), and running them through \code{standardize.headers()} would break that literal match.
+
+(Renamed 2026-08-29, per Josh: \code{presence.absence} ->
+\code{symbol_presence.absence}; \code{statename.format} ->
+\code{statename.format.out}; \code{batname.format} ->
+\code{batname.format.out} - standardizing \code{format}-suffixed
+parameters as \code{.in}/\code{.out} and giving the presence/absence
+symbols argument a clearer name.)
+
 \strong{Rebuilt 2026-08-25 against the real \code{batlist model1.csv} /
 \code{batlist model2.csv} template files}, once Josh granted access to
 the \code{"4 Current  test data"} folder (an earlier same-day version of
@@ -108,7 +108,7 @@ spec alone, before those files were reachable). Confirmed against the
 real templates: \code{table.type = "state"} is one row per
 (state, species) PRESENT pair, not an aggregated per-state list;
 \code{table.type = "matrix"} is one row per species with one column per
-state; \code{batname.format = "full"} bakes \code{hibernation.strat}
+state; \code{batname.format.out = "full"} bakes \code{hibernation.strat}
 directly into the \code{"Bat Species"} text; \code{"Species Code"} is
 its own column, not appended onto the species label; \code{"Federal"} is
 always included, abbreviated from \code{$fedstatus} (\code{"Not
@@ -127,9 +127,9 @@ state in \code{$states.listed} (and not \code{$state.soc}) shows
 \code{"L"} - a generic placeholder, NOT a real abbreviation from Josh's
 models, standing in for "listed, severity unspecified" until real
 per-state Endangered/Threatened/Special-Concern data is available. A
-state that's neither shows \code{presence.absence[1]} (matrix) or blank
+state that's neither shows \code{symbol_presence.absence[1]} (matrix) or blank
 (state table.type, where a row already existing implies presence).
-Absent states show \code{presence.absence[2]} (matrix) or get no row at
+Absent states show \code{symbol_presence.absence[2]} (matrix) or get no row at
 all (state table.type). \strong{If Josh has, or builds, real per-state
 severity data, replace the \code{"L"} placeholder with it.}
 

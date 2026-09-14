@@ -217,7 +217,7 @@ if (length(result7$ggplots) > 0) {
 }
 # Confirm batz.batusa_recode.names() ALONE (no workaround) would NOT have caught "40kMyo" -
 # i.e. this is a real mismatch this function had to work around, not a non-issue.
-direct.recode <- batz.batusa_recode.names("40kMyo", output.format = "common")
+direct.recode <- batz.batusa_recode.names("40kMyo", batname.format.out = "common")
 cat("batz.batusa_recode.names('40kMyo') alone (expected: passed through unchanged, i.e. still '40kMyo', proving the mismatch is real):", direct.recode, "\n")
 
 cat("\n\n########## TEST 8: rows sharing the SAME $plot.name but otherwise DIFFERENT still each produce their own plot (job.key fix, carried over) ##########\n")
@@ -383,27 +383,31 @@ if (length(result17$plots) == 1) {
 }
 cat("$ggplots entries produced (expected 1):", length(result17$ggplots), "\n")
 
-cat("\n\n########## TEST 18: $legend option - a second, independent outline-color legend for dodged $plot.sets values ##########\n")
+cat("\n\n########## TEST 18: $legend option (round 2 - fill-based, no border) - each dodged bar colored by its own $plot.sets value ##########\n")
 job18.on <- make.job(plot.group = "aru.name",
                       plot.sets = '"105059-NW3" "105059-SE3" "105059-SW3"',
                       date.start = "7/7/2026", date.end = "8/18/2026",
                       pool = FALSE, legend = "TRUE")
 result18.on <- batz.plotactivity_observations(processed.real, job18.on, suntimes.synth, aes.default.real)
 g18.on <- result18.on$ggplots[[1]]
-colour.scale.18on <- ggplot2::ggplot_build(g18.on)$plot$scales$get_scales("colour")
-cat("colour scale is non-NULL (present) when legend=TRUE?", !is.null(colour.scale.18on), "\n")
-cat("colour scale's legend title matches aes.default's legend.groupval.title ('Detector')?",
-    identical(colour.scale.18on$name, "Detector"), "\n")
-cat("colour scale covers all 3 selected detector values?",
-    setequal(colour.scale.18on$get_breaks(), c("105059-NW3", "105059-SE3", "105059-SW3")), "\n")
+fill.scale.18on <- ggplot2::ggplot_build(g18.on)$plot$scales$get_scales("fill")
+cat("fill scale is non-NULL (present) when legend=TRUE?", !is.null(fill.scale.18on), "\n")
+cat("fill scale's legend title matches aes.default's legend.groupval.title ('Detector')?",
+    identical(fill.scale.18on$name, "Detector"), "\n")
+cat("fill scale covers all 3 selected detector values plus 40kHzMyo?",
+    setequal(fill.scale.18on$get_breaks(), c("105059-NW3", "105059-SE3", "105059-SW3", "40kHzMyo")), "\n")
+built18.on <- ggplot2::ggplot_build(g18.on)
+cat("no border drawn on any bar (colour aesthetic is NA everywhere in both geom_col layers)?",
+    all(is.na(built18.on$data[[1]]$colour)) && all(is.na(built18.on$data[[2]]$colour)), "\n")
 
 job18.off <- make.job(plot.group = "aru.name",
                        plot.sets = '"105059-NW3" "105059-SE3" "105059-SW3"',
                        date.start = "7/7/2026", date.end = "8/18/2026",
                        pool = FALSE, legend = "FALSE")
 result18.off <- batz.plotactivity_observations(processed.real, job18.off, suntimes.synth, aes.default.real)
-colour.scale.18off <- ggplot2::ggplot_build(result18.off$ggplots[[1]])$plot$scales$get_scales("colour")
-cat("legend=FALSE -> no colour scale (matches pre-2026-08-29 appearance)?", is.null(colour.scale.18off), "\n")
+fill.scale.18off <- ggplot2::ggplot_build(result18.off$ggplots[[1]])$plot$scales$get_scales("fill")
+cat("legend=FALSE -> fill scale falls back to the plain All detections/40kHzMyo scheme?",
+    setequal(fill.scale.18off$get_limits(), c("All detections", "40kHzMyo")), "\n")
 
 ## legend has nothing to show when pooled, or when only one value is selected, regardless of $legend
 job18.pooled <- make.job(plot.group = "aru.name",
@@ -411,15 +415,17 @@ job18.pooled <- make.job(plot.group = "aru.name",
                           date.start = "7/7/2026", date.end = "8/18/2026",
                           pool = TRUE, legend = "TRUE")
 result18.pooled <- batz.plotactivity_observations(processed.real, job18.pooled, suntimes.synth, aes.default.real)
-colour.scale.18pooled <- ggplot2::ggplot_build(result18.pooled$ggplots[[1]])$plot$scales$get_scales("colour")
-cat("legend=TRUE but pool=TRUE (nothing to distinguish) -> no colour scale?", is.null(colour.scale.18pooled), "\n")
+fill.scale.18pooled <- ggplot2::ggplot_build(result18.pooled$ggplots[[1]])$plot$scales$get_scales("fill")
+cat("legend=TRUE but pool=TRUE (nothing to distinguish) -> falls back to plain All detections/40kHzMyo fill scheme?",
+    setequal(fill.scale.18pooled$get_limits(), c("All detections", "40kHzMyo")), "\n")
 
 job18.single <- make.job(plot.group = "aru.name", plot.sets = "105059-NW3",
                           date.start = "7/7/2026", date.end = "8/18/2026",
                           pool = FALSE, legend = "TRUE")
 result18.single <- batz.plotactivity_observations(processed.real, job18.single, suntimes.synth, aes.default.real)
-colour.scale.18single <- ggplot2::ggplot_build(result18.single$ggplots[[1]])$plot$scales$get_scales("colour")
-cat("legend=TRUE but only 1 selected value (nothing to distinguish) -> no colour scale?", is.null(colour.scale.18single), "\n")
+fill.scale.18single <- ggplot2::ggplot_build(result18.single$ggplots[[1]])$plot$scales$get_scales("fill")
+cat("legend=TRUE but only 1 selected value (nothing to distinguish) -> falls back to plain All detections/40kHzMyo fill scheme?",
+    setequal(fill.scale.18single$get_limits(), c("All detections", "40kHzMyo")), "\n")
 
 ## blank $legend on the fig.list row falls back to aes.default's own "legend" parameter (TRUE)
 job18.blank <- make.job(plot.group = "aru.name",
@@ -427,17 +433,53 @@ job18.blank <- make.job(plot.group = "aru.name",
                          date.start = "7/7/2026", date.end = "8/18/2026",
                          pool = FALSE, legend = "")
 result18.blank <- batz.plotactivity_observations(processed.real, job18.blank, suntimes.synth, aes.default.real)
-colour.scale.18blank <- ggplot2::ggplot_build(result18.blank$ggplots[[1]])$plot$scales$get_scales("colour")
-cat("blank $legend on the fig.list row falls back to aes.default's default (TRUE) -> colour scale present?",
-    !is.null(colour.scale.18blank), "\n")
+fill.scale.18blank <- ggplot2::ggplot_build(result18.blank$ggplots[[1]])$plot$scales$get_scales("fill")
+cat("blank $legend on the fig.list row falls back to aes.default's default (TRUE) -> per-detector fill scale present?",
+    setequal(fill.scale.18blank$get_breaks(), c("105059-NW3", "105059-SE3", "105059-SW3", "40kHzMyo")), "\n")
 
 ## fewer configured colors than selected values - cycling, not an error
 aes.default.fewcolors <- aes.default.real
 aes.default.fewcolors$default.value[aes.default.fewcolors$parameter == "legend.groupval.colors"] <- "#111111;#222222"
 result18.cycle <- batz.plotactivity_observations(processed.real, job18.on, suntimes.synth, aes.default.fewcolors)
-colour.scale.18cycle <- ggplot2::ggplot_build(result18.cycle$ggplots[[1]])$plot$scales$get_scales("colour")
-cycle.colors <- colour.scale.18cycle$palette(3)
-cat("only 2 colors configured for 3 values -> no crash, first color reused for the 3rd value (cycling)?",
-    length(cycle.colors) == 3 && cycle.colors[1] == cycle.colors[3] && cycle.colors[1] != cycle.colors[2], "\n")
+built18.cycle <- ggplot2::ggplot_build(result18.cycle$ggplots[[1]])
+cycle.fills <- unique(built18.cycle$data[[1]][, c("group", "fill")])
+cat("only 2 colors configured for 3 values -> no crash, first color reused for a later value (cycling)?",
+    length(unique(cycle.fills$fill)) <= 2 && nrow(cycle.fills) == 3, "\n")
+
+cat("\n\n########## TEST 19: round 2 (2026-08-29) - no border, each bar its own fill color, bar sizes stay constant across nights ##########\n")
+cat("plotopts_callobs.csv no longer has a $legend.groupval.outline.linewidth row (removed, no longer used)?",
+    !("legend.groupval.outline.linewidth" %in% aes.default.real$parameter), "\n")
+
+## no border anywhere, on the "All detections" layer too, even for the plain
+## (non-dodged) fallback scheme
+job19.plain <- make.job(plot.group = "aru.name", plot.sets = "105059-NW3",
+                         date.start = "7/7/2026", date.end = "8/18/2026", pool = FALSE)
+result19.plain <- batz.plotactivity_observations(processed.real, job19.plain, suntimes.synth, aes.default.real)
+built19.plain <- ggplot2::ggplot_build(result19.plain$ggplots[[1]])
+cat("no border drawn in the plain (single-value, no dodge-coloring) fallback path either?",
+    all(is.na(built19.plain$data[[1]]$colour)), "\n")
+
+## bar sizes stay constant (preserve = "single"): a night where only 2 of the
+## 3 selected detectors have data should still draw those 2 bars at the SAME
+## width as a night where all 3 have data - not stretched to fill the gap.
+pd19 <- result18.on$plots[[1]]$pd
+tab19 <- table(pd19$date.parsed[pd19$facet.panel.value == "Big brown bat" & pd19$bar.type == "All detections"])
+dates.full19  <- as.numeric(as.Date(names(tab19)[tab19 == 3]))   # nights with all 3 detectors
+dates.partial19 <- as.numeric(as.Date(names(tab19)[tab19 == 2])) # nights with only 2
+if (length(dates.full19) > 0 && length(dates.partial19) > 0) {
+  g19 <- result18.on$ggplots[[1]]
+  built19 <- ggplot2::ggplot_build(g19)
+  d19 <- built19$data[[1]]
+  # PANEL 2 = "Big brown bat" per its facet position (2nd panel, row1/col2)
+  panel19 <- built19$layout$layout$PANEL[built19$layout$layout$facet.panel.value == "Big brown bat"]
+  sub.full19    <- d19[d19$PANEL == panel19 & round(d19$x) %in% dates.full19, ]
+  sub.partial19 <- d19[d19$PANEL == panel19 & round(d19$x) %in% dates.partial19, ]
+  width.full19    <- unique(round(sub.full19$xmax - sub.full19$xmin, 6))
+  width.partial19 <- unique(round(sub.partial19$xmax - sub.partial19$xmin, 6))
+  cat("bar width on a night with all 3 detectors matches the width on a night with only 2 (preserve = 'single')?",
+      length(width.full19) == 1 && length(width.partial19) == 1 && isTRUE(all.equal(width.full19, width.partial19)), "\n")
+} else {
+  cat("(skipped - couldn't find both a 3-detector night and a 2-detector night for 'Big brown bat' in this data)\n")
+}
 
 cat("\n\nEXIT: 0\n")

@@ -4,7 +4,13 @@
 #' \code{$date}/\code{$time} columns \code{batz.vettedacoustics_merge.format()}
 #' parses out of a recording's file name), auto-detects the format each is
 #' recorded in, parses them, pastes them back together, and returns one
-#' combined date-time character vector formatted per \code{output.format}.
+#' combined date-time character vector formatted per \code{time.format.out}.
+#'
+#' (Renamed 2026-08-29, per Josh, to standardize \code{format}-suffixed
+#' parameters as \code{.in} (candidate input formats) or \code{.out}
+#' (output format): \code{date.format} -> \code{date.format.in},
+#' \code{time.format} -> \code{time.format.in}, \code{output.format} ->
+#' \code{time.format.out}.)
 #'
 #' \strong{How format detection works} (the spec described the goal but not
 #' the mechanics, so a concrete rule had to be built - see the dev script's
@@ -22,7 +28,7 @@
 #'     DIFFERENT actual values (e.g. \code{"01/02/2025"} as
 #'     \verb{\%m/\%d/\%Y} vs \verb{\%d/\%m/\%Y}) - genuine ambiguity - the
 #'     viable candidates are printed and the function stops, UNLESS the
-#'     currently-set \code{date.format}/\code{time.format} value (its
+#'     currently-set \code{date.format.in}/\code{time.format.in} value (its
 #'     default counts the same as an explicit override - see the dev
 #'     script's assumption #4) is itself one of the viable candidates, in
 #'     which case that one is used silently instead.
@@ -57,19 +63,19 @@
 #'   dates (e.g. \code{$date}).
 #' @param time Character or coercible-to-character vector of recorded
 #'   times, the same length as \code{date} (e.g. \code{$time}).
-#' @param date.format Character vector, default \code{c("\%Y\%m\%d")}. Format
-#'   string(s) (\code{strptime()}/\code{as.Date()} style) to prefer if
-#'   \code{date}'s format is genuinely ambiguous between more than one
-#'   built-in candidate - see Details.
-#' @param time.format Character vector, default \code{c("\%H\%M\%S")}. Same
-#'   idea as \code{date.format}, for \code{time}.
-#' @param output.format Character, default
-#'   \code{"\%Y-\%m-\%d \%H:\%M:\%S"}. \code{strftime()}-style format used to
-#'   build the returned combined date-time strings.
+#' @param date.format.in Character vector, default \code{c("\%Y\%m\%d")}.
+#'   Candidate input format string(s) (\code{strptime()}/\code{as.Date()}
+#'   style) to prefer if \code{date}'s format is genuinely ambiguous
+#'   between more than one built-in candidate - see Details.
+#' @param time.format.in Character vector, default \code{c("\%H\%M\%S")}.
+#'   Same idea as \code{date.format.in}, for \code{time}.
+#' @param time.format.out Character, default
+#'   \code{"\%Y-\%m-\%d \%H:\%M:\%S"}. \code{strftime()}-style OUTPUT
+#'   format used to build the returned combined date-time strings.
 #'
 #' @return A character vector the same length as \code{date}/\code{time}:
 #'   the combined date-time for every element, formatted per
-#'   \code{output.format} (\code{NA} for any blank/NA input element).
+#'   \code{time.format.out} (\code{NA} for any blank/NA input element).
 #'
 #' @examples
 #' \dontrun{
@@ -79,9 +85,9 @@
 #'
 #' @export
 batz.datawrangler_call.datetime <- function(date, time,
-                                             date.format = c("%Y%m%d"),
-                                             time.format = c("%H%M%S"),
-                                             output.format = "%Y-%m-%d %H:%M:%S") {
+                                             date.format.in = c("%Y%m%d"),
+                                             time.format.in = c("%H%M%S"),
+                                             time.format.out = "%Y-%m-%d %H:%M:%S") {
 
   if (length(date) != length(time)) {
     stop("`date` and `time` must be the same length (", length(date), " vs ", length(time), ").")
@@ -132,7 +138,7 @@ batz.datawrangler_call.datetime <- function(date, time,
       stop("Could not detect a `", label, "` format - none of the built-in candidate ",
            "formats matched every value of `", label, "`. Candidates tried: ",
            paste(tried, collapse = ", "), ". Pass ", label,
-           ".format explicitly if your data uses a different format.")
+           ".format.in explicitly if your data uses a different format.")
     }
 
     chosen <- viable[1]
@@ -150,7 +156,7 @@ batz.datawrangler_call.datetime <- function(date, time,
           cat("Possible `", label, "` formats (ambiguous - all fit your data but disagree ",
               "on at least one value):\n", sep = "")
           print(viable)
-          stop("`", label, "` format is ambiguous - set ", label, ".format to one of the ",
+          stop("`", label, "` format is ambiguous - set ", label, ".format.in to one of the ",
                "formats printed above to disambiguate.")
         }
       }
@@ -160,16 +166,16 @@ batz.datawrangler_call.datetime <- function(date, time,
     list(format = chosen, parsed = full.parsed)
   }
 
-  date.detect <- detect.format(date, "date", date.candidates, date.format,
+  date.detect <- detect.format(date, "date", date.candidates, date.format.in,
                                 function(x, fmt) as.Date(x, format = fmt))
-  time.detect <- detect.format(time, "time", time.candidates, time.format,
+  time.detect <- detect.format(time, "time", time.candidates, time.format.in,
                                 function(x, fmt) strptime(x, format = fmt, tz = "UTC"))
 
   date.str <- format(date.detect$parsed, "%Y-%m-%d")
   time.str <- format(time.detect$parsed, "%H:%M:%S")
 
   combined  <- as.POSIXct(paste(date.str, time.str), format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
-  date.time <- format(combined, output.format)
+  date.time <- format(combined, time.format.out)
 
   date.time
 }

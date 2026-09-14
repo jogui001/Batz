@@ -62,6 +62,24 @@
 #      matched/renamed, not the values. duplicates.count/duplicates.list are
 #      unaffected either way (they only ever look at recode.table's own first
 #      column, independent of what's being renamed).
+#
+#   9. **Reviewed 2026-09-14, per Josh's project-wide header-standardization
+#      preference - deliberately left UNCHANGED, flagged for review.** The
+#      preference says headers from a loaded file or an externally-supplied
+#      data frame get run through standardize.headers() - but this function's
+#      headers.rename = TRUE mode IS an explicit, user-directed header rename
+#      already, driven by whatever recode.table the caller supplies (e.g.
+#      "A" -> "Alpha"). Auto-standardizing names(data) first would break that:
+#      a raw header like "A" would already be "a" by the time it's compared
+#      against recode.table's literal "A" entry, so the rename would silently
+#      fail to match. So this function does NOT call standardize.headers() on
+#      data in either mode - it's a generic recode/rename utility that trusts
+#      the caller's own recode.table, not a loading step. Headers reaching
+#      this function are typically already standardized upstream (e.g. by
+#      batz.datawrangler_load.files(), which now standardizes on load); if
+#      standardized headers AND a custom rename are both needed, call
+#      standardize.headers() first and build recode.table's first column
+#      against the standardized spellings.
 # =============================================================================
 
 suppressMessages(library(readxl))

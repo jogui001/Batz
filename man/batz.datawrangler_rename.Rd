@@ -66,12 +66,12 @@ unchanged. Requires \code{data} to be a data frame (errors otherwise).}
 }
 \value{
 If \code{headers.rename = TRUE}, \code{data} unchanged except for
-its column names. Otherwise: if \code{data} is a data frame, a data
-frame of the same shape and column names, with every value recoded
-(columns are returned as character vectors); if \code{data} is a vector,
-a character vector of the same length, with values recoded. The four
-diagnostic arguments only print to the console - they never change what
-is returned.
+  its column names. Otherwise: if \code{data} is a data frame, a data
+  frame of the same shape and column names, with every value recoded
+  (columns are returned as character vectors); if \code{data} is a vector,
+  a character vector of the same length, with values recoded. The four
+  diagnostic arguments only print to the console - they never change what
+  is returned.
 }
 \description{
 Recodes every element of a vector, or every element of every column of a
@@ -84,6 +84,29 @@ Alternatively, set \code{headers.rename = TRUE} to rename column HEADERS
 instead of recoding the data frame's contents.
 }
 \details{
+\strong{Header standardization (per Josh, 2026-09-14 project preference)
+- deliberately NOT applied automatically here, flagged for review.} The
+project-wide preference is that headers coming from a loaded file or an
+externally-supplied data frame are run through \code{standardize.headers()}
+(trim whitespace, collapse non-alphanumeric runs to underscores,
+lowercase) - but this function's whole job in \code{headers.rename = TRUE}
+mode is already an explicit, user-directed header rename, driven by
+whatever \code{recode.table} the caller supplies (e.g. \code{"A" ->
+"Alpha"}). Auto-standardizing \code{names(data)} before doing that lookup
+would actively break it: a raw header like \code{"A"} would already have
+become \code{"a"} by the time it's compared against \code{recode.table}'s
+literal \code{"A"} entry, so the intended rename would silently fail to
+match. For that reason \code{batz.datawrangler_rename()} does NOT run
+\code{standardize.headers()} on \code{data} (in either mode) - it is a
+generic recode/rename utility that trusts its caller's own
+\code{recode.table}, not a file/data-loading step the standardization
+preference is aimed at. In practice, headers reaching this function are
+typically already standardized upstream (e.g. by
+\code{batz.datawrangler_load.files()}, which now standardizes on load -
+see its own documentation); if you need standardized headers AND a custom
+rename on top, call \code{standardize.headers()} yourself first and build
+\code{recode.table}'s first column against the standardized spellings.
+
 Matching and replacement are done on the character representation of
 values (\code{as.character}). A value in \code{data} (or, in
 \code{headers.rename} mode, a column header) with no matching entry in

@@ -10,7 +10,7 @@
 #' false mismatch.
 #'
 #' @param data A vector, or a data frame, of bat species identifiers to
-#'   recode. If a data frame is supplied, every column is recorded the same
+#'   recode. If a data frame is supplied, every column is recoded the same
 #'   way (there is no column-selection argument) and comes back as a data
 #'   frame of the same dimensions, with columns returned as character
 #'   vectors.
@@ -67,6 +67,12 @@
 #'   returned unchanged (not \code{NA}, no error).
 #'
 #' @details
+#' \strong{Header standardization (per Josh, 2026-09-14 project preference) - does not apply to this function, flagged not silently skipped.} The project-wide preference is that headers coming from a loaded file or an externally-supplied data frame are run through the shared package helper \code{standardize.headers()} (trim whitespace, collapse non-alphanumeric runs to underscores, lowercase). This function has no raw-header step for that preference to attach to: every element of \code{data} is recoded as a VALUE (a species identifier - a name or code), never as a header, and when \code{data} is a data frame this function never reads, matches on, or otherwise interprets its column names at all - \code{names(out) <- names(data)} just carries them through unchanged as a pure pass-through label. The embedded \code{nabat.names} reference table's own column names (\code{$latin}/\code{$common}/\code{$code4}/\code{$code6}/\code{$fedstatus}/etc.) are this function's fixed, already-established internal schema - not raw headers copied fresh from a file for this rollout - so they are not run through \code{standardize.headers()} either, the same treatment already given to every other \code{batz} function's own output-schema column names.
+#'
+#' (Renamed 2026-08-29, per Josh, from \code{output.format} to
+#' \code{batname.format.out}, to standardize \code{format}-suffixed
+#' parameters as \code{.in}/\code{.out}.)
+#'
 #' If one or more input elements don't match anything in the reference
 #' table, a warning is printed (not raised via \code{warning()} - a plain
 #' \code{cat()} message, matching how similar diagnostics are reported
@@ -119,6 +125,16 @@ batz.batusa_recode.names <- function(data, batname.format.out = "common", gramma
   # $notes added 2026-08-25, plus 8 non-species detection/category label
   # rows - All detections/40KHzMyo/HiF/LoF/HiFrag/LoFrag/Multiple/Social -
   # added 2026-08-27, per Josh). See @details above for how to update this.
+  #
+  # Header standardization (per Josh, 2026-09-14 project preference): NOT
+  # applied to this table's own column names (latin/common/code4/code6/
+  # fedstatus/etc.) - these are this function's own fixed, already-established
+  # output-schema names, not raw headers freshly copied from a loaded file for
+  # this rollout. Nor is it applied anywhere to `data` itself: `data`'s
+  # elements are recoded as VALUES (species identifiers), never as headers,
+  # and when `data` is a data frame its column NAMES are only ever passed
+  # through unchanged (`names(out) <- names(data)`), never read or matched
+  # against. See @details "Header standardization" above.
   # ---------------------------------------------------------------------------
   nabat.names <- structure(list(latin = c("Antrozous pallidus", "Artibeus jamaicensis",
 "Brachyphylla cavernarum", "Choeronycteris mexicana", "Corynorhinus rafinesquii",
@@ -180,9 +196,9 @@ batz.batusa_recode.names <- function(data, batname.format.out = "common", gramma
 "Not Listed", "Endangered", "Endangered", "Not Listed", "Not Listed",
 "Not Listed", "Not Listed", "Not Listed", "Not Listed", "Endangered",
 "Not Listed", "Not Listed", "Not Listed", "Not Listed", "Not Listed",
-"Not Listed", "Not Listed", "Not Listed", "Not Listed", "Endangered",
-"Not Listed", "Not Listed", "Under Review", "Not Listed", "Endangered",
-"Endangered", "Not Listed", "Not Listed", "Not Listed", "Not Listed",
+"Not Listed", "Not Listed", "Not Listed", "Endangered", "Not Listed",
+"Not Listed", "Under Review", "Not Listed", "Endangered", "Endangered",
+"Not Listed", "Not Listed", "Not Listed", "Not Listed", "Not Listed",
 "Not Listed", "Not Listed", "Not Listed", "Not Listed", "Not Listed",
 "Proposed Endangered", "Not Listed", "Not Listed", "", "", "",
 "", "", "", "", ""), iucnstatus = c("Least Concern", "Least Concern",
@@ -231,19 +247,19 @@ batz.batusa_recode.names <- function(data, batname.format.out = "common", gramma
 "CT,MA,ME,NH,NJ,PA,VA,VT", "", "", "", "", "", "", "", "", "IN",
 "", "", "", "", "", "", "", "", "", "", "", "", "", ""), states.the = c("",
 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
-"", "", "", "", "", "", "OK", "", "", "", "", "", "", "", "",
+"", "", "", "", "", "", "", "OK", "", "", "", "", "", "", "",
 "", "", "", "", "", "PA,VT", "TN,WI", "", "", "", "", "", "",
 "", "", "KY,MI", "", "", "", "", "", "", "", "", "", "", "",
 "", "", ""), state.soc = c("", "", "", "AZ,CA", "", "", "", "",
 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
 "", "", "", "", "", "", "", "", "", "", "", "", "AK,WA", "CT,GA,MA,MD,MO,NC,NJ,NY,OH,OK,TN,VA,WV",
 "MI,OH", "", "", "", "", "", "", "", "", "OH", "", "", "", "",
-"", "", "", "", "", "", "", "", "", ""), fed.proposed = c("",
+"", "", "", "", "", "", "", "", ""), fed.proposed = c("",
 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
-"", "", "", "", "", "Under Review, start year unconfirmed", "",
-"", "", "", "", "", "", "", "", "", "", "", "Proposed Endangered, 2022",
-"", "", "", "", "", "", "", "", "", ""), hibernation.strat = c("resident",
+"", "", "", "", "Under Review, start year unconfirmed", "",
+"", "", "", "", "", "", "", "", "", "", "Proposed Endangered, 2022",
+"", "", "", "", "", "", "", "", ""), hibernation.strat = c("resident",
 "resident", "resident", "migratory", "hibernating", "hibernating",
 "hibernating", "hibernating", "unknown", "hibernating", "mixed",
 "resident", "resident", "resident", "unknown", "migratory", "migratory",

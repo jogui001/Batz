@@ -38,14 +38,12 @@ or \code{NA} if it wasn't loaded at all).}
 
 \item{header.match}{Logical, default \code{FALSE}. If \code{TRUE}, every
 file - not just ones sharing a file name with something already loaded
-\itemize{
-\item has its column-name set compared against every already-loaded plain
+- has its column-name set compared against every already-loaded plain
 data frame (in the order those were created); if one matches 100\%
 (same columns, order doesn't matter), the new file is merged into THAT
 object instead of becoming its own. Only ever applies to plain
 single-sheet data frames - a multi-sheet \code{.xlsx}-derived list is
-never compared, as source or as target.
-}}
+never compared, as source or as target.}
 
 \item{duplicates.skip}{Logical, default \code{FALSE}. Governs what
 happens when a file's name already matches an object already loaded
@@ -65,18 +63,18 @@ don't add to the count.}
 }
 \value{
 Invisibly, a named list of everything that was loaded (data
-frames and/or lists-of-sheets, one element per input file/merged group,
-plus \code{log.file} if requested). In addition to being returned,
-every element of that list is also assigned as its own object - under
-its own name - directly into the environment the function was called
-from, so calling \code{batz.datawrangler_load.files(...)} on its own
-(with no assignment) loads everything right into your workspace,
-including \code{log.file} itself if \code{log.file = TRUE}. You can
-still do \code{result <- batz.datawrangler_load.files(...)} and access
-things as \code{result$my.file} if you'd rather work with the list. If
-a file's name isn't a syntactically "plain" R name (it has spaces,
-starts with a digit, etc.), the object is still created exactly as
-named - just access it with backticks or \code{get()}.
+  frames and/or lists-of-sheets, one element per input file/merged group,
+  plus \code{log.file} if requested). In addition to being returned,
+  every element of that list is also assigned as its own object - under
+  its own name - directly into the environment the function was called
+  from, so calling \code{batz.datawrangler_load.files(...)} on its own
+  (with no assignment) loads everything right into your workspace,
+  including \code{log.file} itself if \code{log.file = TRUE}. You can
+  still do \code{result <- batz.datawrangler_load.files(...)} and access
+  things as \code{result$my.file} if you'd rather work with the list. If
+  a file's name isn't a syntactically "plain" R name (it has spaces,
+  starts with a digit, etc.), the object is still created exactly as
+  named - just access it with backticks or \code{get()}.
 }
 \description{
 Scans a directory (and, optionally, its subdirectories) for \code{.csv}
@@ -87,10 +85,30 @@ or an \code{.xlsx} workbook with only one sheet, becomes a data frame. An
 frame per sheet, named by sheet name).
 }
 \details{
-Two independent mechanisms can combine files into one data frame instead
-of creating separate objects: a duplicate FILE NAME (see
-\code{duplicates.skip}) and, optionally, a duplicate HEADER SET across
-differently-named files (see \code{header.match}).
+\strong{Header standardization (per Josh, 2026-09-14 project preference).}
+Every loaded data frame's own column names - a plain \code{.csv}, a
+single-sheet \code{.xlsx}, or each individual sheet of a multi-sheet
+\code{.xlsx} - are run through the shared package helper
+\code{standardize.headers()} (trim whitespace, collapse every run of
+non-alphanumeric characters to a single underscore, lowercase)
+immediately after being read, before any merge-matching logic runs. This
+function never hardcodes a specific column name anywhere in its own
+logic (\code{same.columns()}/\code{find.header.match()}/\code{merge.two()}
+all work generically off whatever \code{names()} a loaded object
+happens to have), so no other code needed to change - but it does mean
+\code{header.match}'s "100\% column set match" comparison, and a
+same-named file's "columns match the existing object" check, now compare
+STANDARDIZED names. Two files whose raw headers only differed by case,
+whitespace, or punctuation (and so previously would NOT have counted as
+a header match) can now match and get merged where they wouldn't have
+before - this is a natural, intended consequence of standardizing before
+comparing, not a separate feature. \strong{File names themselves (used
+for the resulting object names, and for the file-name-based duplicate
+check) are NOT touched by this} - only the column headers INSIDE each
+loaded file/sheet are standardized; a file's own name is this function's
+pre-existing naming mechanism, not a "header from a loaded file", and is
+left exactly as \code{tools::file_path_sans_ext(basename(f))} always
+produced it.
 
 For a file whose base name already matches something already loaded, the
 order of decisions is: (1) \code{duplicates.skip = TRUE} skips it, full
@@ -106,7 +124,9 @@ When merging (by either mechanism), all columns are coerced to character
 first and combined with raw column names preserved exactly
 (\code{check.names = FALSE}) - the same approach used in
 \code{batz.arumeta_merge.format}, avoiding type mismatches between sources
-and avoiding silently mangled column names.
+and avoiding silently mangled column names (these are now the
+already-standardized names from the step above, not the file's original
+raw headers).
 
 \code{$reason} values in \code{log.file}: for \code{action = "loaded"},
 either \code{"file was first of its kind"} (brand-new name, no

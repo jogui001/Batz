@@ -238,6 +238,28 @@
 #     own results; TEST 6 already passes trim.noise/trim.noid explicitly
 #     both ways; TEST 14 already passes dir.sub = TRUE/FALSE explicitly
 #     both ways).
+#
+# 16. **Header standardization (per Josh, 2026-09-14 project preference).**
+#     The arulist file loaded below (SECTION 1) is a real loaded-file
+#     header, so its column names now go through the shared package
+#     helper `standardize.headers()` instead of this function's prior
+#     local, more lenient ad hoc `normalize.header()` (which deleted every
+#     non-alphanumeric character with no separator, instead of
+#     substituting an underscore). Since the package's own `.R` files
+#     load together and can call `standardize.headers()` directly, but
+#     this standalone dev script has no such sibling file to source, the
+#     helper is inlined verbatim just below (SECTION 0b) - same inlining
+#     convention already used in every other `.dev.R` file touched by this
+#     preference. This is a no-op against the real WTG.arulist.csv used in
+#     every test below ($aru/$sunregion are already single lowercase words
+#     with nothing for either normalizer to differ on), and against every
+#     synthetic arulist file built in SECTION 3 (TEST 11-15), all of which
+#     already use plain lowercase $aru/$sunregion headers - but it brings
+#     this function's file-loading step in line with every other `batz`
+#     function that loads a file. `data`'s own `required.headers` (see
+#     SECTION 1) are NOT touched - those are `data`'s own already-
+#     established `batz` output schema (from
+#     batz.merge_vetted.acoustics()), not raw loaded headers.
 # ---------------------------------------------------------------------------
 
 ## ===========================================================================
@@ -246,6 +268,25 @@
 ## assumption #7 above)
 ## ===========================================================================
 source("/home/claude/datetime_work/batz.datawrangler_call.datetime.R")
+
+## ===========================================================================
+## SECTION 0b: standardize.headers() - inlined here (per Josh, 2026-09-14
+## project preference). This is normally a shared, un-exported helper
+## living in its own file inside the package's R/ folder
+## (batz.util_standardize.headers.R), where every other package .R file
+## can call it directly because everything in R/ loads together. This
+## standalone dev script has no such sibling file to source, so the
+## identical definition is inlined here instead - same convention already
+## used in every other .dev.R file touched by this preference. See
+## assumption #16 above.
+## ===========================================================================
+standardize.headers <- function(x) {
+  x <- trimws(as.character(x))
+  x <- gsub("[^A-Za-z0-9]+", "_", x)   # any run of non-alphanumerics -> one underscore
+  x <- gsub("_+", "_", x)              # collapse any doubled-up underscores
+  x <- gsub("^_|_$", "", x)            # strip a leading/trailing underscore
+  tolower(x)
+}
 
 ## ===========================================================================
 ## SECTION 1: function under test (same body as the final .R file)
@@ -267,7 +308,10 @@ batz.generate_plotframe.bat <- function(data,
   ## $sunregion is NOT in this list (and no longer needs to already be a
   ## column of `data`) - it's now loaded from an *arulist.csv file and
   ## joined on below, replacing the old "join it in yourself first"
-  ## requirement. See Details/Follow-up.
+  ## requirement. See Details/Follow-up. These twelve names are `data`'s
+  ## own already-established batz output schema (from
+  ## batz.merge_vetted.acoustics()), not raw loaded headers, so they are
+  ## NOT run through standardize.headers() - see assumption #16 above.
   required.headers <- c("filename", "date.mon", "manid", "autoid.kp",
                          "autoid.sb", "lat", "serial", "lon", "aru.name",
                          "date", "time", "call.datetime")
@@ -290,7 +334,11 @@ batz.generate_plotframe.bat <- function(data,
   ## points to - groupby can be overridden to an unrelated column like
   ## "serial", which wouldn't correspond to the arulist's $aru values at
   ## all) - see Details/Follow-up ----------------------------------------
-  normalize.header <- function(x) tolower(gsub("[^[:alnum:]]", "", x))
+  ## header standardization (per Josh, 2026-09-14 project preference): the
+  ## arulist file's own headers are real loaded-file headers, so they're
+  ## run through the shared package helper standardize.headers() (inlined
+  ## above, SECTION 0b) instead of this function's prior local, more
+  ## lenient ad hoc normalizer - see assumption #16 above.
   arulist.regex <- paste(utils::glob2rx(load.pattern), collapse = "|")
   arulist.files <- list.files(dir.load, pattern = arulist.regex, recursive = dir.sub,
                                full.names = TRUE, ignore.case = TRUE)
@@ -306,7 +354,7 @@ batz.generate_plotframe.bat <- function(data,
     tmp <- tryCatch(read.csv(f, stringsAsFactors = FALSE, check.names = FALSE),
                      error = function(e) NULL)
     if (is.null(tmp)) { arulist.skipped <- c(arulist.skipped, paste0(f, " (could not read file)")); next }
-    names(tmp) <- normalize.header(names(tmp))
+    names(tmp) <- standardize.headers(names(tmp))
     if (!all(c("aru", "sunregion") %in% names(tmp))) {
       arulist.skipped <- c(arulist.skipped, paste0(f, " (missing $aru and/or $sunregion column)")); next
     }

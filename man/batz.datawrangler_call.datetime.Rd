@@ -7,9 +7,9 @@
 batz.datawrangler_call.datetime(
   date,
   time,
-  date.format = c("\%Y\%m\%d"),
-  time.format = c("\%H\%M\%S"),
-  output.format = "\%Y-\%m-\%d \%H:\%M:\%S"
+  date.format.in = c("\%Y\%m\%d"),
+  time.format.in = c("\%H\%M\%S"),
+  time.format.out = "\%Y-\%m-\%d \%H:\%M:\%S"
 )
 }
 \arguments{
@@ -19,56 +19,57 @@ dates (e.g. \code{$date}).}
 \item{time}{Character or coercible-to-character vector of recorded
 times, the same length as \code{date} (e.g. \code{$time}).}
 
-\item{date.format}{Character vector, default \code{c("\%Y\%m\%d")}. Format
-string(s) (\code{strptime()}/\code{as.Date()} style) to prefer if
+\item{date.format.in}{Character vector, default \code{c("\%Y\%m\%d")}.
+Candidate input format string(s) (\code{strptime()}/\code{as.Date()}
+style) to prefer if
 \code{date}'s format is genuinely ambiguous between more than one
 built-in candidate - see Details.}
 
-\item{time.format}{Character vector, default \code{c("\%H\%M\%S")}. Same
-idea as \code{date.format}, for \code{time}.}
+\item{time.format.in}{Character vector, default \code{c("\%H\%M\%S")}. Same
+idea as \code{date.format.in}, for \code{time}.}
 
-\item{output.format}{Character, default
-\code{"\%Y-\%m-\%d \%H:\%M:\%S"}. \code{strftime()}-style format used to
+\item{time.format.out}{Character, default
+\code{"\%Y-\%m-\%d \%H:\%M:\%S"}. \code{strftime()}-style OUTPUT format used to
 build the returned combined date-time strings.}
 }
 \value{
 A character vector the same length as \code{date}/\code{time}:
-the combined date-time for every element, formatted per
-\code{output.format} (\code{NA} for any blank/NA input element).
+  the combined date-time for every element, formatted per
+  \code{time.format.out} (\code{NA} for any blank/NA input element).
 }
 \description{
 Given two parallel vectors \code{date} and \code{time} (e.g. the
 \code{$date}/\code{$time} columns \code{batz.vettedacoustics_merge.format()}
 parses out of a recording's file name), auto-detects the format each is
 recorded in, parses them, pastes them back together, and returns one
-combined date-time character vector formatted per \code{output.format}.
+combined date-time character vector formatted per \code{time.format.out}.
 }
 \details{
 \strong{How format detection works} (the spec described the goal but not
 the mechanics, so a concrete rule had to be built - see the dev script's
 header comment for the full assumptions list):
 \itemize{
-\item A small, fixed list of common date formats (and, separately,
-time formats) is tried against the WHOLE vector at once - one
-format is assumed to describe every non-blank value, not a mix
-row-by-row.
-\item A candidate format is "viable" only if it matches the FULL
-string for every value (not just a lenient prefix match - see the
-WARNING below) and parses to a real, valid date/time.
-\item If exactly one candidate is viable, that's the detected format.
-\item If more than one is viable and they parse the data to
-DIFFERENT actual values (e.g. \code{"01/02/2025"} as
-\verb{\%m/\%d/\%Y} vs \verb{\%d/\%m/\%Y}) - genuine ambiguity - the
-viable candidates are printed and the function stops, UNLESS the
-currently-set \code{date.format}/\code{time.format} value (its
-default counts the same as an explicit override - see the dev
-script's assumption #4) is itself one of the viable candidates, in
-which case that one is used silently instead.
-\item If more than one candidate is viable but they all agree on
-every value, there's no real ambiguity - the first viable one is
-used.
-\item If NO candidate matches at all, that's a separate, always-fatal
-error (added as a safety net, not literally specified).
+  \item A small, fixed list of common date formats (and, separately,
+    time formats) is tried against the WHOLE vector at once - one
+    format is assumed to describe every non-blank value, not a mix
+    row-by-row.
+  \item A candidate format is "viable" only if it matches the FULL
+    string for every value (not just a lenient prefix match - see the
+    WARNING below) and parses to a real, valid date/time.
+  \item If exactly one candidate is viable, that's the detected format.
+  \item If more than one is viable and they parse the data to
+    DIFFERENT actual values (e.g. \code{"01/02/2025"} as
+    \verb{\%m/\%d/\%Y} vs \verb{\%d/\%m/\%Y}) - genuine ambiguity - the
+    viable candidates are printed and the function stops, UNLESS the
+    currently-set \code{date.format.in}/\code{time.format.in} value (its
+    default counts the same as an explicit override - see the dev
+    script's assumption #4) is itself one of the viable candidates, in
+    which case that one is used silently instead.
+  \item If more than one candidate is viable but they all agree on
+    every value, there's no real ambiguity - the first viable one is
+    used.
+  \item If NO candidate matches at all, that's a separate, always-fatal
+    error (added as a safety net, not literally specified).
 }
 
 \strong{WARNING - a real correctness trap this avoids:}
@@ -88,10 +89,8 @@ Naming convention (per project preferences):
 \code{package.family_action.subject()}. This function is
 \code{batz.datawrangler_call.datetime()}: family = "datawrangler"
 (general-purpose data-cleanup helpers), action/subject = "call.datetime"
-\itemize{
-\item "call" here is a noun (the time of a bat call/recording, standard
+- "call" here is a noun (the time of a bat call/recording, standard
 bioacoustics usage), not a verb.
-}
 }
 \examples{
 \dontrun{

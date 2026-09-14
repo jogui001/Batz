@@ -17,6 +17,22 @@
 #     columns (optional)
 #   - trim.noise/trim.noid row-removal (optional)
 #
+# UPDATE (2026-09-14, per Josh's new project-wide header-standardization
+# preference): this function's own normalize.header() - which deleted every
+# separator entirely - is replaced with the shared package helper
+# standardize.headers() (trim, collapse non-alphanumeric runs to a single
+# underscore, lowercase), inlined below since this dev script is standalone.
+# expected.headers is a literal copy of the vetting software's own real
+# column text (not invented shorthand), so per the new preference it is
+# standardized right along with incoming headers: two entries change
+# because their real headers have separators that used to be deleted -
+# "speciesmanualid" -> "species_manual_id" (real header "Species Manual
+# ID") and "wakaleidoscopeautoid" -> "wa_kaleidoscope_auto_id" (real header
+# "WA|Kaleidoscope|Auto ID"). The positional rename immediately downstream
+# is unaffected (it never refers to the old squished text by name). See
+# batz.merge_vetted.acoustics.R's own @details "Header standardization"
+# paragraph for the full explanation.
+#
 # ---------------------------------------------------------------------------
 # ASSUMPTIONS FLAGGED FOR JOSH (spec was open on these - see delivery note):
 #
@@ -26,12 +42,12 @@
 #     Read as a typo, not a real 10-element list - it's an 11-element
 #     positional rename onto the CURRENT 11-column order coming out of the
 #     existing merge/lat-lon-split/filename-parse steps:
-#       filename, monitoringnight, speciesmanualid, wakaleidoscopeautoid,
+#       filename, monitoringnight, species_manual_id, wa_kaleidoscope_auto_id,
 #       sppaccp, lat, serial, lon, aru.name, date, time
 #     ->
 #       filename, date.mon, manid, autoid.kp, autoid.sb, lat, serial, lon,
 #       aru.name, date, time
-#     ("wakaleidoscopeautoid" -> "autoid.kp" and "sppaccp" -> "autoid.sb"
+#     ("wa_kaleidoscope_auto_id" -> "autoid.kp" and "sppaccp" -> "autoid.sb"
 #     make sense once you notice the function merges files from either
 #     k-Pro/Kaleidoscope [kp] or SonoBat [sb] vetting software - Kaleidoscope's
 #     own auto ID column becomes $autoid.kp, SonoBat's "accepted species"
@@ -89,7 +105,7 @@
 #     so a file that lacks it is still merged normally (its rows just get
 #     NA for $sunregion), matching this function's existing tolerant,
 #     skip-only-on-genuinely-missing-required-headers design. A file whose
-#     (normalized) headers DO include "sunregion" has that column carried
+#     (standardized) headers DO include "sunregion" has that column carried
 #     straight through, unchanged, into the merged output - placed next to
 #     $serial/$aru.name (the other detector-level columns) rather than at
 #     the very end. This still doesn't make the function itself DO the
@@ -118,6 +134,18 @@
 source("/home/claude/datetime_work/batz.datawrangler_call.datetime.R")
 source("/home/claude/vettedacoustics_work2/batz.batusa_recode.names.R")
 
+## standardize.headers() - inlined here because this dev script is
+## standalone (not part of the installed package); in the real package
+## every function in R/ is loaded together, so batz.merge_vetted.acoustics()
+## can call it directly without this. See batz.util_standardize.headers.R.
+standardize.headers <- function(x) {
+  x <- trimws(as.character(x))
+  x <- gsub("[^A-Za-z0-9]+", "_", x)
+  x <- gsub("_+", "_", x)
+  x <- gsub("^_|_$", "", x)
+  tolower(x)
+}
+
 ## ===========================================================================
 ## SECTION 1: function under test (same body as the final .R file)
 ## ===========================================================================
@@ -132,10 +160,8 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
                                                trim.noise = TRUE,
                                                trim.noid = FALSE) {
 
-  expected.headers <- c("filename", "monitoringnight", "speciesmanualid",
-                         "wakaleidoscopeautoid", "sppaccp", "lat")
-
-  normalize.header <- function(x) tolower(gsub("[^[:alnum:]]", "", x))
+  expected.headers <- c("filename", "monitoringnight", "species_manual_id",
+                         "wa_kaleidoscope_auto_id", "sppaccp", "lat")
 
   regex.pattern <- paste(utils::glob2rx(load.pattern), collapse = "|")
   files <- list.files(dir.load, pattern = regex.pattern, recursive = dir.sub,
@@ -155,7 +181,7 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
     tmp <- tryCatch(read.csv(f, stringsAsFactors = FALSE, check.names = FALSE),
                      error = function(e) NULL)
     if (is.null(tmp)) { add.log(f, "could not read file", "none"); next }
-    names(tmp) <- normalize.header(names(tmp))
+    names(tmp) <- standardize.headers(names(tmp))
     missing.headers <- setdiff(expected.headers, names(tmp))
     if (length(missing.headers) > 0) {
       add.log(f, "mismatched headers", paste(missing.headers, collapse = ", ")); next
@@ -169,7 +195,7 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
     serial.vals <- if ("serial" %in% names(tmp)) as.character(tmp$serial) else
       rep(NA_character_, nrow(tmp))
     ## $sunregion is OPTIONAL, not one of the required expected.headers - a
-    ## file is never skipped for lacking it. If a file's own (normalized)
+    ## file is never skipped for lacking it. If a file's own (standardized)
     ## headers happen to include it, copy those values straight through;
     ## otherwise this file's rows get NA for $sunregion (still needs to be
     ## joined in separately, exactly as before, for files that don't already
@@ -350,7 +376,6 @@ cat("rows remaining (should keep the 'NoID' row, drop only 'noise' -> 3 left):",
     nrow(res6$vetted.merged), "\n\n")
 
 cat("=== TEST 7: bare call auto-assign into caller's environment ===\n")
-rm(list = c("vetted.merged"), envir = .GlobalEnv)
 suppressWarnings(rm(vetted.merged))
 batz.merge_vetted.acoustics(dir.load = "testdata", load.pattern = "*synth_vetted.csv",
                                    duplicates.remove = FALSE)
@@ -385,7 +410,7 @@ print(head(res10$vetted.merged[, c("manid", "autoid.kp", "autoid.sb")], 3))
 dir.create("testdata/sunregion", showWarnings = FALSE, recursive = TRUE)
 
 ## file A: HAS a $sunregion column (any-case/punctuation header variant,
-## to confirm normalize.header() picks it up the same way it does every
+## to confirm standardize.headers() picks it up the same way it does every
 ## other expected header)
 synth.with.sun <- data.frame(
   Filename = c("SYN-B_20260601_010101_000.wav", "SYN-B_20260601_020202_000.wav"),

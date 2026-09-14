@@ -8,24 +8,39 @@
 #' format, optionally fills blank manual IDs from the matching auto ID
 #' column, and optionally drops noise/unidentified rows.
 #'
-#' \strong{Header standardization - a real bug in the spec's own snippet was
-#' caught and fixed here.} Josh's spec gives the standardization line
-#' literally as \code{tolower(gsub("[[:punct:]]", "", names(temp)))}, but
-#' \code{[[:punct:]]} matches punctuation only, not whitespace. Applied
-#' literally, the real header \code{"Species Manual ID"} would standardize
-#' to \code{"species manual id"} (spaces survive) - which would never match
-#' the spec's own expected header \code{"speciesmanualid"}, and every real
-#' file would be skipped as "mismatched headers" forever. Fixed here to
-#' strip ALL non-alphanumeric characters:
-#' \code{tolower(gsub("[^[:alnum:]]", "", names(tmp)))} - verified against a
-#' real file (\code{FinalVetted.csv}, 6,487 rows) that this exact
-#' substitution turns \code{"Species Manual ID"} into
-#' \code{"speciesmanualid"} and \code{"WA|Kaleidoscope|Auto ID"} into
-#' \code{"wakaleidoscopeautoid"}, both matching the spec's expected list
-#' exactly.
+#' \strong{Header standardization (per Josh, 2026-09-14 project preference)
+#' - real matching-behavior change, flagged not silently made.} This
+#' function's own prior header normalization -
+#' \code{tolower(gsub("[^[:alnum:]]", "", names(tmp)))}, which deleted every
+#' separator entirely - has been replaced by the shared package helper
+#' \code{standardize.headers()} (trim whitespace, collapse every run of
+#' non-alphanumeric characters to a single underscore, lowercase - i.e.
+#' snake_case). \code{expected.headers} is itself a literal, uninvented copy
+#' of the vetting software's own real column text (not a \code{batz}-
+#' invented shorthand), so per this project's header-standardization
+#' preference both sides are standardized together: two of its six entries
+#' change, because the real headers they represent contain spaces/
+#' punctuation that used to be deleted and are now preserved as underscores
+#' - \code{"speciesmanualid"} -> \code{"species_manual_id"} (real header:
+#' \code{"Species Manual ID"}) and \code{"wakaleidoscopeautoid"} ->
+#' \code{"wa_kaleidoscope_auto_id"} (real header: \code{"WA|Kaleidoscope|
+#' Auto ID"}). The other four (\code{filename}, \code{monitoringnight},
+#' \code{sppaccp}, \code{lat}) are unaffected, since their real headers
+#' (\code{"Filename"}, \code{"MonitoringNight"}, \code{"SppAccp"},
+#' \code{"Lat"}) have no separators to begin with. This is purely a
+#' vocabulary change - the POSITIONAL rename immediately below (which maps
+#' these six standardized names, by column position, onto \code{filename,
+#' date.mon, manid, autoid.kp, autoid.sb, lat}) is unaffected, since it never
+#' refers to the old squished text by name. \strong{Historical note (no
+#' longer applicable after this change):} Josh's original spec gave this
+#' standardization line literally as \code{tolower(gsub("[[:punct:]]", "",
+#' names(temp)))}, which matched punctuation only, not whitespace - that bug
+#' (and the fix that replaced it with the old delete-based
+#' \code{normalize.header()}) is superseded by the switch to
+#' \code{standardize.headers()} described above.
 #'
 #' Expected (standardized) headers: \code{filename}, \code{monitoringnight},
-#' \code{speciesmanualid}, \code{wakaleidoscopeautoid}, \code{sppaccp},
+#' \code{species_manual_id}, \code{wa_kaleidoscope_auto_id}, \code{sppaccp},
 #' \code{lat}. A file missing any of these (after
 #' standardization) is skipped with \code{$reason = "mismatched headers"}
 #' and \code{$headers.missing} listing which ones (comma-separated). A file
@@ -66,11 +81,11 @@
 #'     verbatim, was missing a comma between \code{"autoid.sb"} and
 #'     \code{"lat"} - read as a typo, not a real 10-element list. The 11
 #'     existing columns (in the order produced by the steps above:
-#'     \code{filename, monitoringnight, speciesmanualid,
-#'     wakaleidoscopeautoid, sppaccp, lat, serial, lon, aru.name, date,
+#'     \code{filename, monitoringnight, species_manual_id,
+#'     wa_kaleidoscope_auto_id, sppaccp, lat, serial, lon, aru.name, date,
 #'     time}) are renamed POSITIONALLY to \code{filename, date.mon, manid,
 #'     autoid.kp, autoid.sb, lat, serial, lon, aru.name, date, time}.
-#'     \code{"wakaleidoscopeautoid"} becomes \code{"autoid.kp"} and
+#'     \code{"wa_kaleidoscope_auto_id"} becomes \code{"autoid.kp"} and
 #'     \code{"sppaccp"} becomes \code{"autoid.sb"} - this makes sense once
 #'     you notice the function merges files from either k-Pro/Kaleidoscope
 #'     ("kp") or SonoBat ("sb") vetting software: Kaleidoscope's own auto
@@ -149,7 +164,7 @@
 #' above, so a file that lacks it is still merged normally exactly as
 #' before - its rows just get \code{NA} for \code{$sunregion} - matching
 #' this function's existing tolerant, skip-only-on-genuinely-missing-
-#' required-headers design. A file whose (normalized) headers DO include
+#' required-headers design. A file whose (standardized) headers DO include
 #' \code{sunregion} has that column carried straight through, unchanged,
 #' into \code{vetted.merged}, placed next to \code{$serial}/\code{
 #' $aru.name} (the other detector-level columns) in the final column
@@ -252,10 +267,13 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
                                                trim.noise = TRUE,
                                                trim.noid = FALSE) {
 
-  expected.headers <- c("filename", "monitoringnight", "speciesmanualid",
-                         "wakaleidoscopeautoid", "sppaccp", "lat")
-
-  normalize.header <- function(x) tolower(gsub("[^[:alnum:]]", "", x))
+  ## header standardization (per Josh, 2026-09-14 project preference):
+  ## expected.headers is a literal, uninvented copy of the vetting
+  ## software's own real column text, so it is standardized right along
+  ## with incoming raw headers via the shared standardize.headers()
+  ## helper - see @details "Header standardization" above.
+  expected.headers <- c("filename", "monitoringnight", "species_manual_id",
+                         "wa_kaleidoscope_auto_id", "sppaccp", "lat")
 
   regex.pattern <- paste(utils::glob2rx(load.pattern), collapse = "|")
   files <- list.files(dir.load, pattern = regex.pattern, recursive = dir.sub,
@@ -275,7 +293,7 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
     tmp <- tryCatch(read.csv(f, stringsAsFactors = FALSE, check.names = FALSE),
                      error = function(e) NULL)
     if (is.null(tmp)) { add.log(f, "could not read file", "none"); next }
-    names(tmp) <- normalize.header(names(tmp))
+    names(tmp) <- standardize.headers(names(tmp))
     missing.headers <- setdiff(expected.headers, names(tmp))
     if (length(missing.headers) > 0) {
       add.log(f, "mismatched headers", paste(missing.headers, collapse = ", ")); next
@@ -283,13 +301,13 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
     if (nrow(tmp) == 0) { add.log(f, "no records", "none"); next }
     ## $serial is OPTIONAL (2026-08-30 follow-up), not one of the required
     ## expected.headers - a file is never skipped for lacking it (e.g. a
-    ## Mobile-transect export, which has no fixed detector serial number at
+    ## Mobile-transect export, which has no fixed instrument serial number at
     ## all). Captured BEFORE trimming to expected.headers below, exactly like
     ## $sunregion, since that trim would otherwise silently drop it.
     serial.vals <- if ("serial" %in% names(tmp)) as.character(tmp$serial) else
       rep(NA_character_, nrow(tmp))
     ## $sunregion is OPTIONAL, not one of the required expected.headers - a
-    ## file is never skipped for lacking it. If a file's own (normalized)
+    ## file is never skipped for lacking it. If a file's own (standardized)
     ## headers happen to include it, copy those values straight through;
     ## otherwise this file's rows get NA for $sunregion (still needs to be
     ## joined in separately, exactly as before, for files that don't already

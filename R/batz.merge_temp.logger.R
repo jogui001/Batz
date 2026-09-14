@@ -7,37 +7,71 @@
 #' as humidity-capable, and trims records recorded outside each unit's
 #' deployment/recovery window.
 #'
-#' RH is gated strictly on the matched \code{templog.meta.csv} \code{$logger.type}
+#' \strong{Header standardization (per Josh, 2026-09-14 project preference)
+#' - real, documented output-schema change.} \code{templog.meta.csv}'s own
+#' headers are a literal, uninvented copy of that file's real column text
+#' (not a \code{batz}-invented shorthand), so they are now run through the
+#' shared package helper \code{standardize.headers()} (trim whitespace,
+#' collapse every run of non-alphanumeric characters to a single
+#' underscore, lowercase) right after loading - this function had no
+#' header normalization of any kind before this change, so it also newly
+#' tolerates whitespace/case/punctuation variation in the meta file that
+#' used to require an exact literal match. Every meta-file column the code
+#' refers to by name is renamed accordingly: \code{serial#} -> \code{
+#' serial} (the \code{#} is stripped as a non-alphanumeric character),
+#' \code{serial.num} -> \code{serial_num}, \code{serial.short} -> \code{
+#' serial_short}, \code{logger.type} -> \code{logger_type}, \code{
+#' station.code} -> \code{station_code}, \code{date.deployment} -> \code{
+#' date_deployment}, \code{time.deployment} -> \code{time_deployment},
+#' \code{date.recovery} -> \code{date_recovery}, \code{time.recovery} ->
+#' \code{time_recovery}, \code{room.number} -> \code{room_number}, \code{
+#' room.name} -> \code{room_name}. Since every OTHER meta column (besides
+#' the join key) is appended verbatim onto \code{templog.merged} (see
+#' below), this cascades into a real, visible change in that returned data
+#' frame's own column names. \strong{This does NOT affect \code{
+#' templog.merged}'s/\code{templog.notes}'s own \code{$serial.num} column}
+#' - that one is this function's own INVENTED identifier, parsed from each
+#' raw file's NAME (its leading 8-digit serial), not a header loaded from
+#' any file, so it keeps its existing dot-separated name per this
+#' project's ordinary output convention. \strong{Anyone with a saved
+#' templog.meta.csv using the old dotted header spellings should re-save
+#' it with the new underscore spellings (or simply let it load as-is,
+#' since \code{standardize.headers()} converts either spelling to the same
+#' result), and update any downstream script that reads
+#' \code{templog.merged} by the old dotted meta-column names.}
+#'
+#' RH is gated strictly on the matched \code{templog.meta.csv} \code{$logger_type}
 #' - not on header text or any other heuristic:
 #' \itemize{
-#'   \item \code{logger.type == "H"}: \code{$temp.wet.c} keeps the real
+#'   \item \code{logger_type == "H"}: \code{$temp.wet.c} keeps the real
 #'     column-4 reading, and \code{$rh} is calculated from dry/wet bulb.
-#'   \item \code{logger.type == "T"}: \code{$temp.wet.c} and \code{$rh} are
+#'   \item \code{logger_type == "T"}: \code{$temp.wet.c} and \code{$rh} are
 #'     both forced to \code{NA}, even if the raw file has a second
 #'     temperature column.
 #'   \item No confident meta match (missing, ambiguous, or no meta.csv at
 #'     all): treated the same as \code{"T"} (both \code{NA}).
 #' }
 #'
-#' The meta join uses ONLY \code{$serial#} (the file's real 8-digit serial)
-#' plus the file's own observed \code{[$date.start, $date.end]} to pick the
-#' right meta row - \code{$serial.short} and \code{$logger.type} are never
-#' used to find or disambiguate the match (only as a fallback for older meta
-#' files with no \code{$serial#} column at all). Once a single confident meta
-#' row is found, every OTHER column from that row (\code{serial.short},
-#' \code{date.deployment}, \code{date.recovery}, \code{room.number},
-#' \code{room.name}, \code{station.code}, \code{logger.type}) is appended to
+#' The meta join uses ONLY \code{$serial} (the file's real 8-digit serial,
+#' matched against a standardized \code{serial#} header) plus the file's own
+#' observed \code{[$date.start, $date.end]} to pick the right meta row -
+#' \code{$serial_short} and \code{$logger_type} are never used to find or
+#' disambiguate the match (only as a fallback for older meta files with no
+#' \code{serial#} column at all). Once a single confident meta row is found,
+#' every OTHER column from that row (\code{serial_short},
+#' \code{date_deployment}, \code{date_recovery}, \code{room_number},
+#' \code{room_name}, \code{station_code}, \code{logger_type}) is appended to
 #' every record from that file in \code{$templog.merged}, not just used
 #' internally.
 #'
 #' Once a meta row is matched, any record whose \code{$date.time} falls
-#' before \code{$date.deployment}+\code{$time.deployment} or after
-#' \code{$date.recovery}+\code{$time.recovery} is dropped from
+#' before \code{$date_deployment}+\code{$time_deployment} or after
+#' \code{$date_recovery}+\code{$time_recovery} is dropped from
 #' \code{$templog.merged} (e.g. readings taken during setup before actual
 #' deployment, or after physical recovery but before the logger stopped
 #' recording). This only runs when the matched meta row has BOTH date and
 #' time columns for deployment and recovery - meta files with date-only
-#' columns (no \code{$time.deployment}/\code{$time.recovery}), or files with
+#' columns (no \code{$time_deployment}/\code{$time_recovery}), or files with
 #' no confident meta match at all, are left untrimmed. The count of trimmed
 #' records per file is in \code{$templog.notes$rows.trimmed}, and (when > 0)
 #' also called out in \code{$templog.notes$notes}.
@@ -72,7 +106,14 @@
 #'   unless you explicitly pass \code{dir.sub = TRUE}.
 #' @param dir.save Directory to write \code{templog.merged.csv} and
 #'   \code{templog.notes.csv} into when \code{write.output = TRUE}. Default:
-#'   same as \code{dir.load}.
+#'   the current working directory (\code{getwd()}) - set this separately if
+#'   the output should be written somewhere other than where the input
+#'   \verb{*templog.csv} files were loaded from. (Standardized 2026-08-29,
+#'   per Josh: previously defaulted to \code{dir.load}, which silently
+#'   mirrored whatever \code{dir.load} was rather than defaulting to a
+#'   sensible location on its own - the same pattern already fixed as a bug
+#'   in \code{batz.suntimes_generate()}; \code{dir.save} now always
+#'   defaults to \code{getwd()} for consistency across the package.)
 #' @param write.output If \code{TRUE} (default), also write
 #'   \code{templog.merged.csv} and \code{templog.notes.csv} into
 #'   \code{dir.save} (with \code{$rh} rounded to 3 decimal places in the
@@ -83,7 +124,8 @@
 #'     \item{templog.merged}{\code{$obs}, \code{$date.time},
 #'       \code{$temp.dry.c}, \code{$temp.wet.c}, \code{$rh},
 #'       \code{$serial.num}, plus every other column from the matched
-#'       \code{templog.meta.csv} row.}
+#'       \code{templog.meta.csv} row (standardized names - see "Header
+#'       standardization" above).}
 #'     \item{templog.notes}{\code{$serial.num}, \code{$date.start},
 #'       \code{$date.end}, \code{$temp.type}, \code{$rows.in},
 #'       \code{$rows.out}, \code{$rows.trimmed}, \code{$notes}.}
@@ -100,7 +142,7 @@
 batz.merge_temp.logger <- function(dir.load = getwd(),
                                           load.pattern = c("*templog.csv", "*templog.meta.csv"),
                                           dir.sub = FALSE,
-                                          dir.save = dir.load,
+                                          dir.save = getwd(),
                                           write.output = TRUE) {
 
   ## ---- internal helpers ----------------------------------------------------
@@ -172,8 +214,8 @@ batz.merge_temp.logger <- function(dir.load = getwd(),
     as.POSIXct(x, format = fmt, tz = "America/New_York")
   }
 
-  ## combine a templog.meta.csv $date.deployment/$date.recovery ("m/d/Y")
-  ## with its companion $time.deployment/$time.recovery ("H:M:S") into one
+  ## combine a templog.meta.csv $date_deployment/$date_recovery ("m/d/Y")
+  ## with its companion $time_deployment/$time_recovery ("H:M:S") into one
   ## POSIXct. Returns NA if either piece is missing/blank/unparseable.
   parse.meta.datetime <- function(date.str, time.str) {
     if (is.null(date.str) || is.null(time.str) ||
@@ -199,45 +241,52 @@ batz.merge_temp.logger <- function(dir.load = getwd(),
                          colClasses = "character", check.names = FALSE)
     templog.meta <- Reduce(rbind.fill, meta.list)
     templog.meta <- templog.meta[!duplicated(templog.meta), ]
+    ## header standardization (per Josh, 2026-09-14 project preference):
+    ## templog.meta.csv's own headers are a literal, uninvented copy of the
+    ## meta file's real column text, so they're standardized the same as
+    ## any other loaded file's headers - see @details "Header
+    ## standardization" above.
+    names(templog.meta) <- standardize.headers(names(templog.meta))
   } else {
-    templog.meta <- data.frame(serial.num = character(0),
-                                station.code = character(0),
+    templog.meta <- data.frame(serial_num = character(0),
+                                station_code = character(0),
                                 stringsAsFactors = FALSE)
   }
 
-  ## if $logger.type doesn't exist, derive it from the last letter of
-  ## $station.code (T = temp only, H = temp + humidity)
-  if (nrow(templog.meta) > 0 && !"logger.type" %in% names(templog.meta)) {
-    templog.meta$logger.type <- toupper(substr(templog.meta$station.code,
-                                                 nchar(templog.meta$station.code),
-                                                 nchar(templog.meta$station.code)))
+  ## if $logger_type doesn't exist, derive it from the last letter of
+  ## $station_code (T = temp only, H = temp + humidity)
+  if (nrow(templog.meta) > 0 && !"logger_type" %in% names(templog.meta)) {
+    templog.meta$logger_type <- toupper(substr(templog.meta$station_code,
+                                                 nchar(templog.meta$station_code),
+                                                 nchar(templog.meta$station_code)))
   }
 
   ## --- meta matching setup -------------------------------------------------
   ## Preferred path: templog.meta.csv has a real 8-digit serial number column
-  ## (seen as "serial#" in practice) - match a file's serial.num to it
-  ## EXACTLY. The same physical logger gets redeployed to different stations
-  ## over time, so a serial# can legitimately appear more than once;
-  ## disambiguate using the file's own observed date range against each
-  ## candidate row's [$date.deployment, $date.recovery] window.
+  ## (seen as "serial#" in practice, standardized to "serial") - match a
+  ## file's serial.num to it EXACTLY. The same physical logger gets
+  ## redeployed to different stations over time, so a serial can
+  ## legitimately appear more than once; disambiguate using the file's own
+  ## observed date range against each candidate row's
+  ## [$date_deployment, $date_recovery] window.
   ##
-  ## Fallback path: older/partial meta files only have $serial.short, which
+  ## Fallback path: older/partial meta files only have $serial_short, which
   ## is just the last 3-4 digits of the real serial (and may carry stray
   ## characters like "7273+*"). Match a file's serial.num by comparing its
   ## last 4 digits first, falling back to the last 3 only when that 3-digit
   ## value isn't also a substring of some 4-digit code in the table (a
   ## 3-digit reading could otherwise just be a truncated 4-digit one -
   ## unresolvable, so it's skipped rather than guessed at).
-  serial.col <- (if ("serial#" %in% names(templog.meta)) "serial#"
-                 else if ("serial.num" %in% names(templog.meta)) "serial.num"
+  serial.col <- (if ("serial" %in% names(templog.meta)) "serial"
+                 else if ("serial_num" %in% names(templog.meta)) "serial_num"
                  else NA_character_)
 
-  if (nrow(templog.meta) > 0 && is.na(serial.col) && "serial.short" %in% names(templog.meta)) {
-    templog.meta$serial.short.clean <- gsub("[^0-9]", "", templog.meta$serial.short)
-    all.4digit <- unique(templog.meta$serial.short.clean[nchar(templog.meta$serial.short.clean) == 4])
-    ambiguous.3digit <- unique(templog.meta$serial.short.clean[
-      nchar(templog.meta$serial.short.clean) == 3 &
-      sapply(templog.meta$serial.short.clean, function(d) any(grepl(d, all.4digit, fixed = TRUE)))
+  if (nrow(templog.meta) > 0 && is.na(serial.col) && "serial_short" %in% names(templog.meta)) {
+    templog.meta$serial_short_clean <- gsub("[^0-9]", "", templog.meta$serial_short)
+    all.4digit <- unique(templog.meta$serial_short_clean[nchar(templog.meta$serial_short_clean) == 4])
+    ambiguous.3digit <- unique(templog.meta$serial_short_clean[
+      nchar(templog.meta$serial_short_clean) == 3 &
+      sapply(templog.meta$serial_short_clean, function(d) any(grepl(d, all.4digit, fixed = TRUE)))
     ])
   } else {
     ambiguous.3digit <- character(0)
@@ -248,7 +297,7 @@ batz.merge_temp.logger <- function(dir.load = getwd(),
   ## surface all distinct candidate stations in the notes rather than
   ## silently picking one
   resolve.match <- function(match.rows, match.desc) {
-    stations <- unique(match.rows$station.code)
+    stations <- unique(match.rows$station_code)
     if (length(stations) == 1) {
       list(meta.row = match.rows[1, , drop = FALSE],
            meta.notes = paste0("meta match ", match.desc, ": ", stations))
@@ -264,11 +313,11 @@ batz.merge_temp.logger <- function(dir.load = getwd(),
   ## leaves nothing, fall back to the full candidate set
   filter.by.date <- function(match.rows, date.start, date.end) {
     if (nrow(match.rows) <= 1 || is.na(date.start) || is.na(date.end) ||
-        !all(c("date.deployment", "date.recovery") %in% names(match.rows))) {
+        !all(c("date_deployment", "date_recovery") %in% names(match.rows))) {
       return(match.rows)
     }
-    dep <- as.Date(match.rows$date.deployment, format = "%m/%d/%Y")
-    rec <- as.Date(match.rows$date.recovery, format = "%m/%d/%Y")
+    dep <- as.Date(match.rows$date_deployment, format = "%m/%d/%Y")
+    rec <- as.Date(match.rows$date_recovery, format = "%m/%d/%Y")
     f.start <- as.Date(date.start)
     f.end   <- as.Date(date.end)
     keep <- !is.na(dep) & !is.na(rec) & !(f.end < dep | f.start > rec)
@@ -278,7 +327,7 @@ batz.merge_temp.logger <- function(dir.load = getwd(),
   ## column names to append from a matched meta row - everything except
   ## whatever the join actually used to find it (serial# duplicates
   ## $serial.num already; the internal .clean helper isn't real meta data)
-  meta.append.cols <- setdiff(names(templog.meta), c(serial.col, "serial.short.clean"))
+  meta.append.cols <- setdiff(names(templog.meta), c(serial.col, "serial_short_clean"))
 
   ## look up the single matching meta row (if any) + a diagnostic note, for
   ## one file's serial.num / observed date range
@@ -296,13 +345,13 @@ batz.merge_temp.logger <- function(dir.load = getwd(),
       return(resolve.match(match.rows, paste0("on serial# (", serial.num, ")")))
     }
 
-    ## fallback: serial.short suffix matching (only used when the meta file
-    ## has no real serial# column at all)
-    if (!"serial.short" %in% names(templog.meta)) return(no.match)
+    ## fallback: serial_short suffix matching (only used when the meta file
+    ## has no real serial column at all)
+    if (!"serial_short" %in% names(templog.meta)) return(no.match)
     last4 <- substr(serial.num, nchar(serial.num) - 3, nchar(serial.num))
     last3 <- substr(serial.num, nchar(serial.num) - 2, nchar(serial.num))
 
-    match.rows <- templog.meta[templog.meta$serial.short.clean == last4, ]
+    match.rows <- templog.meta[templog.meta$serial_short_clean == last4, ]
     if (nrow(match.rows) > 0) {
       match.rows <- filter.by.date(match.rows, date.start, date.end)
       return(resolve.match(match.rows, paste0("on last 4 digits (", last4, ")")))
@@ -310,9 +359,9 @@ batz.merge_temp.logger <- function(dir.load = getwd(),
     if (last3 %in% ambiguous.3digit) {
       return(list(meta.row = NULL,
                   meta.notes = paste0("meta match skipped: last 3 digits (", last3,
-                                       ") ambiguous with a 4-digit serial.short")))
+                                       ") ambiguous with a 4-digit serial_short")))
     }
-    match.rows <- templog.meta[templog.meta$serial.short.clean == last3, ]
+    match.rows <- templog.meta[templog.meta$serial_short_clean == last3, ]
     if (nrow(match.rows) > 0) {
       match.rows <- filter.by.date(match.rows, date.start, date.end)
       return(resolve.match(match.rows, paste0("on last 3 digits (", last3, ")")))
@@ -412,14 +461,14 @@ batz.merge_temp.logger <- function(dir.load = getwd(),
     ## recovery window (date AND time) -----------------------------------
     ## Only applied when the matched meta row carries full date+time columns
     ## for both deployment and recovery; meta files without
-    ## $time.deployment/$time.recovery (or with no confident match at all)
+    ## $time_deployment/$time_recovery (or with no confident match at all)
     ## skip this step entirely - nothing is trimmed, same as before this
     ## feature existed.
     rows.trimmed <- 0L
     if (!is.null(meta.row) &&
-        all(c("date.deployment", "time.deployment", "date.recovery", "time.recovery") %in% names(meta.row))) {
-      deploy.dt  <- parse.meta.datetime(meta.row$date.deployment[1], meta.row$time.deployment[1])
-      recover.dt <- parse.meta.datetime(meta.row$date.recovery[1], meta.row$time.recovery[1])
+        all(c("date_deployment", "time_deployment", "date_recovery", "time_recovery") %in% names(meta.row))) {
+      deploy.dt  <- parse.meta.datetime(meta.row$date_deployment[1], meta.row$time_deployment[1])
+      recover.dt <- parse.meta.datetime(meta.row$date_recovery[1], meta.row$time_recovery[1])
       if (!is.na(deploy.dt) && !is.na(recover.dt)) {
         ## keep records with an unparseable date.time too (can't judge them
         ## against the window, so don't silently drop them here)
@@ -457,10 +506,10 @@ batz.merge_temp.logger <- function(dir.load = getwd(),
 
     temp.dry.c <- temp.col3
 
-    ## RH gated strictly on the matched meta row's $logger.type: H keeps the
+    ## RH gated strictly on the matched meta row's $logger_type: H keeps the
     ## wet-bulb reading and gets RH calculated; T (or no confident meta
     ## match at all) gets NA for both
-    logger.type <- if (!is.null(meta.row) && "logger.type" %in% names(meta.row)) meta.row$logger.type[1] else NA_character_
+    logger.type <- if (!is.null(meta.row) && "logger_type" %in% names(meta.row)) meta.row$logger_type[1] else NA_character_
     if (identical(logger.type, "H")) {
       temp.wet.c <- temp.col4
       rh <- calc.rh(temp.dry.c, temp.wet.c)

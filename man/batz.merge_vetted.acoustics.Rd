@@ -63,12 +63,12 @@ SonoBat's auto ID). See Details.}
 }
 \value{
 Invisibly, a named list: \code{vetted.merged} (always), and
-\code{vetted.merged_log.file} (only if \code{log.file = TRUE}). As a
-side effect, the same object(s) are also assigned directly into the
-calling environment (same auto-assign convention as
-\code{batz.merge_aru.meta}/\code{batz.datawrangler_load.files}),
-so a bare call with no assignment populates \code{vetted.merged}
-(and \code{vetted.merged_log.file}) directly.
+  \code{vetted.merged_log.file} (only if \code{log.file = TRUE}). As a
+  side effect, the same object(s) are also assigned directly into the
+  calling environment (same auto-assign convention as
+  \code{batz.merge_aru.meta}/\code{batz.datawrangler_load.files}),
+  so a bare call with no assignment populates \code{vetted.merged}
+  (and \code{vetted.merged_log.file}) directly.
 }
 \description{
 Searches a directory (and its subdirectories, if \code{dir.sub = TRUE})
@@ -80,27 +80,37 @@ format, optionally fills blank manual IDs from the matching auto ID
 column, and optionally drops noise/unidentified rows.
 }
 \details{
-\strong{Header standardization - a real bug in the spec's own snippet was
-caught and fixed here.} Josh's spec gives the standardization line
-literally as \code{tolower(gsub("[[:punct:]]", "", names(temp)))}, but
-\code{[[:punct:]]} matches punctuation only, not whitespace. Applied
-literally, the real header \code{"Species Manual ID"} would standardize
-to \code{"species manual id"} (spaces survive) - which would never match
-the spec's own expected header \code{"speciesmanualid"}, and every real
-file would be skipped as "mismatched headers" forever. Fixed here to
-strip ALL non-alphanumeric characters:
-\code{tolower(gsub("[^[:alnum:]]", "", names(tmp)))} - verified against a
-real file (\code{FinalVetted.csv}, 6,487 rows) that this exact
-substitution turns \code{"Species Manual ID"} into
-\code{"speciesmanualid"} and \code{"WA|Kaleidoscope|Auto ID"} into
-\code{"wakaleidoscopeautoid"}, both matching the spec's expected list
-exactly.
+\strong{Header standardization (per Josh, 2026-09-14 project preference)
+- real matching-behavior change, flagged not silently made.} This
+function's own prior header normalization -
+\code{tolower(gsub("[^[:alnum:]]", "", names(tmp)))}, which deleted every
+separator entirely - has been replaced by the shared package helper
+\code{standardize.headers()} (trim whitespace, collapse every run of
+non-alphanumeric characters to a single underscore, lowercase - i.e.
+snake_case). \code{expected.headers} is itself a literal, uninvented copy
+of the vetting software's own real column text (not a \code{batz}-
+invented shorthand), so per this project's header-standardization
+preference both sides are standardized together: two of its six entries
+change, because the real headers they represent contain spaces/
+punctuation that used to be deleted and are now preserved as underscores
+- \code{"speciesmanualid"} -> \code{"species_manual_id"} (real header:
+\code{"Species Manual ID"}) and \code{"wakaleidoscopeautoid"} ->
+\code{"wa_kaleidoscope_auto_id"} (real header: \code{"WA|Kaleidoscope|
+Auto ID"}). The other four (\code{filename}, \code{monitoringnight},
+\code{sppaccp}, \code{lat}) are unaffected, since their real headers have
+no separators to begin with. The positional rename described below is
+unaffected, since it never refers to the old squished text by name.
+\strong{Historical note (superseded by the above):} Josh's original spec
+gave this standardization line literally as \code{tolower(gsub(
+"[[:punct:]]", "", names(temp)))}, which matched punctuation only, not
+whitespace - that bug (and the delete-based fix that replaced it) no
+longer applies now that \code{standardize.headers()} is used instead.
 
 Expected (standardized) headers: \code{filename}, \code{monitoringnight},
-\code{speciesmanualid}, \code{wakaleidoscopeautoid}, \code{sppaccp},
-\code{lat}. A file missing any of these (after
-standardization) is skipped with \code{$reason = "mismatched headers"}
-and \code{$headers.missing} listing which ones (comma-separated). A file
+\code{species_manual_id}, \code{wa_kaleidoscope_auto_id}, \code{sppaccp},
+\code{lat}. A file missing any of these (after standardization) is
+skipped with \code{$reason = "mismatched headers"} and
+\code{$headers.missing} listing which ones (comma-separated). A file
 with all expected headers but zero data rows is skipped with
 \code{$reason = "no records"} and \code{$headers.missing = "none"}. A
 file that fails to read at all is skipped with \code{$reason = "could
@@ -134,48 +144,48 @@ spec itself calls it "military time"). The trailing junk
 pipeline.} Once the steps above finish, the (still 11-column) table is
 put through a further pipeline:
 \enumerate{
-\item \strong{Positional rename.} Josh's own rename list, given
-verbatim, was missing a comma between \code{"autoid.sb"} and
-\code{"lat"} - read as a typo, not a real 10-element list. The 11
-existing columns (in the order produced by the steps above:
-\code{filename, monitoringnight, speciesmanualid,
-    wakaleidoscopeautoid, sppaccp, lat, serial, lon, aru.name, date,
+  \item \strong{Positional rename.} Josh's own rename list, given
+    verbatim, was missing a comma between \code{"autoid.sb"} and
+    \code{"lat"} - read as a typo, not a real 10-element list. The 11
+    existing columns (in the order produced by the steps above:
+    \code{filename, monitoringnight, species_manual_id,
+    wa_kaleidoscope_auto_id, sppaccp, lat, serial, lon, aru.name, date,
     time}) are renamed POSITIONALLY to \code{filename, date.mon, manid,
     autoid.kp, autoid.sb, lat, serial, lon, aru.name, date, time}.
-\code{"wakaleidoscopeautoid"} becomes \code{"autoid.kp"} and
-\code{"sppaccp"} becomes \code{"autoid.sb"} - this makes sense once
-you notice the function merges files from either k-Pro/Kaleidoscope
-("kp") or SonoBat ("sb") vetting software: Kaleidoscope's own auto
-ID column becomes \code{$autoid.kp}, SonoBat's "accepted species"
-column becomes \code{$autoid.sb}.
-\item \strong{Reorder} to \code{filename, date.mon, aru.name, serial,
+    \code{"wa_kaleidoscope_auto_id"} becomes \code{"autoid.kp"} and
+    \code{"sppaccp"} becomes \code{"autoid.sb"} - this makes sense once
+    you notice the function merges files from either k-Pro/Kaleidoscope
+    ("kp") or SonoBat ("sb") vetting software: Kaleidoscope's own auto
+    ID column becomes \code{$autoid.kp}, SonoBat's "accepted species"
+    column becomes \code{$autoid.sb}.
+  \item \strong{Reorder} to \code{filename, date.mon, aru.name, serial,
     lat, lon, manid, autoid.kp, autoid.sb, date, time}.
-\item \code{\link{batz.datawrangler_call.datetime}} is run on
-\code{$date}/\code{$time} to add \code{$call.datetime}.
-\item \code{\link{batz.batusa_recode.names}} is run on \code{$manid},
-\code{$autoid.kp}, and \code{$autoid.sb} in place, using
-\code{batname.format.out = bat.names.out} (default \code{grammar.dash =
+  \item \code{\link{batz.datawrangler_call.datetime}} is run on
+    \code{$date}/\code{$time} to add \code{$call.datetime}.
+  \item \code{\link{batz.batusa_recode.names}} is run on \code{$manid},
+    \code{$autoid.kp}, and \code{$autoid.sb} in place, using
+    \code{batname.format.out = bat.names.out} (default \code{grammar.dash =
     TRUE}) - any value not recognized as a species name/code (e.g.
-\code{"NOISE"}, \code{"NoID"}, or a blank) passes through
-unchanged.
-\item If \code{manid.kp = TRUE} (default), \code{$manid.kp} is created
-as a copy of (the now-recoded) \code{$manid}; every blank/NA element
-of \code{$manid.kp} is overwritten with that row's \code{$autoid.kp}
-value. ("Blank" means \code{NA} or a blank/whitespace-only string -
-not specified either way, same convention already used in
-\code{batz.datawrangler_call.datetime}.) The spec's fill-in prose
-names the source column \code{"$auto.kp"}, which doesn't exist
-anywhere - read as shorthand for \code{$autoid.kp}, matching the
-rest of the spec's own naming.
-\item If \code{manid.sb = TRUE} (default), the same thing happens for
-\code{$manid.sb}, filled from \code{$autoid.sb} ("$auto.sb" in the
-spec's prose, read the same way).
-\item If \code{trim.noise = TRUE} (default), every row whose
-\code{$manid} equals \code{"noise"} (case-insensitive, whitespace-
-trimmed) is removed.
-\item If \code{trim.noid = TRUE} (default \code{FALSE}), every row
-whose \code{$manid} equals \code{"NoID"} (case-insensitive,
-whitespace-trimmed) is removed.
+    \code{"NOISE"}, \code{"NoID"}, or a blank) passes through
+    unchanged.
+  \item If \code{manid.kp = TRUE} (default), \code{$manid.kp} is created
+    as a copy of (the now-recoded) \code{$manid}; every blank/NA element
+    of \code{$manid.kp} is overwritten with that row's \code{$autoid.kp}
+    value. ("Blank" means \code{NA} or a blank/whitespace-only string -
+    not specified either way, same convention already used in
+    \code{batz.datawrangler_call.datetime}.) The spec's fill-in prose
+    names the source column \code{"$auto.kp"}, which doesn't exist
+    anywhere - read as shorthand for \code{$autoid.kp}, matching the
+    rest of the spec's own naming.
+  \item If \code{manid.sb = TRUE} (default), the same thing happens for
+    \code{$manid.sb}, filled from \code{$autoid.sb} ("$auto.sb" in the
+    spec's prose, read the same way).
+  \item If \code{trim.noise = TRUE} (default), every row whose
+    \code{$manid} equals \code{"noise"} (case-insensitive, whitespace-
+    trimmed) is removed.
+  \item If \code{trim.noid = TRUE} (default \code{FALSE}), every row
+    whose \code{$manid} equals \code{"NoID"} (case-insensitive,
+    whitespace-trimmed) is removed.
 }
 \code{$manid.kp}/\code{$manid.sb} (when created) and \code{$call.datetime}
 are appended at the very end of the column order (not specified where
@@ -221,7 +231,7 @@ header: \code{$sunregion} is NOT added to the expected-headers list
 above, so a file that lacks it is still merged normally exactly as
 before - its rows just get \code{NA} for \code{$sunregion} - matching
 this function's existing tolerant, skip-only-on-genuinely-missing-
-required-headers design. A file whose (normalized) headers DO include
+required-headers design. A file whose (standardized) headers DO include
 \code{sunregion} has that column carried straight through, unchanged,
 into \code{vetted.merged}, placed next to \code{$serial}/\code{
 $aru.name} (the other detector-level columns) in the final column
@@ -242,8 +252,7 @@ tests) re-run clean, no regressions.
 
 \strong{Follow-up, 2026-08-30, per Josh (bug report: a real Mobile-transect
 vetted export - \code{FY26_SevenIslands_NABat_105059_Mobile_FinalVetted.csv}
-\itemize{
-\item was silently skipped entirely) - \code{$serial} is now OPTIONAL, handled
+- was silently skipped entirely) - \code{$serial} is now OPTIONAL, handled
 exactly like \code{$sunregion} above.} Confirmed against the reported file:
 it has no \code{Serial}/similar header anywhere (Mobile-transect exports
 use a vehicle-mounted detector with no fixed instrument serial number, only
@@ -261,7 +270,6 @@ that has \code{Serial} keeps its real value, a Mobile file (or any file
 without it) gets \code{NA} for \code{$serial} instead of being dropped
 entirely. Column order is unaffected (\code{$serial} still lands in the
 same position it always did, immediately before \code{$sunregion}).
-}
 }
 \examples{
 \dontrun{

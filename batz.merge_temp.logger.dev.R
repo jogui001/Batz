@@ -12,31 +12,32 @@
 # batz.merge_temp.logger() (see batz.merge_temp.logger.R).
 #
 # UPDATE (latest, per Josh): RH is back, but now strictly gated on the
-# matched templog.meta.csv $logger.type - not on header text or any other
-# heuristic:
-#   - logger.type == "H": $temp.wet.c keeps the real column-4 reading, and
+# matched templog.meta.csv $logger_type (standardized column name - see
+# assumption #8 below) - not on header text or any other heuristic:
+#   - logger_type == "H": $temp.wet.c keeps the real column-4 reading, and
 #     $rh is calculated from dry/wet bulb.
-#   - logger.type == "T": $temp.wet.c and $rh are both forced to NA, even if
+#   - logger_type == "T": $temp.wet.c and $rh are both forced to NA, even if
 #     the raw file has a second temperature column.
 #   - no confident meta match (missing, ambiguous, or no meta.csv at all):
 #     treated the same as "T" (both NA) - see assumption #4 below.
 #
-# The meta join itself uses ONLY $serial# (the file's real 8-digit serial)
-# plus the file's own observed [$date.start, $date.end] to pick the right
-# meta row - $serial.short and $logger.type are never used to help find or
-# disambiguate the match (only to fall back to the same $serial.short logic
-# used by an older version of this script when a meta file was written
-# before $serial# was added -- see lookup.meta()). Once a single confident
-# meta row is found, every OTHER column from that row (serial.short,
-# date.deployment, date.recovery, room.number, room.name, station.code,
-# logger.type) is appended to every record from that file in
+# The meta join itself uses ONLY $serial (the file's real 8-digit serial,
+# matched against a standardized "serial#" header) plus the file's own
+# observed [$date.start, $date.end] to pick the right meta row -
+# $serial_short and $logger_type are never used to help find or disambiguate
+# the match (only to fall back to the same $serial_short logic used by an
+# older version of this script when a meta file was written before
+# "serial#" was added -- see lookup.meta()). Once a single confident meta
+# row is found, every OTHER column from that row (serial_short,
+# date_deployment, date_recovery, room_number, room_name, station_code,
+# logger_type) is appended to every record from that file in
 # $templog.merged - not just used internally.
 #
 # ---------------------------------------------------------------------------
 # ASSUMPTIONS MADE (spec was ambiguous on these - flag for review):
 #
 #  1. "$temp.dry.c" is always column 3; "$temp.wet.c" is column 4 whenever
-#     $logger.type == "H" (see above).
+#     $logger_type == "H" (see above).
 #
 #  2. "Look up earliest date...assign to date.end" in the spec is treated as
 #     a copy-paste of the date.start step; date.end = MAX(date.time), i.e.
@@ -61,8 +62,8 @@
 #
 #  6. Deployment/recovery window trim (per Josh): once a meta row is
 #     matched, any record whose $date.time falls before
-#     $date.deployment+$time.deployment or after
-#     $date.recovery+$time.recovery is dropped from $templog.merged. Only
+#     $date_deployment+$time_deployment or after
+#     $date_recovery+$time_recovery is dropped from $templog.merged. Only
 #     runs when the matched meta row has BOTH date and time columns for
 #     deployment and recovery - meta files with date-only columns, or files
 #     with no confident meta match at all, are left untrimmed. Trimmed
@@ -76,6 +77,25 @@
 #     flagged as a bug and fixed (same standardization applied to
 #     batz.suntimes_generate()). See the "dir.save" config note further
 #     below for the original (now superseded-by-default) history.
+#
+#  8. **Standardized (2026-09-14, per Josh - project-wide header
+#     standardization preference).** templog.meta.csv's own headers are a
+#     literal, uninvented copy of that file's real column text (not a
+#     batz-invented shorthand), so they are now run through
+#     standardize.headers() (trim whitespace, collapse every run of
+#     non-alphanumeric characters to a single underscore, lowercase) right
+#     after loading - this script had no header normalization of any kind
+#     before this change. Every meta-file column referenced by name is
+#     renamed accordingly: serial# -> serial, serial.num -> serial_num,
+#     serial.short -> serial_short, logger.type -> logger_type,
+#     station.code -> station_code, date.deployment -> date_deployment,
+#     time.deployment -> time_deployment, date.recovery -> date_recovery,
+#     time.recovery -> time_recovery, room.number -> room_number,
+#     room.name -> room_name. This does NOT affect templog.merged's/
+#     templog.notes's own $serial.num column - that one is this script's
+#     own INVENTED identifier, parsed from each raw file's NAME (its
+#     leading 8-digit serial), not a header loaded from any file, so it
+#     keeps its existing dot-separated name.
 # ---------------------------------------------------------------------------
 
 ## base R only - no package dependencies required
@@ -88,6 +108,20 @@ rbind.fill <- function(a, b) {
   for (col in setdiff(all.cols, names(a))) a[[col]] <- NA
   for (col in setdiff(all.cols, names(b))) b[[col]] <- NA
   rbind(a[all.cols], b[all.cols])
+}
+
+## ---- helper: standardize.headers (per Josh, 2026-09-14 project
+## preference) - inlined here since this is a standalone dev script, not
+## part of the package (package .R files call the shared internal helper
+## of the same name directly instead). Trims whitespace, collapses every
+## run of non-alphanumeric characters to a single underscore, strips a
+## leading/trailing underscore, and lowercases. ---------------------------
+standardize.headers <- function(x) {
+  x <- trimws(as.character(x))
+  x <- gsub("[^A-Za-z0-9]+", "_", x)
+  x <- gsub("_+", "_", x)
+  x <- gsub("^_|_$", "", x)
+  tolower(x)
 }
 
 ## ---- config for this test run -------------------------------------------
@@ -170,45 +204,51 @@ if (length(meta.files) > 0) {
                        colClasses = "character", check.names = FALSE)
   templog.meta <- Reduce(rbind.fill, meta.list)
   templog.meta <- templog.meta[!duplicated(templog.meta), ]
+  ## header standardization (per Josh, 2026-09-14 project preference):
+  ## templog.meta.csv's own headers are a literal, uninvented copy of the
+  ## meta file's real column text, so they're standardized the same as any
+  ## other loaded file's headers - see assumption #8 above.
+  names(templog.meta) <- standardize.headers(names(templog.meta))
 } else {
-  templog.meta <- data.frame(serial.num = character(0),
-                              station.code = character(0),
+  templog.meta <- data.frame(serial_num = character(0),
+                              station_code = character(0),
                               stringsAsFactors = FALSE)
 }
 
-## if $logger.type doesn't exist, derive it from the last letter of
-## $station.code (T = temp only, H = temp + humidity)
-if (nrow(templog.meta) > 0 && !"logger.type" %in% names(templog.meta)) {
-  templog.meta$logger.type <- toupper(substr(templog.meta$station.code,
-                                               nchar(templog.meta$station.code),
-                                               nchar(templog.meta$station.code)))
+## if $logger_type doesn't exist, derive it from the last letter of
+## $station_code (T = temp only, H = temp + humidity)
+if (nrow(templog.meta) > 0 && !"logger_type" %in% names(templog.meta)) {
+  templog.meta$logger_type <- toupper(substr(templog.meta$station_code,
+                                               nchar(templog.meta$station_code),
+                                               nchar(templog.meta$station_code)))
 }
 
 ## --- meta matching setup ---------------------------------------------------
 ## Preferred path: templog.meta.csv has a real 8-digit serial number column
-## (seen as "serial#" in practice) - match a file's serial.num to it EXACTLY.
-## The same physical logger gets redeployed to different stations over time,
-## so a serial# can legitimately appear more than once; disambiguate using
-## the file's own observed date range against each candidate row's
-## [$date.deployment, $date.recovery] window.
+## (seen as "serial#" in practice, standardized to "serial") - match a
+## file's serial.num to it EXACTLY. The same physical logger gets
+## redeployed to different stations over time, so a serial can legitimately
+## appear more than once; disambiguate using the file's own observed date
+## range against each candidate row's [$date_deployment, $date_recovery]
+## window.
 ##
-## Fallback path: older/partial meta files only have $serial.short, which is
+## Fallback path: older/partial meta files only have $serial_short, which is
 ## just the last 3-4 digits of the real serial (and may carry stray
 ## characters like "7273+*"). Match a file's serial.num by comparing its
 ## last 4 digits first, falling back to the last 3 only when that 3-digit
 ## value isn't also a substring of some 4-digit code in the table (a 3-digit
 ## reading could otherwise just be a truncated 4-digit one - unresolvable,
 ## so it's skipped rather than guessed at).
-serial.col <- (if ("serial#" %in% names(templog.meta)) "serial#"
-               else if ("serial.num" %in% names(templog.meta)) "serial.num"
+serial.col <- (if ("serial" %in% names(templog.meta)) "serial"
+               else if ("serial_num" %in% names(templog.meta)) "serial_num"
                else NA_character_)
 
-if (nrow(templog.meta) > 0 && is.na(serial.col) && "serial.short" %in% names(templog.meta)) {
-  templog.meta$serial.short.clean <- gsub("[^0-9]", "", templog.meta$serial.short)
-  all.4digit <- unique(templog.meta$serial.short.clean[nchar(templog.meta$serial.short.clean) == 4])
-  ambiguous.3digit <- unique(templog.meta$serial.short.clean[
-    nchar(templog.meta$serial.short.clean) == 3 &
-    sapply(templog.meta$serial.short.clean, function(d) any(grepl(d, all.4digit, fixed = TRUE)))
+if (nrow(templog.meta) > 0 && is.na(serial.col) && "serial_short" %in% names(templog.meta)) {
+  templog.meta$serial_short_clean <- gsub("[^0-9]", "", templog.meta$serial_short)
+  all.4digit <- unique(templog.meta$serial_short_clean[nchar(templog.meta$serial_short_clean) == 4])
+  ambiguous.3digit <- unique(templog.meta$serial_short_clean[
+    nchar(templog.meta$serial_short_clean) == 3 &
+    sapply(templog.meta$serial_short_clean, function(d) any(grepl(d, all.4digit, fixed = TRUE)))
   ])
 } else {
   ambiguous.3digit <- character(0)
@@ -219,7 +259,7 @@ if (nrow(templog.meta) > 0 && is.na(serial.col) && "serial.short" %in% names(tem
 ## surface all distinct candidate stations in the notes rather than
 ## silently picking one
 resolve.match <- function(match.rows, match.desc) {
-  stations <- unique(match.rows$station.code)
+  stations <- unique(match.rows$station_code)
   if (length(stations) == 1) {
     list(meta.row = match.rows[1, , drop = FALSE],
          meta.notes = paste0("meta match ", match.desc, ": ", stations))
@@ -235,11 +275,11 @@ resolve.match <- function(match.rows, match.desc) {
 ## nothing (e.g. dates missing/unparseable), fall back to the full candidate set
 filter.by.date <- function(match.rows, date.start, date.end) {
   if (nrow(match.rows) <= 1 || is.na(date.start) || is.na(date.end) ||
-      !all(c("date.deployment", "date.recovery") %in% names(match.rows))) {
+      !all(c("date_deployment", "date_recovery") %in% names(match.rows))) {
     return(match.rows)
   }
-  dep <- as.Date(match.rows$date.deployment, format = "%m/%d/%Y")
-  rec <- as.Date(match.rows$date.recovery, format = "%m/%d/%Y")
+  dep <- as.Date(match.rows$date_deployment, format = "%m/%d/%Y")
+  rec <- as.Date(match.rows$date_recovery, format = "%m/%d/%Y")
   f.start <- as.Date(date.start)
   f.end   <- as.Date(date.end)
   keep <- !is.na(dep) & !is.na(rec) & !(f.end < dep | f.start > rec)
@@ -247,9 +287,9 @@ filter.by.date <- function(match.rows, date.start, date.end) {
 }
 
 ## column names to append from a matched meta row - everything except
-## whatever the join actually used to find it (serial# duplicates
-## $serial.num already; the internal .clean helper isn't real meta data)
-meta.append.cols <- setdiff(names(templog.meta), c(serial.col, "serial.short.clean"))
+## whatever the join actually used to find it (serial duplicates
+## $serial_num already; the internal .clean helper isn't real meta data)
+meta.append.cols <- setdiff(names(templog.meta), c(serial.col, "serial_short_clean"))
 
 ## look up the single matching meta row (if any) + a diagnostic note, for
 ## one file's serial.num / observed date range
@@ -267,13 +307,13 @@ lookup.meta <- function(serial.num, date.start, date.end) {
     return(resolve.match(match.rows, paste0("on serial# (", serial.num, ")")))
   }
 
-  ## fallback: serial.short suffix matching (only used when the meta file
-  ## has no real serial# column at all)
-  if (!"serial.short" %in% names(templog.meta)) return(no.match)
+  ## fallback: serial_short suffix matching (only used when the meta file
+  ## has no real serial column at all)
+  if (!"serial_short" %in% names(templog.meta)) return(no.match)
   last4 <- substr(serial.num, nchar(serial.num) - 3, nchar(serial.num))
   last3 <- substr(serial.num, nchar(serial.num) - 2, nchar(serial.num))
 
-  match.rows <- templog.meta[templog.meta$serial.short.clean == last4, ]
+  match.rows <- templog.meta[templog.meta$serial_short_clean == last4, ]
   if (nrow(match.rows) > 0) {
     match.rows <- filter.by.date(match.rows, date.start, date.end)
     return(resolve.match(match.rows, paste0("on last 4 digits (", last4, ")")))
@@ -281,9 +321,9 @@ lookup.meta <- function(serial.num, date.start, date.end) {
   if (last3 %in% ambiguous.3digit) {
     return(list(meta.row = NULL,
                 meta.notes = paste0("meta match skipped: last 3 digits (", last3,
-                                     ") ambiguous with a 4-digit serial.short")))
+                                     ") ambiguous with a 4-digit serial_short")))
   }
-  match.rows <- templog.meta[templog.meta$serial.short.clean == last3, ]
+  match.rows <- templog.meta[templog.meta$serial_short_clean == last3, ]
   if (nrow(match.rows) > 0) {
     match.rows <- filter.by.date(match.rows, date.start, date.end)
     return(resolve.match(match.rows, paste0("on last 3 digits (", last3, ")")))
@@ -426,8 +466,8 @@ for (f in templog.files) {
     fmt <- build.dt.format(x[valid[1]])
     as.POSIXct(x, format = fmt, tz = "America/New_York")
   }
-  ## combine a templog.meta.csv $date.deployment/$date.recovery ("m/d/Y")
-  ## with its companion $time.deployment/$time.recovery ("H:M:S") into one
+  ## combine a templog.meta.csv $date_deployment/$date_recovery ("m/d/Y")
+  ## with its companion $time_deployment/$time_recovery ("H:M:S") into one
   ## POSIXct. Returns NA if either piece is missing/blank/unparseable.
   parse.meta.datetime <- function(date.str, time.str) {
     if (is.null(date.str) || is.null(time.str) ||
@@ -445,7 +485,7 @@ for (f in templog.files) {
   date.end   <- if (all(is.na(date.time))) NA else format(max(date.time, na.rm = TRUE))
 
   ## --- meta lookup: matched row's columns get appended to every record for
-  ##     this file below; $logger.type from it drives the RH decision -------
+  ##     this file below; $logger_type from it drives the RH decision -------
   meta.result <- lookup.meta(serial.num, date.start, date.end)
   meta.row    <- meta.result$meta.row
   meta.notes  <- meta.result$meta.notes
@@ -457,9 +497,9 @@ for (f in templog.files) {
   ##     match at all, are left untrimmed. ------------------------------------
   rows.trimmed <- 0L
   if (!is.null(meta.row) &&
-      all(c("date.deployment", "time.deployment", "date.recovery", "time.recovery") %in% names(meta.row))) {
-    deploy.dt  <- parse.meta.datetime(meta.row$date.deployment[1], meta.row$time.deployment[1])
-    recover.dt <- parse.meta.datetime(meta.row$date.recovery[1], meta.row$time.recovery[1])
+      all(c("date_deployment", "time_deployment", "date_recovery", "time_recovery") %in% names(meta.row))) {
+    deploy.dt  <- parse.meta.datetime(meta.row$date_deployment[1], meta.row$time_deployment[1])
+    recover.dt <- parse.meta.datetime(meta.row$date_recovery[1], meta.row$time_recovery[1])
     if (!is.na(deploy.dt) && !is.na(recover.dt)) {
       ## keep records with an unparseable date.time too (can't judge them
       ## against the window, so don't silently drop them here)
@@ -501,10 +541,10 @@ for (f in templog.files) {
 
   temp.dry.c <- temp.col3
 
-  ## --- RH gated strictly on the matched meta row's $logger.type: H keeps
+  ## --- RH gated strictly on the matched meta row's $logger_type: H keeps
   ##     the wet-bulb reading and gets RH calculated; T (or no confident
   ##     meta match at all) gets NA for both -----------------------------
-  logger.type <- if (!is.null(meta.row) && "logger.type" %in% names(meta.row)) meta.row$logger.type[1] else NA_character_
+  logger.type <- if (!is.null(meta.row) && "logger_type" %in% names(meta.row)) meta.row$logger_type[1] else NA_character_
   if (identical(logger.type, "H")) {
     temp.wet.c <- temp.col4
     rh <- calc.rh(temp.dry.c, temp.wet.c)

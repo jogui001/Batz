@@ -56,6 +56,32 @@
 #'   objects, only populated when the \code{ggplot2} package is available).
 #'
 #' @details
+#' \strong{Header standardization (per Josh, 2026-09-14 project preference) -
+#' does not mechanically apply to this function, flagged not silently
+#' skipped.} The project-wide preference is that headers coming from a
+#' loaded file or an externally-supplied data frame are run through the
+#' shared package helper \code{standardize.headers()} (trim whitespace,
+#' collapse non-alphanumeric runs to underscores, lowercase). This function
+#' does not load any file itself, and all four of its arguments
+#' (\code{data}, \code{fig.list}, \code{suntimes}, \code{aes.default}) are
+#' already-loaded data frames handed in by the caller - \code{data} in
+#' particular is expected to be \code{\link{batz.generate_plotframe.bat}}'s
+#' own output. \code{DATA.REQUIRED}/\code{SUNTIMES.REQUIRED}/
+#' \code{FIG.LIST.REQUIRED}/\code{AES.DEFAULT.REQUIRED}/
+#' \code{AES.DEFAULT.REQUIRED.PARAMETERS} below are this function's own
+#' hardcoded interface contracts with those upstream functions'/files'
+#' already-established output schemas (e.g. \code{$spp.id}/\code{$date}/
+#' \code{$obs} from \code{batz.generate_plotframe.bat()}), not raw text
+#' copied from a loaded file's real header row, so there is no raw-header
+#' step here for the preference to attach to and none of these names were
+#' renamed. If \code{fig.list}/\code{aes.default}/\code{suntimes} are ever
+#' built by reading a CSV/spreadsheet directly (rather than being handed to
+#' this function pre-loaded), that loading step - wherever it lives -
+#' should run \code{standardize.headers()} on its own raw headers, and this
+#' function's own required-header constants would need to be written to
+#' match those standardized spellings; no such loading step exists inside
+#' this function itself.
+#'
 #' \strong{Iteration 1 ("basic layout"), built 2026-08-28 per Josh's own
 #' framing that this function would be developed iteratively, copying the
 #' structure/steps of \code{batz.plotdetections_first.last()} and modifying
@@ -292,7 +318,7 @@
 #' matters); \code{"rounded"} places them at those same five axis positions
 #' but rounds each resulting raw value to the nearest whole number
 #' afterward (matters once the exact value isn't a whole number already,
-#' e.g. \code{$ymax = 230} with \code{$Yaxe.trans = "none"} gives a raw 25\%
+#' e.g. \code{$ymax = 230} with \code{$Yaxe.trans = "none"} gives a raw 25%
 #' point of \code{57.5}, which \code{"rounded"} shows as \code{58});
 #' \code{"custom"} ignores that computation entirely and uses whatever
 #' numbers are in \code{$y.custom} instead (semicolon-separated, e.g.
@@ -304,7 +330,7 @@
 #' \code{"regular"} was picked as the real default here (it's the option
 #' listed first, and is the more literal/simpler reading of "0,0.25,0.5,
 #' 0.75,1"); \strong{Josh: please confirm this is the one you meant as the
-#' default}, since the two only visibly differ when the exact 25/50/75\%
+#' default}, since the two only visibly differ when the exact 25/50/75%
 #' axis positions don't land on whole numbers.
 #'
 #' \strong{BUGFIX, 2026-08-28, per Josh ("scale is not working as expected.
@@ -314,8 +340,8 @@
 #' Josh's own real render with \code{$Yaxe.trans = "log10"},
 #' \code{$y.scale = "regular"}, \code{$ymax = 230}.} The first version of
 #' this function computed \code{"regular"}/\code{"rounded"} breaks as 5
-#' values evenly spaced across the RAW count range (\code{0}, 25\%, 50\%,
-#' 75\%, 100\% of \code{$ymax} - i.e. \code{0, 57.5, 115, 172.5, 230}), then
+#' values evenly spaced across the RAW count range (\code{0}, 25%, 50%,
+#' 75%, 100% of \code{$ymax} - i.e. \code{0, 57.5, 115, 172.5, 230}), then
 #' transformed only their AXIS POSITIONS through \code{$Yaxe.trans}. That's
 #' fine when \code{$Yaxe.trans = "none"} (position and value are the same
 #' thing), but once a log-family transform is applied, evenly-spaced RAW
@@ -338,13 +364,13 @@
 #' nicely-spaced log axis on their own, without needing hand-picked
 #' \code{$y.custom} values} the way Josh's own target image did - though
 #' \code{"custom"} is still there for full manual control, e.g. round
-#' numbers instead of whatever the automatic 0/25/50/75/100\% axis points
+#' numbers instead of whatever the automatic 0/25/50/75/100% axis points
 #' happen to compute to. Verified by rendering Josh's own real
 #' \code{fig.list} row (\code{$Yaxe.trans = "log10"}, \code{$y.scale =
 #' "regular"}, \code{$ymax = 230}) before and after: before, the break
-#' positions computed to 0\%/74.8\%/87.3\%/94.7\%/100\% of the axis height
+#' positions computed to 0%/74.8%/87.3%/94.7%/100% of the axis height
 #' (all but the first crowded into the top quarter); after, they compute to
-#' exactly 0\%/25\%/50\%/75\%/100\%, genuinely even.
+#' exactly 0%/25%/50%/75%/100%, genuinely even.
 #'
 #' \strong{A second, related defect surfaced while adding a test for the fix
 #' above}: with \code{"regular"} (not \code{"rounded"}) and a log-family
@@ -366,7 +392,7 @@
 #' \strong{a placeholder for this first iteration, flagged for Josh}: this
 #' gives the axis exactly enough headroom to fit the tallest bar and no
 #' more, which may look visually tight; a fixed padding percentage (e.g.
-#' 10\% above the max) could be added in a later iteration if wanted. The
+#' 10% above the max) could be added in a later iteration if wanted. The
 #' actual plotted axis upper limit is never allowed to clip a real bar or a
 #' user-supplied \code{$y.custom} value even if \code{$ymax} itself is
 #' smaller than one of those (\code{max($ymax, $y.custom values, $obs)} is
@@ -460,6 +486,14 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
   ## filter/group by is now named per fig.list row via $plot.group (see
   ## Details/Follow-up 2026-08-28) rather than being a fixed, hardcoded
   ## column data must always have.
+  ##
+  ## Header standardization (per Josh, 2026-09-14 project preference): NOT
+  ## applied to any of the five *.REQUIRED*/DATA.REQUIRED constants below -
+  ## `data`/`fig.list`/`suntimes`/`aes.default` are already-loaded data
+  ## frames handed in by the caller (this function loads no file itself),
+  ## and these names are this function's own interface contract with those
+  ## upstream functions'/files' already-established output schemas, not raw
+  ## loaded headers. See @details "Header standardization" above.
   DATA.REQUIRED <- c("spp.id", "date", "obs")
   SUNTIMES.REQUIRED <- c("aru", "date", "date.mon", "sunregion", "time.zone",
                           "sunregion.type", "schedual1", "schedual2", "suns",

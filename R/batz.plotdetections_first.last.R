@@ -54,6 +54,34 @@
 #'   Details).
 #'
 #' @details
+#' \strong{Header standardization (per Josh, 2026-09-14 project preference) -
+#' does not mechanically apply to this function, flagged not silently
+#' skipped.} The project-wide preference is that headers coming from a
+#' loaded file or an externally-supplied data frame are run through the
+#' shared package helper \code{standardize.headers()} (trim whitespace,
+#' collapse non-alphanumeric runs to underscores, lowercase). This function
+#' does not load any file itself, and all four of its arguments
+#' (\code{data}, \code{fig.list}, \code{suntimes}, \code{aes.default}) are
+#' already-loaded data frames handed in by the caller - \code{data} in
+#' particular is expected to be the output of the upstream \code{batz}
+#' summarizing function. \code{DATA.REQUIRED}/\code{SUNTIMES.REQUIRED}/
+#' \code{FIG.LIST.REQUIRED}/\code{AES.DEFAULT.REQUIRED}/
+#' \code{AES.DEFAULT.REQUIRED.PARAMETERS} in this function's code are its
+#' own hardcoded interface contracts with those upstream functions'/files'
+#' already-established output schemas (e.g. \code{$spp.id}/\code{$date}/
+#' \code{$aru.groupby}/\code{$obs}), not raw text copied from a loaded
+#' file's real header row, so there is no raw-header step here for the
+#' preference to attach to and none of these names were renamed. If
+#' \code{fig.list}/\code{aes.default}/\code{suntimes} are ever built by
+#' reading a CSV/spreadsheet directly (rather than being handed to this
+#' function pre-loaded), that loading step - wherever it lives - should
+#' run \code{standardize.headers()} on its own raw headers, and this
+#' function's own required-header constants would need to be written to
+#' match those standardized spellings; no such loading step exists inside
+#' this function itself. This mirrors the same reasoning already applied
+#' to \code{\link{batz.plotactivity_observations}} - see that function's
+#' own \code{@details} for the identical analysis.
+#'
 #' \strong{Iteration 1 ("basic layout") - per Josh's own framing that this
 #' function would be built iteratively.} This covers: header validation
 #' (including a duplicate-column-name check), settings resolution
@@ -547,7 +575,7 @@
 #' grid/viewport error. Immediate fix for Josh: re-save the current
 #' `batactivity.plotoptions.csv` (already sent, with `$panel.spacing.x` and
 #' the reduced `$axis.text.size`) into his test-data folder and reload it
-#' before calling this function again.
+#' before calling this function again.\
 #'
 #' \strong{Follow-up, 2026-08-27, later still, per Josh ("clean up
 #' batz.plotdect_first.last()... change identifiers to"): the four main
@@ -592,7 +620,7 @@
 #' its existing, separate name - only the merged file Josh loads as
 #' `aes.default` was renamed. Full test suite re-run clean (all 11
 #' scenarios, no regressions) after the rename - no functional change,
-#' purely a file-naming change.
+#' purely a file-naming change.\
 #'
 #' \strong{Follow-up, 2026-08-27, later still, per Josh ("change 'aru.meta.csv'
 #' to 'fig.list.csv'"): the `.dev.R` test script's on-disk test file for the
@@ -676,7 +704,7 @@
 #' shortfall below 3 plots could only be this naming-collision bug, not a
 #' real data-overlap difference) now correctly produce 3 entries in both
 #' \code{$plots} and \code{$ggplots} (previously collapsed to 1). Full
-#' dev-script test suite re-run clean (14 scenarios, no regressions).
+#' dev-script test suite re-run clean (14 scenarios, no regressions).\
 #'
 #' \strong{Follow-up, 2026-08-28, per Josh ("I do not want 100\% duplicate
 #' rows to produced multiple graphs. Instead remove duplicate rows then go
@@ -750,6 +778,13 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
                                             aes.default, project.name = "",
                                             dir.save = getwd()) {
 
+  ## Header standardization (per Josh, 2026-09-14 project preference): NOT
+  ## applied to any of the four *.REQUIRED*/DATA.REQUIRED constants below -
+  ## `data`/`fig.list`/`suntimes`/`aes.default` are already-loaded data
+  ## frames handed in by the caller (this function loads no file itself),
+  ## and these names are this function's own interface contract with those
+  ## upstream functions'/files' already-established output schemas, not raw
+  ## loaded headers. See @details "Header standardization" above.
   DATA.REQUIRED <- c("spp.id", "date", "aru.groupby", "obs",
                            "mins2.noon.min", "mins2.noon.max", "vetting.type")
   SUNTIMES.REQUIRED <- c("aru", "date", "date.mon", "sunregion", "time.zone",

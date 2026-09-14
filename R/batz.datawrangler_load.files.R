@@ -32,7 +32,7 @@
 #' @param header.match Logical, default \code{FALSE}. If \code{TRUE}, every
 #'   file - not just ones sharing a file name with something already loaded
 #'   - has its column-name set compared against every already-loaded plain
-#'   data frame (in the order those were created); if one matches 100%
+#'   data frame (in the order those were created); if one matches 100\%
 #'   (same columns, order doesn't matter), the new file is merged into THAT
 #'   object instead of becoming its own. Only ever applies to plain
 #'   single-sheet data frames - a multi-sheet \code{.xlsx}-derived list is
@@ -67,6 +67,31 @@
 #'   named - just access it with backticks or \code{get()}.
 #'
 #' @details
+#' \strong{Header standardization (per Josh, 2026-09-14 project preference).}
+#' Every loaded data frame's own column names - a plain \code{.csv}, a
+#' single-sheet \code{.xlsx}, or each individual sheet of a multi-sheet
+#' \code{.xlsx} - are run through the shared package helper
+#' \code{standardize.headers()} (trim whitespace, collapse every run of
+#' non-alphanumeric characters to a single underscore, lowercase)
+#' immediately after being read, before any merge-matching logic runs. This
+#' function never hardcodes a specific column name anywhere in its own
+#' logic (\code{same.columns()}/\code{find.header.match()}/\code{merge.two()}
+#' all work generically off whatever \code{names()} a loaded object
+#' happens to have), so no other code needed to change - but it does mean
+#' \code{header.match}'s "100\% column set match" comparison, and a
+#' same-named file's "columns match the existing object" check, now compare
+#' STANDARDIZED names. Two files whose raw headers only differed by case,
+#' whitespace, or punctuation (and so previously would NOT have counted as
+#' a header match) can now match and get merged where they wouldn't have
+#' before - this is a natural, intended consequence of standardizing before
+#' comparing, not a separate feature. \strong{File names themselves (used
+#' for the resulting object names, and for the file-name-based duplicate
+#' check) are NOT touched by this} - only the column headers INSIDE each
+#' loaded file/sheet are standardized; a file's own name is this function's
+#' pre-existing naming mechanism, not a "header from a loaded file", and is
+#' left exactly as \code{tools::file_path_sans_ext(basename(f))} always
+#' produced it.
+#'
 #' For a file whose base name already matches something already loaded, the
 #' order of decisions is: (1) \code{duplicates.skip = TRUE} skips it, full
 #' stop; (2) otherwise, if its columns match the existing same-named object,
@@ -81,7 +106,9 @@
 #' first and combined with raw column names preserved exactly
 #' (\code{check.names = FALSE}) - the same approach used in
 #' \code{batz.arumeta_merge.format}, avoiding type mismatches between sources
-#' and avoiding silently mangled column names.
+#' and avoiding silently mangled column names (these are now the
+#' already-standardized names from the step above, not the file's original
+#' raw headers).
 #'
 #' \code{$reason} values in \code{log.file}: for \code{action = "loaded"},
 #' either \code{"file was first of its kind"} (brand-new name, no
@@ -117,22 +144,31 @@ batz.datawrangler_load.files <- function(dir.load = getwd(),
                                           duplicates.skip   = FALSE,
                                           objects.max       = 25) {
 
+  ## header standardization (per Josh, 2026-09-14 project preference) - see
+  ## @details "Header standardization" above. Applied once, right after a
+  ## data frame is read, before any merge-matching logic sees its names.
+  standardize.df.headers <- function(df) {
+    names(df) <- standardize.headers(names(df))
+    df
+  }
+
   read.one <- function(f) {
     ext <- tolower(tools::file_ext(f))
     if (ext == "csv") {
-      return(read.csv(f, stringsAsFactors = FALSE, check.names = FALSE))
+      return(standardize.df.headers(
+        read.csv(f, stringsAsFactors = FALSE, check.names = FALSE)))
     }
     if (ext == "xlsx") {
       sheets <- readxl::excel_sheets(f)
       if (length(sheets) == 1) {
-        return(suppressMessages(as.data.frame(
+        return(standardize.df.headers(suppressMessages(as.data.frame(
           readxl::read_excel(f, .name_repair = "minimal"),
-          stringsAsFactors = FALSE, check.names = FALSE)))
+          stringsAsFactors = FALSE, check.names = FALSE))))
       }
       sheet.list <- lapply(sheets, function(s) {
-        suppressMessages(as.data.frame(
+        standardize.df.headers(suppressMessages(as.data.frame(
           readxl::read_excel(f, sheet = s, .name_repair = "minimal"),
-          stringsAsFactors = FALSE, check.names = FALSE))
+          stringsAsFactors = FALSE, check.names = FALSE)))
       })
       names(sheet.list) <- sheets
       return(sheet.list)

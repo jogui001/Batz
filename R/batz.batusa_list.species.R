@@ -23,10 +23,10 @@
 #'   this flag. This flag only controls OUTPUT labels: \code{TRUE} (default)
 #'   keeps hyphens as written in the reference tables; \code{FALSE} replaces
 #'   every hyphen in an output species/state label with a space instead.
-#' @param statename.format Character, default \code{"code2"}. How states are
+#' @param statename.format.out Character, default \code{"code2"}. How states are
 #'   labeled in the output: \code{"code2"} (2-letter code), \code{"official.name"},
 #'   or \code{"short.name"}.
-#' @param batname.format Character, default \code{"full"}. How species are
+#' @param batname.format.out Character, default \code{"full"}. How species are
 #'   labeled in the output's \code{"Bat Species"} field:
 #'   \code{"full"} - \code{"<common name> (<latin name>)<hibernation.strat>"},
 #'   all concatenated with NO separator before \code{hibernation.strat}
@@ -48,9 +48,9 @@
 #'   \code{"matrix"} (matches \code{"batlist model2.csv"}) - one row per
 #'   requested/implied species, columns \code{"Bat Species"}, \code{"Species
 #'   Code"}, \code{"Phonic Group"}, \code{"Federal"}, then one column per
-#'   requested/implied state (named per \code{statename.format}), each cell
-#'   per \code{presence.absence} (see Details).
-#' @param presence.absence Character vector of length 2, default
+#'   requested/implied state (named per \code{statename.format.out}), each cell
+#'   per \code{symbol_presence.absence} (see Details).
+#' @param symbol_presence.absence Character vector of length 2, default
 #'   \code{c("*", "-")}. Used for a species that is present in a state but
 #'   not listed there (symbol 1) or absent from a state entirely (symbol
 #'   2). A LISTED species' cell/column shows its listing status instead of
@@ -73,6 +73,15 @@
 #'   dot-convention - a deliberate, spec-driven exception).
 #'
 #' @details
+#' \strong{Header standardization (per Josh, 2026-09-14 project preference) - does not apply to this function, flagged not silently skipped.} The project-wide preference is that headers coming from a loaded file or an externally-supplied data frame are run through the shared package helper \code{standardize.headers()} (trim whitespace, collapse non-alphanumeric runs to underscores, lowercase). This function has no raw-header step for that preference to attach to: \code{data} is flattened and every element is matched as a VALUE (a species identifier or a state/territory identifier), never as a header - unlike \code{\link{batz.batusa_recode.names}}, this function does not even pass a data frame's column names through to its output (the flattening step, \code{unlist(lapply(data, as.character))}, discards them entirely). The two embedded reference tables' own column names (\code{nabat}'s \code{$latin}/\code{$common}/\code{$code4}/\code{$code6}/\code{$fedstatus}/etc., \code{states}'s \code{$official.name}/\code{$short.name}/\code{$code2}/etc.) are this function's fixed, already-established internal schema - not raw headers copied fresh from a file for this rollout - so neither is run through \code{standardize.headers()}, the same treatment already given to every other \code{batz} function's own output-schema column names. The OUTPUT column headers this function produces (\code{"Bat Species"}, \code{"Species Code"}, \code{"State"}, \code{"Federal"}, \code{"Phonic Group"}, and each requested state's own label in \code{table.type = "matrix"}) are also left untouched by \code{standardize.headers()} - they are a deliberate, spec-driven exception already documented below (matching Josh's own \code{"batlist model1.csv"}/\code{"batlist model2.csv"} template headers literally, including a duplicate \code{"State"} header), and running them through \code{standardize.headers()} would break that literal match.
+#'
+#' (Renamed 2026-08-29, per Josh: \code{presence.absence} ->
+#' \code{symbol_presence.absence}; \code{statename.format} ->
+#' \code{statename.format.out}; \code{batname.format} ->
+#' \code{batname.format.out} - standardizing \code{format}-suffixed
+#' parameters as \code{.in}/\code{.out} and giving the presence/absence
+#' symbols argument a clearer name.)
+#'
 #' \strong{Rebuilt 2026-08-25 against the real \code{batlist model1.csv} /
 #' \code{batlist model2.csv} template files}, once Josh granted access to
 #' the \code{"4 Current  test data"} folder (an earlier same-day version of
@@ -81,7 +90,7 @@
 #' real templates: \code{table.type = "state"} is one row per
 #' (state, species) PRESENT pair, not an aggregated per-state list;
 #' \code{table.type = "matrix"} is one row per species with one column per
-#' state; \code{batname.format = "full"} bakes \code{hibernation.strat}
+#' state; \code{batname.format.out = "full"} bakes \code{hibernation.strat}
 #' directly into the \code{"Bat Species"} text; \code{"Species Code"} is
 #' its own column, not appended onto the species label; \code{"Federal"} is
 #' always included, abbreviated from \code{$fedstatus} (\code{"Not
@@ -100,9 +109,9 @@
 #' \code{"L"} - a generic placeholder, NOT a real abbreviation from Josh's
 #' models, standing in for "listed, severity unspecified" until real
 #' per-state Endangered/Threatened/Special-Concern data is available. A
-#' state that's neither shows \code{presence.absence[1]} (matrix) or blank
+#' state that's neither shows \code{symbol_presence.absence[1]} (matrix) or blank
 #' (state table.type, where a row already existing implies presence).
-#' Absent states show \code{presence.absence[2]} (matrix) or get no row at
+#' Absent states show \code{symbol_presence.absence[2]} (matrix) or get no row at
 #' all (state table.type). \strong{If Josh has, or builds, real per-state
 #' severity data, replace the \code{"L"} placeholder with it.}
 #'
@@ -149,11 +158,11 @@
 #' @export
 batz.batusa_list.species <- function(data,
                                       grammar.dash = TRUE,
-                                      statename.format = "code2",
-                                      batname.format = "full",
+                                      statename.format.out = "code2",
+                                      batname.format.out = "full",
                                       bat.code = "code4",
                                       table.type = "state",
-                                      presence.absence = c("*", "-"),
+                                      symbol_presence.absence = c("*", "-"),
                                       phonic.group = TRUE,
                                       species.extirpated = TRUE) {
 
@@ -161,162 +170,172 @@ batz.batusa_list.species <- function(data,
   # Reference database 1: bat species (Josh's NAbat.names.csv, embedded as
   # currently supplied - 54 species x 15 columns). See @details above for
   # how to update this.
+  #
+  # Header standardization (per Josh, 2026-09-14 project preference): NOT
+  # applied to this table's own column names, or to `states`' column names
+  # below - both are this function's own fixed, already-established
+  # output-schema names, not raw headers freshly copied from a file for
+  # this rollout. Nor is it applied to `data`: every element is matched as
+  # a VALUE (a species or state/territory identifier), never as a header,
+  # and `data`'s own column names (when it's a data frame) aren't even
+  # carried through to the output - they're discarded by the flattening
+  # step below. See @details "Header standardization" above.
   # ---------------------------------------------------------------------------
-  nabat <- structure(list(latin = c("Antrozous pallidus", "Artibeus jamaicensis", 
-"Brachyphylla cavernarum", "Choeronycteris mexicana", "Corynorhinus rafinesquii", 
-"Corynorhinus townsendii", "Corynorhinus townsendii ingens", 
-"Corynorhinus townsendii virginianus", "Diphylla ecaudata", "Eptesicus fuscus", 
-"Euderma maculatum", "Eumops floridanus", "Eumops perotis", "Eumops underwoodi", 
-"Idionycteris phyllotis", "Lasionycteris noctivagans", "Lasiurus borealis", 
-"Lasiurus cinereus", "Lasiurus cinereus semotus", "Lasiurus ega", 
-"Lasiurus frantzii", "Lasiurus intermedius", "Lasiurus minor", 
-"Lasiurus seminolus", "Lasiurus xanthinus", "Leptonycteris nivalis", 
-"Leptonycteris yerbabuenae", "Macrotus californicus", "Molossus molossus", 
-"Mormoops megalophylla", "Myotis auriculus", "Myotis austroriparius", 
-"Myotis californicus", "Myotis ciliolabrum", "Myotis evotis", 
-"Myotis grisescens", "Myotis keenii", "Myotis leibii", "Myotis lucifugus", 
-"Myotis occultus", "Myotis septentrionalis", "Myotis sodalis", 
-"Myotis thysanodes", "Myotis velifer", "Myotis volans", "Myotis yumanensis", 
-"Noctilio leporinus", "Nycticeius humeralis", "Nyctinomops femorosaccus", 
-"Nyctinomops macrotis", "Parastrellus hesperus", "Perimyotis subflavus", 
-"Stenoderma rufum", "Tadarida brasiliensis"), common = c("Pallid bat", 
-"Jamaican fruit-eating bat", "Antillean fruit-eating bat", "Mexican long-tongued bat", 
-"Rafinesque's big-eared bat", "Townsend's big-eared bat", "Ozark big-eared bat", 
-"Virginia big-eared bat", "Hairy-legged vampire bat", "Big brown bat", 
-"Spotted bat", "Florida bonneted bat", "Greater bonneted bat", 
-"Underwood's bonneted bat", "Allen's big-eared bat", "Silver-haired bat", 
-"Eastern red bat", "Hoary bat", "Hawaiian hoary bat", "Southern yellow bat", 
-"Desert Red Bat", "Northern yellow bat", "Minor red bat", "Seminole bat", 
-"Western yellow bat", "Mexican long-nosed bat", "Lesser long-nosed bat", 
-"California leaf-nosed bat", "Pallas' mastiff bat", "Peter's ghost-faced bat", 
-"Southwestern myotis", "Southeastern myotis", "California myotis", 
-"Western small-footed myotis", "Long-eared myotis", "Gray bat", 
-"Keen's myotis", "Eastern small-footed myotis", "Little brown bat", 
-"Arizona myotis", "Northern long-eared bat", "Indiana bat", "Fringed myotis", 
-"Cave bat myotis", "Long-legged myotis", "Yuma myotis", "Greater bulldog bat", 
-"Evening bat", "Pocketed free-tailed bat", "Big free-tailed bat", 
+  nabat <- structure(list(latin = c("Antrozous pallidus", "Artibeus jamaicensis",
+"Brachyphylla cavernarum", "Choeronycteris mexicana", "Corynorhinus rafinesquii",
+"Corynorhinus townsendii", "Corynorhinus townsendii ingens",
+"Corynorhinus townsendii virginianus", "Diphylla ecaudata", "Eptesicus fuscus",
+"Euderma maculatum", "Eumops floridanus", "Eumops perotis", "Eumops underwoodi",
+"Idionycteris phyllotis", "Lasionycteris noctivagans", "Lasiurus borealis",
+"Lasiurus cinereus", "Lasiurus cinereus semotus", "Lasiurus ega",
+"Lasiurus frantzii", "Lasiurus intermedius", "Lasiurus minor",
+"Lasiurus seminolus", "Lasiurus xanthinus", "Leptonycteris nivalis",
+"Leptonycteris yerbabuenae", "Macrotus californicus", "Molossus molossus",
+"Mormoops megalophylla", "Myotis auriculus", "Myotis austroriparius",
+"Myotis californicus", "Myotis ciliolabrum", "Myotis evotis",
+"Myotis grisescens", "Myotis keenii", "Myotis leibii", "Myotis lucifugus",
+"Myotis occultus", "Myotis septentrionalis", "Myotis sodalis",
+"Myotis thysanodes", "Myotis velifer", "Myotis volans", "Myotis yumanensis",
+"Noctilio leporinus", "Nycticeius humeralis", "Nyctinomops femorosaccus",
+"Nyctinomops macrotis", "Parastrellus hesperus", "Perimyotis subflavus",
+"Stenoderma rufum", "Tadarida brasiliensis"), common = c("Pallid bat",
+"Jamaican fruit-eating bat", "Antillean fruit-eating bat", "Mexican long-tongued bat",
+"Rafinesque's big-eared bat", "Townsend's big-eared bat", "Ozark big-eared bat",
+"Virginia big-eared bat", "Hairy-legged vampire bat", "Big brown bat",
+"Spotted bat", "Florida bonneted bat", "Greater bonneted bat",
+"Underwood's bonneted bat", "Allen's big-eared bat", "Silver-haired bat",
+"Eastern red bat", "Hoary bat", "Hawaiian hoary bat", "Southern yellow bat",
+"Desert Red Bat", "Northern yellow bat", "Minor red bat", "Seminole bat",
+"Western yellow bat", "Mexican long-nosed bat", "Lesser long-nosed bat",
+"California leaf-nosed bat", "Pallas' mastiff bat", "Peter's ghost-faced bat",
+"Southwestern myotis", "Southeastern myotis", "California myotis",
+"Western small-footed myotis", "Long-eared myotis", "Gray bat",
+"Keen's myotis", "Eastern small-footed myotis", "Little brown bat",
+"Arizona myotis", "Northern long-eared bat", "Indiana bat", "Fringed myotis",
+"Cave bat myotis", "Long-legged myotis", "Yuma myotis", "Greater bulldog bat",
+"Evening bat", "Pocketed free-tailed bat", "Big free-tailed bat",
 "Canyon bat", "Tri-colored bat", "Red fruit bat", "Brazilian free-tailed bat"
-), code4 = c("anpa", "arja", "brca", "chme", "cora", "coto", 
-"coti", "cotv", "diec", "epfu", "euma", "eufl", "eupe", "euun", 
-"idph", "lano", "labo", "laci", "lacs", "laeg", "lafr", "lain", 
-"lami", "lase", "laxa", "leni", "leye", "maca", "momo", "mome", 
-"myar", "myau", "myca", "myci", "myev", "mygr", "myke", "myle", 
-"mylu", "myoc", "myse", "myso", "myth", "myve", "myvo", "myyu", 
+), code4 = c("anpa", "arja", "brca", "chme", "cora", "coto",
+"coti", "cotv", "diec", "epfu", "euma", "eufl", "eupe", "euun",
+"idph", "lano", "labo", "laci", "lacs", "laeg", "lafr", "lain",
+"lami", "lase", "laxa", "leni", "leye", "maca", "momo", "mome",
+"myar", "myau", "myca", "myci", "myev", "mygr", "myke", "myle",
+"mylu", "myoc", "myse", "myso", "myth", "myve", "myvo", "myyu",
 "nole", "nyhu", "nyfe", "nyma", "pahe", "pesu", "stru", "tabr"
-), code6 = c("antpal", "artjam", "bracav", "chomex", "corraf", 
-"cortow", "cotoin", "cotovi", "dipeca", "eptfus", "eudmac", "eumflo", 
-"eumper", "eumund", "idiphy", "lasnoc", "lasbor", "lascin", "lacise", 
-"lasega", "lasfra", "lasint", "lasmin", "lassem", "lasxan", "lepniv", 
-"lepyer", "maccal", "molmol", "mormeg", "myoaur", "myoaus", "myocal", 
-"myocil", "myoevo", "myogri", "myokee", "myolei", "myoluc", "myoocc", 
-"myosep", "myosod", "myothy", "myovel", "myovol", "myoyum", "noclep", 
+), code6 = c("antpal", "artjam", "bracav", "chomex", "corraf",
+"cortow", "cotoin", "cotovi", "dipeca", "eptfus", "eudmac", "eumflo",
+"eumper", "eumund", "idiphy", "lasnoc", "lasbor", "lascin", "lacise",
+"lasega", "lasfra", "lasint", "lasmin", "lassem", "lasxan", "lepniv",
+"lepyer", "maccal", "molmol", "mormeg", "myoaur", "myoaus", "myocal",
+"myocil", "myoevo", "myogri", "myokee", "myolei", "myoluc", "myoocc",
+"myosep", "myosod", "myothy", "myovel", "myovol", "myoyum", "noclep",
 "nychum", "nycfem", "nycmac", "parhes", "persub", "steruf", "tadbra"
-), fedstatus = c("Not Listed", "Not Listed", "Not Listed", "Not Listed", 
-"Not Listed", "Not Listed", "Endangered", "Endangered", "Not Listed", 
-"Not Listed", "Not Listed", "Endangered", "Not Listed", "Not Listed", 
-"Not Listed", "Not Listed", "Not Listed", "Endangered", "Endangered", 
-"Not Listed", "Not Listed", "Not Listed", "Not Listed", "Not Listed", 
-"Not Listed", "Endangered", "Not Listed", "Not Listed", "Not Listed", 
-"Not Listed", "Not Listed", "Not Listed", "Not Listed", "Not Listed", 
-"Not Listed", "Endangered", "Not Listed", "Not Listed", "Under Review", 
-"Not Listed", "Endangered", "Endangered", "Not Listed", "Not Listed", 
-"Not Listed", "Not Listed", "Not Listed", "Not Listed", "Not Listed", 
-"Not Listed", "Not Listed", "Proposed Endangered", "Not Listed", 
-"Not Listed"), iucnstatus = c("Least Concern", "Least Concern", 
-"Least Concern", "Near Threatened", "Least Concern", "Least Concern", 
-"", "", "Least Concern", "Least Concern", "Least Concern", "Vulnerable", 
-"Least Concern", "Least Concern", "Least Concern", "Least Concern", 
-"Least Concern", "Least Concern", "Least Concern", "Least Concern", 
-"", "Least Concern", "Vulnerable", "Least Concern", "Least Concern", 
-"Endangered", "Vulnerable", "Least Concern", "Least Concern", 
-"Least Concern", "Least Concern", "Least Concern", "Least Concern", 
-"Least Concern", "Least Concern", "Vulnerable", "Least Concern", 
-"Endangered", "Endangered", "Least Concern", "Near Threatened", 
-"Near Threatened", "Least Concern", "Least Concern", "Least Concern", 
-"Least Concern", "Least Concern", "Least Concern", "Least Concern", 
-"Least Concern", "Least Concern", "Vulnerable", "Near Threatened", 
-"Least Concern"), states.listed = c("", "", "", "AZ,CA", "", 
-"", "", "", "", "", "", "FL", "", "", "", "", "", "", "", "", 
-"", "", "", "OK", "", "NM,TX", "", "", "", "", "", "", "", "", 
-"", "", "AK,WA", "CT,GA,MA,MD,MO,NC,NH,NJ,NY,OH,OK,PA,TN,VA,VT,WV", 
-"CT,MA,ME,MI,NH,NJ,OH,PA,TN,VA,VT,WI", "", "", "", "", "", "", 
-"", "", "IN,KY,MI,OH", "", "", "", "", "", ""), states.present = c("AZ,CA,CO,ID,KS,MT,NM,NV,OK,OR,TX,UT,WA", 
-"PR", "PR,VI", "AZ,CA,NM,TX", "AL,AR,FL,GA,IL,IN,KY,LA,MS,NC,SC,TN,VA,WV", 
-"AR,AZ,CA,CO,ID,KS,KY,MO,MT,NC,ND,NE,NM,NV,OK,OR,SD,TX,UT,VA,WA,WV,WY", 
-"AR,MO,OK", "KY,NC,VA,WV", "TX", "AK,AL,AR,AZ,CA,CO,CT,DC,DE,FL,GA,IA,ID,IL,IN,KS,KY,LA,MA,MD,ME,MI,MN,MO,MS,MT,NC,ND,NE,NH,NJ,NM,NV,NY,OH,OK,OR,PA,RI,SC,SD,TN,TX,UT,VA,VT,WA,WI,WV,WY", 
-"AZ,CA,CO,MT,NM,NV,OR,UT,WA,WY", "FL", "AZ,CA,NM,TX", "AZ", "AZ,CA,CO,NM,NV,UT", 
-"AK,AL,AR,AZ,CA,CO,CT,DE,FL,GA,IA,ID,IL,IN,KS,KY,LA,MA,MD,ME,MI,MN,MO,MS,MT,NC,ND,NE,NH,NJ,NM,NV,NY,OH,OK,OR,PA,RI,SC,SD,TN,TX,UT,VA,VT,WA,WI,WV,WY", 
-"AL,AR,CO,CT,DE,FL,GA,IA,IL,IN,KS,KY,LA,MA,MD,ME,MI,MN,MO,MS,MT,NC,ND,NE,NH,NJ,NM,NY,OH,OK,PA,RI,SC,SD,TN,TX,VA,VT,WI,WV,WY", 
-"AK,AL,AR,AZ,CA,CO,CT,DE,FL,GA,HI,IA,ID,IL,IN,KS,KY,LA,MA,MD,ME,MI,MN,MO,MS,MT,NC,ND,NE,NH,NJ,NM,NV,NY,OH,OK,OR,PA,RI,SC,SD,TN,TX,UT,VA,VT,WA,WI,WV,WY", 
-"HI", "AZ,CA,NM,TX", "AZ,CA,NM,TX", "AL,FL,GA,LA,MS,NC,PA,SC,TX,VA", 
-"PR", "AL,AR,FL,GA,KY,LA,MO,MS,NC,OK,SC,TN,TX,VA", "AZ,CA,NM", 
-"AZ,NM,TX", "AZ,CA,NM", "AZ,CA,NV", "FL", "AZ,TX", "AZ,NM", "AL,AR,FL,GA,IL,IN,KY,LA,MS,NC,OK,SC,TN,TX", 
-"AZ,CA,CO,ID,MT,NM,NV,OR,TX,UT,WA,WY", "AZ,CA,CO,ID,KS,MT,ND,NE,NM,NV,OK,OR,SD,TX,UT,WA,WY", 
-"AZ,CA,CO,ID,MT,ND,NM,NV,OR,SD,UT,WA,WY", "AL,AR,GA,IL,IN,KS,KY,MO,MS,NC,OK,TN,VA,WV", 
-"AK,WA", "AL,AR,CT,GA,KY,MA,MD,ME,MI,MO,NC,NH,NJ,NY,OH,OK,PA,RI,TN,VA,VT,WV", 
-"AK,AL,AR,AZ,CA,CO,CT,DE,FL,GA,IA,ID,IL,IN,KS,KY,MA,MD,ME,MI,MN,MO,MS,MT,NC,ND,NE,NH,NJ,NM,NV,NY,OH,OK,OR,PA,RI,SC,SD,TN,UT,VA,VT,WA,WI,WV,WY", 
-"AZ,CA,NM", "AL,AR,CT,DE,GA,IA,IL,IN,KS,KY,LA,MA,MD,ME,MI,MN,MO,MS,MT,NC,ND,NE,NH,NJ,NY,OH,OK,PA,RI,SC,SD,TN,VA,VT,WI,WV,WY", 
-"AL,AR,CT,IA,IL,IN,KY,MD,MI,MO,NC,NJ,NY,OH,OK,PA,TN,VA,VT,WV", 
-"AZ,CA,CO,NM,NV,OR,SD,TX,UT,WA,WY", "AZ,CA,KS,NM,OK,TX", "AK,CA,CO,ID,MT,ND,NE,NM,OR,SD,TX,WY", 
-"CA,CO,ID,MT,NV,OR,TX,UT,WA", "", "AL,AR,FL,GA,IA,IL,IN,KS,KY,LA,MD,MI,MN,MO,MS,NC,NE,OH,OK,PA,SC,TN,TX,VA,WI,WV", 
-"AZ,CA,NM,TX", "CA,NV,TX,UT", "AZ,CA,CO,NM,NV,OK,TX,UT,WA", "AL,AR,CO,CT,DC,DE,FL,GA,IA,IL,IN,KS,KY,LA,MA,MD,ME,MI,MN,MO,MS,NC,NE,NH,NJ,NM,NY,OH,OK,PA,RI,SC,SD,TN,TX,VA,VT,WI,WV,WY", 
-"PR,VI", "AZ,CA,CO,FL,KS,NM,NV,OK,TX,UT"), states.end = c("", 
-"", "", "", "", "", "", "", "", "", "", "FL", "", "", "", "", 
-"", "", "", "", "", "", "", "", "", "NM,TX", "", "", "", "", 
-"", "", "", "", "", "", "", "NH", "CT,MA,ME,NH,NJ,PA,VA,VT", 
-"", "", "", "", "", "", "", "", "IN", "", "", "", "", "", ""), 
-    states.the = c("", "", "", "", "", "", "", "", "", "", "", 
-    "", "", "", "", "", "", "", "", "", "", "", "", "OK", "", 
-    "", "", "", "", "", "", "", "", "", "", "", "", "PA,VT", 
-    "TN,WI", "", "", "", "", "", "", "", "", "KY,MI", "", "", 
-    "", "", "", ""), state.soc = c("", "", "", "AZ,CA", "", "", 
-    "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", 
-    "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", 
-    "AK,WA", "CT,GA,MA,MD,MO,NC,NJ,NY,OH,OK,TN,VA,WV", "MI,OH", 
-    "", "", "", "", "", "", "", "", "OH", "", "", "", "", "", 
-    ""), fed.proposed = c("", "", "", "", "", "", "", "", "", 
-    "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", 
-    "", "", "", "", "", "", "", "", "", "", "", "", "", "", "Under Review, start year unconfirmed", 
-    "", "", "", "", "", "", "", "", "", "", "", "", "Proposed Endangered, 2022", 
-    "", ""), hibernation.strat = c("resident", "resident", "resident", 
-    "migratory", "hibernating", "hibernating", "hibernating", 
-    "hibernating", "unknown", "hibernating", "mixed", "resident", 
-    "resident", "resident", "unknown", "migratory", "migratory", 
-    "migratory", "resident", "resident", "migratory", "resident", 
-    "resident", "mixed", "resident", "migratory", "migratory", 
-    "resident", "resident", "unknown", "hibernating", "mixed", 
-    "hibernating", "hibernating", "hibernating", "hibernating", 
-    "hibernating", "hibernating", "hibernating", "hibernating", 
-    "hibernating", "hibernating", "hibernating", "mixed", "hibernating", 
-    "mixed", "unknown", "migratory", "migratory", "migratory", 
-    "resident", "hibernating", "resident", "mixed"), phonic.group = c("Lof", 
-    "None", "None", "Hif", "Lof", "Lof", "Lof", "Lof", "None", 
-    "Lof", "Lof", "Lof", "Lof", "Lof", "Lof", "Lof", "Hif", "Lof", 
-    "Lof", "Hif", "Hif", "Hif", "Hif", "Hif", "Hif", "Hif", "Hif", 
-    "None", "Hif", "Hif", "Hif", "Hif", "Hif", "Hif", "Hif", 
-    "Hif", "Hif", "Hif", "Hif", "Hif", "Hif", "Hif", "Hif", "Hif", 
-    "Hif", "Hif", "Hif", "Hif", "Lof", "Lof", "Hif", "Hif", "None", 
-    "Lof"), notes = c("", "", "", "", "", "", "same as C. townsendii (subspecies)", 
-    "same as C. townsendii (subspecies)", "only marginal/historical US records - winter behavior in US range not documented; $phonic.group reflects general vampire-bat biology (faint, short-range echolocation), not US-specific data", 
-    "", "some individuals migrate to warmer areas in winter, others do not - genuinely mixed at species level per general accounts, LOWER CONFIDENCE on the exact split", 
-    "", "", "very limited US (AZ) records", "poorly studied - winter/hibernation-site behavior not well documented for this species", 
-    "", "", "", "same call/hibernation biology as mainland L. cinereus, but the Hawaiian population does not undertake the mainland's continental migration", 
-    "LOWER CONFIDENCE call-frequency estimate (yellow bat group, less-studied)", 
-    "recently split from L. blossevillii - LOWER CONFIDENCE, based on close congeners", 
-    "LOWER CONFIDENCE call-frequency estimate (yellow bat group)", 
-    "Caribbean population - LOWER CONFIDENCE, based on close congeners (L. borealis-type)", 
-    "documented partial migrant - some individuals overwinter via torpor in the Deep South rather than migrating", 
-    "LOWER CONFIDENCE call-frequency estimate (yellow bat group)", 
-    "", "", "the ONLY North American bat documented to stay fully active year-round with no hibernation or migration, even in the desert", 
-    "", "LOWER CONFIDENCE hibernation call: only a marginal edge-of-range US (TX/AZ) population, poorly documented", 
-    "LOWER CONFIDENCE (desert Myotis, less-studied than eastern species)", 
-    "documented species-level variability - some populations hibernate in caves, Florida populations largely remain active year-round", 
-    "LOWER CONFIDENCE (mild-climate coastal populations may be less strict hibernators than assumed here)", 
-    "", "", "", "", "", "", "LOWER CONFIDENCE (desert Myotis, less-studied)", 
-    "", "", "", "documented species-level variability - northern populations hibernate, southern/border populations may remain active in mild winters", 
-    "", "documented species-level variability - similar pattern to M. velifer/austroriparius", 
-    "no confirmed current PR/US-territory population per $states.present (blank) - hibernation.strat reflects lack of a documented US-range population, not species biology generally; $phonic.group instead reflects general species/family biology (a loud, high-frequency fishing bat) since call type is a fixed physical trait independent of range presence", 
-    "some populations migrate, southern populations may be more resident - classified migratory per general accounts, LOWER CONFIDENCE on the split", 
+), fedstatus = c("Not Listed", "Not Listed", "Not Listed", "Not Listed",
+"Not Listed", "Not Listed", "Endangered", "Endangered", "Not Listed",
+"Not Listed", "Not Listed", "Endangered", "Not Listed", "Not Listed",
+"Not Listed", "Not Listed", "Not Listed", "Endangered", "Endangered",
+"Not Listed", "Not Listed", "Not Listed", "Not Listed", "Not Listed",
+"Not Listed", "Endangered", "Not Listed", "Not Listed", "Not Listed",
+"Not Listed", "Not Listed", "Not Listed", "Not Listed", "Not Listed",
+"Endangered", "Not Listed", "Not Listed", "Under Review", "Not Listed",
+"Endangered", "Endangered", "Not Listed", "Not Listed", "Not Listed",
+"Not Listed", "Not Listed", "Not Listed", "Not Listed", "Not Listed",
+"Not Listed", "Proposed Endangered", "Not Listed", "Not Listed"
+), iucnstatus = c("Least Concern", "Least Concern", "Least Concern",
+"Near Threatened", "Least Concern", "Least Concern", "", "",
+"Least Concern", "Least Concern", "Least Concern", "Vulnerable",
+"Least Concern", "Least Concern", "Least Concern", "Least Concern",
+"Least Concern", "Least Concern", "Least Concern", "Least Concern",
+"", "Least Concern", "Vulnerable", "Least Concern", "Least Concern",
+"Endangered", "Vulnerable", "Least Concern", "Least Concern",
+"Least Concern", "Least Concern", "Least Concern", "Least Concern",
+"Least Concern", "Least Concern", "Vulnerable", "Least Concern",
+"Endangered", "Endangered", "Least Concern", "Near Threatened",
+"Near Threatened", "Least Concern", "Least Concern", "Least Concern",
+"Least Concern", "Least Concern", "Least Concern", "Least Concern",
+"Least Concern", "Least Concern", "Vulnerable", "Near Threatened",
+"Least Concern"), states.listed = c("", "", "", "AZ,CA", "",
+"", "", "", "", "", "", "FL", "", "", "", "", "", "", "", "",
+"", "", "", "OK", "", "NM,TX", "", "", "", "", "", "", "", "",
+"", "", "AK,WA", "CT,GA,MA,MD,MO,NC,NH,NJ,NY,OH,OK,PA,TN,VA,VT,WV",
+"CT,MA,ME,MI,NH,NJ,OH,PA,TN,VA,VT,WI", "", "", "", "", "", "",
+"", "", "IN,KY,MI,OH", "", "", "", "", "", ""), states.present = c("AZ,CA,CO,ID,KS,MT,NM,NV,OK,OR,TX,UT,WA",
+"PR", "PR,VI", "AZ,CA,NM,TX", "AL,AR,FL,GA,IL,IN,KY,LA,MS,NC,SC,TN,VA,WV",
+"AR,AZ,CA,CO,ID,KS,KY,MO,MT,NC,ND,NE,NM,NV,OK,OR,SD,TX,UT,VA,WA,WV,WY",
+"AR,MO,OK", "KY,NC,VA,WV", "TX", "AK,AL,AR,AZ,CA,CO,CT,DC,DE,FL,GA,IA,ID,IL,IN,KS,KY,LA,MA,MD,ME,MI,MN,MO,MS,MT,NC,ND,NE,NH,NJ,NM,NV,NY,OH,OK,OR,PA,RI,SC,SD,TN,TX,UT,VA,VT,WA,WI,WV,WY",
+"AZ,CA,CO,MT,NM,NV,OR,UT,WA,WY", "FL", "AZ,CA,NM,TX", "AZ", "AZ,CA,CO,NM,NV,UT",
+"AK,AL,AR,AZ,CA,CO,CT,DE,FL,GA,IA,ID,IL,IN,KS,KY,LA,MA,MD,ME,MI,MN,MO,MS,MT,NC,ND,NE,NH,NJ,NM,NV,NY,OH,OK,OR,PA,RI,SC,SD,TN,TX,UT,VA,VT,WA,WI,WV,WY",
+"AL,AR,CO,CT,DE,FL,GA,IA,IL,IN,KS,KY,LA,MA,MD,ME,MI,MN,MO,MS,MT,NC,ND,NE,NH,NJ,NM,NY,OH,OK,PA,RI,SC,SD,TN,TX,VA,VT,WI,WV,WY",
+"AK,AL,AR,AZ,CA,CO,CT,DE,FL,GA,HI,IA,ID,IL,IN,KS,KY,LA,MA,MD,ME,MI,MN,MO,MS,MT,NC,ND,NE,NH,NJ,NM,NV,NY,OH,OK,OR,PA,RI,SC,SD,TN,TX,UT,VA,VT,WA,WI,WV,WY",
+"HI", "AZ,CA,NM,TX", "AZ,CA,NM,TX", "AL,FL,GA,LA,MS,NC,PA,SC,TX,VA",
+"PR", "AL,AR,FL,GA,KY,LA,MO,MS,NC,OK,SC,TN,TX,VA", "AZ,CA,NM",
+"AZ,NM,TX", "AZ,CA,NM", "AZ,CA,NV", "FL", "AZ,TX", "AZ,NM", "AL,AR,FL,GA,IL,IN,KY,LA,MS,NC,OK,SC,TN,TX",
+"AZ,CA,CO,ID,MT,NM,NV,OR,TX,UT,WA,WY", "AZ,CA,CO,ID,KS,MT,ND,NE,NM,NV,OK,OR,SD,TX,UT,WA,WY",
+"AZ,CA,CO,ID,MT,ND,NM,NV,OR,SD,UT,WA,WY", "AL,AR,GA,IL,IN,KS,KY,MO,MS,NC,OK,TN,VA,WV",
+"AK,WA", "AL,AR,CT,GA,KY,MA,MD,ME,MI,MO,NC,NH,NJ,NY,OH,OK,PA,RI,TN,VA,VT,WV",
+"AK,AL,AR,AZ,CA,CO,CT,DE,FL,GA,IA,ID,IL,IN,KS,KY,MA,MD,ME,MI,MN,MO,MS,MT,NC,ND,NE,NH,NJ,NM,NV,NY,OH,OK,OR,PA,RI,SC,SD,TN,UT,VA,VT,WA,WI,WV,WY",
+"AZ,CA,NM", "AL,AR,CT,DE,GA,IA,IL,IN,KS,KY,LA,MA,MD,ME,MI,MN,MO,MS,MT,NC,ND,NE,NH,NJ,NY,OH,OK,PA,RI,SC,SD,TN,VA,VT,WI,WV,WY",
+"AL,AR,CT,IA,IL,IN,KY,MD,MI,MO,NC,NJ,NY,OH,OK,PA,TN,VA,VT,WV",
+"AZ,CA,CO,NM,NV,OR,SD,TX,UT,WA,WY", "AZ,CA,KS,NM,OK,TX", "AK,CA,CO,ID,MT,ND,NE,NM,OR,SD,TX,WY",
+"CA,CO,ID,MT,NV,OR,TX,UT,WA", "", "AL,AR,FL,GA,IA,IL,IN,KS,KY,LA,MD,MI,MN,MO,MS,NC,NE,OH,OK,PA,SC,TN,TX,VA,WI,WV",
+"AZ,CA,NM,TX", "CA,NV,TX,UT", "AZ,CA,CO,NM,NV,OK,TX,UT,WA", "AL,AR,CO,CT,DC,DE,FL,GA,IA,IL,IN,KS,KY,LA,MA,MD,ME,MI,MN,MO,MS,NC,NE,NH,NJ,NM,NY,OH,OK,PA,RI,SC,SD,TN,TX,VA,VT,WI,WV,WY",
+"PR,VI", "AZ,CA,CO,FL,KS,NM,NV,OK,TX,UT"), states.end = c("",
+"", "", "", "", "", "", "", "", "", "", "FL", "", "", "", "",
+"", "", "", "", "", "", "", "", "", "NM,TX", "", "", "", "",
+"", "", "", "", "", "", "NH", "CT,MA,ME,NH,NJ,PA,VA,VT",
+"", "", "", "", "", "", "", "", "IN", "", "", "", "", "", ""),
+    states.the = c("", "", "", "", "", "", "", "", "", "", "",
+    "", "", "", "", "", "", "", "", "", "", "", "", "OK", "",
+    "", "", "", "", "", "", "", "", "", "", "", "", "PA,VT",
+    "TN,WI", "", "", "", "", "", "", "", "", "KY,MI", "", "",
+    "", "", "", ""), state.soc = c("", "", "", "AZ,CA", "", "",
+    "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+    "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+    "AK,WA", "CT,GA,MA,MD,MO,NC,NJ,NY,OH,OK,TN,VA,WV", "MI,OH",
+    "", "", "", "", "", "", "", "", "OH", "", "", "", "", "",
+    ""), fed.proposed = c("", "", "", "", "", "", "", "", "",
+    "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+    "", "", "", "", "", "", "", "", "", "", "", "", "", "Under Review, start year unconfirmed",
+    "", "", "", "", "", "", "", "", "", "", "", "", "Proposed Endangered, 2022",
+    "", ""), hibernation.strat = c("resident", "resident", "resident",
+    "migratory", "hibernating", "hibernating", "hibernating",
+    "hibernating", "unknown", "hibernating", "mixed", "resident",
+    "resident", "resident", "unknown", "migratory", "migratory",
+    "migratory", "resident", "resident", "migratory", "resident",
+    "resident", "mixed", "resident", "migratory", "migratory",
+    "resident", "resident", "unknown", "hibernating", "mixed",
+    "hibernating", "hibernating", "hibernating", "hibernating",
+    "hibernating", "hibernating", "hibernating", "hibernating",
+    "hibernating", "hibernating", "hibernating", "mixed", "hibernating",
+    "mixed", "unknown", "migratory", "migratory", "migratory",
+    "resident", "hibernating", "resident", "mixed"), phonic.group = c("Lof",
+    "None", "None", "Hif", "Lof", "Lof", "Lof", "Lof", "None",
+    "Lof", "Lof", "Lof", "Lof", "Lof", "Lof", "Lof", "Hif", "Lof",
+    "Lof", "Hif", "Hif", "Hif", "Hif", "Hif", "Hif", "Hif", "Hif",
+    "None", "Hif", "Hif", "Hif", "Hif", "Hif", "Hif", "Hif",
+    "Hif", "Hif", "Hif", "Hif", "Hif", "Hif", "Hif", "Hif", "Hif",
+    "Hif", "Hif", "Hif", "Hif", "Lof", "Lof", "Hif", "Hif", "None",
+    "Lof"), notes = c("", "", "", "", "", "", "same as C. townsendii (subspecies)",
+    "same as C. townsendii (subspecies)", "only marginal/historical US records - winter behavior in US range not documented; $phonic.group reflects general vampire-bat biology (faint, short-range echolocation), not US-specific data",
+    "", "some individuals migrate to warmer areas in winter, others do not - genuinely mixed at species level per general accounts, LOWER CONFIDENCE on the exact split",
+    "", "", "very limited US (AZ) records", "poorly studied - winter/hibernation-site behavior not well documented for this species",
+    "", "", "", "same call/hibernation biology as mainland L. cinereus, but the Hawaiian population does not undertake the mainland's continental migration",
+    "LOWER CONFIDENCE call-frequency estimate (yellow bat group, less-studied)",
+    "recently split from L. blossevillii - LOWER CONFIDENCE, based on close congeners",
+    "LOWER CONFIDENCE call-frequency estimate (yellow bat group)",
+    "Caribbean population - LOWER CONFIDENCE, based on close congeners (L. borealis-type)",
+    "documented partial migrant - some individuals overwinter via torpor in the Deep South rather than migrating",
+    "LOWER CONFIDENCE call-frequency estimate (yellow bat group)",
+    "", "", "the ONLY North American bat documented to stay fully active year-round with no hibernation or migration, even in the desert",
+    "", "LOWER CONFIDENCE hibernation call: only a marginal edge-of-range US (TX/AZ) population, poorly documented",
+    "LOWER CONFIDENCE (desert Myotis, less-studied than eastern species)",
+    "documented species-level variability - some populations hibernate in caves, Florida populations largely remain active year-round",
+    "LOWER CONFIDENCE (mild-climate coastal populations may be less strict hibernators than assumed here)",
+    "", "", "", "", "", "", "LOWER CONFIDENCE (desert Myotis, less-studied)",
+    "", "", "", "documented species-level variability - northern populations hibernate, southern/border populations may remain active in mild winters",
+    "", "documented species-level variability - similar pattern to M. velifer/austroriparius",
+    "no confirmed current PR/US-territory population per $states.present (blank) - hibernation.strat reflects lack of a documented US-range population, not species biology generally; $phonic.group instead reflects general species/family biology (a loud, high-frequency fishing bat) since call type is a fixed physical trait independent of range presence",
+    "some populations migrate, southern populations may be more resident - classified migratory per general accounts, LOWER CONFIDENCE on the split",
     "", "", "", "", "", "very well-documented species-level mix: most populations (e.g. the famous Bracken Cave, TX colony) migrate to Mexico for winter, but Florida/Gulf coast populations are non-migratory and active year-round"
     )), row.names = c(NA, -54L), class = "data.frame")
 
@@ -324,83 +343,88 @@ batz.batusa_list.species <- function(data,
   # Reference database 2: US states/territories (confirmed to be Josh's
   # "USAstate.names.database" - see @details - embedded from
   # NAstates.names.csv, 56 rows x 8 columns).
+  #
+  # Header standardization (per Josh, 2026-09-14 project preference): NOT
+  # applied here either, for the same reason as `nabat` above - this
+  # table's column names are this function's own fixed, already-established
+  # schema. See @details "Header standardization" above.
   # ---------------------------------------------------------------------------
-  states <- structure(list(official.name = c("State of Alabama", "State of Alaska", 
-"State of Arizona", "State of Arkansas", "State of California", 
-"State of Colorado", "State of Connecticut", "State of Delaware", 
-"State of Florida", "State of Georgia", "State of Hawaii", "State of Idaho", 
-"State of Illinois", "State of Indiana", "State of Iowa", "State of Kansas", 
-"Commonwealth of Kentucky", "State of Louisiana", "State of Maine", 
-"State of Maryland", "Commonwealth of Massachusetts", "State of Michigan", 
-"State of Minnesota", "State of Mississippi", "State of Missouri", 
-"State of Montana", "State of Nebraska", "State of Nevada", "State of New Hampshire", 
-"State of New Jersey", "State of New Mexico", "State of New York", 
-"State of North Carolina", "State of North Dakota", "State of Ohio", 
-"State of Oklahoma", "State of Oregon", "Commonwealth of Pennsylvania", 
-"State of Rhode Island", "State of South Carolina", "State of South Dakota", 
-"State of Tennessee", "State of Texas", "State of Utah", "State of Vermont", 
-"Commonwealth of Virginia", "State of Washington", "State of West Virginia", 
-"State of Wisconsin", "State of Wyoming", "District of Columbia", 
-"Commonwealth of Puerto Rico", "Virgin Islands of the United States", 
+  states <- structure(list(official.name = c("State of Alabama", "State of Alaska",
+"State of Arizona", "State of Arkansas", "State of California",
+"State of Colorado", "State of Connecticut", "State of Delaware",
+"State of Florida", "State of Georgia", "State of Hawaii", "State of Idaho",
+"State of Illinois", "State of Indiana", "State of Iowa", "State of Kansas",
+"Commonwealth of Kentucky", "State of Louisiana", "State of Maine",
+"State of Maryland", "Commonwealth of Massachusetts", "State of Michigan",
+"State of Minnesota", "State of Mississippi", "State of Missouri",
+"State of Montana", "State of Nebraska", "State of Nevada", "State of New Hampshire",
+"State of New Jersey", "State of New Mexico", "State of New York",
+"State of North Carolina", "State of North Dakota", "State of Ohio",
+"State of Oklahoma", "State of Oregon", "Commonwealth of Pennsylvania",
+"State of Rhode Island", "State of South Carolina", "State of South Dakota",
+"State of Tennessee", "State of Texas", "State of Utah", "State of Vermont",
+"Commonwealth of Virginia", "State of Washington", "State of West Virginia",
+"State of Wisconsin", "State of Wyoming", "District of Columbia",
+"Commonwealth of Puerto Rico", "Virgin Islands of the United States",
 "Territory of Guam", "Territory of American Samoa", "Commonwealth of the Northern Mariana Islands"
-), short.name = c("Alabama", "Alaska", "Arizona", "Arkansas", 
-"California", "Colorado", "Connecticut", "Delaware", "Florida", 
-"Georgia", "Hawaii", "Idaho", "Illinois", "Indiana", "Iowa", 
-"Kansas", "Kentucky", "Louisiana", "Maine", "Maryland", "Massachusetts", 
-"Michigan", "Minnesota", "Mississippi", "Missouri", "Montana", 
-"Nebraska", "Nevada", "New Hampshire", "New Jersey", "New Mexico", 
-"New York", "North Carolina", "North Dakota", "Ohio", "Oklahoma", 
-"Oregon", "Pennsylvania", "Rhode Island", "South Carolina", "South Dakota", 
-"Tennessee", "Texas", "Utah", "Vermont", "Virginia", "Washington", 
-"West Virginia", "Wisconsin", "Wyoming", "Washington, D.C.", 
-"Puerto Rico", "U.S. Virgin Islands", "Guam", "American Samoa", 
-"Northern Mariana Islands"), code2 = c("AL", "AK", "AZ", "AR", 
-"CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID", "IL", "IN", "IA", 
-"KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", 
-"NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK", "OR", 
-"PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", 
-"WI", "WY", "DC", "PR", "VI", "GU", "AS", "MP"), entity.type = c("State", 
-"State", "State", "State", "State", "State", "State", "State", 
-"State", "State", "State", "State", "State", "State", "State", 
-"State", "State", "State", "State", "State", "State", "State", 
-"State", "State", "State", "State", "State", "State", "State", 
-"State", "State", "State", "State", "State", "State", "State", 
-"State", "State", "State", "State", "State", "State", "State", 
-"State", "State", "State", "State", "State", "State", "State", 
-"Federal District", "Territory", "Territory", "Territory", "Territory", 
-"Territory"), USFWS.Region = c("4", "7", "2", "4", "8", "6", 
-"5", "5", "4", "4", "1", "1", "3", "3", "3", "6", "4", "4", "5", 
-"5", "5", "3", "3", "4", "3", "6", "6", "8", "5", "5", "2", "5", 
-"4", "6", "3", "2", "1", "5", "5", "4", "6", "4", "2", "6", "5", 
-"5", "1", "5", "3", "6", "5", "4", "4", "1", "1", "1"), time.zone = c("6", 
-"9", "7", "6", "8", "7", "5", "5", "5", "5", "10", "7", "6", 
-"5", "6", "6", "5", "6", "5", "5", "5", "5", "6", "6", "6", "7", 
-"6", "8", "5", "5", "7", "5", "5", "6", "5", "6", "8", "5", "5", 
-"5", "6", "6", "6", "7", "5", "5", "8", "5", "6", "7", "5", "4", 
-"4", "-10", "11", "-10"), dst.observed = c("TRUE", "TRUE", "FALSE", 
-"TRUE", "TRUE", "TRUE", "TRUE", "TRUE", "TRUE", "TRUE", "FALSE", 
-"TRUE", "TRUE", "TRUE", "TRUE", "TRUE", "TRUE", "TRUE", "TRUE", 
-"TRUE", "TRUE", "TRUE", "TRUE", "TRUE", "TRUE", "TRUE", "TRUE", 
-"TRUE", "TRUE", "TRUE", "TRUE", "TRUE", "TRUE", "TRUE", "TRUE", 
-"TRUE", "TRUE", "TRUE", "TRUE", "TRUE", "TRUE", "TRUE", "TRUE", 
-"TRUE", "TRUE", "TRUE", "TRUE", "TRUE", "TRUE", "TRUE", "TRUE", 
-"FALSE", "FALSE", "FALSE", "FALSE", "FALSE"), notes = c("", "", 
-"Does not observe DST (Mountain Standard Time year-round; the Navajo Nation portion of AZ does observe DST, not broken out here)", 
-"", "", "", "", "", "Panhandle (west of Apalachicola River, e.g. Pensacola) is Central; majority Eastern used here", 
-"", "Does not observe DST", "Northern panhandle (~10 counties, e.g. Coeur d'Alene, Lewiston) is Pacific; majority Mountain used here", 
-"", "NW corner (Chicago area) and SW corner (Evansville area) are Central; majority Eastern used here", 
-"", "Far western counties are Mountain; majority Central used here", 
-"", "", "", "", "", "Western Upper Peninsula (a few counties) is Central; majority Eastern used here", 
-"", "", "", "", "Panhandle (Scottsbluff area) is Mountain; majority Central used here", 
-"Nevada is Pacific by state law statewide; a few easternmost points are geographically nearer Mountain but not officially observed", 
-"", "", "", "", "", "", "West is Mountain (~13 westernmost counties); majority Central used here", 
-"", "Malheur County (far east) is Mountain; majority Pacific used here", 
-"", "", "", "West is Mountain (~10 westernmost counties); majority Central used here", 
-"East third (Knoxville/Chattanooga area) is Eastern; majority Central used here", 
-"El Paso area (far west) is Mountain; majority Central used here", 
-"", "", "", "", "", "", "", "", "Does not observe DST (Atlantic Standard Time year-round)", 
-"Does not observe DST (Atlantic Standard Time year-round)", "Does not observe DST (Chamorro Standard Time, UTC+10 year-round)", 
-"Does not observe DST (Samoa Standard Time, UTC-11 year-round)", 
+), short.name = c("Alabama", "Alaska", "Arizona", "Arkansas",
+"California", "Colorado", "Connecticut", "Delaware", "Florida",
+"Georgia", "Hawaii", "Idaho", "Illinois", "Indiana", "Iowa",
+"Kansas", "Kentucky", "Louisiana", "Maine", "Maryland", "Massachusetts",
+"Michigan", "Minnesota", "Mississippi", "Missouri", "Montana",
+"Nebraska", "Nevada", "New Hampshire", "New Jersey", "New Mexico",
+"New York", "North Carolina", "North Dakota", "Ohio", "Oklahoma",
+"Oregon", "Pennsylvania", "Rhode Island", "South Carolina", "South Dakota",
+"Tennessee", "Texas", "Utah", "Vermont", "Virginia", "Washington",
+"West Virginia", "Wisconsin", "Wyoming", "Washington, D.C.",
+"Puerto Rico", "U.S. Virgin Islands", "Guam", "American Samoa",
+"Northern Mariana Islands"), code2 = c("AL", "AK", "AZ", "AR",
+"CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID", "IL", "IN", "IA",
+"KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT",
+"NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK", "OR",
+"PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV",
+"WI", "WY", "DC", "PR", "VI", "GU", "AS", "MP"), entity.type = c("State",
+"State", "State", "State", "State", "State", "State", "State",
+"State", "State", "State", "State", "State", "State", "State",
+"State", "State", "State", "State", "State", "State", "State",
+"State", "State", "State", "State", "State", "State", "State",
+"State", "State", "State", "State", "State", "State", "State",
+"State", "State", "State", "State", "State", "State", "State",
+"State", "State", "State", "State", "State", "State", "State",
+"Federal District", "Territory", "Territory", "Territory", "Territory",
+"Territory"), USFWS.Region = c("4", "7", "2", "4", "8", "6",
+"5", "5", "4", "4", "1", "1", "3", "3", "3", "6", "4", "4", "5",
+"5", "5", "3", "3", "4", "3", "6", "6", "8", "5", "5", "2", "5",
+"4", "6", "3", "2", "1", "5", "5", "4", "6", "4", "2", "6", "5",
+"5", "1", "5", "3", "6", "5", "4", "4", "1", "1", "1"), time.zone = c("6",
+"9", "7", "6", "8", "7", "5", "5", "5", "5", "10", "7", "6",
+"5", "6", "6", "5", "6", "5", "5", "5", "5", "6", "6", "6", "7",
+"6", "8", "5", "5", "7", "5", "5", "6", "5", "6", "8", "5", "5",
+"5", "6", "6", "6", "7", "5", "5", "8", "5", "6", "7", "5", "4",
+"4", "-10", "11", "-10"), dst.observed = c("TRUE", "TRUE", "FALSE",
+"TRUE", "TRUE", "TRUE", "TRUE", "TRUE", "TRUE", "TRUE", "FALSE",
+"TRUE", "TRUE", "TRUE", "TRUE", "TRUE", "TRUE", "TRUE", "TRUE",
+"TRUE", "TRUE", "TRUE", "TRUE", "TRUE", "TRUE", "TRUE", "TRUE",
+"TRUE", "TRUE", "TRUE", "TRUE", "TRUE", "TRUE", "TRUE", "TRUE",
+"TRUE", "TRUE", "TRUE", "TRUE", "TRUE", "TRUE", "TRUE", "TRUE",
+"TRUE", "TRUE", "TRUE", "TRUE", "TRUE", "TRUE", "TRUE", "TRUE",
+"FALSE", "FALSE", "FALSE", "FALSE", "FALSE"), notes = c("", "",
+"Does not observe DST (Mountain Standard Time year-round; the Navajo Nation portion of AZ does observe DST, not broken out here)",
+"", "", "", "", "", "Panhandle (west of Apalachicola River, e.g. Pensacola) is Central; majority Eastern used here",
+"", "Does not observe DST", "Northern panhandle (~10 counties, e.g. Coeur d'Alene, Lewiston) is Pacific; majority Mountain used here",
+"", "NW corner (Chicago area) and SW corner (Evansville area) are Central; majority Eastern used here",
+"", "Far western counties are Mountain; majority Central used here",
+"", "", "", "", "", "Western Upper Peninsula (a few counties) is Central; majority Eastern used here",
+"", "", "", "", "Panhandle (Scottsbluff area) is Mountain; majority Central used here",
+"Nevada is Pacific by state law statewide; a few easternmost points are geographically nearer Mountain but not officially observed",
+"", "", "", "", "", "", "West is Mountain (~13 westernmost counties); majority Central used here",
+"", "Malheur County (far east) is Mountain; majority Pacific used here",
+"", "", "", "West is Mountain (~10 westernmost counties); majority Central used here",
+"East third (Knoxville/Chattanooga area) is Eastern; majority Central used here",
+"El Paso area (far west) is Mountain; majority Central used here",
+"", "", "", "", "", "", "", "", "Does not observe DST (Atlantic Standard Time year-round)",
+"Does not observe DST (Atlantic Standard Time year-round)", "Does not observe DST (Chamorro Standard Time, UTC+10 year-round)",
+"Does not observe DST (Samoa Standard Time, UTC-11 year-round)",
 "Does not observe DST (Chamorro Standard Time, UTC+10 year-round)"
 )), row.names = c(NA, -56L), class = "data.frame")
 
@@ -430,14 +454,14 @@ batz.batusa_list.species <- function(data,
       fedstatus)
   }
 
-  status.value <- function(bat.row, state.code2, presence.absence) {
+  status.value <- function(bat.row, state.code2, symbol_presence.absence) {
     present <- state.code2 %in% split.codes(bat.row[["states.present"]])
     soc     <- state.code2 %in% split.codes(bat.row[["state.soc"]])
     listed  <- state.code2 %in% split.codes(bat.row[["states.listed"]])
-    if (!present) return(presence.absence[2])
+    if (!present) return(symbol_presence.absence[2])
     if (soc) return("SC")
     if (listed) return("L")
-    presence.absence[1]
+    symbol_presence.absence[1]
   }
 
   bat.cols   <- c("latin", "common", "code4", "code6")
@@ -498,23 +522,23 @@ batz.batusa_list.species <- function(data,
   }
 
   format.bat.label <- function(row) {
-    name <- switch(batname.format,
+    name <- switch(batname.format.out,
       "full"   = sprintf("%s (%s)%s", row[["common"]], row[["latin"]], row[["hibernation.strat"]]),
       "both"   = sprintf("%s (%s)", row[["common"]], row[["latin"]]),
       "common" = row[["common"]],
       "latin"  = row[["latin"]],
-      stop(sprintf("batname.format must be one of \"full\", \"both\", \"common\", \"latin\" (got '%s')", batname.format))
+      stop(sprintf("batname.format.out must be one of \"full\", \"both\", \"common\", \"latin\" (got '%s')", batname.format.out))
     )
     if (!grammar.dash) name <- gsub("-", " ", name)
     name
   }
 
   format.state.label <- function(row) {
-    label <- switch(statename.format,
+    label <- switch(statename.format.out,
       "code2"         = row[["code2"]],
       "official.name" = row[["official.name"]],
       "short.name"    = row[["short.name"]],
-      stop(sprintf("statename.format must be one of \"code2\", \"official.name\", \"short.name\" (got '%s')", statename.format))
+      stop(sprintf("statename.format.out must be one of \"code2\", \"official.name\", \"short.name\" (got '%s')", statename.format.out))
     )
     if (!grammar.dash) label <- gsub("-", " ", label)
     label
@@ -537,7 +561,7 @@ batz.batusa_list.species <- function(data,
       j <- state.idx[k]
       state.code2 <- states[j, "code2"]
       col <- vapply(species.idx, function(i) {
-        val <- status.value(nabat[i, ], state.code2, presence.absence)
+        val <- status.value(nabat[i, ], state.code2, symbol_presence.absence)
         if (is.extirpated(nabat[i, ], state.code2)) val <- paste0(val, "#")
         val
       }, character(1))
@@ -557,8 +581,8 @@ batz.batusa_list.species <- function(data,
         i <- species.idx[m]
         present <- state.code2 %in% split.codes(nabat[i, "states.present"])
         if (!present) next
-        val <- status.value(nabat[i, ], state.code2, presence.absence)
-        if (val == presence.absence[1]) val <- ""   # a row existing already implies presence
+        val <- status.value(nabat[i, ], state.code2, symbol_presence.absence)
+        if (val == symbol_presence.absence[1]) val <- ""   # a row existing already implies presence
         if (is.extirpated(nabat[i, ], state.code2)) val <- paste0(val, "#")
         # Built POSITIONALLY, not as a named list: the model reuses "State"
         # as the header for BOTH the row's state and the listing-status

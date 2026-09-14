@@ -4,8 +4,8 @@
 #' Autonomous Recording Unit activity-log summary files
 #' (\code{"*_A_Summary.txt"}/\code{"*_B_Summary.txt"}), validates each
 #' file's headers, and merges them into one standardized master data frame:
-#' the ARU name is extracted from the file name, \code{$DATE} is normalized
-#' to \code{YYYY-MM-DD}, and \code{$LAT}/\code{$NS} and \code{$LON}/\code{$EW}
+#' the ARU name is extracted from the file name, \code{$date} is normalized
+#' to \code{YYYY-MM-DD}, and \code{$lat}/\code{$ns} and \code{$lon}/\code{$ew}
 #' are converted to signed decimal degrees (\code{$Y}/\code{$X}).
 #'
 #' @param dir.load Character. Directory to search for files matching
@@ -35,14 +35,38 @@
 #'   requested) directly in your workspace.
 #'
 #' @details
+#' \strong{Header standardization (per Josh, 2026-09-14 project preference)
+#' - real, documented output-schema change.} The 11 expected SM4 summary
+#' columns are a literal, uninvented copy of the ARU device's own real
+#' export column text (not a \code{batz}-invented shorthand), so - like the
+#' raw headers read off every file - they are now run through the shared
+#' package helper \code{standardize.headers()} (trim whitespace, collapse
+#' every run of non-alphanumeric characters to a single underscore,
+#' lowercase). The expected-header list itself was rewritten to the
+#' standardized spellings so both sides of the header-validation check line
+#' up: \code{DATE} -> \code{date}, \code{TIME} -> \code{time}, \code{LAT} ->
+#' \code{lat}, \code{NS} -> \code{ns}, \code{LON} -> \code{lon}, \code{EW} ->
+#' \code{ew}, \code{POWER(V)} -> \code{power_v}, \code{TEMP(C)} ->
+#' \code{temp_c}, \code{#FILES} -> \code{files}, \code{#SCRUBBED} ->
+#' \code{scrubbed}, \code{MIC0 TYPE} -> \code{mic0_type}. Since these are the
+#' exact columns kept (and renamed to nothing else) in \code{sm4logs.merged},
+#' this is a real, visible change in that returned data frame's own column
+#' names - anyone with existing code reading \code{sm4logs.merged$DATE},
+#' \code{$NS}, \code{$EW}, etc. by the old upper-case/punctuated names will
+#' need to switch to the new standardized ones. \strong{This does NOT
+#' affect \code{$aru.name}, \code{$X}, or \code{$Y}} - none of the three is
+#' a header loaded from any file: \code{aru.name} is parsed from the file's
+#' own NAME, and \code{X}/\code{Y} are this function's own derived/computed
+#' columns, so all three keep their existing names per this project's
+#' ordinary output convention.
+#'
 #' \strong{Header validation:} a file must have all 11 expected columns
-#' (\code{DATE, TIME, LAT, NS, LON, EW, POWER(V), TEMP(C), #FILES,
-#' #SCRUBBED, MIC0 TYPE}, matched exactly, case-insensitively, after
-#' trimming whitespace) to be merged in. A file missing one or more of them
-#' is skipped with reason \code{"mismatched headers"}; a file with a header
-#' row but zero data rows is skipped with reason \code{"no records"}. Extra,
-#' unexpected columns don't cause a skip - only a missing expected column
-#' does.
+#' (now matched by their standardized spellings, case-insensitively and
+#' whitespace/punctuation-insensitively by construction) to be merged in. A
+#' file missing one or more of them is skipped with reason \code{"mismatched
+#' headers"}; a file with a header row but zero data rows is skipped with
+#' reason \code{"no records"}. Extra, unexpected columns don't cause a skip -
+#' only a missing expected column does.
 #'
 #' \strong{ARU name:} taken from the file name, everything before the first
 #' \code{"_"} (e.g. \code{"AYERS_A_Summary.txt"} -> \code{"AYERS"}).
@@ -54,12 +78,12 @@
 #' month-name lookup rather than \code{strptime}'s locale-dependent
 #' \code{\%b}.
 #'
-#' \strong{Coordinate conversion:} \code{$LAT}/\code{$LON} in the real data
+#' \strong{Coordinate conversion:} \code{$lat}/\code{$lon} in the real data
 #' are already plain decimal degrees, so \code{$Y}/\code{$X} are produced by
 #' applying the correct sign from the hemisphere letter only (\code{"s"} ->
 #' negative \code{$Y}, \code{"w"} -> negative \code{$X}) - not a
-#' degrees-minutes-seconds parse. The original \code{$LAT}/\code{$NS}/
-#' \code{$LON}/\code{$EW} columns are kept alongside the new \code{$Y}/
+#' degrees-minutes-seconds parse. The original \code{$lat}/\code{$ns}/
+#' \code{$lon}/\code{$ew} columns are kept alongside the new \code{$Y}/
 #' \code{$X} columns, not replaced.
 #'
 #' @examples
@@ -80,8 +104,13 @@ batz.merge_sm4.logfile <- function(dir.load = getwd(),
 
   pattern.regex <- function(p) paste(vapply(p, utils::glob2rx, character(1)), collapse = "|")
 
-  expected.headers <- c("DATE", "TIME", "LAT", "NS", "LON", "EW",
-                         "POWER(V)", "TEMP(C)", "#FILES", "#SCRUBBED", "MIC0 TYPE")
+  ## Header standardization (per Josh, 2026-09-14 project preference): the
+  ## expected-header list is a literal, uninvented copy of the SM4 device's
+  ## own real export column text, so it's rewritten here to the standardized
+  ## spellings that raw file headers will also be run through below - see
+  ## @details "Header standardization" above.
+  expected.headers <- standardize.headers(c("DATE", "TIME", "LAT", "NS", "LON", "EW",
+                                             "POWER(V)", "TEMP(C)", "#FILES", "#SCRUBBED", "MIC0 TYPE"))
 
   month.lookup <- c(jan = "01", feb = "02", mar = "03", apr = "04", may = "05", jun = "06",
                      jul = "07", aug = "08", sep = "09", oct = "10", nov = "11", dec = "12")
@@ -110,7 +139,9 @@ batz.merge_sm4.logfile <- function(dir.load = getwd(),
     )
     if (is.null(raw)) return(list(data = NULL, reason = "could not read file"))
 
-    names(raw) <- trimws(names(raw))
+    ## header standardization (per Josh, 2026-09-14 project preference) -
+    ## replaces the previous bare trimws(names(raw)); see @details above.
+    names(raw) <- standardize.headers(names(raw))
     present <- expected.headers %in% names(raw)
     if (!all(present)) {
       return(list(data = NULL, reason = paste0("mismatched headers (missing: ",
@@ -127,12 +158,12 @@ batz.merge_sm4.logfile <- function(dir.load = getwd(),
     base.name <- basename(f)
     tmp$aru.name <- sub("_.*$", "", base.name)
 
-    tmp$DATE <- convert.date(tmp$DATE)
+    tmp$date <- convert.date(tmp$date)
 
-    ns <- tolower(trimws(tmp$NS))
-    ew <- tolower(trimws(tmp$EW))
-    tmp$Y <- ifelse(ns == "s", -as.numeric(tmp$LAT), as.numeric(tmp$LAT))
-    tmp$X <- ifelse(ew == "w", -as.numeric(tmp$LON), as.numeric(tmp$LON))
+    ns <- tolower(trimws(tmp$ns))
+    ew <- tolower(trimws(tmp$ew))
+    tmp$Y <- ifelse(ns == "s", -as.numeric(tmp$lat), as.numeric(tmp$lat))
+    tmp$X <- ifelse(ew == "w", -as.numeric(tmp$lon), as.numeric(tmp$lon))
 
     tmp <- tmp[c("aru.name", expected.headers, "X", "Y")]
 

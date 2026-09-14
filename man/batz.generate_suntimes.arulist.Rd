@@ -63,9 +63,9 @@ Invisibly, a list with:
   \describe{
     \item{aru.suntimes}{One row per (aru, date), \code{"fixed.unique"}/
       \code{"fixed.pooled"} rows only: \code{$aru}, \code{$date},
-      \code{$date.mon}, \code{$sunregion}, \code{$sunregion.long},
-      \code{$sunregion.lat}, \code{$date.start}, \code{$date.end},
-      \code{$time.zone}, \code{$sunregion.type}, \code{$schedual1},
+      \code{$date.mon}, \code{$sunregion}, \code{$sunregion_long},
+      \code{$sunregion_lat}, \code{$date_start}, \code{$date_end},
+      \code{$time_zone}, \code{$sunregion_type}, \code{$schedual1},
       \code{$schedual2}, \code{$lat}, \code{$long}, \code{$suns},
       \code{$suns.unix}, \code{$sunr}, \code{$sunr.unix},
       \code{$sunr.mon}, \code{$sunr.mon.unix}.}
@@ -77,12 +77,44 @@ Invisibly, a list with:
 }
 \description{
 For every ARU in an \verb{*arulist.csv} deployment list, and for every
-calendar date in that ARU's \code{[$date.start, $date.end]} range,
+calendar date in that ARU's \code{[$date_start, $date_end]} range,
 calculates sunset on \code{$date}, sunrise on \code{$date}, and sunrise on
 the FOLLOWING day - i.e. the start/end bounds of that night's monitoring
 window (sunset of \code{$date} through sunrise of \code{$date + 1}).
 }
 \details{
+\strong{Header standardization (per Josh, 2026-09-14 project preference)
+- real, documented output-schema change.} The raw \verb{*arulist.csv}'s
+own headers are now run through the shared package helper
+\code{standardize.headers()} (trim whitespace, collapse every run of
+non-alphanumeric characters to a single underscore, lowercase) right
+after loading, before the required-header check below runs. Unlike most
+other \code{batz} functions, this one's \code{required.headers} list is
+a literal, uninvented copy of the ARU list file's own real column text
+(not a \code{batz}-invented shorthand) - so per this project's
+header-standardization preference, both the raw incoming headers AND
+\code{required.headers} are standardized together, and the change
+cascades all the way through to this function's own returned
+\code{aru.suntimes} column names, since those columns are pass-through
+copies of the loaded file's fields, not an independently-invented output
+schema. Concretely, every dot-separated required header becomes
+underscore-separated: \code{sunregion.type} -> \code{sunregion_type},
+\code{sunregion.long} -> \code{sunregion_long}, \code{sunregion.lat} ->
+\code{sunregion_lat}, \code{date.start} -> \code{date_start},
+\code{date.end} -> \code{date_end}, \code{time.zone} -> \code{time_zone}.
+\code{aru}, \code{long}, \code{lat}, \code{sunregion}, \code{schedual1},
+\code{schedual2} have no separators and are unaffected. This does NOT
+touch this function's own INVENTED fields, which never came from the
+loaded file - \code{date.mon}, \code{suns}, \code{suns.unix}, \code{sunr},
+\code{sunr.unix}, \code{sunr.mon}, \code{sunr.mon.unix}, \code{calc.lat},
+\code{calc.long} all keep their existing dot-separated names, per this
+project's ordinary (unrelated to this preference) dot-separated output
+convention. \strong{Anyone with a saved *arulist.csv using the old
+dotted header spellings should re-save it with the new underscore
+spellings (or simply let it load as-is, since \code{standardize.headers()}
+converts either spelling to the same result), and update any downstream
+script that reads \code{aru.suntimes} by the old dotted column names.}
+
 Solar times are calculated in base R (no package dependencies) using the
 standard astronomy-answers.nl / NOAA sunrise-sunset algorithm - the same
 approach used by NOAA's solar calculator and the widely-used "suncalc"
@@ -91,25 +123,25 @@ tables.
 
 Before any solar calculation runs, ARU rows are expanded to one row per
 (aru, date) and then collapsed to the DISTINCT set of
-(\code{sunregion}, \code{calc.lat}, \code{calc.long}, \code{time.zone},
+(\code{sunregion}, \code{calc.lat}, \code{calc.long}, \code{time_zone},
 \code{date}) combinations actually needed (\code{calc.lat}/\code{calc.long}
-per the \code{$sunregion.type} handling below). ARUs that share a site
+per the \code{$sunregion_type} handling below). ARUs that share a site
 with identical or overlapping date ranges automatically reuse one
 calculation per shared date instead of repeating it per ARU.
 
 \strong{Required input headers (added 2026-08-26, per Josh) - checked
 up front, before anything else runs.} \code{dir.load}'s
 \verb{*arulist.csv} must have every one of: \code{aru}, \code{long},
-\code{lat}, \code{sunregion}, \code{sunregion.long},
-\code{sunregion.lat}, \code{date.start}, \code{date.end},
-\code{time.zone}, \code{sunregion.type}, \code{schedual1},
+\code{lat}, \code{sunregion}, \code{sunregion_long},
+\code{sunregion_lat}, \code{date_start}, \code{date_end},
+\code{time_zone}, \code{sunregion_type}, \code{schedual1},
 \code{schedual2}. If any are missing, the function stops immediately
 with \code{"inputfile is missing these headers"} followed by the list
 of missing header names (Josh's own literal message text, used
-verbatim). \code{$sunregion.type} is now REQUIRED - the previous
+verbatim). \code{$sunregion_type} is now REQUIRED - the previous
 behavior of defaulting to \code{"fixed.unique"} when the column was
 entirely absent no longer applies, since a missing
-\code{$sunregion.type} column now fails this header check before
+\code{$sunregion_type} column now fails this header check before
 reaching that point. \code{$schedual1}/\code{$schedual2} are new,
 pass-through-only columns (not used in any calculation, just carried
 into the output - see below); note the spelling is Josh's own
@@ -117,14 +149,14 @@ into the output - see below); note the spelling is Josh's own
 
 \strong{Only \code{"fixed.unique"}/\code{"fixed.pooled"} rows get
 records generated (updated 2026-08-26, per Josh) - a real behavior
-change from erroring to filtering.} Four \code{$sunregion.type}
+change from erroring to filtering.} Four \code{$sunregion_type}
 categories exist - \code{"fixed.unique"}, \code{"fixed.pooled"},
 \code{"mobile.unique"}, \code{"mobile.pooled"} - but only rows where
-\code{$sunregion.type} is \code{"fixed.unique"} or \code{"fixed.pooled"}
+\code{$sunregion_type} is \code{"fixed.unique"} or \code{"fixed.pooled"}
 get records generated. Any OTHER value (\code{"mobile.unique"}/
 \code{"mobile.pooled"}, or anything else, including a typo) is
 EXCLUDED from the run with a console \code{NOTE} listing the affected
-ARU(s) and their actual \code{$sunregion.type} value, rather than
+ARU(s) and their actual \code{$sunregion_type} value, rather than
 stopping the whole function. \strong{The PREVIOUS version of this
 function hard-stopped the entire run if ANY row was
 \code{"mobile.unique"}/\code{"mobile.pooled"}; that hard stop is gone
@@ -132,23 +164,23 @@ now} - those rows are simply left out of \code{aru.suntimes}. If every
 row ends up excluded, the function still stops (nothing to generate).
 
 \strong{Solar-calculation coordinates now come directly from
-\code{$sunregion.long}/\code{$sunregion.lat} (updated 2026-08-26, per
+\code{$sunregion_long}/\code{$sunregion_lat} (updated 2026-08-26, per
 Josh) - a real behavior change.} The PREVIOUS version used the ARU's
 own exact \code{$lat}/\code{$long} for \code{"fixed.unique"} rows, and
 a COMPUTED MEAN of \code{$lat}/\code{$long} across every ARU sharing a
 \code{$sunregion} for \code{"fixed.pooled"} rows. Now, for EVERY kept
-row (both types), the solar calculation uses \code{$sunregion.long}/
-\code{$sunregion.lat} exactly as given in the input file - no
+row (both types), the solar calculation uses \code{$sunregion_long}/
+\code{$sunregion_lat} exactly as given in the input file - no
 averaging happens here anymore; the input file itself is now
 responsible for carrying one consistent coordinate pair on every row
 sharing a \code{$sunregion}. \code{$lat}/\code{$long} (the ARU's own
 coordinates) are still required as input and still appear in the
 output, just no longer used for the calculation itself. A console
 \code{NOTE} (non-blocking) is printed if any \code{$sunregion} has
-more than one distinct \code{$sunregion.long}/\code{$sunregion.lat}
+more than one distinct \code{$sunregion_long}/\code{$sunregion_lat}
 pair across its rows - not explicitly requested, added as a light
 data-entry sanity check matching the existing
-\code{$sunregion.type}-consistency \code{NOTE} below.
+\code{$sunregion_type}-consistency \code{NOTE} below.
 
 A row marked \code{"fixed.unique"} whose \code{$sunregion} does not equal
 its \code{$aru} is flagged with a console \code{NOTE} (per the spec's own
@@ -168,7 +200,7 @@ review):}
     \code{$sunr.mon}, which explicitly says "for the following day").
     Noon (rather than midnight) is used so the timestamp can't drift to
     the wrong calendar day when read back in a different time zone.
-  \item \code{[$date.start, $date.end]} is inclusive of both endpoints.
+  \item \code{[$date_start, $date_end]} is inclusive of both endpoints.
   \item Sunrise/sunset use the standard -0.833 degree solar-elevation
     threshold (atmospheric refraction + the sun's angular radius).
   \item Locations that would produce polar day/night (no sunrise or

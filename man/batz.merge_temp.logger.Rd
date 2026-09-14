@@ -8,7 +8,7 @@ batz.merge_temp.logger(
   dir.load = getwd(),
   load.pattern = c("*templog.csv", "*templog.meta.csv"),
   dir.sub = FALSE,
-  dir.save = dir.load,
+  dir.save = getwd(),
   write.output = TRUE
 )
 }
@@ -30,7 +30,14 @@ unless you explicitly pass \code{dir.sub = TRUE}.}
 
 \item{dir.save}{Directory to write \code{templog.merged.csv} and
 \code{templog.notes.csv} into when \code{write.output = TRUE}. Default:
-same as \code{dir.load}.}
+the current working directory (\code{getwd()}) - set this separately if
+the output should be written somewhere other than where the input
+\verb{*templog.csv} files were loaded from. (Standardized 2026-08-29,
+per Josh: previously defaulted to \code{dir.load}, which silently
+mirrored whatever \code{dir.load} was rather than defaulting to a
+sensible location on its own - the same pattern already fixed as a bug
+in \code{batz.suntimes_generate()}; \code{dir.save} now always
+defaults to \code{getwd()} for consistency across the package.)}
 
 \item{write.output}{If \code{TRUE} (default), also write
 \code{templog.merged.csv} and \code{templog.notes.csv} into
@@ -43,7 +50,8 @@ Invisibly, a list with two data frames:
 \item{templog.merged}{\code{$obs}, \code{$date.time},
 \code{$temp.dry.c}, \code{$temp.wet.c}, \code{$rh},
 \code{$serial.num}, plus every other column from the matched
-\code{templog.meta.csv} row.}
+\code{templog.meta.csv} row (standardized names - see "Header
+standardization" above).}
 \item{templog.notes}{\code{$serial.num}, \code{$date.start},
 \code{$date.end}, \code{$temp.type}, \code{$rows.in},
 \code{$rows.out}, \code{$rows.trimmed}, \code{$notes}.}
@@ -58,39 +66,71 @@ as humidity-capable, and trims records recorded outside each unit's
 deployment/recovery window.
 }
 \details{
-RH is gated strictly on the matched \code{templog.meta.csv} \code{$logger.type}
+\strong{Header standardization (per Josh, 2026-09-14 project preference)
+- real, documented output-schema change.} \code{templog.meta.csv}'s own
+headers are a literal, uninvented copy of that file's real column text
+(not a \code{batz}-invented shorthand), so they are now run through the
+shared package helper \code{standardize.headers()} (trim whitespace,
+collapse every run of non-alphanumeric characters to a single
+underscore, lowercase) right after loading - this function had no
+header normalization of any kind before this change, so it also newly
+tolerates whitespace/case/punctuation variation in the meta file that
+used to require an exact literal match. Every meta-file column the code
+refers to by name is renamed accordingly: \code{serial#} -> \code{
+serial} (the \code{#} is stripped as a non-alphanumeric character),
+\code{serial.num} -> \code{serial_num}, \code{serial.short} -> \code{
+serial_short}, \code{logger.type} -> \code{logger_type}, \code{
+station.code} -> \code{station_code}, \code{date.deployment} -> \code{
+date_deployment}, \code{time.deployment} -> \code{time_deployment},
+\code{date.recovery} -> \code{date_recovery}, \code{time.recovery} ->
+\code{time_recovery}, \code{room.number} -> \code{room_number}, \code{
+room.name} -> \code{room_name}. Since every OTHER meta column (besides
+the join key) is appended verbatim onto \code{templog.merged} (see
+below), this cascades into a real, visible change in that returned data
+frame's own column names. \strong{This does NOT affect \code{
+templog.merged}'s/\code{templog.notes}'s own \code{$serial.num} column}
+- that one is this function's own INVENTED identifier, parsed from each
+raw file's NAME (its leading 8-digit serial), not a header loaded from
+any file, so it keeps its existing dot-separated name per this
+project's ordinary output convention. \strong{Anyone with a saved
+templog.meta.csv using the old dotted header spellings should re-save
+it with the new underscore spellings (or simply let it load as-is,
+since \code{standardize.headers()} converts either spelling to the same
+result), and update any downstream script that reads
+\code{templog.merged} by the old dotted meta-column names.}
+
+RH is gated strictly on the matched \code{templog.meta.csv} \code{$logger_type}
+- not on header text or any other heuristic:
 \itemize{
-\item not on header text or any other heuristic:
-\itemize{
-\item \code{logger.type == "H"}: \code{$temp.wet.c} keeps the real
+\item \code{logger_type == "H"}: \code{$temp.wet.c} keeps the real
 column-4 reading, and \code{$rh} is calculated from dry/wet bulb.
-\item \code{logger.type == "T"}: \code{$temp.wet.c} and \code{$rh} are
+\item \code{logger_type == "T"}: \code{$temp.wet.c} and \code{$rh} are
 both forced to \code{NA}, even if the raw file has a second
 temperature column.
 \item No confident meta match (missing, ambiguous, or no meta.csv at
 all): treated the same as \code{"T"} (both \code{NA}).
 }
-}
 
-The meta join uses ONLY \code{$serial#} (the file's real 8-digit serial)
-plus the file's own observed \code{[$date.start, $date.end]} to pick the
-right meta row - \code{$serial.short} and \code{$logger.type} are never
-used to find or disambiguate the match (only as a fallback for older meta
-files with no \code{$serial#} column at all). Once a single confident meta
-row is found, every OTHER column from that row (\code{serial.short},
-\code{date.deployment}, \code{date.recovery}, \code{room.number},
-\code{room.name}, \code{station.code}, \code{logger.type}) is appended to
+The meta join uses ONLY \code{$serial} (the file's real 8-digit serial,
+matched against a standardized \code{serial#} header) plus the file's own
+observed \code{[$date.start, $date.end]} to pick the right meta row -
+\code{$serial_short} and \code{$logger_type} are never used to find or
+disambiguate the match (only as a fallback for older meta files with no
+\code{serial#} column at all). Once a single confident meta row is found,
+every OTHER column from that row (\code{serial_short},
+\code{date_deployment}, \code{date_recovery}, \code{room_number},
+\code{room_name}, \code{station_code}, \code{logger_type}) is appended to
 every record from that file in \code{$templog.merged}, not just used
 internally.
 
 Once a meta row is matched, any record whose \code{$date.time} falls
-before \code{$date.deployment}+\code{$time.deployment} or after
-\code{$date.recovery}+\code{$time.recovery} is dropped from
+before \code{$date_deployment}+\code{$time_deployment} or after
+\code{$date_recovery}+\code{$time_recovery} is dropped from
 \code{$templog.merged} (e.g. readings taken during setup before actual
 deployment, or after physical recovery but before the logger stopped
 recording). This only runs when the matched meta row has BOTH date and
 time columns for deployment and recovery - meta files with date-only
-columns (no \code{$time.deployment}/\code{$time.recovery}), or files with
+columns (no \code{$time_deployment}/\code{$time_recovery}), or files with
 no confident meta match at all, are left untrimmed. The count of trimmed
 records per file is in \code{$templog.notes$rows.trimmed}, and (when > 0)
 also called out in \code{$templog.notes$notes}.
