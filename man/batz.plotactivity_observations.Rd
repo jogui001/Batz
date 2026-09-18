@@ -9,7 +9,8 @@ batz.plotactivity_observations(
   fig.list,
   suntimes,
   aes.default,
-  project.name = "",
+  project.name = "new.project",
+  aes.style = "overide.value",
   dir.save = getwd()
 )
 }
@@ -49,19 +50,32 @@ checked, but not otherwise used yet this iteration} - see Details.}
 \item{aes.default}{A data frame of default plot settings, one row per
 parameter (e.g. \code{plotopts_callobs.csv}). Must have
 \code{$category}, \code{$parameter}, \code{$default.value};
-\code{$notes} and any \code{project.name}-matching override column(s)
-are optional.}
+an \code{$overide.value} column (blank, user-fillable) and
+\code{$notes} are optional - see \code{project.name}/\code{aes.style}
+below and Details, "Settings resolution (round nineteen)".}
 
-\item{project.name}{Character, default \code{""}. Must EXACTLY match a
-real column name already present in \code{aes.default} - see
-\code{batz.plotdetections_first.last()}'s own \code{@param} docs for
-the full three-tier precedence (this function resolves settings the
-same way: \code{fig.list} row > \code{project.name} column >
-\code{$default.value}).}
+\item{project.name}{Character, default \code{"new.project"}. Per Josh's
+nineteenth follow-up (2026-09-16), this NO LONGER selects an
+\code{aes.default} override column - it is now used ONLY to build the
+first part of every saved file name:
+\code{"<project.name>_<ARU>_<timestamp>.png"}. See Details, "Settings
+resolution (round nineteen)" for what replaced the old column-matching
+behavior.}
+
+\item{aes.style}{Character, default \code{"overide.value"}. Names which
+column of \code{aes.default} is checked FIRST for each parameter
+(falling back to \code{$default.value} when that column doesn't exist,
+or is blank for that row) - replaces the old \code{project.name}
+column-matching mechanism entirely. A given plot row's OWN value in
+\code{fig.list} (when that column exists there and is non-blank)
+still takes priority over both - see Details, "Settings resolution
+(round nineteen)" for the full precedence.}
 
 \item{dir.save}{Character, default \code{getwd()}. Directory every
-generated PNG is saved into (each file's own name still comes from
-\code{aes.default}'s \code{$output.filename.pattern}).}
+generated PNG is saved into. Per Josh's nineteenth follow-up, the file
+name itself is now always \code{"<project.name>_<ARU>_<timestamp>.png"}
+(see \code{project.name} above) - \code{aes.default}'s
+\code{$output.filename.pattern} is DEPRECATED and no longer read.}
 }
 \value{
 Invisibly, a list with \code{plots} (one entry per generated
@@ -426,7 +440,7 @@ Myotis rows use \code{$spp.id = "40kMyo"}, but
 \code{batz.batusa_recode.names()}'s own reference table's matching
 non-species category label is \code{"40KHzMyo"} - these do NOT match
 after that function's own case/dash/underscore-folding normalization
-(folding case doesn't add the missing \code{"Hz"}), so running
+(folding case doesn't add the missing "Hz"), so running
 \code{"40kMyo"} through \code{batz.batusa_recode.names()} alone leaves it
 unmatched (passed through unchanged, plus a console \code{WARNING} from
 that function). Worked around, scoped to this function only (the shared
@@ -444,13 +458,13 @@ source (in whatever produces \code{plfr.bats.csv}), or whether
 unnecessary, but isn't required for this function to work correctly as
 delivered.
 
-\strong{\code{$output.filename.pattern}'s default value} in
-\code{plotopts_callobs.csv} (\code{"Number of bat calls detected at
-<ARU> between <date.start> and <date.end> <timestamp>.png"}) was chosen
-to match the literal file name of Josh's own target output image
-(\code{"Number of bat calls detected.png"}), with the same \code{<ARU>}/
-\code{<date.start>}/\code{<date.end>}/\code{<timestamp>} placeholders
-\code{batz.plotdetections_first.last()} already uses.
+\strong{\code{$output.filename.pattern} is DEPRECATED as of Josh's
+nineteenth follow-up (2026-09-16)} - see "File naming (round nineteen)"
+below. Its default value in \code{plotopts_callobs.csv}
+(\code{"Number of bat calls detected at <ARU> between <date.start> and
+<date.end> <timestamp>.png"}) was originally chosen to match the literal
+file name of Josh's own target output image (\code{"Number of bat calls
+detected.png"}) - left in place, harmless, no longer read.
 
 \strong{Real bug found and fixed while visually comparing a render
 against Josh's target image: the 40kHzMyo bar overlay was invisible.}
@@ -474,6 +488,48 @@ draw order regardless of the fill factor's own alphabetical sort.
 Re-verified by rendering: the black segment now shows correctly at the
 base of the gray bar on every night with a real 40kHzMyo observation.
 
+\strong{Settings resolution (round nineteen), per Josh's 2026-09-16
+follow-up ("reorder the headings in all plotopts files to be $category
+$parameter $default.value $overide.value $notes ... add arguments
+aes.style = "overide.value" ... Function logic will first look in the
+column with the header = aes.style ... then if that element is blank
+use $default.value"):} the \code{project.name}-matches-a-column-name
+mechanism described above (e.g. a "gome" column) is REPLACED entirely.
+\code{aes.default} now has a fixed \code{$overide.value} column (blank
+by default, between \code{$default.value} and \code{$notes} - see
+\code{\link{batz.generate_plotopts}}), which the user fills in directly
+on their own copy of the CSV to override a setting. The new
+\code{aes.style} argument (default \code{"overide.value"}) names which
+column \code{get.default()} checks FIRST; when that column doesn't
+exist (an older sheet) or is blank for a given row, \code{$default.value}
+is used, exactly as before. \code{project.name} no longer participates
+in settings resolution AT ALL - it is now used purely to build the saved
+file name (see "File naming (round nineteen)" below). The THIRD tier of
+the old precedence - a \code{fig.list} row's own value beating both the
+column and the default - is UNCHANGED: \code{get.setting(job, param)}
+still checks \code{job} first, then falls through to the (now
+\code{aes.style}-driven) \code{get.default(param)}. This is a judgment
+call on backward compatibility, flagged for Josh, matching the identical
+change made in \code{\link{batz.plotdetections_first.last}} and
+\code{\link{batz.plotcover_bullseye}}: an older \code{aes.default} sheet
+with its own \code{project.name}-matching column will simply be ignored
+now - re-fill any values that were in that column into the new
+\code{$overide.value} column instead.
+
+\strong{File naming (round nineteen), same follow-up:} every saved PNG's
+file name is now always \code{"<project.name>_<ARU>_<timestamp>.png"} -
+\code{aes.default}'s \code{$output.filename.pattern} is DEPRECATED and no
+longer read at all (the row is left in place in \code{plotopts_callobs.csv},
+harmless, simply ignored). The \code{<ARU>} token is this function's own
+\code{aru.token} - the selected \code{$plot.sets} value(s) joined with
+\code{"+"} (falling back to \code{$plot.group}'s own column name when no
+specific values were selected), with a \code{"-pooled"} suffix appended
+when \code{$pool = TRUE} - unchanged from how that token was already
+computed before this round, just now spliced directly into the fixed
+\code{"<project.name>_<ARU>_<timestamp>.png"} pattern instead of a
+user-editable one. Every saved file's name is printed to the console via
+\code{cat("Saved:", fname, "\\n")}, as it already was before this round.
+
 Naming convention (per project preferences):
 \code{package.family_action.subject()}. This function is
 \code{batz.plotactivity_observations()}: family = "plotactivity" (the
@@ -486,6 +542,8 @@ actually intended.}
 }
 \examples{
 \dontrun{
+# default dir.save = getwd(), default project.name = "new.project" -
+# saved file name will be "new.project_<ARU>_<timestamp>.png"
 result <- batz.plotactivity_observations(
   data = plfr.bats,
   fig.list = fig.list,

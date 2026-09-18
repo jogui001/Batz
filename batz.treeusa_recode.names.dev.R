@@ -36,15 +36,15 @@
 #     Confirmed (byte-for-byte diff) the two files are IDENTICAL content, so
 #     this is just an inconsistent filename between the two copies, not a
 #     different/older dataset.
-#   - Since the literal spec pattern "maine_tree_species_and_shrubs" would
-#     find NOTHING in the "reference database files" folder Josh actually
-#     named, `load.pattern`'s default was broadened to
-#     "*tree_species_and_shrubs*" (drops the "maine_" requirement) so the
-#     function actually finds the real file wherever `dir.load` points -
-#     this still matches BOTH real filenames. **Flagging for Josh: please
-#     confirm whether the "reference database files" copy should be renamed
-#     to include "maine_" (to match the spec literally) or whether the
-#     broadened pattern is fine going forward.**
+#   - 2026-09-14 update (per Josh): the internal reference data frame is now
+#     called reference.plants (was reference), and the canonical file name
+#     is "USA.treeshrub_recode.names.csv" (matching NAbat.names.csv/
+#     USAstates.names.csv naming elsewhere in this package) - a THIRD name
+#     for what appears to be the same table. load.pattern's default is now
+#     a vector matching either the new canonical name or the previously-
+#     established real file name(s), so the function still finds whichever
+#     copy Josh actually has. **Flagging for Josh: please confirm which
+#     single name should be canonical going forward.**
 #   - Real reference file structure (verified directly, 121 species/shrub
 #     rows x 11 columns): $species, $common_one, $common_two, $genus,
 #     $family, $native_status, $growth_habit, $wood_type, $grouping_one,
@@ -145,6 +145,43 @@
 #      file picking up stray whitespace/case/punctuation differences.
 #      match.cols and the default head.out are already written as their
 #      standardized spellings, so nothing else needed to change.
+#  10. **Added 2026-09-14, per Josh: optional supplemental reference data
+#      (reference.data/pattern).** New params: dir.load/dir.sub are reused
+#      (dir.sub's default flips to TRUE - see below); `pattern` (default
+#      "plant.names.csv", vector-friendly) names supplemental CSV(s) to
+#      search for; `reference.data` ("default"/"append"/"overwrite") turns
+#      the feature on. Only when reference.data != "default": dir.load (and
+#      subdirectories, if dir.sub) is searched for `pattern`; each matched
+#      file's headers are standardized then matched to reference.plants'
+#      10 non-wood_type columns by (1) exact standardized name, (2) a
+#      keyword match on the header text, (3) a content-signature fallback
+#      (binomial-looking text -> species; small controlled vocabularies ->
+#      native_status/growth_habit) - flagged as a best-effort heuristic,
+#      not a guarantee, since "match using header names AND content" has no
+#      single obvious algorithm. A file missing species, every common name
+#      column, or every grouping column entirely is skipped (message
+#      printed, not added). A file that's missing only one of
+#      common_one/common_two, or one or two of grouping_one/two/three, has
+#      the missing slot(s) filled by RECYCLING the other/first-present
+#      value (flagged: recycling from "the first present grouping column"
+#      specifically is an arbitrary tie-break, since the spec doesn't say
+#      which level to prefer). Missing $genus is derived from the first
+#      word of $species. Missing $family/$native_status/$growth_habit are
+#      padded with NA. If nothing had to be recycled/derived/padded, a
+#      "complete success very nice!" message prints instead of the "loaded
+#      but padded..." one (per Josh's literal wording). All matched files'
+#      reconciled rows are folded into one reference.plants.temp, and then:
+#      reference.plants.all <- reference.plants (copy); "append" adds
+#      reference.plants.temp's rows onto it (column union, so wood_type is
+#      NA for the new rows); "overwrite" replaces it entirely with
+#      reference.plants.temp (falling back to the unmodified
+#      reference.plants if nothing was actually loaded - flagged, since an
+#      empty reference table would break the rest of the function).
+#      reference.plants.all (not reference.plants) is what matching/
+#      head.out validation actually use from here on.
+#  11. **dir.sub default changed 2026-09-14, per Josh:** dir.sub now
+#      defaults to TRUE (was FALSE) - both the base reference file and any
+#      supplemental files are searched recursively by default now.
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -206,7 +243,26 @@ standardize.headers <- function(x) {
 }
 
 # -----------------------------------------------------------------------------
-# helper: load the reference database from disk (dir.load/load.pattern/
+# helper: read one .csv/.xlsx file into a trimmed character data frame.
+# -----------------------------------------------------------------------------
+read.ref.file <- function(f) {
+  ext <- tolower(tools::file_ext(f))
+  if (ext == "csv") {
+    df <- read.csv(f, stringsAsFactors = FALSE, check.names = FALSE)
+  } else if (ext %in% c("xlsx", "xls")) {
+    if (!requireNamespace("readxl", quietly = TRUE)) {
+      stop("Reference file '", basename(f), "' is an Excel file, but the 'readxl' package is not installed.")
+    }
+    df <- as.data.frame(readxl::read_excel(f), stringsAsFactors = FALSE)
+  } else {
+    stop("Reference file '", basename(f), "' has an unsupported extension (expected .csv/.xlsx/.xls).")
+  }
+  df[] <- lapply(df, function(col) trimws(as.character(col)))
+  df
+}
+
+# -----------------------------------------------------------------------------
+# helper: load the base reference database from disk (dir.load/load.pattern/
 # dir.sub) - supports .csv and .xlsx by extension.
 # -----------------------------------------------------------------------------
 load.tree.reference <- function(dir.load, load.pattern, dir.sub) {
@@ -220,21 +276,7 @@ load.tree.reference <- function(dir.load, load.pattern, dir.sub) {
     cat("NOTE: more than one file matched load.pattern - using the first: ",
         basename(matches[1]), "\n", sep = "")
   }
-  f <- matches[1]
-  ext <- tolower(tools::file_ext(f))
-
-  if (ext == "csv") {
-    ref <- read.csv(f, stringsAsFactors = FALSE, check.names = FALSE)
-  } else if (ext %in% c("xlsx", "xls")) {
-    if (!requireNamespace("readxl", quietly = TRUE)) {
-      stop("Reference file '", basename(f), "' is an Excel file, but the 'readxl' package is not installed.")
-    }
-    ref <- as.data.frame(readxl::read_excel(f), stringsAsFactors = FALSE)
-  } else {
-    stop("Reference file '", basename(f), "' has an unsupported extension (expected .csv/.xlsx/.xls).")
-  }
-
-  ref[] <- lapply(ref, function(col) trimws(as.character(col)))
+  ref <- read.ref.file(matches[1])
 
   ## header standardization (per Josh, 2026-09-14 project preference): the
   ## reference database's own column names are a literal, uninvented copy
@@ -242,12 +284,130 @@ load.tree.reference <- function(dir.load, load.pattern, dir.sub) {
   ## standardize.headers() the same as any other loaded file's headers - a
   ## no-op against the current real reference file (already exactly this
   ## snake_case shape), but guards against future whitespace/case/
-  ## punctuation drift in the file. See assumption 9 below.
+  ## punctuation drift in the file. See assumption 9 above.
   names(ref) <- standardize.headers(names(ref))
   ref
 }
 
 match.cols <- c("species", "common_one", "common_two")
+plant.schema.cols <- c("species", "common_one", "common_two", "genus", "family",
+                        "native_status", "growth_habit",
+                        "grouping_one", "grouping_two", "grouping_three")
+
+## ---- content-signature helpers for supplemental-file column matching
+## (assumption 10 above) ------------------------------------------------
+looks.like.binomial <- function(x) {
+  x <- x[nzchar(x)]
+  if (length(x) == 0) return(FALSE)
+  mean(grepl("^[A-Z][a-z]+[ _][a-z]+", x)) > 0.7
+}
+native.status.vocab <- c("native", "introduced", "nonnative", "non native",
+                          "invasive", "naturalized", "exotic", "adventive")
+growth.habit.vocab   <- c("tree", "shrub", "vine", "tree shrub", "treeshrub",
+                           "groundcover", "herb", "graminoid")
+looks.like.vocab <- function(x, vocab) {
+  x <- normalize.tree(x)
+  x <- x[nzchar(x)]
+  if (length(x) == 0) return(FALSE)
+  mean(x %in% normalize.tree(vocab)) > 0.6
+}
+
+match.file.headers <- function(df, canonical.cols) {
+  std <- standardize.headers(names(df))
+  names(df) <- std
+
+  mapped <- rep(NA_character_, length(std))
+
+  exact <- std %in% canonical.cols
+  mapped[exact] <- std[exact]
+  already.used <- unique(mapped[exact])
+
+  keyword.map <- list(
+    species        = c("species", "latin", "scientific", "sciname"),
+    genus          = c("genus"),
+    family         = c("family"),
+    native_status  = c("native", "status"),
+    growth_habit   = c("growth", "habit"),
+    common_one     = c("common"),
+    common_two     = c("common"),
+    grouping_one   = c("group", "grouping"),
+    grouping_two   = c("group", "grouping"),
+    grouping_three = c("group", "grouping")
+  )
+  for (i in which(!exact)) {
+    h <- std[i]
+    hit <- NA_character_
+    for (cc in canonical.cols) {
+      if (cc %in% already.used) next
+      kws <- keyword.map[[cc]]
+      if (!is.null(kws) && any(vapply(kws, function(k) grepl(k, h, fixed = TRUE), logical(1)))) {
+        hit <- cc
+        break
+      }
+    }
+    if (!is.na(hit)) {
+      mapped[i] <- hit
+      already.used <- c(already.used, hit)
+    }
+  }
+
+  for (i in which(is.na(mapped))) {
+    col.vals <- df[[i]]
+    if (!("species" %in% already.used) && looks.like.binomial(col.vals)) {
+      mapped[i] <- "species"; already.used <- c(already.used, "species")
+    } else if (!("native_status" %in% already.used) && looks.like.vocab(col.vals, native.status.vocab)) {
+      mapped[i] <- "native_status"; already.used <- c(already.used, "native_status")
+    } else if (!("growth_habit" %in% already.used) && looks.like.vocab(col.vals, growth.habit.vocab)) {
+      mapped[i] <- "growth_habit"; already.used <- c(already.used, "growth_habit")
+    }
+  }
+
+  names(df) <- ifelse(is.na(mapped), std, mapped)
+  df <- df[names(df) %in% canonical.cols]
+  df[!duplicated(names(df))]
+}
+
+build.plant.row.set <- function(df, canonical.cols) {
+  padded <- character(0)
+
+  has.c1 <- "common_one" %in% names(df)
+  has.c2 <- "common_two" %in% names(df)
+  if (has.c1 && !has.c2) { df$common_two <- df$common_one; padded <- c(padded, "common_two") }
+  if (has.c2 && !has.c1) { df$common_one <- df$common_two; padded <- c(padded, "common_one") }
+
+  grp.cols     <- c("grouping_one", "grouping_two", "grouping_three")
+  present.grp  <- grp.cols[grp.cols %in% names(df)]
+  if (length(present.grp) > 0 && length(present.grp) < 3) {
+    source.col  <- present.grp[1]
+    missing.grp <- setdiff(grp.cols, present.grp)
+    for (gc in missing.grp) df[[gc]] <- df[[source.col]]
+    padded <- c(padded, missing.grp)
+  }
+
+  if (!"genus" %in% names(df)) {
+    df$genus <- vapply(strsplit(df$species, "\\s+"),
+                        function(w) if (length(w) >= 1) w[1] else NA_character_,
+                        character(1))
+    padded <- c(padded, "genus")
+  }
+
+  for (cc in c("family", "native_status", "growth_habit")) {
+    if (!cc %in% names(df)) {
+      df[[cc]] <- NA_character_
+      padded <- c(padded, cc)
+    }
+  }
+
+  df <- df[canonical.cols]
+  list(data = df, padded = padded)
+}
+
+rbind.fill <- function(a, b) {
+  all.cols <- union(names(a), names(b))
+  for (cc in setdiff(all.cols, names(a))) a[[cc]] <- NA
+  for (cc in setdiff(all.cols, names(b))) b[[cc]] <- NA
+  rbind(a[all.cols], b[all.cols])
+}
 
 # -----------------------------------------------------------------------------
 # helper: core element-wise lookup for ONE requested head.out column.
@@ -277,19 +437,93 @@ closest.match.for <- function(x.norm.one, ref.pool.norm, ref.pool.raw) {
 }
 
 # -----------------------------------------------------------------------------
-# batz.treeusa_recode.names(data, head.out, dir.load, load.pattern, dir.sub)
+# batz.treeusa_recode.names(data, head.out, dir.load, load.pattern, dir.sub,
+#                            pattern, reference.data)
 # -----------------------------------------------------------------------------
 batz.treeusa_recode.names <- function(data,
-                                       head.out     = "common_one",
-                                       dir.load     = getwd(),
-                                       load.pattern = "*tree_species_and_shrubs*",
-                                       dir.sub      = FALSE) {
+                                       head.out       = "common_one",
+                                       dir.load       = getwd(),
+                                       load.pattern   = c("*USA.treeshrub_recode.names*",
+                                                           "*tree_species_and_shrubs*"),
+                                       dir.sub        = TRUE,
+                                       pattern        = "plant.names.csv",
+                                       reference.data = "default") {
+
+  if (!(is.character(reference.data) && length(reference.data) == 1 &&
+        reference.data %in% c("default", "append", "overwrite"))) {
+    stop("`reference.data` must be one of \"default\", \"append\", or \"overwrite\" (got: \"",
+         paste(reference.data, collapse = ", "), "\").")
+  }
 
   if (is.data.frame(data)) {
     stop("`data` must be a plain vector for batz.treeusa_recode.names() (not a data frame).")
   }
 
-  reference <- load.tree.reference(dir.load, load.pattern, dir.sub)
+  reference.plants <- load.tree.reference(dir.load, load.pattern, dir.sub)
+  reference.plants.all <- reference.plants
+
+  if (reference.data %in% c("append", "overwrite")) {
+    supp.matches <- list.files(dir.load, pattern = pattern.regex(pattern),
+                                recursive = dir.sub, full.names = TRUE, ignore.case = TRUE)
+
+    if (length(supp.matches) == 0) {
+      cat(sprintf("NOTE: no files matching pattern '%s' were found in '%s' (dir.sub = %s) - %s using only reference.plants.\n",
+                   paste(pattern, collapse = "', '"), dir.load, dir.sub,
+                   if (reference.data == "overwrite") "nothing to overwrite with;" else "nothing to append;"))
+    }
+
+    reference.plants.temp <- NULL
+
+    for (f in supp.matches) {
+      df <- tryCatch(read.ref.file(f), error = function(e) {
+        cat(sprintf("%s %s skipped as unreadable: %s\n", basename(f), f, conditionMessage(e)))
+        NULL
+      })
+      if (is.null(df)) next
+
+      df <- match.file.headers(df, plant.schema.cols)
+
+      has.species <- "species" %in% names(df)
+      has.common  <- any(c("common_one", "common_two") %in% names(df))
+      has.group   <- any(c("grouping_one", "grouping_two", "grouping_three") %in% names(df))
+
+      if (!(has.species && has.common && has.group)) {
+        missing.req <- c(
+          if (!has.species) "species (latin name)",
+          if (!has.common)  "a common name column",
+          if (!has.group)   "a grouping column"
+        )
+        cat(sprintf("%s %s skipped as missing required headers: %s\n",
+                    basename(f), f, paste(missing.req, collapse = ", ")))
+        next
+      }
+
+      built <- build.plant.row.set(df, plant.schema.cols)
+
+      if (length(built$padded) == 0) {
+        cat(sprintf("%s %s complete success very nice!\n", basename(f), f))
+      } else {
+        cat(sprintf("%s %s loaded but padded as missing these headers: %s\n",
+                    basename(f), f, paste(built$padded, collapse = ", ")))
+      }
+
+      reference.plants.temp <- if (is.null(reference.plants.temp)) {
+        built$data
+      } else {
+        rbind.fill(reference.plants.temp, built$data)
+      }
+    }
+
+    if (!is.null(reference.plants.temp)) {
+      if (reference.data == "append") {
+        reference.plants.all <- rbind.fill(reference.plants.all, reference.plants.temp)
+      } else if (reference.data == "overwrite") {
+        reference.plants.all <- reference.plants.temp
+      }
+    }
+  }
+
+  reference <- reference.plants.all
 
   bad.head <- setdiff(head.out, names(reference))
   if (length(bad.head) > 0) {
@@ -409,3 +643,89 @@ cat("\n=== duplicate unmatched inputs - missmatch_count should reflect instance 
 dup.test <- c("not.a.real.tree", "Sugar Maple", "not.a.real.tree", "not.a.real.tree", "also.fake")
 print(batz.treeusa_recode.names(dup.test, dir.load = test.dir))
 print(treesmismatch.log)
+
+# =============================================================================
+# NEW 2026-09-14 tests: reference.data / pattern (supplemental reference data)
+# Uses a synthetic scratch folder (not the real reference data) so these
+# tests are self-contained and don't depend on any specific file Josh may or
+# may not have under test.dir - mirrors the same synthetic-fixture approach
+# already used above for the "no file matching load.pattern" test.
+# =============================================================================
+supp.dir <- file.path(tempdir(), "treeusa_supp_test")
+supp.sub <- file.path(supp.dir, "sub")
+dir.create(supp.sub, recursive = TRUE, showWarnings = FALSE)
+
+## copy the real base reference file into the scratch folder so load.pattern
+## still finds a base table there
+file.copy(file.path(test.dir, "maine_tree_species_and_shrubs.csv"),
+          file.path(supp.dir, "maine_tree_species_and_shrubs.csv"), overwrite = TRUE)
+
+## file 1 (top level): all 10 canonical headers present natively -> expect
+## the "complete success very nice!" message
+writeLines(c(
+  "species,common_one,common_two,genus,family,native_status,growth_habit,grouping_one,grouping_two,grouping_three",
+  "Betula papyrifera,Paper Birch,White Birch,Betula,Betulaceae,Native,Tree,Birch,Softwood Hardwood,Common"
+), file.path(supp.dir, "plant.names.csv"))
+
+## file 2 (in a subdirectory - exercises dir.sub): only Scientific Name/
+## Common Name/Group One - missing common_two, grouping_two, grouping_three,
+## genus, family, native_status, growth_habit -> expect recycling + genus
+## derivation + NA-padding, and the "loaded but padded..." message
+writeLines(c(
+  "Scientific Name,Common Name,Group One",
+  "Cornus sericea,Red-osier Dogwood,Dogwood"
+), file.path(supp.sub, "shrub_extra.csv"))
+
+## file 3 (top level): missing species/common/grouping entirely -> expect
+## the "skipped as missing required headers" message
+writeLines(c(
+  "Genus,Family",
+  "Betula,Betulaceae"
+), file.path(supp.dir, "missing_required.csv"))
+
+cat("\n=== reference.data = 'default' (new params present but inert) ===\n")
+print(batz.treeusa_recode.names(c("sugar maple", "paper birch"), dir.load = supp.dir, dir.sub = TRUE))
+cat("(\"paper birch\" should NOT match here - it only exists in the supplemental file)\n")
+
+cat("\n=== reference.data = 'append', pattern matches all 3 synthetic files ===\n")
+out.append <- batz.treeusa_recode.names(
+  c("sugar maple", "paper birch", "red-osier dogwood"),
+  dir.load = supp.dir, dir.sub = TRUE,
+  pattern = c("plant.names.csv", "shrub_extra.csv", "missing_required.csv"),
+  reference.data = "append",
+  head.out = c("common_one", "genus", "family", "native_status", "growth_habit", "grouping_one")
+)
+print(out.append)
+cat("(expect: missing_required.csv skipped; plant.names.csv 'complete success';\n",
+    "shrub_extra.csv 'loaded but padded...'; all three test inputs matched)\n", sep = "")
+
+cat("\n=== reference.data = 'overwrite' - only supplemental rows used ===\n")
+out.overwrite <- batz.treeusa_recode.names(
+  c("paper birch", "sugar maple"),
+  dir.load = supp.dir, dir.sub = TRUE,
+  pattern = c("plant.names.csv", "shrub_extra.csv"),
+  reference.data = "overwrite",
+  head.out = "common_one"
+)
+print(out.overwrite)
+cat("(expect: 'paper birch' matches; 'sugar maple' does NOT - base table was discarded)\n")
+print(treesmismatch.log)
+
+cat("\n=== reference.data = 'overwrite' with no matching supplemental files - falls back\n",
+    "to reference.plants unmodified ===\n", sep = "")
+print(batz.treeusa_recode.names("sugar maple", dir.load = supp.dir, dir.sub = TRUE,
+                                 pattern = "no_such_file_xyz.csv", reference.data = "overwrite"))
+
+cat("\n=== invalid reference.data value should error ===\n")
+tryCatch(
+  batz.treeusa_recode.names("sugar maple", dir.load = supp.dir, reference.data = "bogus"),
+  error = function(e) cat("Got expected error:", conditionMessage(e), "\n")
+)
+
+cat("\n=== dir.sub now defaults to TRUE - confirm the subdirectory file is found\n",
+    "without passing dir.sub explicitly ===\n", sep = "")
+out.default.dirsub <- batz.treeusa_recode.names(
+  "red-osier dogwood", dir.load = supp.dir,
+  pattern = "shrub_extra.csv", reference.data = "append"
+)
+print(out.default.dirsub)

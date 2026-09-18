@@ -5,7 +5,8 @@
 \title{Recode Maine tree/shrub identifiers between scientific name, common names, and other reference fields}
 \usage{
 batz.treeusa_recode.names(data, head.out = "common_one", dir.load = getwd(),
-  load.pattern = "*tree_species_and_shrubs*", dir.sub = FALSE)
+  load.pattern = c("*USA.treeshrub_recode.names*", "*tree_species_and_shrubs*"),
+  dir.sub = TRUE, pattern = "plant.names.csv", reference.data = "default")
 }
 \arguments{
 \item{data}{A vector of tree/shrub identifiers to recode. Must be a plain
@@ -21,17 +22,36 @@ input element to a reference row always uses \code{species}/
 \code{common_one}/\code{common_two} only, regardless of what's
 requested in \code{head.out}. An unrecognized header is an error.}
 
-\item{dir.load}{Character. Directory to search for the reference
-database file matching \code{load.pattern}. Default \code{getwd()}.}
+\item{dir.load}{Character. Directory to search for the base reference
+database file (\code{load.pattern}) and, when \code{reference.data !=
+"default"}, for supplemental files (\code{pattern}). Default
+\code{getwd()}.}
 
-\item{load.pattern}{Character, default \code{"*tree_species_and_shrubs*"}
-(wildcard/glob pattern, converted internally to a regex via
-\code{utils::glob2rx()}). See \strong{Details} for why this is
-broader than the literal \code{"maine_tree_species_and_shrubs"} named
-in the original spec.}
+\item{load.pattern}{Character, default
+\code{c("*USA.treeshrub_recode.names*", "*tree_species_and_shrubs*")}
+(wildcard/glob pattern(s), converted internally to a regex via
+\code{utils::glob2rx()}). See \strong{Details} for why this now
+searches for more than one literal file name.}
 
-\item{dir.sub}{Logical, default \code{FALSE}. If \code{TRUE}, also search
-subdirectories of \code{dir.load} for the reference file.}
+\item{dir.sub}{Logical, default \code{TRUE} (changed from \code{FALSE},
+per Josh, 2026-09-14 - see Details). If \code{TRUE}, also search
+subdirectories of \code{dir.load} - for \code{load.pattern} and, when
+applicable, for \code{pattern}.}
+
+\item{pattern}{Character, default \code{"plant.names.csv"}. One or more
+(a vector is fine) file name(s)/glob pattern(s) identifying
+supplemental reference CSVs to search for in \code{dir.load} (and its
+subdirectories, if \code{dir.sub = TRUE}) when \code{reference.data !=
+"default"}. Ignored entirely when \code{reference.data = "default"}.}
+
+\item{reference.data}{Character, default \code{"default"}. One of:
+\code{"default"} - use only the base reference table loaded via
+\code{load.pattern}, exactly as before this feature was added;
+\code{"append"} - also search for and load every file matching
+\code{pattern}, and add their (validated/reconciled) rows onto the
+base table; \code{"overwrite"} - also search for and load every file
+matching \code{pattern}, but use ONLY those rows in place of the base
+table (see Details for the fallback when nothing usable is found).}
 }
 \value{
 A vector (if \code{head.out} has length 1) or data frame (if
@@ -52,6 +72,11 @@ cause a false mismatch. Shares its core lookup/pass-through/reporting
 logic with \code{\link{batz.batusa_recode.names}}, generalized to load
 its reference table from disk (rather than an embedded table) and to
 support more than one output header at once.
+
+As of 2026-09-14 (per Josh), the base reference table can optionally be
+supplemented with one or more additional CSV files found on disk -
+see \code{reference.data}/\code{pattern} below and \strong{"Supplemental
+reference data (reference.data/pattern)"} in Details.
 }
 \details{
 \strong{Header standardization (per Josh, 2026-09-14 project preference).}
@@ -60,14 +85,16 @@ of that file's real header text (not a \code{batz}-invented shorthand), so
 they're run through the shared package helper \code{standardize.headers()}
 (trim whitespace, collapse every run of non-alphanumeric characters to a
 single underscore, lowercase) immediately after loading, the same as any
-other loaded file's headers. This is a no-op against the CURRENT real
-reference file - every column listed under \strong{Reference file
-structure} below is already in exactly this snake_case shape - but it
-guards against a future copy of the file picking up stray whitespace,
-mixed case, or punctuation differences. \code{match.cols} and the default
-\code{head.out} are written as their already-standardized spellings, so no
-further change was needed there; if the reference file's real headers
-ever change to something standardize.headers() would alter, \code{head.out}
+other loaded file's headers - both for the base reference file and for
+every supplemental file read under \code{reference.data = "append"/
+"overwrite"}. This is a no-op against the CURRENT real reference file -
+every column listed under \strong{Reference file structure} below is
+already in exactly this snake_case shape - but it guards against a
+future copy of the file picking up stray whitespace, mixed case, or
+punctuation differences. \code{match.cols} and the default \code{head.out}
+are written as their already-standardized spellings, so no further
+change was needed there; if the reference file's real headers ever
+change to something standardize.headers() would alter, \code{head.out}
 should be called with the new standardized spelling.
 
 \strong{Reference file location - real naming mismatch, flagged not
@@ -79,11 +106,28 @@ does exist, but it sits at the top level of that folder - the copy
 actually inside "reference database files" is named
 \code{tree_species_and_shrubs.csv} (missing the \code{"maine_"} prefix;
 confirmed byte-for-byte identical content to the other copy).
-\code{load.pattern}'s default was broadened to
-\code{"*tree_species_and_shrubs*"} so the function finds the real file
-either way. Please confirm with Josh whether the "reference database
-files" copy should be renamed to include \code{"maine_"}, or whether the
-broadened pattern is fine going forward.
+\strong{Renamed 2026-09-14, per Josh:} the internal reference data frame
+is now called \code{reference.plants} (previously \code{reference}),
+loaded from a file named \code{"USA.treeshrub_recode.names.csv"} -
+matching the naming convention already used elsewhere in this package
+(\code{NAbat.names.csv}, \code{USAstates.names.csv} - see
+\code{\link{batz.batusa_list.species}}). Since this is a THIRD name for
+what appears to be the same underlying reference table, \code{load.pattern}'s
+default was widened to a vector matching \emph{either} the new canonical
+name or the previously-established real file name(s), so the function
+keeps working with whichever copy Josh actually has in \code{dir.load}
+at the time. \strong{Please confirm with Josh which single name should
+be treated as canonical going forward} (and, if a rename is wanted,
+whether the "reference database files" copy should also be renamed to
+match) - until then, this function does not silently prefer one name
+over another beyond "first match wins" (see \strong{Reference file
+structure} below for the multiple-match notice).
+
+\strong{dir.sub default changed 2026-09-14, per Josh:} \code{dir.sub} now
+defaults to \code{TRUE} (previously \code{FALSE}) - subdirectories of
+\code{dir.load} are searched by default, for both the base reference
+file and any supplemental files. Pass \code{dir.sub = FALSE} to restore
+the old top-level-only search.
 
 \strong{Reference file structure} (verified against the real data, 121
 species/shrub rows x 11 columns): \code{$species}, \code{$common_one},
@@ -93,7 +137,97 @@ species/shrub rows x 11 columns): \code{$species}, \code{$common_one},
 blank for many rows (not every species has a second common name); a
 blank never matches anything, and if \code{$common_two} itself is
 requested via \code{head.out} for a row with no second name, that
-header just comes back \code{""} for that row.
+header just comes back \code{""} for that row. \code{$wood_type} is not
+one of the 10 columns \code{reference.data = "append"/"overwrite"}
+reconciles supplemental files against (see below) - it is carried
+through from the base table untouched, and comes back \code{NA} for any
+row contributed by a supplemental file that didn't happen to also match
+a \code{wood_type}-like column.
+
+\strong{Supplemental reference data (\code{reference.data}/\code{pattern}),
+added 2026-09-14 per Josh.} When \code{reference.data = "append"} or
+\code{"overwrite"}, after \code{reference.plants} is loaded as above,
+\code{dir.load} (and its subdirectories, if \code{dir.sub = TRUE}) is
+searched for every file matching \code{pattern} (one or more file
+names/glob patterns; the default \code{"plant.names.csv"} is a literal
+name, but a wildcard like \code{"*.csv"} works the same way as
+\code{load.pattern}). Each matched file is processed independently, in
+the order \code{list.files()} returns, and folded into a single
+\code{reference.plants.temp} data frame:
+\enumerate{
+  \item \strong{Column matching (name AND content).} The file's own
+    headers are standardized (see above), then matched to
+    \code{reference.plants}'s 10 non-\code{wood_type} columns
+    (\code{species}, \code{common_one}, \code{common_two}, \code{genus},
+    \code{family}, \code{native_status}, \code{growth_habit},
+    \code{grouping_one}, \code{grouping_two}, \code{grouping_three}) in
+    three passes: (1) an exact match on the standardized header text;
+    (2) for anything left over, a keyword match on the standardized
+    header (e.g. a header containing \code{"latin"}/\code{"scientific"}
+    maps to \code{species}; \code{"common"} to \code{common_one} then
+    \code{common_two}, in file column order; \code{"group"}/
+    \code{"grouping"} to \code{grouping_one}/\code{two}/\code{three}, in
+    file column order; \code{"genus"}, \code{"family"},
+    \code{"native"}/\code{"status"}, \code{"growth"}/\code{"habit"} to
+    their like-named column); (3) for anything STILL unmapped, a
+    content signature check against whichever of \code{species}/
+    \code{native_status}/\code{growth_habit} remain unclaimed (a column
+    that's mostly two-word capitalized text - e.g. \code{"Acer negundo"}
+    - is treated as \code{species}; a column whose values mostly fall in
+    a small native/introduced/invasive vocabulary is treated as
+    \code{native_status}; a column whose values mostly fall in a small
+    tree/shrub/vine vocabulary is treated as \code{growth_habit}). This
+    is a best-effort heuristic, not a guarantee - \strong{flagged, not
+    silently perfect:} an odd or ambiguous input file may map incorrectly
+    or not at all; any input column that never gets claimed by a
+    canonical name is simply dropped (not merged as an extra column).
+  \item \strong{Required headers.} A file must end up with (after step
+    1) at least \code{species}, at least one of
+    \code{common_one}/\code{common_two}, and at least one of
+    \code{grouping_one}/\code{grouping_two}/\code{grouping_three} - if
+    any of those three categories is entirely missing, the file is
+    skipped (not added to \code{reference.plants.temp}) and
+    \code{"<basename> <full path> skipped as missing required headers:
+    <list>"} is printed via \code{cat()}.
+  \item \strong{Recycling/derivation/padding.} For a file that passes
+    step 2: if only one of \code{common_one}/\code{common_two} is
+    present, the other is set equal to it (recycled, not left blank);
+    if only one or two of \code{grouping_one}/\code{two}/\code{three}
+    are present, the missing slot(s) are filled by recycling the
+    FIRST present grouping column's value (an arbitrary but consistent
+    choice - \strong{flagged}: there's no principled way to pick which
+    grouping level to recycle from without more information from Josh);
+    if \code{genus} is missing, it's derived as the first
+    whitespace-separated word of \code{species}; if \code{family},
+    \code{native_status}, or \code{growth_habit} is missing, it's added
+    as \code{NA} for every row. Every column that had to be
+    recycled/derived/padded this way is collected into one list.
+  \item \strong{Notice.} If that list is empty (the file's own headers,
+    once matched in step 1, already covered all 10 columns natively -
+    nothing needed recycling, deriving, or padding),
+    \code{"<basename> <full path> complete success very nice!"} is
+    printed. Otherwise, \code{"<basename> <full path> loaded but padded
+    as missing these headers: <list>"} is printed, naming every
+    recycled/derived/padded column.
+  \item \strong{Merge.} The file's reconciled 10-column data frame is
+    added onto \code{reference.plants.temp} (row-bound; a file's
+    \code{wood_type} is not part of this reconciliation and is simply
+    absent - i.e. \code{NA} - for these rows).
+}
+Once every matched file has been processed: \code{reference.plants.all}
+starts as a copy of \code{reference.plants}. If \code{reference.data =
+"append"}, \code{reference.plants.temp}'s rows are added onto
+\code{reference.plants.all} (column union with the base table, so
+\code{wood_type} is simply \code{NA} for the new rows). If
+\code{reference.data = "overwrite"}, \code{reference.plants.all} is
+REPLACED entirely by \code{reference.plants.temp} (the base
+\code{reference.plants} table is discarded) - \strong{flagged:} if
+\code{pattern} matches nothing usable (every candidate file is skipped,
+or none matches at all), there is nothing to overwrite with, so
+\code{reference.plants.all} falls back to the unmodified
+\code{reference.plants} rather than becoming empty. \code{reference.plants.all}
+(not \code{reference.plants}) is what the rest of this function - matching,
+\code{head.out} validation, everything below this point - actually uses.
 
 \strong{Matching normalization} is stronger than
 \code{batz.batusa_recode.names}': case is folded AND every space/
@@ -111,9 +245,12 @@ is shared by three different \emph{Amelanchier} species, and
 \code{"Filbert"} (\code{$common_two}) by two \emph{Corylus} species. No
 tie-break parameter was requested for this function, so the FIRST match
 wins (checked in \code{species}/\code{common_one}/\code{common_two}
-column order, then file row order) - an input of \code{"Juneberry"}
-alone is genuinely ambiguous in the source data and always resolves to
-the first of the three.
+column order, then row order in \code{reference.plants.all}) - an input
+of \code{"Juneberry"} alone is genuinely ambiguous in the source data
+and always resolves to the first of the three. Loading supplemental
+data via \code{reference.data = "append"} can introduce further
+collisions (including a supplemental row colliding with a base row);
+the same first-match rule applies.
 
 \strong{Unmatched inputs:} passed through unchanged in every requested
 \code{head.out} column. Whenever at least one input doesn't match,
@@ -142,6 +279,16 @@ batz.treeusa_recode.names("Ash-leaved Maple", head.out = "species")
 batz.treeusa_recode.names(c("Sugar Maple", "Red Oak"),
                            head.out = c("species", "family", "growth_habit"))
 # -> data frame with $species, $family, $growth_habit columns
+
+# pull in every "plant.names.csv" found under dir.load (recursively, since
+# dir.sub defaults to TRUE) and add their rows onto the base reference table
+batz.treeusa_recode.names("sugar maple", reference.data = "append")
+
+# same, but searching for several possible supplemental file names, and
+# using ONLY their rows (base reference.plants table discarded)
+batz.treeusa_recode.names("sugar maple",
+                           pattern = c("plant.names.csv", "shrub_extra.csv"),
+                           reference.data = "overwrite")
 }
 
 }

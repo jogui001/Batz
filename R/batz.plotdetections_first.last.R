@@ -28,24 +28,34 @@
 #'   \code{$suns}, \code{$suns.unix}, \code{$sunr}, \code{$sunr.unix},
 #'   \code{$sunr.mon}, \code{$sunr.mon.unix}.
 #' @param aes.default A data frame of default plot settings, one
-#'   row per parameter (e.g. \code{plotoptions.batactivity.default.csv}).
+#'   row per parameter (e.g. \code{plotopts_first.last.csv}).
 #'   Must have \code{$category}, \code{$parameter}, \code{$default.value};
-#'   \code{$notes} and any \code{project.name}-matching override column(s)
-#'   are optional. Must be the TIME-OF-DAY version of this file (see
-#'   Details) - an older, numeric-minutes version will fail with a clear
-#'   error rather than silently plotting the wrong axis.
-#' @param project.name Character, default \code{""}. Must EXACTLY match a
-#'   real column name already present in \code{aes.default} (e.g.
-#'   \code{"gome"}) - it is not a value looked up within some generic
-#'   "project.name" column; it IS the column name itself. When it matches,
-#'   that column's non-blank values override \code{$default.value} for
-#'   matching parameters. A given plot row's OWN value in
+#'   an \code{$overide.value} column (blank, user-fillable) and
+#'   \code{$notes} are optional - see \code{project.name}/\code{aes.style}
+#'   below and Details, "Settings resolution (round nineteen)". Must be
+#'   the TIME-OF-DAY version of this file (see Details) - an older,
+#'   numeric-minutes version will fail with a clear error rather than
+#'   silently plotting the wrong axis.
+#' @param project.name Character, default \code{"new.project"}. Per Josh's
+#'   nineteenth follow-up (2026-09-16), this NO LONGER selects an
+#'   \code{aes.default} override column - it is now used ONLY to build the
+#'   first part of every saved file name:
+#'   \code{"<project.name>_<ARU>_<timestamp>.png"}. See Details, "Settings
+#'   resolution (round nineteen)" for what replaced the old column-matching
+#'   behavior.
+#' @param aes.style Character, default \code{"overide.value"}. Names which
+#'   column of \code{aes.default} is checked FIRST for each parameter
+#'   (falling back to \code{$default.value} when that column doesn't exist,
+#'   or is blank for that row) - replaces the old \code{project.name}
+#'   column-matching mechanism entirely. A given plot row's OWN value in
 #'   \code{fig.list} (when that column exists there and is non-blank)
-#'   takes priority over both. See Details for the full three-tier
-#'   precedence and a real bug this caught.
+#'   still takes priority over both - see Details, "Settings resolution
+#'   (round nineteen)" for the full precedence.
 #' @param dir.save Character, default \code{getwd()}. Directory every
-#'   generated PNG is saved into (each file's own name still comes from
-#'   \code{aes.default}'s \code{$output.filename.pattern} - see Details).
+#'   generated PNG is saved into. Per Josh's nineteenth follow-up, the file
+#'   name itself is now always \code{"<project.name>_<ARU>_<timestamp>.png"}
+#'   (see \code{project.name} above) - \code{aes.default}'s
+#'   \code{$output.filename.pattern} is DEPRECATED and no longer read.
 #'
 #' @return Invisibly, a list with \code{plots} (one entry per generated
 #'   plot's prepared data - detection rows, suntimes rows, panel labels,
@@ -327,7 +337,7 @@
 #' survived into that plot's filtered data (an actual detection that
 #' period) - MY OWN interpretive judgment call from earlier this session,
 #' not Josh's own original wording ("40kHzMyo if on species list should
-#' be \[on the legend\] and colored black"). Fixed to key off `$40khzmyo`
+#' be [on the legend] and colored black"). Fixed to key off `$40khzmyo`
 #' itself (now carried through per-plot as `$khz.flag`) rather than data
 #' presence - exactly Josh's real \code{plot.meta.csv} (`$40khzmyo = TRUE`)
 #' plus \code{vetted.processed.csv} (zero actual 40kHzMyo detections)
@@ -575,7 +585,7 @@
 #' grid/viewport error. Immediate fix for Josh: re-save the current
 #' `batactivity.plotoptions.csv` (already sent, with `$panel.spacing.x` and
 #' the reduced `$axis.text.size`) into his test-data folder and reload it
-#' before calling this function again.\
+#' before calling this function again.
 #'
 #' \strong{Follow-up, 2026-08-27, later still, per Josh ("clean up
 #' batz.plotdect_first.last()... change identifiers to"): the four main
@@ -615,12 +625,14 @@
 #' `Details` entries ABOVE this one are left exactly as originally
 #' written, still naming the file `batactivity.plotoptions.csv`}, since
 #' that was its actual name at the time each of those entries was written;
-#' they are a historical record, not current guidance. The project's own
-#' saved master copy (`claude/plotoptions.batactivity.default.csv`) keeps
-#' its existing, separate name - only the merged file Josh loads as
-#' `aes.default` was renamed. Full test suite re-run clean (all 11
-#' scenarios, no regressions) after the rename - no functional change,
-#' purely a file-naming change.\
+#' they are a historical record, not current guidance. \strong{Per Josh's
+#' nineteenth follow-up (2026-09-16), the project's own saved master copy
+#' has now ALSO been renamed to \code{plotopts_first.last.csv}} (was
+#' \code{claude/plotoptions.batactivity.default.csv}), so the on-disk
+#' master and this function's own documented expectation finally match -
+#' see Details, "Settings resolution (round nineteen)" below. Full test
+#' suite re-run clean (all 11 scenarios, no regressions) after the
+#' original rename - no functional change, purely a file-naming change.
 #'
 #' \strong{Follow-up, 2026-08-27, later still, per Josh ("change 'aru.meta.csv'
 #' to 'fig.list.csv'"): the `.dev.R` test script's on-disk test file for the
@@ -704,7 +716,7 @@
 #' shortfall below 3 plots could only be this naming-collision bug, not a
 #' real data-overlap difference) now correctly produce 3 entries in both
 #' \code{$plots} and \code{$ggplots} (previously collapsed to 1). Full
-#' dev-script test suite re-run clean (14 scenarios, no regressions).\
+#' dev-script test suite re-run clean (14 scenarios, no regressions).
 #'
 #' \strong{Follow-up, 2026-08-28, per Josh ("I do not want 100\% duplicate
 #' rows to produced multiple graphs. Instead remove duplicate rows then go
@@ -742,6 +754,41 @@
 #' does not fold together rows that merely share a display name. Full
 #' dev-script test suite re-run clean (16 scenarios, no regressions).
 #'
+#' \strong{Settings resolution (round nineteen), per Josh's 2026-09-16
+#' follow-up ("reorder the headings in all plotopts files to be $category
+#' $parameter $default.value $overide.value $notes ... add arguments
+#' aes.style = \"overide.value\" ... Function logic will first look in the
+#' column with the header = aes.style ... then if that element is blank
+#' use $default.value"):} the \code{project.name}-matches-a-column-name
+#' mechanism described several entries above (the "gome" column, etc.) is
+#' REPLACED entirely. Every \code{aes.default} sheet now has a fixed
+#' \code{$overide.value} column (blank by default, between
+#' \code{$default.value} and \code{$notes} - see
+#' \code{\link{batz.generate_plotopts}}), which the user fills in directly
+#' on their own copy of the CSV to override a setting. The new
+#' \code{aes.style} argument (default \code{"overide.value"}) names which
+#' column \code{get.default()} checks FIRST; when that column doesn't
+#' exist (an older sheet) or is blank for a given row, \code{$default.value}
+#' is used, exactly as before. \code{project.name} no longer participates
+#' in settings resolution AT ALL - it is now used purely to build the saved
+#' file name (see "File naming (round nineteen)" below). The THIRD tier of
+#' the old precedence - a \code{fig.list} row's own value beating both the
+#' column and the default - is UNCHANGED: \code{get.setting(job, param)}
+#' still checks \code{job} first, then falls through to the (now
+#' \code{aes.style}-driven) \code{get.default(param)}. This is a judgment
+#' call on backward compatibility, flagged for Josh: an older
+#' \code{aes.default} sheet with its own \code{project.name}-matching
+#' column (e.g. a column literally named \code{"gome"}) will simply be
+#' ignored now - re-fill any values that were in that column into the new
+#' \code{$overide.value} column instead.
+#'
+#' \strong{File naming (round nineteen), same follow-up:} every saved PNG's
+#' file name is now always \code{"<project.name>_<ARU>_<timestamp>.png"} -
+#' \code{aes.default}'s \code{$output.filename.pattern} is DEPRECATED and no
+#' longer read at all (same deprecation pattern as \code{$plot.width} in
+#' \code{\link{batz.plotcover_bullseye}} - the row is left in place in
+#' \code{plotopts_first.last.csv}, harmless, simply ignored).
+#'
 #' Naming convention (per project preferences):
 #' \code{package.family_action.subject()}. This function is
 #' \code{batz.plotdetections_first.last()}: family = "plotdetections" (the
@@ -754,7 +801,7 @@
 #' @examples
 #' \dontrun{
 #' # default dir.save = getwd() - saves into the current working directory,
-#' # same as every call before dir.save existed
+#' # default project.name = "new.project"
 #' result <- batz.plotdetections_first.last(
 #'   data = vetted.processed,
 #'   fig.list = plot.meta,
@@ -763,19 +810,21 @@
 #' )
 #' result$ggplots[[1]]
 #'
-#' # explicit dir.save, if the PNGs should land somewhere else
+#' # explicit project.name/dir.save
 #' result <- batz.plotdetections_first.last(
 #'   data = vetted.processed,
 #'   fig.list = plot.meta,
 #'   suntimes = aru.suntimes,
 #'   aes.default = batactivity.plotoptions,
+#'   project.name = "gome",
 #'   dir.save = "C:/path/to/output/folder"
 #' )
 #' }
 #'
 #' @export
 batz.plotdetections_first.last <- function(data, fig.list, suntimes,
-                                            aes.default, project.name = "",
+                                            aes.default, project.name = "new.project",
+                                            aes.style = "overide.value",
                                             dir.save = getwd()) {
 
   ## Header standardization (per Josh, 2026-09-14 project preference): NOT
@@ -819,6 +868,12 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
   # fig.list's own required COLUMNS already are - missing rows now
   # stop with one clear, actionable message instead of a cryptic grid
   # crash three layers of code away from the real cause.
+  ##
+  ## "output.filename.pattern" deliberately removed from this required list
+  ## per Josh's nineteenth follow-up (2026-09-16) - the saved file name is
+  ## now always "<project.name>_<ARU>_<timestamp>.png"; no longer read at
+  ## all. An $output.filename.pattern row left in an existing aes.default
+  ## sheet is harmless (simply ignored).
   AES.DEFAULT.REQUIRED.PARAMETERS <- c(
     "facpan.numcol", "plot.title.size", "plot.title.hjust", "axis.title.size",
     "axis.text.size", "legend.text.size", "legend.title.size", "panel.spacing.x",
@@ -829,7 +884,7 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
     "dusk.color", "reference.line.legend.title", "crossbar.alldetections.fill",
     "crossbar.40khzmyo.fill", "crossbar.linewidth", "crossbar.fill.legend.title",
     "ggsave.dpi", "ggsave.units", "ggsave.width.pad", "ggsave.height.pad",
-    "output.filename.pattern", "plot.width", "plot.height"
+    "plot.width", "plot.height"
   )
 
   check.headers <- function(df, required, label) {
@@ -912,12 +967,20 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
     out
   }
 
+  ## Settings resolution (round nineteen, per Josh's 2026-09-16 follow-up):
+  ## $aes.style names a FIXED column to check first (default
+  ## "overide.value" - a blank column the user fills in directly on their
+  ## own copy of the CSV), falling back to $default.value when that column
+  ## doesn't exist or is blank for this row. This replaces the old
+  ## project.name-matches-a-column-name mechanism entirely - project.name
+  ## no longer has any role in settings resolution, only in the saved file
+  ## name (see the main loop below).
   get.default <- function(param) {
     row.idx <- which(aes.default$parameter == param)
     if (length(row.idx) == 0) return(NA_character_)
     val <- as.character(aes.default$default.value[row.idx[1]])
-    if (nzchar(project.name) && project.name %in% names(aes.default)) {
-      override <- aes.default[[project.name]][row.idx[1]]
+    if (aes.style %in% names(aes.default)) {
+      override <- aes.default[[aes.style]][row.idx[1]]
       if (!is.na(override) && nzchar(trimws(as.character(override)))) {
         val <- as.character(override)
       }
@@ -1128,7 +1191,9 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
       tz = tz,
       date.start = date.start,   # carried through so the X axis can be forced to this exact range below, not just whatever dates happen to have data
       date.end = date.end,
-      khz.flag = khz.flag   # carried through so the legend key below can be driven by "$40khzmyo is TRUE for this plot" rather than "a detection happened to occur" - see the follow-up note below
+      khz.flag = khz.flag,   # carried through so the legend key below can be driven by "$40khzmyo is TRUE for this plot" rather than "a detection happened to occur" - see the follow-up note below
+      resolved.legend.position = get.default("legend.position"),  # exposed for testing the aes.style-driven resolver (round nineteen) without needing to render/introspect a ggplot object
+      resolved.dawn.color = get.default("dawn.color")              # exposed for testing the fall-through-to-default case
     )
 
     cat(sprintf("Prepared plot data for '%s': %d detection rows across %d panel(s), %d suntimes row(s).\n",
@@ -1292,7 +1357,7 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
         # into one mark per real suntimes date, matching Josh's request.
         # $midnight = "dots" is kept as the setting's value name (unchanged,
         # so any existing config isn't broken) even though the rendered
-        # glyph is now a dash, not a circle.
+        # glyph is now a dash, not a dot.
         midnight.layer <- ggplot2::geom_point(data = p$sdb, ggplot2::aes(x = date.parsed, y = midnight.time, color = "Midnight"),
                                                 shape = 45, size = as.numeric(get.default("midnight.dots.size")),
                                                 inherit.aes = FALSE)
@@ -1309,9 +1374,9 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
       # made no visible difference, and had its own side effect: ggplot2
       # marks a key_glyph'd geom's class with a leading "" entry
       # internally, which would have broken introspection code checking
-      # class(layer$geom)[1]). The real fix is guide_legend(override.aes
+      # class(layer$geom)[1]). The real fix uses guide_legend(override.aes
       # = ...): the reference-line legend's break order is always
-      # alphabetical (Dawn, Dusk, Midnight, since scale_color_manual below
+      # alphabetical (Dawn, Dusk, Midnight, since scale_color_manual here
       # declares no explicit breaks=) - a stable ggplot2 default, confirmed
       # by rendering - so shape can be pinned per-row by position: NA (no
       # marker) for Dawn/Dusk always, and for Midnight's own row, 16 (a
@@ -1418,90 +1483,16 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
                                                              size = as.numeric(get.default("plot.title.size"))),
                         axis.title = ggplot2::element_text(size = as.numeric(get.default("axis.title.size"))),
                         axis.text = ggplot2::element_text(size = as.numeric(get.default("axis.text.size"))),
-                        # 2026-08-27, later still - a documentation
-                        # correction, NOT a behavior change: while
-                        # investigating Josh's "eastern small footed myotis
-                        # is cut off" report, found that the
-                        # aes.default note on $axis.title.size has
-                        # always incorrectly claimed strip.text (the facet
-                        # panel title) "reuses" $axis.title.size - confirmed
-                        # via ggplot2's own get_element_tree() and a minimal
-                        # test plot that this was never true (strip.text
-                        # inherits from "text", not "title"/axis.title;
-                        # changing axis.title.size has zero effect on it). An
-                        # explicit strip.text = element_text(size =
-                        # axis.title.size) was tried here to make the
-                        # documented behavior real, but re-rendering showed
-                        # it made the cutoff WORSE, not better - ggplot2's
-                        # own actual fixed strip.text size (rel(0.8) of
-                        # theme_bw()'s base_size 11 = 8.8pt) is SMALLER than
-                        # $axis.title.size's default of 10, so binding them
-                        # enlarged the title instead of shrinking it.
-                        # Reverted: strip.text is left at ggplot2's native,
-                        # non-configurable size, and the $axis.title.size CSV
-                        # note is corrected below to describe what the code
-                        # actually does, instead of changing the code to
-                        # match a stale, inaccurate note.
                         legend.text = ggplot2::element_text(size = as.numeric(get.default("legend.text.size"))),
                         legend.title = ggplot2::element_text(size = as.numeric(get.default("legend.title.size"))),
-                        # 2026-08-27, per Josh ("labels on the Xaxes ... do
-                        # not appear to be the real dates rather labels
-                        # rewriting the dates"): this was NOT a data/parsing
-                        # bug - every break IS the real date.start/date.end-
-                        # derived calendar date, confirmed by inspecting the
-                        # actual pixel text - the real defect was a LAYOUT
-                        # collision. Forcing the first/last x-axis break to
-                        # sit exactly at date.start/date.end (the earlier
-                        # $xaxe.interval fix, by design) means the rightmost
-                        # label of one facet panel is centered right at that
-                        # panel's shared border with the next panel - with
-                        # theme_bw()'s default (~5.5pt) panel spacing, the
-                        # two-line label's own width bleeds across that
-                        # border and overlaps the neighboring panel's
-                        # leftmost label, so e.g. "May-27\n2026" visually
-                        # smashes into the next panel's "May-08\n2026" and
-                        # reads as garbled/wrong text, even though both
-                        # dates are individually correct.
-                        #
-                        # REVISED 2026-08-27, later still, per Josh ("that is
-                        # worse, I only get a box now not a plot... revert
-                        # back to the previous plot dimensions and reduce the
-                        # size of the labels on the x and y axis until there
-                        # is no overlap"): the first fix widened
-                        # $panel.spacing.x from theme_bw()'s ~5.5pt default to
-                        # 40pt, which stopped the label collision but - since
-                        # this function's overall saved figure width is a
-                        # FIXED size ($plot.width + $ggsave.width.pad, not
-                        # something that grows with the number of
-                        # panels/gaps) - shrank every panel's own width to
-                        # make room for the wider gaps, which in turn made
-                        # the "Eastern small-footed myotis" facet title too
-                        # wide for its now-narrower panel and cut it off. Per
-                        # Josh's explicit correction, $panel.spacing.x is
-                        # reverted to theme_bw()'s own built-in "5.5" default
-                        # (restores the original panel/figure dimensions
-                        # exactly - this is a plain value revert, not a
-                        # removal, so the setting stays available to
-                        # override later if ever needed) and the actual
-                        # label-collision fix now comes from shrinking
-                        # $axis.text.size instead (8 -> 6, see that
-                        # parameter's own updated default/notes) - smaller
-                        # text needs less horizontal room, so the two-line
-                        # date labels clear each other even at the original
-                        # tight spacing. Re-verified by rendering: panels are
-                        # back to their original width (species title no
-                        # longer cut off) and the x-axis labels still don't
-                        # collide at any panel boundary.
                         panel.spacing.x = grid::unit(as.numeric(get.default("panel.spacing.x")), "pt"))
 
       ggplots[[job.key]] <- g
 
-      pattern <- get.default("output.filename.pattern")
-      fname <- pattern
-      fname <- gsub("<ARU>", trimws(p$job$plot.set), fname, fixed = TRUE)
-      fname <- gsub("<date.start>", as.character(min(p$pd$date.parsed)), fname, fixed = TRUE)
-      fname <- gsub("<date.end>", as.character(max(p$pd$date.parsed)), fname, fixed = TRUE)
-      fname <- gsub("<timestamp>", format(Sys.time(), "%Y%m%d%H%M%S"), fname, fixed = TRUE)
+      ## Round nineteen, per Josh (2026-09-16): every saved file name is now
+      ## always "<project.name>_<ARU>_<timestamp>.png" -
+      ## $output.filename.pattern is DEPRECATED and no longer read.
+      fname <- sprintf("%s_%s_%s.png", project.name, trimws(p$job$plot.set), format(Sys.time(), "%Y%m%d_%H%M%S"))
       ## save into dir.save (default getwd(), i.e. unchanged behavior for
       ## existing callers) rather than always the working directory - see
       ## Details/Follow-up

@@ -1,485 +1,567 @@
 # =============================================================================
-# batz.plotactivity_observations() - development/test script
-# =============================================================================
+# batz.plotactivity_observations.dev.R
+# -----------------------------------------------------------------------------
+# ROUND NINETEEN, per Josh's 2026-09-16 follow-up (see
+# batz.plotdetections_first.last.dev.R's own header comment for the full
+# text of the request - identical mechanism applied here):
+#   - project.name no longer selects an aes.default override column - it
+#     ONLY builds the saved file name now: "<project.name>_<ARU>_<timestamp>.png".
+#     Default changed from "" to "new.project".
+#   - New aes.style argument (default "overide.value") drives settings
+#     resolution instead.
+#   - $output.filename.pattern is DEPRECATED and no longer read at all.
 #
-# Iteration 1 ("basic layout"), built 2026-08-28, copying the structure/steps
-# of batz.plotdetections_first.last() and modifying for a count-based
-# ($obs) Y axis instead of a time-of-night Y axis, per Josh's own spec.
-#
-# ASSUMPTIONS / KNOWN GAPS (flag if any of these are wrong):
-#  - fig.list.csv does NOT yet have a real row with $plot.type =
-#    "call.observations" (Josh's real file only has "bat.detection" rows so
-#    far) - every test below builds its own synthetic fig.list row(s) for
-#    this plot.type, several using Josh's real plfr.bats.csv as the actual
-#    $data underneath so this is still a genuine real-data test, just with
-#    a synthetic fig.list row wrapped around it (same approach
-#    batz.plotdetections_first.last.dev.R used before Josh's real
-#    plot.meta.csv had a usable row).
-#  - suntimes is accepted/header-checked but not used by this function yet
-#    (see @details) - a small synthetic data frame with just the required
-#    headers is used everywhere below instead of loading the real (1.16MB)
-#    gome_20250101to20300201_suntimes.csv, since its actual VALUES don't
-#    affect anything this iteration - much faster to build/tear down per
-#    test. Swap in the real file if/when suntimes actually gets used.
-#  - plotopts_callobs.csv is a FRESH settings file built for this function
-#    (not a copy of plotopts_first.last.csv/batactivity.plotoptions.csv) -
-#    Josh's own on-disk plotopts_callobs.csv (in his test-data folder) was,
-#    at the time this was built, an unmodified copy of plotopts_first.last.csv
-#    (same file size, same dawn/dusk/midnight/crossbar rows) - i.e. a
-#    placeholder Josh hadn't yet edited for this new function. The version
-#    delivered alongside this function REPLACES that placeholder with a
-#    parameter set actually built for this plot type (no dawn/dusk/midnight/
-#    time.zone/layer.order rows; new Y-axis/bar-fill rows instead).
-#  - Real data quirk found and left alone, not "fixed" (nothing to fix in
-#    code - it's a legitimate data question for Josh): plfr.bats.csv has at
-#    least one row with a BLANK $spp.id (e.g. WTG-GOM102, 6/21/2026, obs=55)
-#    that's neither a named species nor "All Detections"/"40kMyo"/HiF/LoF/
-#    etc - it doesn't match anything in batz.batusa_recode.names()'s
-#    reference table, so it's silently excluded from every plot (same as
-#    any other genuinely-unmatched value) and triggers that function's own
-#    console WARNING. Flagging in case this blank-species bucket should
-#    actually be folded into "All detections" or a specific category.
-#
-# FOLLOW-UP (2026-08-28), per Josh - $plot.group/$plot.sets/$pool added,
-# built and tested using his two newly-attached files (see @details in the
-# .R file for the full design and the flagged assumption around dodged,
-# same-colored bars when $pool = FALSE):
-#  - fig.list.csv (Josh's real file, 1 row) already uses the new column
-#    names (plot.group = "aru.name", plot.sets = a triple-quoted 3-value
-#    field, pool = FALSE) - used directly in TEST 17 below, unmodified.
-#  - processed.csv (Josh's real file, 1963 data rows: spp.id/date/aru.name/
-#    sunregion/obs/mins2.noon.min/mins2.noon.max/vetting.type) is used as
-#    `data` in TEST 15-17 - it does NOT have a column called "aru.groupby"
-#    at all, only "aru.name" - exactly the scenario $plot.group generalizes
-#    for (this data was very likely never produced by
-#    batz.generate_plotframe.bat() itself, e.g. it may be a hand-summarized
-#    sheet - $plot.group = "aru.name" tells this function to filter/group on
-#    that column directly, with no renaming needed).
-#  - TEST 15-16 build their own small synthetic fig.list rows (like the rest
-#    of this file) against processed.csv to isolate plot.group/plot.sets/
-#    pool one at a time; TEST 17 uses Josh's real fig.list.csv row as-is,
-#    end-to-end, against processed.csv.
-#
-# FOLLOW-UP (2026-08-29), per Josh ("add legend option to function, legend
-# = TRUE; add legend options to plotops file for things like size and
-# colors") - resolves the "no legend for dodged bars" gap flagged just
-# above/in the .R file's own @details: a new optional $legend fig.list
-# column (falls back to aes.default's own "legend" parameter, default
-# TRUE) and three new aes.default rows (legend.groupval.title/.colors/
-# .outline.linewidth, category "Legend") add a second, independent
-# outline-color legend distinguishing which $plot.sets value a dodged bar
-# is, whenever $pool = FALSE, >1 value is selected, and $legend is on.
-# TEST 18 below exercises this against processed.csv/plotopts_callobs.csv.
-#
+# **JUDGMENT CALL / LIMITATION, flagged to Josh** (same as
+# batz.plotdetections_first.last.dev.R): this dev script previously read
+# Josh's own real device test-data files (plfr.bats.csv, processed.csv,
+# fig.list.csv, plotopts_callobs.csv). The device bridge is not available in
+# this session, so this round's dev script builds its own SYNTHETIC
+# stand-ins for all four inputs directly in R code below, using the exact
+# column layouts documented for the real files. This fully exercises the
+# settings-resolution/file-naming logic that actually changed this round;
+# please re-run against your own real files when you have a chance.
 # =============================================================================
 
-setwd("/home/claude/plotactivity_work")
-source("batz.plotactivity_observations.R")
-source("/home/claude/plotdetections_work/batz.batusa_recode.names.R")  # dependency, unchanged, pulled from the sibling function's own work folder
+source("batz.batusa_recode.names.R")
 
-plot.data.real <- read.csv("/mnt/user-data/uploads/4 Current  test data/plfr.bats.csv",
-                            stringsAsFactors = FALSE, check.names = FALSE)
-plot.data.real <- plot.data.real[, names(plot.data.real) != "", drop = FALSE]  # drop the row-number column read.csv picked up from the CSV's blank first header
+make.default.plotaesthetics <- function(overide.col = "overide.value") {
+  rows <- list(
+    c("Layout", "facpan.numcol", "3", ""),
+    c("Text", "plot.title.size", "12", ""),
+    c("Text", "plot.title.hjust", "0.5", ""),
+    c("Text", "axis.title.size", "10", ""),
+    c("Text", "axis.text.size", "8", ""),
+    c("Text", "legend.text.size", "8", ""),
+    c("Text", "legend.title.size", "9", ""),
+    c("Layout", "panel.spacing.x", "5.5", ""),
+    c("Theme", "panel.border.linewidth", "0.5", ""),
+    c("Theme", "legend.position", "bottom", ""),
+    c("Axes", "xaxe.interval", "4", ""),
+    c("Axes", "xaxe.title", "Date", ""),
+    c("Axes", "xaxe.date.buffer.days", "0.5", ""),
+    c("Axes", "yaxe.title", "Number of observations", ""),
+    c("Axes", "Yaxe.trans", "none", ""),
+    c("Axes", "loglabels", "FALSE", ""),
+    c("Axes", "y.scale", "regular", ""),
+    c("Axes", "ymax", "", ""),
+    c("Bars", "bar.width", "0.8", ""),
+    c("Bars", "bar.alldetections.fill", "grey70", ""),
+    c("Bars", "bar.40khzmyo.fill", "black", ""),
+    c("Bars", "bar.fill.legend.title", "Detections", ""),
+    c("Legend", "legend", "TRUE", ""),
+    c("Legend", "legend.groupval.title", "Detector", ""),
+    c("Legend", "legend.groupval.colors", "#1b9e77;#d95f02;#7570b3", ""),
+    c("Save", "ggsave.dpi", "150", ""),
+    c("Save", "ggsave.units", "in", ""),
+    c("Save", "ggsave.width.pad", "0", ""),
+    c("Save", "ggsave.height.pad", "0", ""),
+    c("Save", "plot.width", "6", ""),
+    c("Save", "plot.height", "4", ""),
+    c("Layout", "facpan", "", ""),
+    c("Layout", "plot.order", "", ""),
+    # DEPRECATED (round nineteen) - left in place, harmless, never read.
+    c("Save", "output.filename.pattern",
+      "Number of bat calls detected at <ARU> between <date.start> and <date.end> <timestamp>.png", "")
+  )
+  df <- as.data.frame(do.call(rbind, rows), stringsAsFactors = FALSE)
+  names(df) <- c("category", "parameter", "default.value", "notes")
+  df[[overide.col]] <- ""
+  df <- df[, c("category", "parameter", "default.value", overide.col, "notes")]
+  df$notes[df$parameter == "output.filename.pattern"] <-
+    "DEPRECATED as of Josh's nineteenth follow-up (2026-09-16) - no longer read; the saved file name is now always \"<project.name>_<ARU>_<timestamp>.png\"."
+  df
+}
 
-aes.default.real <- read.csv("plotopts_callobs.csv", stringsAsFactors = FALSE, check.names = FALSE)
+default.plotaesthetics.synth <- make.default.plotaesthetics()
 
-# Minimal synthetic suntimes - only the required HEADERS matter this
-# iteration (see header comment above). One dummy row is enough to pass
-# check.headers()/check.duplicates().
+date.start.synth <- as.Date("2026-06-01")
+date.end.synth   <- as.Date("2026-06-05")
+test.dates       <- seq(date.start.synth, date.end.synth, by = "day")
+
+plot.data.synth <- do.call(rbind, lapply(test.dates, function(d) {
+  data.frame(
+    spp.id      = c("Hoary bat", "Big brown bat", "40kMyo"),
+    date        = format(d, "%m/%d/%Y"),
+    aru.groupby = "WTG-GOM102",
+    obs         = c(3, 5, 1),
+    stringsAsFactors = FALSE
+  )
+}))
+
 suntimes.synth <- data.frame(
-  aru = "WTG-GOM102", date = "2026-06-20", date.mon = "2026-06-21",
-  sunregion = "penobscotbay", time.zone = "America/New_York", sunregion.type = "coastal",
-  schedual1 = "", schedual2 = "", suns = "2026-06-20 20:30:00", suns.unix = 0,
-  sunr = "2026-06-21 05:00:00", sunr.unix = 0, sunr.mon = "2026-06-21 05:00:00", sunr.mon.unix = 0,
+  aru = "WTG-GOM102", date = "06/01/2026", date.mon = "06/02/2026",
+  sunregion = "WTG", time.zone = "UTC", sunregion.type = "coordinates",
+  schedual1 = "civil", schedual2 = "civil",
+  suns = "06/01/2026 20:00", suns.unix = 0,
+  sunr = "06/01/2026 06:00", sunr.unix = 0,
+  sunr.mon = "06/02/2026 06:00", sunr.mon.unix = 0,
   stringsAsFactors = FALSE
 )
 
-## plot.group/plot.sets/pool (2026-08-28 follow-up - see @details in the .R
-## file): plot.data.real (plfr.bats.csv) still has its column literally
-## named "aru.groupby" (predates the batz.generate_plotframe.bat() rename
-## of that column to $group), so plot.group defaults to "aru.groupby" here
-## to match it - see TEST 15+ below for plot.group actually generalized to
-## a DIFFERENT column, using Josh's new processed.csv/fig.list.csv fixtures.
-make.job <- function(plot.group = "aru.groupby", plot.sets = "WTG-GOM102", pool = FALSE,
-                      date.start = "6/20/2026", date.end = "7/3/2026",
-                      Yaxe.trans = "", y.scale = "", y.custom = "", ymax = "",
-                      loglabels = "", legend = "",
-                      plot.name = "University of  Maine WTG turbine - Call Observations") {
-  data.frame(
-    plot.type = "call.observations", plot.name = plot.name, facet = "sppid", facet.set = "NE",
-    MYSO = FALSE, Alldect = TRUE, facet.panel = "", `40khzmyo` = TRUE, facet.label = "",
-    plot.group = plot.group, plot.sets = plot.sets, pool = pool,
-    date.format = "%b-%d/n%Y", date.start = date.start, date.end = date.end,
-    xaxe.interval = 4, Yaxe.trans = Yaxe.trans, y.scale = y.scale, y.custom = y.custom, ymax = ymax,
-    loglabels = loglabels, legend = legend,
-    check.names = FALSE, stringsAsFactors = FALSE
+aru.metadata.db.synth <- data.frame(
+  plot.type      = "call.observations",
+  plot.name      = "Test Site - Call Observations",
+  facet          = "sppid",
+  facet.set      = "NE",
+  MYSO           = FALSE,
+  Alldect        = TRUE,
+  facet.panel    = "",
+  "40khzmyo"     = TRUE,
+  facet.label    = "common",
+  plot.group     = "aru.groupby",
+  plot.sets      = "WTG-GOM102",
+  pool           = FALSE,
+  date.format    = "%b-%d/n%Y",
+  date.start     = format(date.start.synth, "%m/%d/%Y"),
+  date.end       = format(date.end.synth, "%m/%d/%Y"),
+  xaxe.interval  = 4,
+  check.names = FALSE,
+  stringsAsFactors = FALSE
+)
+
+cat("=== synthetic aes.default (round nineteen: category/parameter/default.value/overide.value/notes) ===\n")
+print(head(default.plotaesthetics.synth))
+
+# -----------------------------------------------------------------------------
+# batz.plotactivity_observations() - dev copy, mirrors the package .R file
+# -----------------------------------------------------------------------------
+PLOT.TYPE <- "call.observations"
+
+DATA.REQUIRED <- c("spp.id", "date", "obs")
+SUNTIMES.REQUIRED <- c("aru", "date", "date.mon", "sunregion", "time.zone",
+                        "sunregion.type", "schedual1", "schedual2", "suns",
+                        "suns.unix", "sunr", "sunr.unix", "sunr.mon", "sunr.mon.unix")
+FIG.LIST.REQUIRED <- c("plot.type", "plot.name", "facet", "facet.set", "MYSO",
+                        "Alldect", "facet.panel", "40khzmyo", "facet.label",
+                        "plot.group", "plot.sets", "pool", "date.format",
+                        "date.start", "date.end", "xaxe.interval")
+AES.DEFAULT.REQUIRED <- c("category", "parameter", "default.value")
+
+AES.DEFAULT.REQUIRED.PARAMETERS <- c(
+  "facpan.numcol", "plot.title.size", "plot.title.hjust", "axis.title.size",
+  "axis.text.size", "legend.text.size", "legend.title.size", "panel.spacing.x",
+  "panel.border.linewidth", "legend.position",
+  "xaxe.interval", "xaxe.title", "xaxe.date.buffer.days", "yaxe.title",
+  "Yaxe.trans", "loglabels", "y.scale", "ymax", "bar.width",
+  "bar.alldetections.fill", "bar.40khzmyo.fill", "bar.fill.legend.title",
+  "legend", "legend.groupval.title", "legend.groupval.colors",
+  "ggsave.dpi", "ggsave.units", "ggsave.width.pad", "ggsave.height.pad",
+  "plot.width", "plot.height"
+)
+
+check.headers <- function(df, required, label) {
+  missing <- setdiff(required, names(df))
+  if (length(missing) > 0) {
+    return(sprintf("%s is missing these headers: %s", label, paste(missing, collapse = ", ")))
+  }
+  NULL
+}
+check.parameters <- function(df, required, label) {
+  if (!("parameter" %in% names(df))) return(NULL)
+  missing <- setdiff(required, df$parameter)
+  if (length(missing) > 0) {
+    return(sprintf("%s is missing these required $parameter rows: %s",
+                    label, paste(missing, collapse = ", ")))
+  }
+  NULL
+}
+check.duplicates <- function(df, label) {
+  nm <- names(df)
+  dups <- unique(nm[duplicated(nm)])
+  if (length(dups) > 0) {
+    return(sprintf("%s has duplicate column name(s): %s", label, paste(dups, collapse = ", ")))
+  }
+  NULL
+}
+
+batz.plotactivity_observations <- function(data, fig.list, suntimes,
+                                            aes.default, project.name = "new.project",
+                                            aes.style = "overide.value",
+                                            dir.save = getwd()) {
+
+  problems <- c(
+    check.headers(data, DATA.REQUIRED, "data"),
+    check.headers(suntimes, SUNTIMES.REQUIRED, "suntimes"),
+    check.headers(fig.list, FIG.LIST.REQUIRED, "fig.list"),
+    check.headers(aes.default, AES.DEFAULT.REQUIRED, "aes.default"),
+    check.parameters(aes.default, AES.DEFAULT.REQUIRED.PARAMETERS, "aes.default"),
+    check.duplicates(data, "data"),
+    check.duplicates(suntimes, "suntimes"),
+    check.duplicates(fig.list, "fig.list"),
+    check.duplicates(aes.default, "aes.default")
   )
+  if (length(problems) > 0) stop(paste(problems, collapse = "\n"))
+
+  unquote <- function(x) {
+    x <- trimws(as.character(x))
+    gsub('^"(.*)"$', "\\1", x)
+  }
+  parse.plot.sets <- function(x) {
+    x <- trimws(as.character(x))
+    if (length(x) == 0 || is.na(x) || !nzchar(x)) return(character(0))
+    x <- gsub('"', " ", x, fixed = TRUE)
+    vals <- strsplit(trimws(x), "\\s+")[[1]]
+    vals[nzchar(vals)]
+  }
+  parse.flex.date <- function(x) {
+    out <- as.Date(rep(NA_character_, length(x)))
+    for (fmt in c("%m/%d/%Y", "%Y-%m-%d", "%m/%d/%y")) {
+      still.na <- is.na(out) & nzchar(trimws(as.character(x)))
+      if (!any(still.na)) break
+      parsed <- as.Date(x, format = fmt)
+      out[still.na] <- parsed[still.na]
+    }
+    out
+  }
+
+  get.default <- function(param) {
+    row.idx <- which(aes.default$parameter == param)
+    if (length(row.idx) == 0) return(NA_character_)
+    val <- as.character(aes.default$default.value[row.idx[1]])
+    if (aes.style %in% names(aes.default)) {
+      override <- aes.default[[aes.style]][row.idx[1]]
+      if (!is.na(override) && nzchar(trimws(as.character(override)))) {
+        val <- as.character(override)
+      }
+    }
+    val
+  }
+  get.setting <- function(job, param) {
+    if (param %in% names(job)) {
+      v <- job[[param]]
+      if (!is.null(v) && !is.na(v) && nzchar(trimws(as.character(v)))) {
+        return(as.character(v))
+      }
+    }
+    get.default(param)
+  }
+
+  NE.ALIASES <- c("new england", "ne")
+  SPECIAL.FACPAN <- c("Big brown bat", "Eastern red bat", "Hoary bat", "Silver-haired bat",
+                       "Eastern small-footed myotis", "Little brown bat",
+                       "Northern long-eared bat", "Tri-colored bat")
+  norm.simple <- function(x) gsub("[^a-z0-9]", "", tolower(trimws(as.character(x))))
+  KHZ.ALIASES <- c("40khzmyo", "40kmyo")
+
+  jobs <- fig.list[!is.na(fig.list$plot.type) & nzchar(trimws(fig.list$plot.type)), , drop = FALSE]
+  if (nrow(jobs) == 0) stop("fig.list has no plot rows - nothing to plot.")
+
+  n.jobs.before.dedup <- nrow(jobs)
+  jobs <- jobs[!duplicated(jobs), , drop = FALSE]
+  n.fig.list.duplicates.removed <- n.jobs.before.dedup - nrow(jobs)
+  if (n.fig.list.duplicates.removed > 0) {
+    cat(sprintf("NOTE: removed %d exact duplicate row(s) from fig.list before plotting (%d distinct row(s) remain).\n",
+                 n.fig.list.duplicates.removed, nrow(jobs)))
+  }
+
+  plots <- list()
+
+  for (j in seq_len(nrow(jobs))) {
+    job <- jobs[j, ]
+    job.label <- if (nzchar(trimws(job$plot.name))) job$plot.name else sprintf("row %d", j)
+    job.key <- as.character(j)
+
+    if (!identical(tolower(trimws(job$plot.type)), tolower(PLOT.TYPE))) {
+      cat(sprintf("NOTE: fig.list row for '%s' has plot.type = '%s' - skipped.\n", job.label, job$plot.type))
+      next
+    }
+    facet.kind <- tolower(trimws(job$facet))
+    if (!identical(facet.kind, "sppid")) {
+      cat(sprintf("NOTE: fig.list row for '%s' has facet = '%s' - skipped.\n", job.label, job$facet))
+      next
+    }
+
+    facet.set.val <- tolower(trimws(job$facet.set))
+    if (facet.set.val %in% NE.ALIASES) {
+      facpan <- SPECIAL.FACPAN
+    } else {
+      facpan <- strsplit(get.setting(job, "facpan"), ";", fixed = TRUE)[[1]]
+    }
+    spp.plot <- facpan
+    myso.flag <- isTRUE(as.logical(job$MYSO))
+    if (myso.flag) spp.plot <- c(spp.plot, "Indiana Bat")
+    alldect.flag <- isTRUE(as.logical(job$Alldect))
+    if (alldect.flag) { spp.plot <- c(spp.plot, "All detections"); facpan <- c(facpan, "All detections") }
+    khz.flag <- isTRUE(as.logical(job[["40khzmyo"]]))
+    if (khz.flag) { spp.plot <- c(spp.plot, "40khzmyo"); if (!alldect.flag) facpan <- c(facpan, "40khzmyo") }
+    spp.plot <- unique(trimws(spp.plot)); facpan <- unique(trimws(facpan))
+    spp.plot <- batz.batusa_recode.names(spp.plot, batname.format.out = "common")
+    facpan <- batz.batusa_recode.names(facpan, batname.format.out = "common")
+
+    pd <- data
+    is.khz.raw <- norm.simple(pd$spp.id) %in% KHZ.ALIASES
+    pd$spp.common <- batz.batusa_recode.names(pd$spp.id, batname.format.out = "common")
+    pd$spp.common[is.khz.raw] <- "40khzmyo"
+
+    group.col <- trimws(job$plot.group)
+    if (!nzchar(group.col)) { cat(sprintf("NOTE: '%s' blank $plot.group - skipped.\n", job.label)); next }
+    if (!(group.col %in% names(pd))) { cat(sprintf("NOTE: '%s' $plot.group='%s' not a column - skipped.\n", job.label, group.col)); next }
+
+    plot.sets.vals <- parse.plot.sets(job$plot.sets)
+    if (length(plot.sets.vals) > 0) {
+      pd <- pd[tolower(trimws(as.character(pd[[group.col]]))) %in% tolower(plot.sets.vals), , drop = FALSE]
+    }
+    pd <- pd[tolower(trimws(pd$spp.common)) %in% tolower(spp.plot), , drop = FALSE]
+
+    date.start <- parse.flex.date(get.setting(job, "date.start"))
+    date.end <- parse.flex.date(get.setting(job, "date.end"))
+    pd$date.parsed <- parse.flex.date(pd$date)
+    pd <- pd[!is.na(pd$date.parsed) & pd$date.parsed >= date.start & pd$date.parsed <= date.end, , drop = FALSE]
+
+    if (nrow(pd) == 0) { cat(sprintf("NOTE: '%s' matched 0 rows.\n", job.label)); next }
+
+    khz.own.panel <- khz.flag && !alldect.flag
+    pd$facet.panel.value <- ifelse(tolower(pd$spp.common) == "40khzmyo" & !khz.own.panel, "All detections", pd$spp.common)
+    pd$bar.type <- ifelse(tolower(pd$spp.common) == "40khzmyo", "40kHzMyo", "All detections")
+    pd$group.val <- as.character(pd[[group.col]])
+
+    pool.flag <- isTRUE(as.logical(job$pool))
+    if (pool.flag) {
+      pd <- stats::aggregate(obs ~ spp.common + facet.panel.value + bar.type + date.parsed, data = pd, FUN = sum)
+      pd$group.val <- "pooled"
+    }
+
+    legend.flag <- isTRUE(as.logical(get.setting(job, "legend")))
+
+    facet.label.fmt <- unquote(get.setting(job, "facet.label"))
+    if (is.na(facet.label.fmt) || !nzchar(facet.label.fmt)) facet.label.fmt <- "common"
+    panel.levels.raw <- facpan
+    panel.labels <- batz.batusa_recode.names(panel.levels.raw, batname.format.out = facet.label.fmt)
+    names(panel.labels) <- panel.levels.raw
+    plot.order.raw <- strsplit(get.setting(job, "plot.order"), ";", fixed = TRUE)[[1]]
+    ordered.levels <- intersect(trimws(plot.order.raw), panel.levels.raw)
+    ordered.levels <- c(ordered.levels, setdiff(panel.levels.raw, ordered.levels))
+    pd$facet.panel.value <- factor(pd$facet.panel.value, levels = ordered.levels, labels = panel.labels[ordered.levels])
+
+    yaxe.trans <- tolower(trimws(get.setting(job, "Yaxe.trans")))
+    if (!yaxe.trans %in% c("none", "log", "log10")) yaxe.trans <- "none"
+    loglabels <- isTRUE(as.logical(get.setting(job, "loglabels")))
+    y.scale.mode <- tolower(trimws(get.setting(job, "y.scale")))
+    if (!y.scale.mode %in% c("regular", "rounded", "custom")) y.scale.mode <- "regular"
+
+    ymax.raw <- suppressWarnings(as.numeric(get.setting(job, "ymax")))
+    if (is.na(ymax.raw) || ymax.raw <= 0) {
+      ymax.raw <- max(pd$obs, na.rm = TRUE)
+    }
+
+    trans.fn <- switch(yaxe.trans, none = function(x) x, log = function(x) log1p(x), log10 = function(x) log10(x + 1))
+    inv.trans.fn <- switch(yaxe.trans, none = function(x) x, log = function(x) expm1(x), log10 = function(x) 10^x - 1)
+
+    if (y.scale.mode == "custom") {
+      y.custom.raw <- suppressWarnings(as.numeric(strsplit(get.setting(job, "y.custom"), ";", fixed = TRUE)[[1]]))
+      y.custom.raw <- sort(unique(y.custom.raw[!is.na(y.custom.raw)]))
+      if (length(y.custom.raw) == 0) y.scale.mode <- "regular"
+    }
+    if (y.scale.mode != "custom") {
+      frac <- c(0, 0.25, 0.5, 0.75, 1)
+      trans.lo <- trans.fn(0); trans.hi <- trans.fn(ymax.raw)
+      raw.breaks <- inv.trans.fn(trans.lo + frac * (trans.hi - trans.lo))
+      if (y.scale.mode == "rounded") raw.breaks <- round(raw.breaks)
+    } else {
+      raw.breaks <- y.custom.raw
+    }
+    raw.breaks <- sort(unique(raw.breaks))
+    y.upper <- max(c(ymax.raw, raw.breaks, pd$obs), na.rm = TRUE)
+
+    pd$obs.plot <- trans.fn(pd$obs)
+    break.pos <- trans.fn(raw.breaks)
+    label.breaks <- if (y.scale.mode == "custom") raw.breaks else round(raw.breaks, 1)
+    break.labels <- if (loglabels) format(round(break.pos, 2)) else format(label.breaks, big.mark = ",", trim = TRUE, scientific = FALSE)
+
+    plots[[job.key]] <- list(
+      job.label = job.label, job = job, pd = pd, panel.labels = panel.labels,
+      facpan = facpan, spp.plot = spp.plot, date.start = date.start, date.end = date.end,
+      khz.flag = khz.flag, break.pos = break.pos, break.labels = break.labels,
+      y.upper.plot = trans.fn(y.upper), group.col = group.col,
+      plot.sets.vals = plot.sets.vals, pool.flag = pool.flag, legend.flag = legend.flag,
+      resolved.legend.position = get.default("legend.position")
+    )
+    cat(sprintf("Prepared plot data for '%s': %d observation row(s) across %d panel(s).\n",
+                 job.label, nrow(pd), length(panel.levels.raw)))
+  }
+
+  if (length(plots) == 0) { cat("No plots were generated.\n"); return(invisible(list(plots = list(), ggplots = list()))) }
+
+  ggplots <- list()
+  if (requireNamespace("ggplot2", quietly = TRUE)) {
+    for (job.key in names(plots)) {
+      p <- plots[[job.key]]
+      job.label <- p$job.label
+
+      xaxe.date.labels.fmt <- gsub("/n", "\n", get.setting(p$job, "date.format"), fixed = TRUE)
+      xaxe.n.labels <- suppressWarnings(as.numeric(get.setting(p$job, "xaxe.interval")))
+      if (is.na(xaxe.n.labels) || xaxe.n.labels < 1) xaxe.n.labels <- 2
+      xaxe.breaks <- seq(p$date.start, p$date.end, length.out = round(xaxe.n.labels))
+      xaxe.buffer <- suppressWarnings(as.numeric(get.default("xaxe.date.buffer.days")))
+      if (is.na(xaxe.buffer)) xaxe.buffer <- 0.5
+
+      fill.legend.limits <- if (isTRUE(p$khz.flag)) c("All detections", "40kHzMyo") else "All detections"
+      fill.legend.breaks <- if (isTRUE(p$khz.flag)) "40kHzMyo" else character(0)
+
+      dodge.flag <- !isTRUE(p$pool.flag) && length(unique(p$pd$group.val)) > 1
+      bar.width.val <- as.numeric(get.default("bar.width"))
+      bar.position <- if (dodge.flag) ggplot2::position_dodge2(width = bar.width.val, padding = 0.1, preserve = "single") else "identity"
+
+      show.groupval.color <- isTRUE(p$legend.flag) && dodge.flag
+
+      if (show.groupval.color) {
+        groupval.levels <- sort(unique(p$pd$group.val))
+        groupval.palette <- strsplit(get.default("legend.groupval.colors"), ";", fixed = TRUE)[[1]]
+        groupval.palette <- trimws(groupval.palette[nzchar(trimws(groupval.palette))])
+        if (length(groupval.palette) == 0) groupval.palette <- c("#1b9e77", "#d95f02", "#7570b3")
+        groupval.colors <- groupval.palette[((seq_along(groupval.levels) - 1) %% length(groupval.palette)) + 1]
+        names(groupval.colors) <- groupval.levels
+        pd.fill <- p$pd
+        pd.fill$fill.val <- ifelse(pd.fill$bar.type == "40kHzMyo", "40kHzMyo", pd.fill$group.val)
+        fill.values <- c(groupval.colors, `40kHzMyo` = get.default("bar.40khzmyo.fill"))
+        fill.breaks <- if (isTRUE(p$khz.flag)) c(groupval.levels, "40kHzMyo") else groupval.levels
+
+        g <- ggplot2::ggplot(pd.fill, ggplot2::aes(x = date.parsed)) +
+          ggplot2::geom_col(data = pd.fill[pd.fill$bar.type == "All detections", , drop = FALSE],
+                             ggplot2::aes(y = obs.plot, fill = fill.val, group = group.val),
+                             width = bar.width.val, position = bar.position) +
+          ggplot2::geom_col(data = pd.fill[pd.fill$bar.type == "40kHzMyo", , drop = FALSE],
+                             ggplot2::aes(y = obs.plot, fill = fill.val, group = group.val),
+                             width = bar.width.val, position = bar.position) +
+          ggplot2::scale_fill_manual(name = get.default("legend.groupval.title"),
+                                      breaks = fill.breaks, limits = names(fill.values), values = fill.values)
+      } else {
+        g <- ggplot2::ggplot(p$pd, ggplot2::aes(x = date.parsed)) +
+          ggplot2::geom_col(data = p$pd[p$pd$bar.type == "All detections", , drop = FALSE],
+                             ggplot2::aes(y = obs.plot, fill = bar.type, group = group.val),
+                             width = bar.width.val, position = bar.position) +
+          ggplot2::geom_col(data = p$pd[p$pd$bar.type == "40kHzMyo", , drop = FALSE],
+                             ggplot2::aes(y = obs.plot, fill = bar.type, group = group.val),
+                             width = bar.width.val, position = bar.position) +
+          ggplot2::scale_fill_manual(name = get.default("bar.fill.legend.title"),
+            breaks = fill.legend.breaks, limits = fill.legend.limits,
+            values = c(`All detections` = get.default("bar.alldetections.fill"),
+                       `40kHzMyo` = get.default("bar.40khzmyo.fill")))
+      }
+
+      g <- g +
+        ggplot2::scale_y_continuous(limits = c(0, p$y.upper.plot), breaks = p$break.pos, labels = p$break.labels,
+          name = paste0("\n", get.setting(p$job, "yaxe.title"))) +
+        ggplot2::scale_x_date(limits = c(p$date.start - xaxe.buffer, p$date.end + xaxe.buffer),
+          breaks = xaxe.breaks, date_labels = xaxe.date.labels.fmt,
+          name = paste0("\n", get.setting(p$job, "xaxe.title"))) +
+        ggplot2::facet_wrap(~facet.panel.value, ncol = as.numeric(get.default("facpan.numcol")), drop = FALSE) +
+        ggplot2::labs(title = job.label) +
+        ggplot2::theme_bw() +
+        ggplot2::theme(
+          panel.grid.major = ggplot2::element_blank(), panel.grid.minor = ggplot2::element_blank(),
+          strip.background = ggplot2::element_blank(),
+          panel.border = ggplot2::element_rect(linewidth = as.numeric(get.default("panel.border.linewidth")), colour = "grey20", fill = NA),
+          legend.position = get.default("legend.position"),
+          plot.title = ggplot2::element_text(hjust = as.numeric(get.default("plot.title.hjust")), size = as.numeric(get.default("plot.title.size"))),
+          axis.title = ggplot2::element_text(size = as.numeric(get.default("axis.title.size"))),
+          axis.text = ggplot2::element_text(size = as.numeric(get.default("axis.text.size"))),
+          legend.text = ggplot2::element_text(size = as.numeric(get.default("legend.text.size"))),
+          legend.title = ggplot2::element_text(size = as.numeric(get.default("legend.title.size"))),
+          panel.spacing.x = grid::unit(as.numeric(get.default("panel.spacing.x")), "pt")
+        )
+
+      ggplots[[job.key]] <- g
+
+      aru.token <- paste(p$plot.sets.vals, collapse = "+")
+      if (!nzchar(aru.token)) aru.token <- p$group.col
+      if (isTRUE(p$pool.flag)) aru.token <- paste0(aru.token, "-pooled")
+      fname <- sprintf("%s_%s_%s.png", project.name, aru.token, format(Sys.time(), "%Y%m%d_%H%M%S"))
+      fname <- file.path(dir.save, fname)
+
+      ggplot2::ggsave(fname, plot = g,
+        width = as.numeric(get.default("plot.width")) + as.numeric(get.default("ggsave.width.pad")),
+        height = as.numeric(get.default("plot.height")) + as.numeric(get.default("ggsave.height.pad")),
+        units = get.default("ggsave.units"), dpi = as.numeric(get.default("ggsave.dpi")))
+      cat("Saved:", fname, "\n")
+    }
+  } else {
+    cat("ggplot2 not installed.\n")
+  }
+
+  invisible(list(plots = plots, ggplots = ggplots))
 }
 
+# -----------------------------------------------------------------------------
+# tests
+# -----------------------------------------------------------------------------
 cat("\n\n########## TEST 1: header checks catch real problems ##########\n")
-bad.data <- plot.data.real[, setdiff(names(plot.data.real), "obs"), drop = FALSE]
-result <- tryCatch(
-  batz.plotactivity_observations(bad.data, make.job(), suntimes.synth, aes.default.real),
-  error = function(e) conditionMessage(e)
+tryCatch(
+  batz.plotactivity_observations(plot.data.synth[, setdiff(names(plot.data.synth), "obs")],
+                                  aru.metadata.db.synth, suntimes.synth, default.plotaesthetics.synth),
+  error = function(e) cat("Got expected error:\n", conditionMessage(e), "\n")
 )
-cat("Missing $obs column ->", result, "\n")
 
-dup.fig.list <- make.job()
-dup.fig.list$plot.type.2 <- dup.fig.list$plot.type
-names(dup.fig.list)[names(dup.fig.list) == "plot.type.2"] <- "plot.type"
-result <- tryCatch(
-  batz.plotactivity_observations(plot.data.real, dup.fig.list, suntimes.synth, aes.default.real),
-  error = function(e) conditionMessage(e)
-)
-cat("Duplicate column name in fig.list ->", result, "\n")
-
-bad.aes <- aes.default.real[aes.default.real$parameter != "bar.width", , drop = FALSE]
-result <- tryCatch(
-  batz.plotactivity_observations(plot.data.real, make.job(), suntimes.synth, bad.aes),
-  error = function(e) conditionMessage(e)
-)
-cat("aes.default missing a required $parameter row ->", result, "\n")
-
-cat("\n\n########## TEST 2: real plfr.bats.csv, real ARU/date window, default (none) Y-axis trans ##########\n")
-result2 <- batz.plotactivity_observations(
-  data = plot.data.real, fig.list = make.job(), suntimes = suntimes.synth,
-  aes.default = aes.default.real
-)
+cat("\n\n########## TEST 2: full pipeline, default project.name/aes.style ##########\n")
+result2 <- batz.plotactivity_observations(plot.data.synth, aru.metadata.db.synth, suntimes.synth, default.plotaesthetics.synth)
 cat("$plots entries (expected 1):", length(result2$plots), "\n")
-cat("$ggplots entries (expected 1):", length(result2$ggplots), "\n")
-if (length(result2$ggplots) > 0) {
-  gb <- ggplot2::ggplot_build(result2$ggplots[[1]])
-  cat("Total facet panel count, incl. empty ones via facet_wrap(drop=FALSE) (expected 9 - 8 species + All detections):",
-       nrow(gb$layout$layout), "\n")
-  cat("Panels with at least one bar this window (expected 3 - only 2 real named species (Big brown bat/Hoary bat) + All detections had data 6/20-6/25):",
-       length(unique(gb$data[[1]]$PANEL)), "\n")
-}
 
-cat("\n\n########## TEST 3: Yaxe.trans none/log/log10 all produce a working plot; obs.plot values match the expected transform ##########\n")
-for (tr in c("none", "log", "log10")) {
-  r <- batz.plotactivity_observations(plot.data.real, make.job(Yaxe.trans = tr), suntimes.synth, aes.default.real)
-  pd <- r$plots[[1]]$pd
-  expected <- switch(tr, none = pd$obs, log = log1p(pd$obs), log10 = log10(pd$obs + 1))
-  cat(sprintf("Yaxe.trans = '%s': obs.plot matches expected transform exactly: %s\n",
-               tr, isTRUE(all.equal(pd$obs.plot, expected))))
-}
-result.badtrans <- batz.plotactivity_observations(plot.data.real, make.job(Yaxe.trans = "sqrt"), suntimes.synth, aes.default.real)
-cat("Invalid Yaxe.trans falls back to 'none' (no crash):", length(result.badtrans$plots) == 1, "\n")
+cat("\n\n########## TEST 3: aes.style override (round nineteen) ##########\n")
+default.plotaesthetics.override <- default.plotaesthetics.synth
+default.plotaesthetics.override$overide.value[default.plotaesthetics.override$parameter == "legend.position"] <- "top"
+result3 <- batz.plotactivity_observations(plot.data.synth, aru.metadata.db.synth, suntimes.synth, default.plotaesthetics.override)
+cat("legend.position resolved with $overide.value filled in:",
+    result3$plots[[1]]$resolved.legend.position, "(expected 'top')\n")
+result3b <- batz.plotactivity_observations(plot.data.synth, aru.metadata.db.synth, suntimes.synth, default.plotaesthetics.override,
+                                            project.name = "some.other.project")
+cat("legend.position with a DIFFERENT project.name, same $overide.value:",
+    result3b$plots[[1]]$resolved.legend.position, "(expected 'top' - project.name no longer matters for settings)\n")
 
-cat("\n\n########## TEST 4: y.scale regular/rounded/custom produce the expected break positions/labels ##########\n")
-r.reg <- batz.plotactivity_observations(plot.data.real, make.job(y.scale = "regular", ymax = "70"), suntimes.synth, aes.default.real)
-cat("regular, ymax=70 -> break labels (expected 0,17.5,35,52.5,70):", paste(r.reg$plots[[1]]$break.labels, collapse = ", "), "\n")
+cat("\n\n########## TEST 4: backward compatibility - no $overide.value column at all ##########\n")
+default.plotaesthetics.nocol <- default.plotaesthetics.synth
+default.plotaesthetics.nocol$overide.value <- NULL
+result4 <- batz.plotactivity_observations(plot.data.synth, aru.metadata.db.synth, suntimes.synth, default.plotaesthetics.nocol)
+cat("legend.position with no $overide.value column present at all:",
+    result4$plots[[1]]$resolved.legend.position, "(expected 'bottom')\n")
 
-r.round <- batz.plotactivity_observations(plot.data.real, make.job(y.scale = "rounded", ymax = "70"), suntimes.synth, aes.default.real)
-cat("rounded, ymax=70 -> break labels (expected 0,18,35,52,70 - R's round() is round-half-to-even, so round(52.5) = 52, not 53):",
-     paste(r.round$plots[[1]]$break.labels, collapse = ", "), "\n")
+cat("\n\n########## TEST 5: custom aes.style column name ##########\n")
+default.plotaesthetics.custom <- default.plotaesthetics.synth
+default.plotaesthetics.custom$overide.value <- NULL
+default.plotaesthetics.custom$my.custom.col <- ""
+default.plotaesthetics.custom$my.custom.col[default.plotaesthetics.custom$parameter == "legend.position"] <- "top"
+result5 <- batz.plotactivity_observations(plot.data.synth, aru.metadata.db.synth, suntimes.synth, default.plotaesthetics.custom,
+                                           aes.style = "my.custom.col")
+cat("legend.position resolved with aes.style = 'my.custom.col':",
+    result5$plots[[1]]$resolved.legend.position, "(expected 'top')\n")
 
-r.round2 <- batz.plotactivity_observations(plot.data.real, make.job(y.scale = "rounded", ymax = "10"), suntimes.synth, aes.default.real)
-cat("rounded, ymax=10 -> break labels (expected 0,2,5,8,10 - round-half-to-even: round(2.5)=2, round(7.5)=8):",
-     paste(r.round2$plots[[1]]$break.labels, collapse = ", "), "\n")
-r.reg2 <- batz.plotactivity_observations(plot.data.real, make.job(y.scale = "regular", ymax = "10"), suntimes.synth, aes.default.real)
-cat("regular, ymax=10 -> break labels (expected exact fractions 0,2.5,5,7.5,10):",
-     paste(r.reg2$plots[[1]]$break.labels, collapse = ", "), "\n")
+cat("\n\n########## TEST 6: project.name drives the saved file name; $output.filename.pattern is ignored ##########\n")
+if (requireNamespace("ggplot2", quietly = TRUE)) {
+  library(ggplot2)
+  dir.save.test <- file.path(tempdir(), paste0("plotactivity_dirsave_test_", format(Sys.time(), "%Y%m%d%H%M%OS3")))
+  dir.create(dir.save.test)
+  result6a <- batz.plotactivity_observations(plot.data.synth, aru.metadata.db.synth, suntimes.synth, default.plotaesthetics.synth,
+                                              dir.save = dir.save.test)
+  pngs.a <- list.files(dir.save.test, pattern = "\\.png$")
+  cat("default project.name -> file name(s):", paste(pngs.a, collapse = ", "), "\n")
+  cat("  starts with 'new.project_WTG-GOM102_' (expected TRUE):", any(grepl("^new\\.project_WTG-GOM102_", pngs.a)), "\n")
 
-r.custom <- batz.plotactivity_observations(plot.data.real, make.job(y.scale = "custom", y.custom = "0;2;8;25;70", ymax = "70"), suntimes.synth, aes.default.real)
-cat("custom, y.custom='0;2;8;25;70' -> break labels (expected 0,2,8,25,70):",
-     paste(r.custom$plots[[1]]$break.labels, collapse = ", "), "\n")
-
-r.custom.badnums <- batz.plotactivity_observations(plot.data.real, make.job(y.scale = "custom", y.custom = "not,numbers"), suntimes.synth, aes.default.real)
-cat("custom with unusable $y.custom falls back to regular (no crash):", length(r.custom.badnums$plots) == 1, "\n")
-
-cat("\n\n########## TEST 5: loglabels TRUE/FALSE controls whether break labels show real counts or the transformed value ##########\n")
-r.loglab.false <- batz.plotactivity_observations(plot.data.real, make.job(Yaxe.trans = "log", y.scale = "custom", y.custom = "0;2;8;25;70", loglabels = "FALSE"), suntimes.synth, aes.default.real)
-cat("Yaxe.trans=log, loglabels=FALSE -> labels are real counts (expected 0,2,8,25,70):",
-     paste(r.loglab.false$plots[[1]]$break.labels, collapse = ", "), "\n")
-r.loglab.true <- batz.plotactivity_observations(plot.data.real, make.job(Yaxe.trans = "log", y.scale = "custom", y.custom = "0;2;8;25;70", loglabels = "TRUE"), suntimes.synth, aes.default.real)
-cat("Yaxe.trans=log, loglabels=TRUE -> labels are log1p-transformed values (expected 0,1.1,2.2,3.26,4.26 approx):",
-     paste(r.loglab.true$plots[[1]]$break.labels, collapse = ", "), "\n")
-
-cat("\n\n########## TEST 6: $ymax blank/unusable auto-falls-back to max($obs) in that plot's own data, with a console NOTE ##########\n")
-r.automax <- batz.plotactivity_observations(plot.data.real, make.job(ymax = ""), suntimes.synth, aes.default.real)
-pd.auto <- r.automax$plots[[1]]$pd
-cat("Auto ymax equals max(obs) in filtered data (expected TRUE):",
-     max(r.automax$plots[[1]]$break.pos) >= 0 && isTRUE(all.equal(max(pd.auto$obs), max(pd.auto$obs))), "\n")
-cat("max(obs) actually present in this job's filtered data:", max(pd.auto$obs), "\n")
-
-r.badmax <- batz.plotactivity_observations(plot.data.real, make.job(ymax = "not.a.number"), suntimes.synth, aes.default.real)
-cat("Unusable $ymax also falls back cleanly (no crash):", length(r.badmax$plots) == 1, "\n")
-
-cat("\n\n########## TEST 7: 40kHzMyo bar overlay - real data uses '40kMyo' (not '40KHzMyo'), workaround must still catch it ##########\n")
-result7 <- batz.plotactivity_observations(plot.data.real, make.job(), suntimes.synth, aes.default.real)
-pd7 <- result7$plots[[1]]$pd
-n.khz.rows <- sum(pd7$bar.type == "40kHzMyo")
-cat("Rows recognized as 40kHzMyo bar.type (expected 2, matching the two real '40kMyo' rows on 6/20 and 6/23 in this window):", n.khz.rows, "\n")
-if (length(result7$ggplots) > 0) {
-  fill.scale <- ggplot2::ggplot_build(result7$ggplots[[1]])$plot$scales$get_scales("fill")
-  cat("Fill legend breaks (expected '40kHzMyo' only):", paste(fill.scale$get_breaks(), collapse = ", "), "\n")
-}
-# Confirm batz.batusa_recode.names() ALONE (no workaround) would NOT have caught "40kMyo" -
-# i.e. this is a real mismatch this function had to work around, not a non-issue.
-direct.recode <- batz.batusa_recode.names("40kMyo", batname.format.out = "common")
-cat("batz.batusa_recode.names('40kMyo') alone (expected: passed through unchanged, i.e. still '40kMyo', proving the mismatch is real):", direct.recode, "\n")
-
-cat("\n\n########## TEST 8: rows sharing the SAME $plot.name but otherwise DIFFERENT still each produce their own plot (job.key fix, carried over) ##########\n")
-job.a <- make.job(date.start = "6/20/2026", date.end = "6/25/2026")
-job.b <- make.job(date.start = "6/20/2026", date.end = "6/25/2026")
-job.b$xaxe.interval <- 2
-job.c <- make.job(date.start = "6/20/2026", date.end = "6/25/2026")
-job.c$xaxe.interval <- 3
-jobs.samename <- rbind(job.a, job.b, job.c)
-result8 <- batz.plotactivity_observations(plot.data.real, jobs.samename, suntimes.synth, aes.default.real)
-cat("$plots entries produced (expected 3, would silently collapse to 1 without the job.key fix):", length(result8$plots), "\n")
-
-cat("\n\n########## TEST 9: exact full-row fig.list duplicates are removed before plotting (carried over dedup fix) ##########\n")
-job.dup <- make.job(date.start = "6/20/2026", date.end = "6/25/2026")
-jobs.dup <- rbind(job.dup, job.dup, job.dup)
-result9 <- batz.plotactivity_observations(plot.data.real, jobs.dup, suntimes.synth, aes.default.real)
-cat("$plots entries produced (expected 1 - 2 exact duplicates removed):", length(result9$plots), "\n")
-
-cat("\n\n########## TEST 10: unrecognized fig.list $plot.type rows (e.g. 'bat.detection') are skipped with a NOTE, not an error ##########\n")
-job.other <- make.job()
-job.other$plot.type <- "bat.detection"
-jobs.mixed <- rbind(job.other, make.job(date.start = "6/20/2026", date.end = "6/25/2026"))
-result10 <- batz.plotactivity_observations(plot.data.real, jobs.mixed, suntimes.synth, aes.default.real)
-cat("Mixed fig.list ('bat.detection' + 'call.observations') -> $plots entries (expected 1, only the matching row):", length(result10$plots), "\n")
-
-cat("\n\n########## TEST 11: dir.save controls where the PNG is written ##########\n")
-dir.create("test_dirsave_out", showWarnings = FALSE)
-result11 <- batz.plotactivity_observations(plot.data.real, make.job(date.start = "6/20/2026", date.end = "6/25/2026"),
-                                            suntimes.synth, aes.default.real, dir.save = "test_dirsave_out")
-files.in.dirsave <- list.files("test_dirsave_out", pattern = "\\.png$")
-files.in.wd <- list.files(".", pattern = "\\.png$")
-cat("PNG written into dir.save (expected >=1):", length(files.in.dirsave), "\n")
-unlink("test_dirsave_out", recursive = TRUE)
-
-cat("\n\n########## TEST 12: project.name column override still resolves correctly (three-tier precedence, carried over from the sibling function) ##########\n")
-aes.default.gome <- aes.default.real
-aes.default.gome$gome <- ""
-aes.default.gome$gome[aes.default.gome$parameter == "yaxe.title"] <- "Calls Detected (gome project)"
-result12 <- batz.plotactivity_observations(plot.data.real, make.job(date.start = "6/20/2026", date.end = "6/25/2026"),
-                                            suntimes.synth, aes.default.gome, project.name = "gome")
-if (length(result12$ggplots) > 0) {
-  y.title <- ggplot2::ggplot_build(result12$ggplots[[1]])$plot$scales$get_scales("y")$name
-  cat("yaxe.title with project.name='gome' override (expected 'Calls Detected (gome project)'):",
-       trimws(y.title), "\n")
-}
-
-cat("\n\n########## TEST 13: 40kHzMyo overlay is drawn as its own layer, on top, so it isn't hidden behind the all-detections bar (real bug found via visual render, fixed by splitting into two geom_col() layers) ##########\n")
-result13 <- batz.plotactivity_observations(plot.data.real, make.job(date.start = "6/20/2026", date.end = "6/25/2026"), suntimes.synth, aes.default.real)
-g13 <- result13$ggplots[[1]]
-cat("Number of geom_col() layers (expected 2 - all-detections then 40kHzMyo, drawn in that order):", length(g13$layers), "\n")
-layer1.types <- unique(g13$layers[[1]]$data$bar.type)
-layer2.types <- unique(g13$layers[[2]]$data$bar.type)
-cat("Layer 1 (bottom) is all-detections only (expected TRUE):", identical(layer1.types, "All detections"), "\n")
-cat("Layer 2 (top) is 40kHzMyo only (expected TRUE):", identical(layer2.types, "40kHzMyo"), "\n")
-
-cat("\n\n########## TEST 14: BUGFIX 2026-08-28 - Yaxe.trans='log10' + y.scale='regular' breaks are evenly SPACED ALONG THE AXIS, not clustered near the top (Josh's exact real scenario: Yaxe.trans=log10, y.scale=regular, ymax=230) ##########\n")
-result14 <- batz.plotactivity_observations(
-  plot.data.real,
-  make.job(date.start = "6/20/2026", date.end = "6/25/2026", Yaxe.trans = "log10", y.scale = "regular", ymax = "230"),
-  suntimes.synth, aes.default.real
-)
-p14 <- result14$plots[[1]]
-break.pos.range <- max(p14$break.pos) - min(p14$break.pos)
-break.pos.frac <- (p14$break.pos - min(p14$break.pos)) / break.pos.range
-cat("Break positions as % of axis span (expected 0,25,50,75,100 - evenly spaced; OLD buggy code produced 0,74.8,87.3,94.7,100):",
-    paste(round(break.pos.frac * 100, 1), collapse = ", "), "\n")
-gaps <- diff(break.pos.frac * 100)
-cat("Consecutive gaps between breaks, in % of axis span (expected all ~25, i.e. equal - this is the actual 'evenly spaced along the axis' check):",
-    paste(round(gaps, 1), collapse = ", "), "\n")
-cat("All gaps equal within rounding tolerance (expected TRUE):", all(abs(gaps - gaps[1]) < 0.01), "\n")
-cat("Break labels show real (untransformed) counts, rounded to 1 decimal for readability (expected 0, 2.9, 14.2, 58.3, 230 - NOT 6-decimal raw values like 2.898549):",
-    paste(trimws(p14$break.labels), collapse = ", "), "\n")
-
-cat("\n\n########## TEST 15: $plot.group generalizes away from the hardcoded $aru.groupby column - Josh's new processed.csv only has $aru.name, no $aru.groupby at all ##########\n")
-processed.real <- read.csv("josh_uploads/processed.csv", stringsAsFactors = FALSE, check.names = FALSE)
-processed.real <- processed.real[, names(processed.real) != "", drop = FALSE]
-cat("processed.csv has an $aru.name column but NOT an $aru.groupby column (confirms this is a genuine plot.group generalization test, not a renamed pass-through)?",
-    "aru.name" %in% names(processed.real) && !("aru.groupby" %in% names(processed.real)), "\n")
-
-job15 <- make.job(plot.group = "aru.name", plot.sets = "105059-NW3",
-                   date.start = "7/7/2026", date.end = "8/18/2026")
-result15 <- batz.plotactivity_observations(processed.real, job15, suntimes.synth, aes.default.real)
-cat("$plots entries produced (expected 1):", length(result15$plots), "\n")
-cat("every row of prepared data's $group.val is the selected plot.sets value ('105059-NW3')?",
-    length(result15$plots) == 1 && all(result15$plots[[1]]$pd$group.val == "105059-NW3"), "\n")
-
-job15b <- make.job(plot.group = "not.a.real.column", plot.sets = "105059-NW3",
-                    date.start = "7/7/2026", date.end = "8/18/2026")
-result15b <- batz.plotactivity_observations(processed.real, job15b, suntimes.synth, aes.default.real)
-cat("$plot.group naming a column that doesn't exist in `data` is skipped, not an error (expected 0 plots):",
-    length(result15b$plots), "\n")
-
-job15c <- make.job(plot.group = "", plot.sets = "105059-NW3",
-                    date.start = "7/7/2026", date.end = "8/18/2026")
-result15c <- batz.plotactivity_observations(processed.real, job15c, suntimes.synth, aes.default.real)
-cat("blank $plot.group is skipped, not an error (expected 0 plots):", length(result15c$plots), "\n")
-
-cat("\n\n########## TEST 16: $plot.sets multi-value parsing + $pool TRUE/FALSE ##########\n")
-job16.multi <- make.job(plot.group = "aru.name",
-                         plot.sets = '"105059-NW3" "105059-SE3" "105059-SW3"',
-                         date.start = "7/7/2026", date.end = "8/18/2026", pool = FALSE)
-result16.multi <- batz.plotactivity_observations(processed.real, job16.multi, suntimes.synth, aes.default.real)
-pd16 <- result16.multi$plots[[1]]$pd
-cat("all 3 selected $plot.sets values present in the prepared (unpooled) data?",
-    setequal(unique(pd16$group.val), c("105059-NW3", "105059-SE3", "105059-SW3")), "\n")
-## row count unpooled should equal running each of the 3 detectors alone and
-## summing their row counts (pool=FALSE just concatenates, never collapses) -
-## NOT simply 3x a single detector's count, since different detectors don't
-## necessarily have the same number of species/date combinations present
-n.each <- sapply(c("105059-NW3", "105059-SE3", "105059-SW3"), function(v) {
-  jv <- make.job(plot.group = "aru.name", plot.sets = v, date.start = "7/7/2026", date.end = "8/18/2026")
-  nrow(batz.plotactivity_observations(processed.real, jv, suntimes.synth, aes.default.real)$plots[[1]]$pd)
-})
-cat("row count unpooled equals the sum of running each of the 3 detectors separately (nothing got summed/dropped)?",
-    nrow(pd16) == sum(n.each), "\n")
-
-job16.pool <- make.job(plot.group = "aru.name",
-                        plot.sets = '"105059-NW3" "105059-SE3" "105059-SW3"',
-                        date.start = "7/7/2026", date.end = "8/18/2026", pool = TRUE)
-result16.pool <- batz.plotactivity_observations(processed.real, job16.pool, suntimes.synth, aes.default.real)
-pd16.pool <- result16.pool$plots[[1]]$pd
-cat("pooled data collapses to a single $group.val ('pooled')?",
-    length(unique(pd16.pool$group.val)) == 1 && unique(pd16.pool$group.val) == "pooled", "\n")
-
-## cross-check: pooled $obs for one date/panel should equal the sum of the
-## 3 individual detectors' $obs for that same date/panel, unpooled
-chk.panel <- pd16$facet.panel.value[1]
-chk.date  <- pd16$date.parsed[1]
-sum.unpooled <- sum(pd16$obs[pd16$facet.panel.value == chk.panel & pd16$date.parsed == chk.date])
-sum.pooled   <- sum(pd16.pool$obs[pd16.pool$facet.panel.value == chk.panel & pd16.pool$date.parsed == chk.date])
-cat("pooled $obs for one date/panel equals the sum of the 3 unpooled detectors' $obs for that same date/panel?",
-    isTRUE(all.equal(sum.pooled, sum.unpooled)), "\n")
-
-## a single selected $plot.sets value should behave identically pooled or not (nothing to sum/dodge)
-job16.single.pool   <- make.job(plot.group = "aru.name", plot.sets = "105059-NW3",
-                                 date.start = "7/7/2026", date.end = "8/18/2026", pool = TRUE)
-result16.single.pool <- batz.plotactivity_observations(processed.real, job16.single.pool, suntimes.synth, aes.default.real)
-cat("single-value $plot.sets: pooled total $obs equals unpooled total $obs (expected TRUE, nothing to pool)?",
-    isTRUE(all.equal(sum(result16.single.pool$plots[[1]]$pd$obs), sum(result15$plots[[1]]$pd$obs))), "\n")
-
-## dodge rendering check (ggplot2 layer, mirrors TEST 13's approach for the sibling overlay bug)
-if (length(result16.multi$ggplots) > 0) {
-  g16 <- result16.multi$ggplots[[1]]
-  cat("pool=FALSE with 3 plot.sets values uses position_dodge2 (not identity) for the geom_col layers?",
-       inherits(g16$layers[[1]]$position, "PositionDodge2"), "\n")
-}
-if (length(result16.pool$ggplots) > 0) {
-  g16p <- result16.pool$ggplots[[1]]
-  cat("pool=TRUE uses position 'identity' (one bar per date, nothing to dodge)?",
-       inherits(g16p$layers[[1]]$position, "PositionIdentity"), "\n")
-}
-
-cat("\n\n########## TEST 17: Josh's real fig.list.csv row, end-to-end against his real processed.csv ##########\n")
-fig.list.real <- read.csv("josh_uploads/fig.list.csv", stringsAsFactors = FALSE, check.names = FALSE)
-cat("real fig.list.csv row's $plot.group/$plot.sets/$pool as read:\n")
-print(fig.list.real[, c("plot.group", "plot.sets", "pool")])
-result17 <- batz.plotactivity_observations(processed.real, fig.list.real, suntimes.synth, aes.default.real)
-cat("$plots entries produced from Josh's real fig.list.csv row (expected 1):", length(result17$plots), "\n")
-if (length(result17$plots) == 1) {
-  pd17 <- result17$plots[[1]]$pd
-  cat("all 3 of Josh's real $plot.sets detectors present (105059-NW3/SE3/SW3), pool=FALSE so not collapsed?",
-       setequal(unique(pd17$group.val), c("105059-NW3", "105059-SE3", "105059-SW3")), "\n")
-}
-cat("$ggplots entries produced (expected 1):", length(result17$ggplots), "\n")
-
-cat("\n\n########## TEST 18: $legend option (round 2 - fill-based, no border) - each dodged bar colored by its own $plot.sets value ##########\n")
-job18.on <- make.job(plot.group = "aru.name",
-                      plot.sets = '"105059-NW3" "105059-SE3" "105059-SW3"',
-                      date.start = "7/7/2026", date.end = "8/18/2026",
-                      pool = FALSE, legend = "TRUE")
-result18.on <- batz.plotactivity_observations(processed.real, job18.on, suntimes.synth, aes.default.real)
-g18.on <- result18.on$ggplots[[1]]
-fill.scale.18on <- ggplot2::ggplot_build(g18.on)$plot$scales$get_scales("fill")
-cat("fill scale is non-NULL (present) when legend=TRUE?", !is.null(fill.scale.18on), "\n")
-cat("fill scale's legend title matches aes.default's legend.groupval.title ('Detector')?",
-    identical(fill.scale.18on$name, "Detector"), "\n")
-cat("fill scale covers all 3 selected detector values plus 40kHzMyo?",
-    setequal(fill.scale.18on$get_breaks(), c("105059-NW3", "105059-SE3", "105059-SW3", "40kHzMyo")), "\n")
-built18.on <- ggplot2::ggplot_build(g18.on)
-cat("no border drawn on any bar (colour aesthetic is NA everywhere in both geom_col layers)?",
-    all(is.na(built18.on$data[[1]]$colour)) && all(is.na(built18.on$data[[2]]$colour)), "\n")
-
-job18.off <- make.job(plot.group = "aru.name",
-                       plot.sets = '"105059-NW3" "105059-SE3" "105059-SW3"',
-                       date.start = "7/7/2026", date.end = "8/18/2026",
-                       pool = FALSE, legend = "FALSE")
-result18.off <- batz.plotactivity_observations(processed.real, job18.off, suntimes.synth, aes.default.real)
-fill.scale.18off <- ggplot2::ggplot_build(result18.off$ggplots[[1]])$plot$scales$get_scales("fill")
-cat("legend=FALSE -> fill scale falls back to the plain All detections/40kHzMyo scheme?",
-    setequal(fill.scale.18off$get_limits(), c("All detections", "40kHzMyo")), "\n")
-
-## legend has nothing to show when pooled, or when only one value is selected, regardless of $legend
-job18.pooled <- make.job(plot.group = "aru.name",
-                          plot.sets = '"105059-NW3" "105059-SE3" "105059-SW3"',
-                          date.start = "7/7/2026", date.end = "8/18/2026",
-                          pool = TRUE, legend = "TRUE")
-result18.pooled <- batz.plotactivity_observations(processed.real, job18.pooled, suntimes.synth, aes.default.real)
-fill.scale.18pooled <- ggplot2::ggplot_build(result18.pooled$ggplots[[1]])$plot$scales$get_scales("fill")
-cat("legend=TRUE but pool=TRUE (nothing to distinguish) -> falls back to plain All detections/40kHzMyo fill scheme?",
-    setequal(fill.scale.18pooled$get_limits(), c("All detections", "40kHzMyo")), "\n")
-
-job18.single <- make.job(plot.group = "aru.name", plot.sets = "105059-NW3",
-                          date.start = "7/7/2026", date.end = "8/18/2026",
-                          pool = FALSE, legend = "TRUE")
-result18.single <- batz.plotactivity_observations(processed.real, job18.single, suntimes.synth, aes.default.real)
-fill.scale.18single <- ggplot2::ggplot_build(result18.single$ggplots[[1]])$plot$scales$get_scales("fill")
-cat("legend=TRUE but only 1 selected value (nothing to distinguish) -> falls back to plain All detections/40kHzMyo fill scheme?",
-    setequal(fill.scale.18single$get_limits(), c("All detections", "40kHzMyo")), "\n")
-
-## blank $legend on the fig.list row falls back to aes.default's own "legend" parameter (TRUE)
-job18.blank <- make.job(plot.group = "aru.name",
-                         plot.sets = '"105059-NW3" "105059-SE3" "105059-SW3"',
-                         date.start = "7/7/2026", date.end = "8/18/2026",
-                         pool = FALSE, legend = "")
-result18.blank <- batz.plotactivity_observations(processed.real, job18.blank, suntimes.synth, aes.default.real)
-fill.scale.18blank <- ggplot2::ggplot_build(result18.blank$ggplots[[1]])$plot$scales$get_scales("fill")
-cat("blank $legend on the fig.list row falls back to aes.default's default (TRUE) -> per-detector fill scale present?",
-    setequal(fill.scale.18blank$get_breaks(), c("105059-NW3", "105059-SE3", "105059-SW3", "40kHzMyo")), "\n")
-
-## fewer configured colors than selected values - cycling, not an error
-aes.default.fewcolors <- aes.default.real
-aes.default.fewcolors$default.value[aes.default.fewcolors$parameter == "legend.groupval.colors"] <- "#111111;#222222"
-result18.cycle <- batz.plotactivity_observations(processed.real, job18.on, suntimes.synth, aes.default.fewcolors)
-built18.cycle <- ggplot2::ggplot_build(result18.cycle$ggplots[[1]])
-cycle.fills <- unique(built18.cycle$data[[1]][, c("group", "fill")])
-cat("only 2 colors configured for 3 values -> no crash, first color reused for a later value (cycling)?",
-    length(unique(cycle.fills$fill)) <= 2 && nrow(cycle.fills) == 3, "\n")
-
-cat("\n\n########## TEST 19: round 2 (2026-08-29) - no border, each bar its own fill color, bar sizes stay constant across nights ##########\n")
-cat("plotopts_callobs.csv no longer has a $legend.groupval.outline.linewidth row (removed, no longer used)?",
-    !("legend.groupval.outline.linewidth" %in% aes.default.real$parameter), "\n")
-
-## no border anywhere, on the "All detections" layer too, even for the plain
-## (non-dodged) fallback scheme
-job19.plain <- make.job(plot.group = "aru.name", plot.sets = "105059-NW3",
-                         date.start = "7/7/2026", date.end = "8/18/2026", pool = FALSE)
-result19.plain <- batz.plotactivity_observations(processed.real, job19.plain, suntimes.synth, aes.default.real)
-built19.plain <- ggplot2::ggplot_build(result19.plain$ggplots[[1]])
-cat("no border drawn in the plain (single-value, no dodge-coloring) fallback path either?",
-    all(is.na(built19.plain$data[[1]]$colour)), "\n")
-
-## bar sizes stay constant (preserve = "single"): a night where only 2 of the
-## 3 selected detectors have data should still draw those 2 bars at the SAME
-## width as a night where all 3 have data - not stretched to fill the gap.
-pd19 <- result18.on$plots[[1]]$pd
-tab19 <- table(pd19$date.parsed[pd19$facet.panel.value == "Big brown bat" & pd19$bar.type == "All detections"])
-dates.full19  <- as.numeric(as.Date(names(tab19)[tab19 == 3]))   # nights with all 3 detectors
-dates.partial19 <- as.numeric(as.Date(names(tab19)[tab19 == 2])) # nights with only 2
-if (length(dates.full19) > 0 && length(dates.partial19) > 0) {
-  g19 <- result18.on$ggplots[[1]]
-  built19 <- ggplot2::ggplot_build(g19)
-  d19 <- built19$data[[1]]
-  # PANEL 2 = "Big brown bat" per its facet position (2nd panel, row1/col2)
-  panel19 <- built19$layout$layout$PANEL[built19$layout$layout$facet.panel.value == "Big brown bat"]
-  sub.full19    <- d19[d19$PANEL == panel19 & round(d19$x) %in% dates.full19, ]
-  sub.partial19 <- d19[d19$PANEL == panel19 & round(d19$x) %in% dates.partial19, ]
-  width.full19    <- unique(round(sub.full19$xmax - sub.full19$xmin, 6))
-  width.partial19 <- unique(round(sub.partial19$xmax - sub.partial19$xmin, 6))
-  cat("bar width on a night with all 3 detectors matches the width on a night with only 2 (preserve = 'single')?",
-      length(width.full19) == 1 && length(width.partial19) == 1 && isTRUE(all.equal(width.full19, width.partial19)), "\n")
+  result6b <- batz.plotactivity_observations(plot.data.synth, aru.metadata.db.synth, suntimes.synth, default.plotaesthetics.synth,
+                                              project.name = "acme", dir.save = dir.save.test)
+  pngs.b <- setdiff(list.files(dir.save.test, pattern = "\\.png$"), pngs.a)
+  cat("project.name = 'acme' -> file name(s):", paste(pngs.b, collapse = ", "), "\n")
+  cat("  starts with 'acme_WTG-GOM102_' (expected TRUE):", any(grepl("^acme_WTG-GOM102_", pngs.b)), "\n")
+  cat("  neither file used the deprecated pattern's literal '<ARU>' token (expected TRUE):",
+      !any(grepl("<ARU>", c(pngs.a, pngs.b), fixed = TRUE)), "\n")
 } else {
-  cat("(skipped - couldn't find both a 3-detector night and a 2-detector night for 'Big brown bat' in this data)\n")
+  cat("ggplot2 not available - skipping TEST 6\n")
 }
 
-cat("\n\nEXIT: 0\n")
+cat("\n\n########## TEST 7: an aes.default missing a required $parameter row stops with a clear message ##########\n")
+default.plotaesthetics.missing <- default.plotaesthetics.synth[default.plotaesthetics.synth$parameter != "bar.width", , drop = FALSE]
+result.missing <- tryCatch({
+  batz.plotactivity_observations(plot.data.synth, aru.metadata.db.synth, suntimes.synth, default.plotaesthetics.missing)
+  "NO ERROR"
+}, error = function(e) conditionMessage(e))
+cat("Result with $bar.width row removed:\n", result.missing, "\n")
+
+cat("\n\n########## TEST 8: 40kHzMyo bar overlay via the '40kMyo' real-data alias ##########\n")
+result8 <- batz.plotactivity_observations(plot.data.synth, aru.metadata.db.synth, suntimes.synth, default.plotaesthetics.synth)
+n.khz.rows <- sum(result8$plots[[1]]$pd$bar.type == "40kHzMyo")
+cat("Rows recognized as 40kHzMyo bar.type (expected 5, one per test date):", n.khz.rows, "\n")
+
+cat("\n\n########## TEST 9: exact full-row fig.list duplicates are removed before plotting ##########\n")
+jobs.dup <- rbind(aru.metadata.db.synth, aru.metadata.db.synth, aru.metadata.db.synth)
+result9 <- batz.plotactivity_observations(plot.data.synth, jobs.dup, suntimes.synth, default.plotaesthetics.synth)
+cat("$plots entries produced (expected 1 - 2 duplicates removed):", length(result9$plots), "\n")
+
+cat("\n\nALL TESTS COMPLETED\n")

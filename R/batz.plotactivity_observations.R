@@ -39,17 +39,29 @@
 #' @param aes.default A data frame of default plot settings, one row per
 #'   parameter (e.g. \code{plotopts_callobs.csv}). Must have
 #'   \code{$category}, \code{$parameter}, \code{$default.value};
-#'   \code{$notes} and any \code{project.name}-matching override column(s)
-#'   are optional.
-#' @param project.name Character, default \code{""}. Must EXACTLY match a
-#'   real column name already present in \code{aes.default} - see
-#'   \code{batz.plotdetections_first.last()}'s own \code{@param} docs for
-#'   the full three-tier precedence (this function resolves settings the
-#'   same way: \code{fig.list} row > \code{project.name} column >
-#'   \code{$default.value}).
+#'   an \code{$overide.value} column (blank, user-fillable) and
+#'   \code{$notes} are optional - see \code{project.name}/\code{aes.style}
+#'   below and Details, "Settings resolution (round nineteen)".
+#' @param project.name Character, default \code{"new.project"}. Per Josh's
+#'   nineteenth follow-up (2026-09-16), this NO LONGER selects an
+#'   \code{aes.default} override column - it is now used ONLY to build the
+#'   first part of every saved file name:
+#'   \code{"<project.name>_<ARU>_<timestamp>.png"}. See Details, "Settings
+#'   resolution (round nineteen)" for what replaced the old column-matching
+#'   behavior.
+#' @param aes.style Character, default \code{"overide.value"}. Names which
+#'   column of \code{aes.default} is checked FIRST for each parameter
+#'   (falling back to \code{$default.value} when that column doesn't exist,
+#'   or is blank for that row) - replaces the old \code{project.name}
+#'   column-matching mechanism entirely. A given plot row's OWN value in
+#'   \code{fig.list} (when that column exists there and is non-blank)
+#'   still takes priority over both - see Details, "Settings resolution
+#'   (round nineteen)" for the full precedence.
 #' @param dir.save Character, default \code{getwd()}. Directory every
-#'   generated PNG is saved into (each file's own name still comes from
-#'   \code{aes.default}'s \code{$output.filename.pattern}).
+#'   generated PNG is saved into. Per Josh's nineteenth follow-up, the file
+#'   name itself is now always \code{"<project.name>_<ARU>_<timestamp>.png"}
+#'   (see \code{project.name} above) - \code{aes.default}'s
+#'   \code{$output.filename.pattern} is DEPRECATED and no longer read.
 #'
 #' @return Invisibly, a list with \code{plots} (one entry per generated
 #'   plot's prepared data) and \code{ggplots} (the corresponding ggplot
@@ -405,7 +417,7 @@
 #' \code{batz.batusa_recode.names()}'s own reference table's matching
 #' non-species category label is \code{"40KHzMyo"} - these do NOT match
 #' after that function's own case/dash/underscore-folding normalization
-#' (folding case doesn't add the missing \code{"Hz"}), so running
+#' (folding case doesn't add the missing "Hz"), so running
 #' \code{"40kMyo"} through \code{batz.batusa_recode.names()} alone leaves it
 #' unmatched (passed through unchanged, plus a console \code{WARNING} from
 #' that function). Worked around, scoped to this function only (the shared
@@ -423,13 +435,13 @@
 #' unnecessary, but isn't required for this function to work correctly as
 #' delivered.
 #'
-#' \strong{\code{$output.filename.pattern}'s default value} in
-#' \code{plotopts_callobs.csv} (\code{"Number of bat calls detected at
-#' <ARU> between <date.start> and <date.end> <timestamp>.png"}) was chosen
-#' to match the literal file name of Josh's own target output image
-#' (\code{"Number of bat calls detected.png"}), with the same \code{<ARU>}/
-#' \code{<date.start>}/\code{<date.end>}/\code{<timestamp>} placeholders
-#' \code{batz.plotdetections_first.last()} already uses.
+#' \strong{\code{$output.filename.pattern} is DEPRECATED as of Josh's
+#' nineteenth follow-up (2026-09-16)} - see "File naming (round nineteen)"
+#' below. Its default value in \code{plotopts_callobs.csv}
+#' (\code{"Number of bat calls detected at <ARU> between <date.start> and
+#' <date.end> <timestamp>.png"}) was originally chosen to match the literal
+#' file name of Josh's own target output image (\code{"Number of bat calls
+#' detected.png"}) - left in place, harmless, no longer read.
 #'
 #' \strong{Real bug found and fixed while visually comparing a render
 #' against Josh's target image: the 40kHzMyo bar overlay was invisible.}
@@ -453,6 +465,48 @@
 #' Re-verified by rendering: the black segment now shows correctly at the
 #' base of the gray bar on every night with a real 40kHzMyo observation.
 #'
+#' \strong{Settings resolution (round nineteen), per Josh's 2026-09-16
+#' follow-up ("reorder the headings in all plotopts files to be $category
+#' $parameter $default.value $overide.value $notes ... add arguments
+#' aes.style = "overide.value" ... Function logic will first look in the
+#' column with the header = aes.style ... then if that element is blank
+#' use $default.value"):} the \code{project.name}-matches-a-column-name
+#' mechanism described above (e.g. a "gome" column) is REPLACED entirely.
+#' \code{aes.default} now has a fixed \code{$overide.value} column (blank
+#' by default, between \code{$default.value} and \code{$notes} - see
+#' \code{\link{batz.generate_plotopts}}), which the user fills in directly
+#' on their own copy of the CSV to override a setting. The new
+#' \code{aes.style} argument (default \code{"overide.value"}) names which
+#' column \code{get.default()} checks FIRST; when that column doesn't
+#' exist (an older sheet) or is blank for a given row, \code{$default.value}
+#' is used, exactly as before. \code{project.name} no longer participates
+#' in settings resolution AT ALL - it is now used purely to build the saved
+#' file name (see "File naming (round nineteen)" below). The THIRD tier of
+#' the old precedence - a \code{fig.list} row's own value beating both the
+#' column and the default - is UNCHANGED: \code{get.setting(job, param)}
+#' still checks \code{job} first, then falls through to the (now
+#' \code{aes.style}-driven) \code{get.default(param)}. This is a judgment
+#' call on backward compatibility, flagged for Josh, matching the identical
+#' change made in \code{\link{batz.plotdetections_first.last}} and
+#' \code{\link{batz.plotcover_bullseye}}: an older \code{aes.default} sheet
+#' with its own \code{project.name}-matching column will simply be ignored
+#' now - re-fill any values that were in that column into the new
+#' \code{$overide.value} column instead.
+#'
+#' \strong{File naming (round nineteen), same follow-up:} every saved PNG's
+#' file name is now always \code{"<project.name>_<ARU>_<timestamp>.png"} -
+#' \code{aes.default}'s \code{$output.filename.pattern} is DEPRECATED and no
+#' longer read at all (the row is left in place in \code{plotopts_callobs.csv},
+#' harmless, simply ignored). The \code{<ARU>} token is this function's own
+#' \code{aru.token} - the selected \code{$plot.sets} value(s) joined with
+#' \code{"+"} (falling back to \code{$plot.group}'s own column name when no
+#' specific values were selected), with a \code{"-pooled"} suffix appended
+#' when \code{$pool = TRUE} - unchanged from how that token was already
+#' computed before this round, just now spliced directly into the fixed
+#' \code{"<project.name>_<ARU>_<timestamp>.png"} pattern instead of a
+#' user-editable one. Every saved file's name is printed to the console via
+#' \code{cat("Saved:", fname, "\\n")}, as it already was before this round.
+#'
 #' Naming convention (per project preferences):
 #' \code{package.family_action.subject()}. This function is
 #' \code{batz.plotactivity_observations()}: family = "plotactivity" (the
@@ -465,6 +519,7 @@
 #'
 #' @examples
 #' \dontrun{
+#' # default dir.save = getwd(), default project.name = "new.project"
 #' result <- batz.plotactivity_observations(
 #'   data = plfr.bats,
 #'   fig.list = fig.list,
@@ -476,7 +531,8 @@
 #'
 #' @export
 batz.plotactivity_observations <- function(data, fig.list, suntimes,
-                                            aes.default, project.name = "",
+                                            aes.default, project.name = "new.project",
+                                            aes.style = "overide.value",
                                             dir.save = getwd()) {
 
   # See @details above for why this value was chosen and how to change it.
@@ -504,6 +560,11 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
                           "date.start", "date.end", "xaxe.interval")
   AES.DEFAULT.REQUIRED <- c("category", "parameter", "default.value")
 
+  ## "output.filename.pattern" deliberately removed from this required list
+  ## per Josh's nineteenth follow-up (2026-09-16) - the saved file name is
+  ## now always "<project.name>_<ARU>_<timestamp>.png"; no longer read at
+  ## all. An $output.filename.pattern row left in an existing aes.default
+  ## sheet is harmless (simply ignored).
   AES.DEFAULT.REQUIRED.PARAMETERS <- c(
     "facpan.numcol", "plot.title.size", "plot.title.hjust", "axis.title.size",
     "axis.text.size", "legend.text.size", "legend.title.size", "panel.spacing.x",
@@ -513,7 +574,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     "bar.alldetections.fill", "bar.40khzmyo.fill", "bar.fill.legend.title",
     "legend", "legend.groupval.title", "legend.groupval.colors",
     "ggsave.dpi", "ggsave.units", "ggsave.width.pad", "ggsave.height.pad",
-    "output.filename.pattern", "plot.width", "plot.height"
+    "plot.width", "plot.height"
   )
 
   check.headers <- function(df, required, label) {
@@ -565,24 +626,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
   }
 
   # Parses $plot.sets (2026-08-28) into a character vector of one or more
-  # values. Real spreadsheet-exported $plot.sets values (Josh's own
-  # fig.list.csv, confirmed against the actual file) don't come through as
-  # cleanly double-quoted-and-escaped as `"105059-NW3" "105059-SE3"
-  # "105059-SW3"` might suggest - the CSV field's own OUTER quoting eats the
-  # very first value's leading quote, so after read.csv() unescapes it, the
-  # raw string actually looks like `105059-NW3" "105059-SE3" "105059-SW3"`
-  # (no leading quote on the first token). Rather than depend on
-  # well-formed quote PAIRS (which would silently drop the first token, or
-  # even the whole value, on real data), every double-quote character is
-  # simply treated as a token delimiter alongside whitespace: they're
-  # stripped out entirely, then the remainder is split on whitespace. This
-  # correctly recovers all N values from both the messy real file and a
-  # cleanly-quoted one, and also handles a single bare, unquoted value
-  # (e.g. `105059-NW3`, exactly like the old $plot.set) or several bare
-  # whitespace-separated values with no quoting at all. The one thing it
-  # can't handle is a value that itself contains a space (it would be
-  # split into two) - not expected for detector/group names, but flagging
-  # in case that's ever needed.
+  # values - see @details above.
   parse.plot.sets <- function(x) {
     x <- trimws(as.character(x))
     if (length(x) == 0 || is.na(x) || !nzchar(x)) return(character(0))
@@ -602,12 +646,20 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     out
   }
 
+  ## Settings resolution (round nineteen, per Josh's 2026-09-16 follow-up):
+  ## $aes.style names a FIXED column to check first (default "overide.value"
+  ## - a blank column the user fills in directly on their own copy of the
+  ## CSV), falling back to $default.value when that column doesn't exist or
+  ## is blank for this row. Replaces the old project.name-matches-a-
+  ## column-name mechanism entirely - project.name no longer participates in
+  ## settings resolution, only in the saved file name (see the main loop
+  ## below).
   get.default <- function(param) {
     row.idx <- which(aes.default$parameter == param)
     if (length(row.idx) == 0) return(NA_character_)
     val <- as.character(aes.default$default.value[row.idx[1]])
-    if (nzchar(project.name) && project.name %in% names(aes.default)) {
-      override <- aes.default[[project.name]][row.idx[1]]
+    if (aes.style %in% names(aes.default)) {
+      override <- aes.default[[aes.style]][row.idx[1]]
       if (!is.na(override) && nzchar(trimws(as.character(override)))) {
         val <- as.character(override)
       }
@@ -858,7 +910,8 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
       khz.flag = khz.flag, break.pos = break.pos, break.labels = break.labels,
       y.upper.plot = trans.fn(y.upper), group.col = group.col,
       plot.sets.vals = plot.sets.vals, pool.flag = pool.flag,
-      legend.flag = legend.flag
+      legend.flag = legend.flag,
+      resolved.legend.position = get.default("legend.position")  # exposed for testing the aes.style resolver (round nineteen)
     )
     cat(sprintf("Prepared plot data for '%s': %d observation row(s) across %d panel(s).\n",
                  job.label, nrow(pd), length(panel.levels.raw)))
@@ -890,17 +943,8 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
       fill.legend.breaks <- if (isTRUE(p$khz.flag)) "40kHzMyo" else character(0)
 
       # Drawn as TWO separate geom_col() layers (all-detections first/bottom,
-      # 40kHzMyo second/on top), rather than one geom_col() call with
-      # aes(fill = bar.type) - a real rendering bug found and fixed while
-      # visually comparing a render to Josh's target image: a single
-      # geom_col() call groups by the fill aesthetic's OWN factor-level
-      # order (alphabetical, since no explicit levels were set), which put
-      # "40kHzMyo" (before "All detections" alphabetically) UNDERNEATH the
-      # gray all-detections bar for the same night - same width, same x
-      # position, same day - completely hiding the black overlay every
-      # time, even though both bars' data rows were present and correct.
-      # Two explicit layers, added to the plot in bottom-to-top order,
-      # guarantee 40kHzMyo always draws on top regardless of factor order.
+      # 40kHzMyo second/on top) - see @details for the real overlay bug this
+      # fixed.
       #
       # $pool = FALSE (2026-08-28 follow-up - see Details): when more than
       # one $plot.sets value is selected and not pooled, each is drawn as
@@ -912,28 +956,19 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
       bar.width.val <- as.numeric(get.default("bar.width"))
       bar.position <- if (dodge.flag) {
         # preserve = "single" (2026-08-29 follow-up, per Josh "keep the bar
-        # sizes constant"): each dodged bar keeps the SAME width on every
-        # date, even a night where fewer than the full set of selected
-        # $plot.sets values actually has data. The default preserve =
-        # "total" instead stretches bars wider on those nights to hold the
-        # OVERALL dodge cluster's width constant, which reads as bar sizes
-        # changing from night to night.
+        # sizes constant"): see Details.
         ggplot2::position_dodge2(width = bar.width.val, padding = 0.1, preserve = "single")
       } else {
         "identity"
       }
 
-      # $legend / per-bar coloring (2026-08-29 follow-up, two rounds - see
+      # $legend / per-bar coloring (2026-08-29 follow-up, round 2 - see
       # Details): when dodging (pool = FALSE, >1 selected $plot.sets value)
       # AND $legend is on, every bar is FILLED with its own $plot.sets
-      # value's own color (no border/outline at all - round 2, per Josh
-      # "get rid of the border and make each bar a different color";
-      # round 1 used an outline-color legend instead, which round 2
-      # replaced). The "40kHzMyo" bar keeps its own fixed color regardless
-      # of which value it belongs to (still always the same color, so it
-      # reads as "the 40kHzMyo one" no matter which detector's bar it
-      # overlays) - both live in ONE combined fill scale/legend, since fill
-      # can only be mapped to one variable at a time.
+      # value's own color. The "40kHzMyo" bar keeps its own fixed color
+      # regardless of which value it belongs to - both live in ONE combined
+      # fill scale/legend, since fill can only be mapped to one variable at
+      # a time.
       show.groupval.color <- isTRUE(p$legend.flag) && dodge.flag
 
       if (show.groupval.color) {
@@ -1005,18 +1040,16 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
 
       ggplots[[job.key]] <- g
 
-      pattern <- get.default("output.filename.pattern")
-      fname <- pattern
+      ## Round nineteen, per Josh (2026-09-16): every saved file name is now
+      ## always "<project.name>_<ARU>_<timestamp>.png" -
+      ## $output.filename.pattern is DEPRECATED and no longer read.
       # <ARU> token: the selected $plot.sets value(s), joined with "+" (was
       # the single $plot.set value pre-2026-08-28); "-pooled" suffix added
       # when $pool = TRUE, since that collapses them into one bar/value.
       aru.token <- paste(p$plot.sets.vals, collapse = "+")
       if (!nzchar(aru.token)) aru.token <- p$group.col
       if (isTRUE(p$pool.flag)) aru.token <- paste0(aru.token, "-pooled")
-      fname <- gsub("<ARU>", aru.token, fname, fixed = TRUE)
-      fname <- gsub("<date.start>", as.character(min(p$pd$date.parsed)), fname, fixed = TRUE)
-      fname <- gsub("<date.end>", as.character(max(p$pd$date.parsed)), fname, fixed = TRUE)
-      fname <- gsub("<timestamp>", format(Sys.time(), "%Y%m%d%H%M%S"), fname, fixed = TRUE)
+      fname <- sprintf("%s_%s_%s.png", project.name, aru.token, format(Sys.time(), "%Y%m%d_%H%M%S"))
       fname <- file.path(dir.save, fname)
 
       ggplot2::ggsave(fname, plot = g,
