@@ -4,7 +4,11 @@
 \alias{batz.batusa_recode.names}
 \title{Recode US bat species identifiers between common name, latin name, species codes, and status fields}
 \usage{
-batz.batusa_recode.names(data, batname.format.out = "common", grammar.dash = TRUE)
+batz.batusa_recode.names(
+  data,
+  batname.format.out = "common",
+  grammar.dash = TRUE
+)
 }
 \arguments{
 \item{data}{A vector, or a data frame, of bat species identifiers to
@@ -62,10 +66,10 @@ every hyphen in a matched value with a space instead (e.g.
 }
 \value{
 A vector (if \code{data} is a vector) or data frame (if
-  \code{data} is a data frame) of the same length/dimensions as
-  \code{data}, with every element re-expressed in \code{batname.format.out}.
-  An input element with no match anywhere in the reference table is
-  returned unchanged (not \code{NA}, no error).
+\code{data} is a data frame) of the same length/dimensions as
+\code{data}, with every element re-expressed in \code{batname.format.out}.
+An input element with no match anywhere in the reference table is
+returned unchanged (not \code{NA}, no error).
 }
 \description{
 Given a vector or data frame containing any mix of common name, latin
@@ -79,6 +83,10 @@ false mismatch.
 }
 \details{
 \strong{Header standardization (per Josh, 2026-09-14 project preference) - does not apply to this function, flagged not silently skipped.} The project-wide preference is that headers coming from a loaded file or an externally-supplied data frame are run through the shared package helper \code{standardize.headers()} (trim whitespace, collapse non-alphanumeric runs to underscores, lowercase). This function has no raw-header step for that preference to attach to: every element of \code{data} is recoded as a VALUE (a species identifier - a name or code), never as a header, and when \code{data} is a data frame this function never reads, matches on, or otherwise interprets its column names at all - \code{names(out) <- names(data)} just carries them through unchanged as a pure pass-through label. The embedded \code{nabat.names} reference table's own column names (\code{$latin}/\code{$common}/\code{$code4}/\code{$code6}/\code{$fedstatus}/etc.) are this function's fixed, already-established internal schema - not raw headers copied fresh from a file for this rollout - so they are not run through \code{standardize.headers()} either, the same treatment already given to every other \code{batz} function's own output-schema column names.
+
+(Renamed 2026-08-29, per Josh, from \code{output.format} to
+\code{batname.format.out}, to standardize \code{format}-suffixed
+parameters as \code{.in}/\code{.out}.)
 
 If one or more input elements don't match anything in the reference
 table, a warning is printed (not raised via \code{warning()} - a plain

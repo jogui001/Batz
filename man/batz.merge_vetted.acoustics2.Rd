@@ -39,10 +39,10 @@ duplicate rows (base \code{duplicated()}) from the final merged table.}
 \item{rename}{Logical, default \code{TRUE}. If \code{TRUE}, each file's
 standardized headers are first run through a rename lookup read from
 \code{header.rename.path} (see Details) before validation. If
-\code{FALSE}, headers are only standardized (see "Header standardization"
-below), and only headers that already happen to be one of this
-function's short target names (e.g. a file whose own column is already
-literally called \code{mon.ngh}) will validate.}
+\code{FALSE}, headers are only standardized (see "Header
+standardization" below), and only headers that already happen to be
+one of this function's short target names (e.g. a file whose own
+column is already literally called \code{mon.ngh}) will validate.}
 
 \item{header.rename.path}{Character, default
 \code{"arumerge.headerrename.csv"}. Path to the header-rename reference
@@ -79,15 +79,15 @@ warns and skips the save (does not error) if not installed.}
 }
 \value{
 Invisibly, a named list of exactly two data frames: \code{data}
-  (the merged/processed table) and \code{log.file} (one row per file the
-  function ATTEMPTED to load - success or failure, always, since the
-  2026-09-06 revision removed the old \code{log.file} INPUT parameter that
-  used to gate this - with \code{$filename}, \code{$status}, \code{
+(the merged/processed table) and \code{log.file} (one row per file the
+function ATTEMPTED to load - success or failure, always, since the
+2026-09-06 revision removed the old \code{log.file} INPUT parameter that
+used to gate this - with \code{$filename}, \code{$status}, \code{
   $reason}, \code{$missing headers}). As a side effect, \code{data} and
-  \code{log.file} are also assigned directly into the calling
-  environment (same auto-assign convention as
-  \code{batz.merge_vetted.acoustics}), so a bare call with no assignment
-  populates both names directly.
+\code{log.file} are also assigned directly into the calling
+environment (same auto-assign convention as
+\code{batz.merge_vetted.acoustics}), so a bare call with no assignment
+populates both names directly.
 }
 \description{
 A revised version of \code{\link{batz.merge_vetted.acoustics}}, and a
@@ -104,7 +104,8 @@ single xlsx workbook.
 }
 \details{
 \strong{Header standardization (per Josh, 2026-09-14 project preference)
-- real matching-behavior change, flagged not silently made:} every
+\itemize{
+\item real matching-behavior change, flagged not silently made:} every
 incoming raw file header, and the "raw" column of the
 \code{header.rename.path} reference table, are now both run through the
 shared package helper \code{standardize.headers()} (trim whitespace,
@@ -125,6 +126,7 @@ was updated accordingly (see "Flagged assumptions" below) so real-world
 spelled-out headers still resolve correctly - anyone with their OWN
 header-rename CSV (not the one shipped in this project) should re-check
 it against this new normalization.
+}
 
 \strong{Short target column names.} Where the prior (2026-09-04) version
 of this function used the long, vetting-software-native header names
@@ -154,7 +156,8 @@ wakaleidoscopeautoid}/\code{sppaccp}, OR an alternate location-column
 spelling like \code{long}/\code{x}/\code{y}), column 2 is the SHORT
 target name it becomes. Only column 1 is standardized (via
 \code{standardize.headers()}) to match a file's own standardized headers
-- column 2 is kept exactly as given (including its dots, e.g. \code{
+\itemize{
+\item column 2 is kept exactly as given (including its dots, e.g. \code{
 "mon.ngh"} - standardizing it too would turn the dot into an underscore).
 If the CSV itself has more than one row for the same raw header, only the
 FIRST is kept ("ignore conflicting headers") - later duplicate rows are
@@ -163,19 +166,20 @@ unchanged (i.e. only useful if it's already one of the short target
 names, or gets dropped as unrecognized by the validation step below).
 \code{claude/arumerge.headerrename.csv} was updated for this revision -
 see "Flagged assumptions" below.
+}
 
 \strong{Three header categories.} After standardize + optional rename,
 every file's headers are checked against:
 \itemize{
-  \item \strong{Required} - \code{filename}, \code{mon.ngh}, \code{manid}.
-    ALL must be present, or the file fails.
-  \item \strong{Results} - \code{auto.kp}, \code{auto.sb}. At least ONE
-    must be present, or the file fails; an absent one is carried as NA
-    for that file's rows and the file's status is \code{"success
+\item \strong{Required} - \code{filename}, \code{mon.ngh}, \code{manid}.
+ALL must be present, or the file fails.
+\item \strong{Results} - \code{auto.kp}, \code{auto.sb}. At least ONE
+must be present, or the file fails; an absent one is carried as NA
+for that file's rows and the file's status is \code{"success
     missing"} rather than a failure.
-  \item \strong{Optional} - \code{lat}/\code{lon} (see below),
-    \code{aru.serial}, \code{sunregion}. NEVER block loading; carried as
-    NA for any file that lacks them.
+\item \strong{Optional} - \code{lat}/\code{lon} (see below),
+\code{aru.serial}, \code{sunregion}. NEVER block loading; carried as
+NA for any file that lacks them.
 }
 \code{$lat}/\code{$lon} moved from their own blocking "location" category
 in the 2026-09-04 build to fully optional here: if a file has both
@@ -199,7 +203,7 @@ rows, or fails the required/results checks is skipped (not merged into
 (\code{duplicates.remove}), \code{$filename} parsed into
 \code{$aru.name}/\code{$date}/\code{$time}, \code{$call.datetime} via
 \code{\link{batz.datawrangler_call.datetime}}, then a step that drops any
-of \code{$auto.kp}/\code{$auto.sb} that is 100\% \code{NA} across the
+of \code{$auto.kp}/\code{$auto.sb} that is 100\\% \code{NA} across the
 WHOLE merged table (i.e. no file that contributed to \code{data} ever
 supplied that auto-ID program) entirely as a column - then species-ID
 recoding via \code{\link{batz.batusa_recode.names}} (\code{
@@ -223,68 +227,90 @@ for a \code{"failure"} file - blank for \code{"success all headers"}).
 
 \strong{Flagged assumptions (spec was open on these):}
 \enumerate{
-  \item The supplied header-rename table's rows read literally as
-    \verb{<in> <recode>}. Two of its rows (\code{file.name ->
+\item The supplied header-rename table's rows read literally as
+\verb{<in> <recode>}. Two of its rows (\code{file.name ->
     filename}, \code{sunregions -> sunregion}) are unambiguous
-    raw-header-text -> short-target-name pairs; the others, read the
-    same way, are equally consistent with that direction (e.g.
-    \code{monitoringnight} - the long name a real export normalizes to -
-    renamed to the short \code{mon.ngh}). All rows are therefore applied
-    uniformly as raw-header-text -> short-target-name.
-  \item The \code{serial} row's given target was \code{serials}, but the
-    requested blank-output header is \code{$aru.serial} - read as a typo
-    and corrected to \code{serial -> aru.serial} in
-    \code{arumerge.headerrename.csv}.
-  \item \strong{Removed 2026-09-08, per Josh:} the 2026-09-06 revision had
-    briefly added \code{auto.bc}/\code{auto.ec} results columns (from raw
-    \code{BCID}/\code{EchoClass} headers), their \code{manid.bc}/\code{
+raw-header-text -> short-target-name pairs; the others, read the
+same way, are equally consistent with that direction (e.g.
+\code{monitoringnight} - the long name a real export normalizes to -
+renamed to the short \code{mon.ngh}). All rows are therefore applied
+uniformly as raw-header-text -> short-target-name.
+\item The \code{serial} row's given target was \code{serials}, but the
+requested blank-output header is \code{$aru.serial} - read as a typo
+and corrected to \code{serial -> aru.serial} in
+\code{arumerge.headerrename.csv}.
+\item \strong{Removed 2026-09-08, per Josh:} the 2026-09-06 revision had
+briefly added \code{auto.bc}/\code{auto.ec} results columns (from raw
+\code{BCID}/\code{EchoClass} headers), their \code{manid.bc}/\code{
     manid.ec} fill-in columns, and matching \code{BCID -> auto.bc}/\code{
     EchoClass -> auto.ec} rows in \code{arumerge.headerrename.csv}. Josh
-    asked for these removed because BCID and EchoClass don't follow the
-    same export format as Kaleidoscope/SonoBat - see the \code{.R} file's
-    own roxygen comments for the full research note.
-    \code{results.headers} is back to \code{auto.kp}/\code{auto.sb} only
-    (at least one required); \code{manid.kp}/\code{manid.sb} are the only
-    blank-fill columns again.
-  \item \strong{Follow-up (2026-09-06, per Josh):} alternate location-
-    header spellings (\code{$long} full spelling, and an \code{X}/\code{Y}
-    column pair) are supported via three header-rename rows instead of
-    dedicated location-parsing code: \code{long -> lon}, \code{x -> long},
-    \code{y -> lat}. The \code{x -> long} row relies on the same
-    \code{long}-is-an-alias-for-\code{lon} step (see the "Three header
-    categories" section above) to finish resolving to \code{lon} - so
-    \code{X}/\code{Y} support depends on \code{rename = TRUE} (the
-    default) and an intact \code{header.rename.path} table.
-  \item "add user defined headers to the headers dataframe by column
-    position, ignore conflicting headers" is read as: the working lookup
-    table starts empty, the CSV is added to it by column position when
-    \code{rename = TRUE}, and a raw header that repeats within that CSV
-    keeps only its first occurrence (later, conflicting rows for the same
-    raw header are ignored).
-  \item \strong{2026-09-14, per the new header-standardization
-    preference:} \code{arumerge.headerrename.csv}'s raw column was
-    rewritten to spell out the real-world header text with its original
-    spaces/punctuation (\code{"Species Manual ID"}, \code{
+asked for these removed because BCID and EchoClass don't follow the
+same export format as Kaleidoscope/SonoBat: research into how those
+two programs actually produce output (neither vendor's native export
+is a clean flat table with a literal \code{BCID}/\code{EchoClass}
+header cell the way Kaleidoscope's \code{wakaleidoscopeautoid} and
+SonoBat's \code{sppaccp} are - both are multi-section Excel reports
+that need marker-string row-scanning just to locate a data table, and
+EchoClass's real species-result column is named \code{Prominent
+    Species}) confirmed the simple raw-header-cell-rename model this
+function uses for Kaleidoscope/SonoBat doesn't fit either program.
+\code{results.headers} is back to \code{auto.kp}/\code{auto.sb} only
+(at least one required); \code{manid.kp}/\code{manid.sb} are the only
+blank-fill columns again. Should BCID/EchoClass results need to be
+folded in later, they'll need either their own dedicated parsing step
+(mirroring how a raw export is actually structured) or confirmation
+that Josh's team already hand-builds a column literally labeled
+\code{BCID}/\code{EchoClass} into the vetted sheet before it reaches
+this function.
+\item \strong{Follow-up (2026-09-06, per Josh):} the initial version of
+\code{arumerge.headerrename.csv} for the 2026-09-06 revision dropped
+the alternate location-header spellings that the 2026-09-04 build had
+handled with dedicated code (\code{$long} full spelling, and an
+\code{X}/\code{Y} column pair) - flagged then as "not part of that
+revision's spec". Josh asked for them back, so three rows were added
+to the table instead of restoring the old dedicated code:
+\code{long -> lon}, \code{x -> long}, \code{y -> lat}. The
+\code{x -> long} row relies on the same \code{long}-is-an-alias-for-
+\code{lon} step (see the "Three header categories" section above)
+to finish resolving to \code{lon} - so \code{X}/\code{Y} support now
+depends on \code{rename = TRUE} (the default) and an intact
+\code{header.rename.path} table, rather than working unconditionally
+as it did in the 2026-09-04 build. These rows are unaffected by the
+2026-09-08 BCID/EchoClass removal above.
+\item "add user defined headers to the headers dataframe by column
+position, ignore conflicting headers" is read as: the working lookup
+table starts empty, the CSV is added to it by column position when
+\code{rename = TRUE}, and a raw header that repeats within that CSV
+keeps only its first occurrence (later, conflicting rows for the same
+raw header are ignored).
+\item \strong{2026-09-14, per the new header-standardization
+preference:} \code{arumerge.headerrename.csv}'s raw column was
+rewritten to spell out the real-world header text with its original
+spaces/punctuation (\code{"Species Manual ID"}, \code{
     "WA|Kaleidoscope|Auto ID"}, \code{"Sun Region"}) instead of the old
-    pre-squished no-separator text (\code{"speciesmanualid"}, \code{
+pre-squished no-separator text (\code{"speciesmanualid"}, \code{
     "wakaleidoscopeautoid"}) - since that raw column is now run through
-    \code{standardize.headers()} the same as any other incoming header,
-    writing it as literal real-world text is both more legible and
-    future-proof than hand-squishing it.
-  \item \code{trim.noise}/\code{trim.noid}/\code{manid.kp}/\code{
-    manid.sb} are unchanged carryovers from the 2026-09-04 build.
-  \item The \code{log.file} RETURNED DATA FRAME still exists (it's one of
-    the two required outputs) - only the old \code{log.file} INPUT
-    PARAMETER was removed (2026-09-06). Every attempted file is
-    unconditionally logged (matching the old parameter's \code{TRUE}
-    behavior).
-  \item No \code{dir.save} parameter was requested for the xlsx-save
-    step - defaults to \code{dir.load}, unchanged from the 2026-09-04
-    build.
-  \item The xlsx save's missing-package fallback (warn + skip, no error)
-    is unchanged. This sandbox still has no network access to install
-    \pkg{openxlsx}, so only that fallback path was exercised here - Josh
-    should confirm the real two-sheet save on his own machine.
+\code{standardize.headers()} the same as any other incoming header,
+writing it as literal real-world text is both more legible and
+future-proof than hand-squishing it. See the "Header standardization"
+paragraph above for why this was necessary (not just cosmetic).
+\item \code{trim.noise}/\code{trim.noid}/\code{manid.kp}/\code{
+    manid.sb} are unchanged carryovers from the 2026-09-04 build (not
+mentioned in the 2026-09-06 round's add/remove-inputs sections at
+all, and untouched by the 2026-09-08 removal above).
+\item The \code{log.file} RETURNED DATA FRAME still exists (it's one of
+the two required outputs) - only the old \code{log.file} INPUT
+PARAMETER was removed (2026-09-06), per the request's explicit
+"remove inputs: log.file = TRUE". Every attempted file is
+unconditionally logged (matching the old parameter's \code{TRUE}
+behavior).
+\item No \code{dir.save} parameter was requested for the xlsx-save
+step - defaults to \code{dir.load}, unchanged from the 2026-09-04
+build.
+\item The xlsx save's missing-package fallback (warn + skip, no error)
+is unchanged. This sandbox still has no network access to install
+\pkg{openxlsx}, so only that fallback path was exercised here - Josh
+should confirm the real two-sheet save on his own machine.
 }
 }
 \examples{

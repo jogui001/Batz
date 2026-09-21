@@ -55,7 +55,8 @@ are converted to signed decimal degrees (\code{$Y}/\code{$X}).
 }
 \details{
 \strong{Header standardization (per Josh, 2026-09-14 project preference)
-- real, documented output-schema change.} The 11 expected SM4 summary
+\itemize{
+\item real, documented output-schema change.} The 11 expected SM4 summary
 columns are a literal, uninvented copy of the ARU device's own real
 export column text (not a \code{batz}-invented shorthand), so - like the
 raw headers read off every file - they are now run through the shared
@@ -78,6 +79,7 @@ a header loaded from any file: \code{aru.name} is parsed from the file's
 own NAME, and \code{X}/\code{Y} are this function's own derived/computed
 columns, so all three keep their existing names per this project's
 ordinary output convention.
+}
 
 \strong{Header validation:} a file must have all 11 expected columns
 (now matched by their standardized spellings, case-insensitively and
