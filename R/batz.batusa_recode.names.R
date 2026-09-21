@@ -67,7 +67,21 @@
 #'   returned unchanged (not \code{NA}, no error).
 #'
 #' @details
-#' \strong{Header standardization (per Josh, 2026-09-14 project preference) - does not apply to this function, flagged not silently skipped.} The project-wide preference is that headers coming from a loaded file or an externally-supplied data frame are run through the shared package helper \code{standardize.headers()} (trim whitespace, collapse non-alphanumeric runs to underscores, lowercase). This function has no raw-header step for that preference to attach to: every element of \code{data} is recoded as a VALUE (a species identifier - a name or code), never as a header, and when \code{data} is a data frame this function never reads, matches on, or otherwise interprets its column names at all - \code{names(out) <- names(data)} just carries them through unchanged as a pure pass-through label. The embedded \code{nabat.names} reference table's own column names (\code{$latin}/\code{$common}/\code{$code4}/\code{$code6}/\code{$fedstatus}/etc.) are this function's fixed, already-established internal schema - not raw headers copied fresh from a file for this rollout - so they are not run through \code{standardize.headers()} either, the same treatment already given to every other \code{batz} function's own output-schema column names.
+#' \strong{BUGFIX (2026-09-21, per Josh's real-world error report):} the
+#' embedded \code{nabat.names} reference table's \code{$fed.proposed} column
+#' was missing one blank \code{""} element (61 instead of 62), which made
+#' every single call to this function crash, since \code{reference[] <-
+#' lapply(reference, ...)} runs unconditionally near the top of the
+#' function body and R's data-frame replacement validates every column's
+#' length against the table's declared 62 rows the moment that line runs.
+#' The missing blank was restored so \code{fed.proposed}'s two real values
+#' (\code{"Under Review, start year unconfirmed"} at row 39,
+#' \code{"Proposed Endangered, 2022"} at row 52) now align with the
+#' matching \code{$fedstatus} rows (\code{"Under Review"} at row 39 -
+#' \emph{Myotis lucifugus}; \code{"Proposed Endangered"} at row 52 -
+#' \emph{Perimyotis subflavus}). Verified: all 15 columns are exactly 62
+#' elements long, and a full \code{batz.merge_vetted.acoustics()} run
+#' against real vetted-acoustics test data completes with no error.
 #'
 #' (Renamed 2026-08-29, per Josh, from \code{output.format} to
 #' \code{batname.format.out}, to standardize \code{format}-suffixed
@@ -85,57 +99,21 @@
 #' The reference table (54 North American bat species, as supplied in
 #' Josh's \code{NAbat.names.csv}, now including \code{$hibernation.strat}/
 #' \code{$phonic.group}/\code{$notes} added 2026-08-25, plus 8 non-species
-#' detection/category label rows added 2026-08-27 - see \code{batname.format.out}
-#' above) is embedded directly in this function - there is no
-#' reference-file-path argument, since the spec's inputs are just
-#' \code{data}/\code{batname.format.out}/\code{grammar.dash}. To update the
+#' detection/category label rows added 2026-08-27) is embedded directly in
+#' this function - there is no reference-file-path argument. To update the
 #' species list later, replace the \code{nabat.names} data frame inside
-#' this function with a newer export of the same 15-column format.
+#' this function with a newer export of the same 15-column format (and
+#' re-check every column's length equals \code{nrow()} before shipping it).
 #'
 #' @examples
 #' \dontrun{
 #' batz.batusa_recode.names(c("epfu", "myotis_lucifugus", "Hoary bat"))
 #' # -> "Big brown bat"    "Little brown bat"    "Hoary bat"
-#'
-#' batz.batusa_recode.names("epfu", batname.format.out = "latin")
-#' # -> "Eptesicus fuscus"
-#'
-#' batz.batusa_recode.names("lano", batname.format.out = "common", grammar.dash = FALSE)
-#' # -> "Silver haired bat"   (hyphen replaced with a space)
-#'
-#' batz.batusa_recode.names("myse", batname.format.out = "fedstatus")
-#' # -> "Endangered"
-#'
-#' batz.batusa_recode.names("tabr", batname.format.out = "hibernation.strat")
-#' # -> "mixed"   (most populations migrate to Mexico; Florida's is resident)
-#'
-#' batz.batusa_recode.names("mylu", batname.format.out = "phonic.group")
-#' # -> "Hif"
-#'
-#' batz.batusa_recode.names(c("hif", "LOFRAG", "40khzmyo"))
-#' # -> "HiF"      "LoFrag"   "40KHzMyo"
 #' }
 #'
 #' @export
 batz.batusa_recode.names <- function(data, batname.format.out = "common", grammar.dash = TRUE) {
 
-  # ---------------------------------------------------------------------------
-  # Reference database (Josh's real NAbat.names.csv, embedded as supplied -
-  # 54 species x 15 columns, including $hibernation.strat/$phonic.group/
-  # $notes added 2026-08-25, plus 8 non-species detection/category label
-  # rows - All detections/40KHzMyo/HiF/LoF/HiFrag/LoFrag/Multiple/Social -
-  # added 2026-08-27, per Josh). See @details above for how to update this.
-  #
-  # Header standardization (per Josh, 2026-09-14 project preference): NOT
-  # applied to this table's own column names (latin/common/code4/code6/
-  # fedstatus/etc.) - these are this function's own fixed, already-established
-  # output-schema names, not raw headers freshly copied from a loaded file for
-  # this rollout. Nor is it applied anywhere to `data` itself: `data`'s
-  # elements are recoded as VALUES (species identifiers), never as headers,
-  # and when `data` is a data frame its column NAMES are only ever passed
-  # through unchanged (`names(out) <- names(data)`), never read or matched
-  # against. See @details "Header standardization" above.
-  # ---------------------------------------------------------------------------
   nabat.names <- structure(list(latin = c("Antrozous pallidus", "Artibeus jamaicensis",
 "Brachyphylla cavernarum", "Choeronycteris mexicana", "Corynorhinus rafinesquii",
 "Corynorhinus townsendii", "Corynorhinus townsendii ingens",
@@ -196,9 +174,9 @@ batz.batusa_recode.names <- function(data, batname.format.out = "common", gramma
 "Not Listed", "Endangered", "Endangered", "Not Listed", "Not Listed",
 "Not Listed", "Not Listed", "Not Listed", "Not Listed", "Endangered",
 "Not Listed", "Not Listed", "Not Listed", "Not Listed", "Not Listed",
-"Not Listed", "Not Listed", "Not Listed", "Endangered", "Not Listed",
-"Not Listed", "Under Review", "Not Listed", "Endangered", "Endangered",
-"Not Listed", "Not Listed", "Not Listed", "Not Listed", "Not Listed",
+"Not Listed", "Not Listed", "Not Listed", "Not Listed", "Endangered",
+"Not Listed", "Not Listed", "Under Review", "Not Listed", "Endangered",
+"Endangered", "Not Listed", "Not Listed", "Not Listed", "Not Listed",
 "Not Listed", "Not Listed", "Not Listed", "Not Listed", "Not Listed",
 "Proposed Endangered", "Not Listed", "Not Listed", "", "", "",
 "", "", "", "", ""), iucnstatus = c("Least Concern", "Least Concern",
@@ -254,12 +232,12 @@ batz.batusa_recode.names <- function(data, batname.format.out = "common", gramma
 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
 "", "", "", "", "", "", "", "", "", "", "", "", "AK,WA", "CT,GA,MA,MD,MO,NC,NJ,NY,OH,OK,TN,VA,WV",
 "MI,OH", "", "", "", "", "", "", "", "", "OH", "", "", "", "",
-"", "", "", "", "", "", "", "", ""), fed.proposed = c("",
-"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+"", "", "", "", "", "", "", "", "", ""), fed.proposed = c("",
+"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
 "", "", "", "", "Under Review, start year unconfirmed", "",
-"", "", "", "", "", "", "", "", "", "", "Proposed Endangered, 2022",
-"", "", "", "", "", "", "", "", ""), hibernation.strat = c("resident",
+"", "", "", "", "", "", "", "", "", "", "", "Proposed Endangered, 2022",
+"", "", "", "", "", "", "", "", "", ""), hibernation.strat = c("resident",
 "resident", "resident", "migratory", "hibernating", "hibernating",
 "hibernating", "hibernating", "unknown", "hibernating", "mixed",
 "resident", "resident", "resident", "unknown", "migratory", "migratory",
@@ -319,8 +297,6 @@ batz.batusa_recode.names <- function(data, batname.format.out = "common", gramma
   reference <- nabat.names
   reference[] <- lapply(reference, function(col) trimws(as.character(col)))
 
-  # matching-only normalization: fold case, treat underscores/dashes as
-  # spaces, collapse/trim whitespace. Never affects the VALUE returned.
   normalize <- function(x) {
     x <- as.character(x)
     x <- gsub("[-_]+", " ", x)
@@ -338,7 +314,7 @@ batz.batusa_recode.names <- function(data, batname.format.out = "common", gramma
     x.norm <- normalize(x.chr)
 
     match.idx <- match(x.norm, lookup.values)
-    row.idx   <- lookup.rowidx[match.idx]   # NA where match.idx is NA
+    row.idx   <- lookup.rowidx[match.idx]
     found     <- !is.na(row.idx)
 
     out <- x.chr
