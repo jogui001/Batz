@@ -62,7 +62,8 @@ rows, and reports how many were removed.
 }
 \details{
 \strong{Header standardization (per Josh, 2026-09-14 project preference)
-- REVERSES a prior explicit design decision, flagged for review.} Every
+\itemize{
+\item REVERSES a prior explicit design decision, flagged for review.} Every
 loaded file/sheet's own column names are now run through the shared
 package helper \code{standardize.headers()} (trim whitespace, collapse
 every run of non-alphanumeric characters to a single underscore,
@@ -79,17 +80,19 @@ is now returned as \code{site_name} / \code{aru_serial_number}; anyone
 with existing code that reads \code{result$aru.visit} (etc.) by the old
 raw/spaced column names will need to update it to the standardized
 snake_case names.
+}
 
 \strong{Interaction with within-source duplicate-column resolution.}
 Standardization runs BEFORE \code{resolve.dup.columns()}, not after - two
 raw columns that used to be treated as distinct (because they differed
-only in case, whitespace, or punctuation) could now collapse to the same
-standardized name and get swept into the existing
-identical-content-drop / differing-content-merge logic that already
-handles the real \code{"Personnel"}-appears-twice case. This is a natural
-consequence of standardizing before merging, not a separate feature, but
-is called out here since it changes what counts as a "duplicate column"
-for a given source file/sheet.
+only in case, whitespace, or punctuation - e.g. a stray \code{"ARU
+Serial#"} vs. \code{"ARU Serial Number"} typo-variant, purely
+hypothetical) could now collapse to the same standardized name and get
+swept into the existing identical-content-drop / differing-content-merge
+logic that already handles the real \code{"Personnel"}-appears-twice
+case. This is a natural consequence of standardizing before merging, not
+a separate feature, but is called out here since it changes what counts
+as a "duplicate column" for a given source file/sheet.
 
 \strong{The internal \code{.source.file} tracking column is NOT
 standardized and is unaffected.} It is this function's own invented
@@ -114,7 +117,9 @@ name, the same as a \code{.csv}.
 Column names have a leading UTF-8 byte-order-mark stripped if present (some
 exported CSVs carry one on their first column), so the same logical column
 from a CSV and an xlsx sheet lines up correctly instead of appearing twice
-- this BOM-stripping step runs first, before header standardization.
+\itemize{
+\item this BOM-stripping step runs first, before header standardization.
+}
 
 If a single file or sheet has the same (now-standardized) column name more
 than once (a real issue in the source forms - e.g. "Personnel" appears

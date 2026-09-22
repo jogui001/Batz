@@ -10,7 +10,8 @@ batz.generate_suntimes.arulist(
   dir.sub = FALSE,
   write.output = TRUE,
   dir.save = getwd(),
-  project.name = ""
+  project.name = "",
+  snake_case = FALSE
 )
 }
 \arguments{
@@ -28,63 +29,96 @@ deployment-list file(s) to load.}
 \item{dir.sub}{Logical, default \code{FALSE}. If \code{TRUE}, also search
 every subdirectory of \code{dir.load}.}
 
-\item{write.output}{If \code{TRUE} (default), also write the output CSV
-into \code{dir.save} (with the \verb{*.unix} columns rounded to whole
-seconds in the written CSV only).}
+\item{write.output}{If \code{TRUE} (default), also write
+\code{aru.suntimes.csv} into \code{dir.save} (with the \verb{*.unix}
+columns rounded to whole seconds in the written CSV only).}
 
 \item{dir.save}{Directory to write the output CSV into when
 \code{write.output = TRUE}. Default: the current working directory
-(\code{getwd()}) - set this separately if the output should be written
-somewhere other than where the input \verb{*arulist.csv} was loaded
-from. (Standardized 2026-08-29, per Josh: previously defaulted to
-\code{dir.load}, which silently mirrored whatever \code{dir.load} was
-rather than defaulting to a sensible location on its own - flagged as a
-bug and fixed.)}
+(\code{getwd()}) - set this separately if the output should be
+written somewhere other than where the input \verb{*arulist.csv} was
+loaded from. (Standardized 2026-08-29, per Josh: previously defaulted
+to \code{dir.load}, which silently mirrored whatever \code{dir.load}
+was rather than defaulting to a sensible location on its own -
+flagged as a bug and fixed.)}
 
 \item{project.name}{Character, default \code{""}: base name for the
-output CSV written when \code{write.output = TRUE}. Every output file
-name gets a date-range + save-time stamp appended automatically, so no
-two runs ever silently overwrite each other:
+output CSV written when \code{write.output = TRUE}. Every output
+file name gets a date-range + save-time stamp appended automatically,
+so no two runs ever silently overwrite each other:
 \verb{<base>_<DATE1>to<DATE2>_sav<timestamp>_suntimes.csv}, where
 \code{DATE1}/\code{DATE2} are the earliest/latest \code{$date} in the
 output (\code{YYYYMMDD}) and \code{<timestamp>} is when the file was
 written (\code{YYYYMMDDHHMMSS}, e.g. \code{sav20260826114426}).
-\code{""} (default) uses \code{"aru"} as \verb{<base>}. Any other value
-is used as \verb{<base>} instead - e.g. \code{project.name =
+\code{""} (default) uses \code{"aru"} as \verb{<base>}. Any other
+value is used as \verb{<base>} instead - e.g. \code{project.name =
 "projectname_suntimes.csv"} produces something like
 \code{"projectname_20250101to20250202_sav20260826113700_suntimes.csv"}.
 If the given value already ends in a previously-auto-generated suffix
-(e.g. you passed a prior run's output file name back in), that suffix is
-stripped back off first, so the file gets a fresh stamp instead of a
-second one stacked on top.}
+(e.g. you passed a prior run's output file name back in), that suffix
+is stripped back off first, so the file gets a fresh stamp instead of
+a second one stacked on top.}
+
+\item{snake_case}{Logical, default \code{FALSE}. Added 2026-09-22, per
+Josh's request to audit and extend the snake_case output option
+package-wide (see \code{\link{batz.generate_plotframe.bat}}, the first
+function this was added to). Controls only \code{aru.suntimes}'s OWN
+output column names (and, when \code{write.output = TRUE}, the CSV
+written to disk), applied as the very last step before each is
+written/returned. \code{FALSE} (default) keeps this function's normal
+column names exactly as always. \code{TRUE} runs every output column
+name through \code{standardize.headers()} instead (e.g.
+\code{$sunregion_long} stays \code{$sunregion_long}, \code{$date.mon}
+becomes \code{$date_mon}, \code{$sunr.mon.unix} becomes
+\code{$sunr_mon_unix}) - for a caller who specifically wants a
+snake_case CSV/data frame out of this function, without having to
+convert it themselves afterward.}
 }
 \value{
 Invisibly, a list with:
-  \describe{
-    \item{aru.suntimes}{One row per (aru, date), \code{"fixed.unique"}/
-      \code{"fixed.pooled"} rows only: \code{$aru}, \code{$date},
-      \code{$date.mon}, \code{$sunregion}, \code{$sunregion_long},
-      \code{$sunregion_lat}, \code{$date_start}, \code{$date_end},
-      \code{$time_zone}, \code{$sunregion_type}, \code{$schedual1},
-      \code{$schedual2}, \code{$lat}, \code{$long}, \code{$suns},
-      \code{$suns.unix}, \code{$sunr}, \code{$sunr.unix},
-      \code{$sunr.mon}, \code{$sunr.mon.unix}.}
-    \item{efficiency}{One-row summary: \code{$aru.date.rows} (rows needed
-      without de-duplication), \code{$site.date.rows} (unique site-date
-      rows actually calculated), \code{$shared.sites} (count of sites
-      with more than one ARU sharing the same calculation site).}
-  }
+\describe{
+\item{aru.suntimes}{One row per (aru, date), \code{"fixed.unique"}/
+\code{"fixed.pooled"} rows only: \code{$aru}, \code{$date},
+\code{$date.mon}, \code{$sunregion}, \code{$sunregion_long},
+\code{$sunregion_lat}, \code{$date_start}, \code{$date_end},
+\code{$time_zone}, \code{$sunregion_type}, \code{$schedual1},
+\code{$schedual2}, \code{$lat}, \code{$long}, \code{$suns},
+\code{$suns.unix}, \code{$sunr}, \code{$sunr.unix},
+\code{$sunr.mon}, \code{$sunr.mon.unix} (or their snake_case
+equivalents if \code{snake_case = TRUE} - see that parameter
+above).}
+\item{efficiency}{One-row summary: \code{$aru.date.rows} (rows needed
+without de-duplication), \code{$site.date.rows} (unique site-date
+rows actually calculated), \code{$shared.sites} (count of sites
+with more than one ARU sharing the same calculation site). Not
+affected by \code{snake_case} - see that parameter above.}
+}
 }
 \description{
 For every ARU in an \verb{*arulist.csv} deployment list, and for every
-calendar date in that ARU's \code{[$date_start, $date_end]} range,
+calendar date in that ARU's \code{[$date.start, $date.end]} range,
 calculates sunset on \code{$date}, sunrise on \code{$date}, and sunrise on
 the FOLLOWING day - i.e. the start/end bounds of that night's monitoring
 window (sunset of \code{$date} through sunrise of \code{$date + 1}).
 }
 \details{
+Solar times are calculated in base R (no package dependencies) using the
+standard astronomy-answers.nl / NOAA sunrise-sunset algorithm - the same
+approach used by NOAA's solar calculator and the widely-used "suncalc"
+JS/R libraries, accurate to within about a minute of NOAA's published
+tables.
+
+Before any solar calculation runs, ARU rows are expanded to one row per
+(aru, date) and then collapsed to the DISTINCT set of
+(\code{sunregion}, \code{calc.lat}, \code{calc.long}, \code{time.zone},
+\code{date}) combinations actually needed (\code{calc.lat}/\code{calc.long}
+per the \code{$sunregion.type} handling below). ARUs that share a site
+with identical or overlapping date ranges automatically reuse one
+calculation per shared date instead of repeating it per ARU.
+
 \strong{Header standardization (per Josh, 2026-09-14 project preference)
-- real, documented output-schema change.} The raw \verb{*arulist.csv}'s
+\itemize{
+\item real, documented output-schema change.} The raw \verb{*arulist.csv}'s
 own headers are now run through the shared package helper
 \code{standardize.headers()} (trim whitespace, collapse every run of
 non-alphanumeric characters to a single underscore, lowercase) right
@@ -111,23 +145,13 @@ loaded file - \code{date.mon}, \code{suns}, \code{suns.unix}, \code{sunr},
 project's ordinary (unrelated to this preference) dot-separated output
 convention. \strong{Anyone with a saved *arulist.csv using the old
 dotted header spellings should re-save it with the new underscore
-spellings (or simply let it load as-is, since \code{standardize.headers()}
-converts either spelling to the same result), and update any downstream
-script that reads \code{aru.suntimes} by the old dotted column names.}
-
-Solar times are calculated in base R (no package dependencies) using the
-standard astronomy-answers.nl / NOAA sunrise-sunset algorithm - the same
-approach used by NOAA's solar calculator and the widely-used "suncalc"
-JS/R libraries, accurate to within about a minute of NOAA's published
-tables.
-
-Before any solar calculation runs, ARU rows are expanded to one row per
-(aru, date) and then collapsed to the DISTINCT set of
-(\code{sunregion}, \code{calc.lat}, \code{calc.long}, \code{time_zone},
-\code{date}) combinations actually needed (\code{calc.lat}/\code{calc.long}
-per the \code{$sunregion_type} handling below). ARUs that share a site
-with identical or overlapping date ranges automatically reuse one
-calculation per shared date instead of repeating it per ARU.
+spellings (or simply let \code{read.csv()} load it as-is and rely on
+\code{standardize.headers()} to convert it automatically - a header
+spelled \code{"sunregion.long"} standardizes to \code{"sunregion_long"}
+exactly the same as \code{"Sunregion Long"} would), and update any
+downstream script that reads \code{aru.suntimes} by the old dotted
+column names.}
+}
 
 \strong{Required input headers (added 2026-08-26, per Josh) - checked
 up front, before anything else runs.} \code{dir.load}'s
@@ -135,7 +159,8 @@ up front, before anything else runs.} \code{dir.load}'s
 \code{lat}, \code{sunregion}, \code{sunregion_long},
 \code{sunregion_lat}, \code{date_start}, \code{date_end},
 \code{time_zone}, \code{sunregion_type}, \code{schedual1},
-\code{schedual2}. If any are missing, the function stops immediately
+\code{schedual2} (standardized spellings - see "Header standardization"
+above). If any are missing, the function stops immediately
 with \code{"inputfile is missing these headers"} followed by the list
 of missing header names (Josh's own literal message text, used
 verbatim). \code{$sunregion_type} is now REQUIRED - the previous
@@ -190,22 +215,22 @@ the run.
 \strong{Assumptions made (spec was ambiguous on these - flag for
 review):}
 \itemize{
-  \item \code{$suns} is treated as SUNSET on \code{$date} (the shorthand
-    "suns"/"sunr" strongly implies sunset vs. sunrise, and \code{$sunr}
-    is separately and explicitly defined as sunrise - having both be
-    sunrise would make \code{$suns} a pure duplicate).
-  \item \code{$date.mon} is \code{$date} itself at noon (12:00:00), NOT
-    \code{$date + 1} - taken literally from "date plus time of
-    12:00:00", with no mention of the following day (unlike
-    \code{$sunr.mon}, which explicitly says "for the following day").
-    Noon (rather than midnight) is used so the timestamp can't drift to
-    the wrong calendar day when read back in a different time zone.
-  \item \code{[$date_start, $date_end]} is inclusive of both endpoints.
-  \item Sunrise/sunset use the standard -0.833 degree solar-elevation
-    threshold (atmospheric refraction + the sun's angular radius).
-  \item Locations that would produce polar day/night (no sunrise or
-    sunset on some date) are not expected in this data and are not
-    specially handled beyond returning \code{NA}.
+\item \code{$suns} is treated as SUNSET on \code{$date} (the shorthand
+"suns"/"sunr" strongly implies sunset vs. sunrise, and \code{$sunr}
+is separately and explicitly defined as sunrise - having both be
+sunrise would make \code{$suns} a pure duplicate).
+\item \code{$date.mon} is \code{$date} itself at noon (12:00:00), NOT
+\code{$date + 1} - taken literally from "date plus time of
+12:00:00", with no mention of the following day (unlike
+\code{$sunr.mon}, which explicitly says "for the following day").
+Noon (rather than midnight) is used so the timestamp can't drift to
+the wrong calendar day when read back in a different time zone.
+\item \code{[$date_start, $date_end]} is inclusive of both endpoints.
+\item Sunrise/sunset use the standard -0.833 degree solar-elevation
+threshold (atmospheric refraction + the sun's angular radius).
+\item Locations that would produce polar day/night (no sunrise or
+sunset on some date) are not expected in this data and are not
+specially handled beyond returning \code{NA}.
 }
 
 See \code{batz.generate_suntimes.arulist.dev.R} in the package source repo for
@@ -222,17 +247,38 @@ that work with ARU deployment lists and solar-time calculations), action =
 
 \strong{Follow-up, 2026-08-30, per Josh: renamed from
 \code{batz.suntimes_generate()} to \code{batz.generate_suntimes.arulist()}}
-- this breaks the project's own \code{family_action.subject} convention
+\itemize{
+\item this breaks the project's own \code{family_action.subject} convention
 (the verb normally comes after the underscore, e.g. \code{suntimes_generate},
 \code{batusa_recode.names}) since "generate" now comes first, but the user
 was asked to confirm and explicitly chose this exact literal name over a
 convention-conforming alternative, so it was used as given.
+}
+
+\strong{Follow-up, 2026-09-22, per Josh's request to audit and extend the
+snake_case output option package-wide:} added a \code{snake_case}
+parameter (default \code{FALSE}, matching
+\code{\link{batz.generate_plotframe.bat}}'s own). When \code{TRUE},
+\code{aru.suntimes}'s own output column names are run through
+\code{standardize.headers()} as the very last step before it's written
+to CSV (when \code{write.output = TRUE}) and returned - e.g.
+\code{$date.mon} becomes \code{$date_mon}, \code{$sunr.mon.unix} becomes
+\code{$sunr_mon_unix}. This is unrelated to, and does not change, the
+existing \verb{*arulist.csv} header standardization described above
+(which already always runs, regardless of this parameter, on the loaded
+file's own real headers before the required-header check). The
+\code{efficiency} list element is left untouched either way - its three
+columns (\code{aru.date.rows}, \code{site.date.rows},
+\code{shared.sites}) have no dot-separated words to convert.
 }
 \examples{
 \dontrun{
 result <- batz.generate_suntimes.arulist(dir.load = "path/to/data")
 result$aru.suntimes
 result$efficiency
+
+# snake_case output headers instead of this function's usual dot-style
+result <- batz.generate_suntimes.arulist(dir.load = "path/to/data", snake_case = TRUE)
 }
 
 }

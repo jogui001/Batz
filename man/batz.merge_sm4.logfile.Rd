@@ -28,18 +28,14 @@ duplicate rows from the final merged data frame. (Not listed in the
 original spec's "Optional inputs", but used in its Steps section -
 added as a real parameter; see the dev script's header comment.)}
 
-\item{log.file}{Logical, default \code{FALSE}. \strong{Redesigned
-2026-09-22, per Josh - see \code{@details} below for the full history.}
-If \code{TRUE}, also return (and auto-assign) \code{sm4logs.merged_log.file}:
-now one row per file EXAMINED (every matching file, not just skipped
-ones), with columns \code{$aru.name}, \code{$file.name}, \code{$date.start},
-\code{$date.end}, \code{$date.unique}, \code{$date.range}, \code{$records},
-\code{$load.status} (\code{"Success"}/\code{"Failure"}), \code{$reason},
-\code{$filepath}. On a successfully-loaded file, \code{$date.start}/
-\code{$date.end}/\code{$records} etc. are populated from that file's own
-data; on a failed file, every data-derived column is \code{NA} and
-\code{$reason} explains why. This replaces the old (pre-2026-09-22)
-\code{$filepath}/\code{$reason}-only, skipped-files-only log schema.}
+\item{log.file}{Logical, default \code{FALSE}. If \code{TRUE}, also
+return (and auto-assign) \code{sm4logs.merged_log.file}: one row per
+file examined (whether it was successfully merged in or not; per
+Josh's 2026-09-22 redesign of this parameter - see \code{@details}),
+with columns \code{$aru.name}, \code{$file.name}, \code{$date.start},
+\code{$date.end}, \code{$date.unique}, \code{$date.range},
+\code{$records}, \code{$load.status} (\code{"Success"}/\code{"Failure"}),
+\code{$reason}, and \code{$filepath}.}
 }
 \value{
 Invisibly, a named list: \code{sm4logs.merged} (always), plus
@@ -50,19 +46,6 @@ pattern already used in \code{batz.merge_aru.meta},
 \code{batz.arumeta_generate.eventlog}), so a bare call with no
 assignment creates \code{sm4logs.merged} (and the log table, if
 requested) directly in your workspace.
-
-\strong{\code{sm4logs.merged_log.file}'s current (2026-09-22) schema},
-one row per file examined: \code{$aru.name} (character, always
-populated, even on failure), \code{$file.name} (character, the file's
-own base name, always populated), \code{$date.start}/\code{$date.end}
-(character, \code{YYYY-MM-DD}, \code{NA} on failure), \code{$date.unique}
-(integer count of distinct dates in the file, \code{NA} on failure),
-\code{$date.range} (integer, days from \code{$date.start} to
-\code{$date.end} inclusive, \code{NA} on failure), \code{$records}
-(integer row count, \code{NA} on failure), \code{$load.status}
-(\code{"Success"} or \code{"Failure"}), \code{$reason} (character,
-success message or one of the failure reasons listed in
-\code{@details}), \code{$filepath} (character, always populated).
 }
 \description{
 Searches a directory (and, optionally, its subdirectories) for SM4
@@ -75,7 +58,8 @@ are converted to signed decimal degrees (\code{$Y}/\code{$X}).
 }
 \details{
 \strong{Header standardization (per Josh, 2026-09-14 project preference)
-- real, documented output-schema change.} The 11 expected SM4 summary
+\itemize{
+\item real, documented output-schema change.} The 11 expected SM4 summary
 columns are a literal, uninvented copy of the ARU device's own real
 export column text (not a \code{batz}-invented shorthand), so - like the
 raw headers read off every file - they are now run through the shared
@@ -98,14 +82,16 @@ a header loaded from any file: \code{aru.name} is parsed from the file's
 own NAME, and \code{X}/\code{Y} are this function's own derived/computed
 columns, so all three keep their existing names per this project's
 ordinary output convention.
+}
 
 \strong{Header validation:} a file must have all 11 expected columns
 (now matched by their standardized spellings, case-insensitively and
 whitespace/punctuation-insensitively by construction) to be merged in. A
-file missing one or more of them is skipped with reason \code{"mismatched
-headers"}; a file with a header row but zero data rows is skipped with
-reason \code{"no records"}. Extra, unexpected columns don't cause a skip -
-only a missing expected column does.
+file missing one or more of them, or with a header row but zero data
+rows, is not merged into \code{sm4logs.merged} - see the
+\code{log.file} redesign below for how this is now reported. Extra,
+unexpected columns don't cause a skip - only a missing expected column
+does.
 
 \strong{ARU name:} taken from the file name, everything before the first
 \code{"_"} (e.g. \code{"AYERS_A_Summary.txt"} -> \code{"AYERS"}).
@@ -126,66 +112,47 @@ degrees-minutes-seconds parse. The original \code{$lat}/\code{$ns}/
 \code{$X} columns, not replaced.
 
 \strong{Follow-up, 2026-09-22, per Josh - \code{log.file} completely
-redesigned.} Josh's own spec (quoted in full in this session's history)
-replaced the old skipped-files-only, \code{$filepath}/\code{$reason}-only
-log with a new 10-column schema, populated for EVERY file the function
-examines (success or failure), giving a per-file summary of what was
-found: \code{$aru.name}, \code{$file.name}, \code{$date.start},
-\code{$date.end}, \code{$date.unique}, \code{$date.range}, \code{$records},
-\code{$load.status}, \code{$reason}, \code{$filepath} (see \code{@return}
-above for the full column-by-column description). \code{$aru.name} is
-parsed from the file name the same way as for \code{sm4logs.merged}
-itself, and is always populated - even for a file that fails to load -
-since the ARU name comes from the file name, not the file's contents.
-
-On a file that loads successfully (all expected headers present, at
-least one data row): \code{$date.start}/\code{$date.end} are that file's
-own earliest/latest date (after the same \code{YYYY-Mon-DD} ->
-\code{YYYY-MM-DD} conversion described above), \code{$date.unique} is the
-count of distinct dates in the file, \code{$date.range} is the number of
-calendar days from \code{$date.start} to \code{$date.end} inclusive
-(so a single-day file has \code{$date.range = 1}, not \code{0}),
-\code{$records} is the file's row count, \code{$load.status =
-"Success"}, and \code{$reason = "All headers present and observation in
-file"} (Josh's own literal wording).
-
-On a file that fails to load, every data-derived column
-(\code{$date.start}/\code{$date.end}/\code{$date.unique}/
-\code{$date.range}/\code{$records}) is \code{NA}, \code{$load.status =
-"Failure"}, and \code{$reason} is one of: \code{"no data"} (all expected
-headers present, but zero data rows), \code{"These headers are missing:
-<comma-separated list>"} (one or more expected headers absent, but the
-file has at least one data row), \code{"no data and These headers are
-missing: <list>"} (both problems at once - Josh's own literal phrasing
-for this combined case, kept exactly as given even though the grammar is
-a little unusual), or \code{"could not read file"} (the file could not
-be parsed/read at all - an extra failure reason beyond Josh's own list,
-added because a genuinely unreadable file still needs a row in the log
-with something in \code{$reason}, flagged here as an addition rather than
-silently added). \code{$filepath} is always the path the file was found
-at, on both success and failure.
-
-\strong{Judgment calls made implementing this spec, flagged here rather
-than silently decided:} (1) a malformed/unparseable date value within an
-otherwise-successful file is still counted in \code{$date.unique} (it's
-a distinct string value), but is excluded from the \code{$date.start}/
-\code{$date.end}/\code{$date.range} calculation (which only considers
-values matching the file's own expected \code{YYYY-MM-DD}-after-conversion
-format) - Josh's spec didn't address a partially-malformed date column
-directly, and silently including an unparseable value in a min/max would
-produce a nonsensical date range. (2) \code{$date.range} is computed as
-an inclusive day count (\code{end - start + 1}), not a plain subtraction,
-so a file spanning a single calendar day reads as a 1-day range rather
-than a 0-day range - read as the more natural meaning of "range" for a
-count of days covered, not explicitly specified either way in the spec.
-(3) the old schema's behavior (log only skipped files, only
-\code{$filepath}/\code{$reason}) is fully replaced, not kept alongside
-the new one - Josh's spec describes an unconditional new dataframe, not
-an additional one.
-
-This is a complete replacement of the log schema; the underlying
-merge/header-validation/date-conversion/coordinate-conversion logic
-described above for \code{sm4logs.merged} itself is unchanged.
+redesigned.} Previously, \code{sm4logs.merged_log.file} only had a row
+for a SKIPPED file (\code{$filepath}/\code{$reason} only). Josh asked for
+a richer log covering every file examined, success or failure, with a
+per-file date/record summary. \code{sm4logs.merged_log.file} (when
+\code{log.file = TRUE}) now has exactly one row per file matched by
+\code{load.pattern}, with columns \code{$aru.name} (always set, parsed
+from the file name the same way as \code{sm4logs.merged}'s own
+\code{$aru.name}), \code{$file.name} (the file's base name, always set),
+\code{$filepath} (always set), \code{$load.status} (\code{"Success"} if
+the file had all 11 expected headers AND at least one data row,
+\code{"Failure"} otherwise), \code{$reason} (Josh's literal text: for a
+success, \code{"All headers present and observation in file"}; for a
+failure, \code{"no data"} (headers fine, zero rows), \code{"These
+headers are missing: <list>"} (>=1 row but headers missing), or
+\code{"no data and These headers are missing: <list>"} (both) - plus
+\code{"could not read file"} for a file \code{read.csv()} itself
+errored on, an edge case outside Josh's given reason list, added for
+parity with the (removed) old scheme's equivalent case), and, for a
+\code{"Success"} row only (\code{NA} on every \code{"Failure"} row, per
+Josh's explicit "all other headers = NA"): \code{$date.start}/
+\code{$date.end} (earliest/latest \code{$date} value in that one file,
+after the same \code{YYYY-MM-DD} conversion \code{sm4logs.merged} itself
+uses - a plain string min/max is chronologically correct here since
+zero-padded ISO dates sort the same as strings or as dates),
+\code{$date.unique} (count of distinct \code{$date} values in that
+file), \code{$date.range} (the number of calendar days from
+\code{$date.start} to \code{$date.end} inclusive - compare against
+\code{$date.unique} to spot gap days with no records), and
+\code{$records} (row count of that one file, before the
+package-level \code{duplicates.remove} step below, which only ever
+operates on the final merged \code{sm4logs.merged}, never per-file).
+\strong{Flagged, not in Josh's spec:} a \code{$date} value that
+\code{convert.date()} doesn't recognize (see "Date conversion" above)
+is still counted in \code{$date.unique} but excluded from the
+\code{$date.start}/\code{$date.end}/\code{$date.range} calculation (via
+an ISO-format validity check), so one malformed date value can't corrupt
+the file's chronological summary; no real file has been seen to trigger
+this. This is a full replacement of the previous \code{log.file}
+behavior - a workflow reading the old \code{$filepath}/\code{$reason}-
+only schema (skipped-files only) needs to be updated for the new
+10-column, one-row-per-file schema.
 }
 \examples{
 \dontrun{
@@ -193,9 +160,7 @@ batz.merge_sm4.logfile()
 # sm4logs.merged is now in your workspace
 
 batz.merge_sm4.logfile(dir.sub = TRUE, log.file = TRUE)
-# sm4logs.merged and sm4logs.merged_log.file (one row per file examined,
-# Success or Failure - see @details) both created
+# sm4logs.merged and sm4logs.merged_log.file both created
 }
 
 }
-</content>

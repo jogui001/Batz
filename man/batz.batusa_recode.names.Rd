@@ -4,7 +4,11 @@
 \alias{batz.batusa_recode.names}
 \title{Recode US bat species identifiers between common name, latin name, species codes, and status fields}
 \usage{
-batz.batusa_recode.names(data, batname.format.out = "common", grammar.dash = TRUE)
+batz.batusa_recode.names(
+  data,
+  batname.format.out = "common",
+  grammar.dash = TRUE
+)
 }
 \arguments{
 \item{data}{A vector, or a data frame, of bat species identifiers to
@@ -62,10 +66,10 @@ every hyphen in a matched value with a space instead (e.g.
 }
 \value{
 A vector (if \code{data} is a vector) or data frame (if
-  \code{data} is a data frame) of the same length/dimensions as
-  \code{data}, with every element re-expressed in \code{batname.format.out}.
-  An input element with no match anywhere in the reference table is
-  returned unchanged (not \code{NA}, no error).
+\code{data} is a data frame) of the same length/dimensions as
+\code{data}, with every element re-expressed in \code{batname.format.out}.
+An input element with no match anywhere in the reference table is
+returned unchanged (not \code{NA}, no error).
 }
 \description{
 Given a vector or data frame containing any mix of common name, latin
@@ -79,6 +83,69 @@ false mismatch.
 }
 \details{
 \strong{Header standardization (per Josh, 2026-09-14 project preference) - does not apply to this function, flagged not silently skipped.} The project-wide preference is that headers coming from a loaded file or an externally-supplied data frame are run through the shared package helper \code{standardize.headers()} (trim whitespace, collapse non-alphanumeric runs to underscores, lowercase). This function has no raw-header step for that preference to attach to: every element of \code{data} is recoded as a VALUE (a species identifier - a name or code), never as a header, and when \code{data} is a data frame this function never reads, matches on, or otherwise interprets its column names at all - \code{names(out) <- names(data)} just carries them through unchanged as a pure pass-through label. The embedded \code{nabat.names} reference table's own column names (\code{$latin}/\code{$common}/\code{$code4}/\code{$code6}/\code{$fedstatus}/etc.) are this function's fixed, already-established internal schema - not raw headers copied fresh from a file for this rollout - so they are not run through \code{standardize.headers()} either, the same treatment already given to every other \code{batz} function's own output-schema column names.
+
+(Renamed 2026-08-29, per Josh, from \code{output.format} to
+\code{batname.format.out}, to standardize \code{format}-suffixed
+parameters as \code{.in}/\code{.out}.)
+
+\strong{BUGFIX (2026-09-21, per Josh's real-world error report):} the
+embedded \code{nabat.names} reference table's \code{$fed.proposed} column
+was missing one blank \code{""} element (61 instead of 62), which made
+every single call to this function crash - not conditionally, since
+\code{reference[] <- lapply(reference, ...)} runs unconditionally near
+the top of the function body, and R's data-frame replacement validates
+every column's length against the table's declared 62 rows the moment
+that line runs. The error looked like
+\code{Error in `[<-.data.frame`(...) : replacement element N has 61 rows,
+need 62} (N depends on which copy of this file is running - both a
+sandbox-side transcription slip and Josh's own installed copy hit this
+same failure mode, at different column positions, before this fix).
+Root-caused by checking every column's length against the declared
+62-row table and confirming exactly one column (\code{fed.proposed}) was
+short; the missing blank was restored in the block of blanks before row
+39 (\code{Myotis lucifugus}), which realigns \code{fed.proposed}'s two
+real values (\code{"Under Review, start year unconfirmed"} at row 39,
+\code{"Proposed Endangered, 2022"} at row 52) with the matching
+\code{$fedstatus} rows (\code{"Under Review"} at row 39 - \emph{Myotis
+lucifugus}, the little brown bat, under status review for white-nose
+syndrome; \code{"Proposed Endangered"} at row 52 - \emph{Perimyotis
+subflavus}, the tri-colored bat, proposed for ESA listing in 2022).
+Verified after the fix: every one of the table's 15 columns is exactly
+62 elements long, and a full \code{batz.merge_vetted.acoustics()} run
+against real vetted-acoustics test data (6,777 rows) completes with no
+error. \strong{Action needed on Josh's machine:} replace
+\code{R/batz.batusa_recode.names.R} in the \code{Batz} GitHub repo with
+this corrected file, commit, push, then reinstall
+(\code{pak::pak("jogui001/Batz")}) - this file has no exported-name or
+argument changes, so no \code{devtools::document()}/NAMESPACE update is
+needed, just the file replacement.
+
+\strong{RECURRENCE (2026-09-22, per Josh's "Error is back with the last
+push" report):} the exact same crash resurfaced
+(\code{Error in `[<-.data.frame`(...) : replacement element 12 has 61
+rows, need 62}). Direct execution confirmed the 2026-09-21 fix above was
+never actually applied to the shipped \code{$fed.proposed} column data -
+the file's prose said the column was restored to 62 elements, but the
+embedded vector itself was still 61 elements long (one blank \code{""}
+still missing from the leading run before row 39), so
+\code{"Under Review, start year unconfirmed"} was landing on row 38 and
+\code{"Proposed Endangered, 2022"} on row 51 - both one row too early.
+This time the missing blank was restored and, critically, verified by
+actually running \code{sapply(nabat.names, length)} against the live
+file content (not just re-reading the prose) before shipping: all 15
+columns confirmed exactly 62 elements, the two real \code{fed.proposed}
+values now land on rows 39/52 as documented above, and a synthetic
+3-row \code{data.frame} recode exercising the same
+\code{$manid}/\code{$autoid.kp}/\code{$autoid.sb} call pattern used by
+\code{batz.merge_vetted.acoustics()} completes with no error.
+\strong{Action needed on Josh's machine (same as above):} replace
+\code{R/batz.batusa_recode.names.R}, commit, push, reinstall. As a
+standing safeguard against a silent future re-break of this same kind,
+any change to the \code{nabat.names} table should be followed by running
+\code{stopifnot(all(sapply(nabat.names, length) == nrow(nabat.names)))}
+before shipping - this is now the required verification step, not an
+optional one, precisely because narrative claims of "verified" in this
+file's own history were not sufficient to prevent this recurrence.
 
 If one or more input elements don't match anything in the reference
 table, a warning is printed (not raised via \code{warning()} - a plain
@@ -97,7 +164,9 @@ above) is embedded directly in this function - there is no
 reference-file-path argument, since the spec's inputs are just
 \code{data}/\code{batname.format.out}/\code{grammar.dash}. To update the
 species list later, replace the \code{nabat.names} data frame inside
-this function with a newer export of the same 15-column format.
+this function with a newer export of the same 15-column format (and
+re-check every column's length equals \code{nrow()}, per the bugfix
+above, before shipping it).
 }
 \examples{
 \dontrun{
