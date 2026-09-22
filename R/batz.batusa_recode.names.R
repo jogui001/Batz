@@ -105,6 +105,33 @@
 #' argument changes, so no \code{devtools::document()}/NAMESPACE update is
 #' needed, just the file replacement.
 #'
+#' \strong{RECURRENCE (2026-09-22, per Josh's "Error is back with the last
+#' push" report):} the exact same crash resurfaced
+#' (\code{Error in `[<-.data.frame`(...) : replacement element 12 has 61
+#' rows, need 62}). Direct execution confirmed the 2026-09-21 fix above was
+#' never actually applied to the shipped \code{$fed.proposed} column data -
+#' the file's prose said the column was restored to 62 elements, but the
+#' embedded vector itself was still 61 elements long (one blank \code{""}
+#' still missing from the leading run before row 39), so
+#' \code{"Under Review, start year unconfirmed"} was landing on row 38 and
+#' \code{"Proposed Endangered, 2022"} on row 51 - both one row too early.
+#' This time the missing blank was restored and, critically, verified by
+#' actually running \code{sapply(nabat.names, length)} against the live
+#' file content (not just re-reading the prose) before shipping: all 15
+#' columns confirmed exactly 62 elements, the two real \code{fed.proposed}
+#' values now land on rows 39/52 as documented above, and a synthetic
+#' 3-row \code{data.frame} recode exercising the same
+#' \code{$manid}/\code{$autoid.kp}/\code{$autoid.sb} call pattern used by
+#' \code{batz.merge_vetted.acoustics()} completes with no error.
+#' \strong{Action needed on Josh's machine (same as above):} replace
+#' \code{R/batz.batusa_recode.names.R}, commit, push, reinstall. As a
+#' standing safeguard against a silent future re-break of this same kind,
+#' any change to the \code{nabat.names} table should be followed by running
+#' \code{stopifnot(all(sapply(nabat.names, length) == nrow(nabat.names)))}
+#' before shipping - this is now the required verification step, not an
+#' optional one, precisely because narrative claims of "verified" in this
+#' file's own history were not sufficient to prevent this recurrence.
+#'
 #' If one or more input elements don't match anything in the reference
 #' table, a warning is printed (not raised via \code{warning()} - a plain
 #' \code{cat()} message, matching how similar diagnostics are reported
@@ -160,9 +187,13 @@ batz.batusa_recode.names <- function(data, batname.format.out = "common", gramma
   # rows - All detections/40KHzMyo/HiF/LoF/HiFrag/LoFrag/Multiple/Social -
   # added 2026-08-27, per Josh). See @details above for how to update this.
   #
-  # BUGFIX (2026-09-21): $fed.proposed was one element short (61 vs 62) -
-  # restored below. See @details "BUGFIX" paragraph above for the full
-  # story and how the correct row alignment was confirmed.
+  # BUGFIX (2026-09-21, RECURRED and re-fixed 2026-09-22): $fed.proposed
+  # was one element short (61 vs 62) - restored below. The 2026-09-21 fix
+  # was documented but never actually landed in this data (still 61 as of
+  # 2026-09-22); this time confirmed by directly running
+  # sapply(nabat.names, length) against the live file, not just re-reading
+  # the prose. See @details "BUGFIX"/"RECURRENCE" paragraphs above for the
+  # full story and how the correct row alignment was confirmed.
   #
   # Header standardization (per Josh, 2026-09-14 project preference): NOT
   # applied to this table's own column names (latin/common/code4/code6/
@@ -292,11 +323,11 @@ batz.batusa_recode.names <- function(data, batname.format.out = "common", gramma
 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
 "", "", "", "", "", "", "", "", "", "", "", "", "AK,WA", "CT,GA,MA,MD,MO,NC,NJ,NY,OH,OK,TN,VA,WV",
 "MI,OH", "", "", "", "", "", "", "", "", "OH", "", "", "", "",
-"", "", "", "", "", "", "", "", ""), fed.proposed = c("",
+"", "", "", "", "", "", "", "", "", ""), fed.proposed = c("",
 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
-"", "", "", "", "Under Review, start year unconfirmed", "",
-"", "", "", "", "", "", "", "", "", "", "Proposed Endangered, 2022",
+"", "", "", "", "", "Under Review, start year unconfirmed", "",
+"", "", "", "", "", "", "", "", "", "", "", "Proposed Endangered, 2022",
 "", "", "", "", "", "", "", "", "", ""), hibernation.strat = c("resident",
 "resident", "resident", "migratory", "hibernating", "hibernating",
 "hibernating", "hibernating", "unknown", "hibernating", "mixed",

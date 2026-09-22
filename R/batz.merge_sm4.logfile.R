@@ -21,9 +21,12 @@
 #'   added as a real parameter; see the dev script's header comment.)
 #' @param log.file Logical, default \code{FALSE}. If \code{TRUE}, also
 #'   return (and auto-assign) \code{sm4logs.merged_log.file}: one row per
-#'   skipped input file, with \code{$filepath} and \code{$reason}
-#'   (\code{"mismatched headers (missing: ...)"}, \code{"no records"}, or
-#'   \code{"could not read file"}).
+#'   file examined (whether it was successfully merged in or not; per
+#'   Josh's 2026-09-22 redesign of this parameter - see \code{@details}),
+#'   with columns \code{$aru.name}, \code{$file.name}, \code{$date.start},
+#'   \code{$date.end}, \code{$date.unique}, \code{$date.range},
+#'   \code{$records}, \code{$load.status} (\code{"Success"}/\code{"Failure"}),
+#'   \code{$reason}, and \code{$filepath}.
 #'
 #' @return Invisibly, a named list: \code{sm4logs.merged} (always), plus
 #'   \code{sm4logs.merged_log.file} when \code{log.file = TRUE}. Every
@@ -63,10 +66,11 @@
 #' \strong{Header validation:} a file must have all 11 expected columns
 #' (now matched by their standardized spellings, case-insensitively and
 #' whitespace/punctuation-insensitively by construction) to be merged in. A
-#' file missing one or more of them is skipped with reason \code{"mismatched
-#' headers"}; a file with a header row but zero data rows is skipped with
-#' reason \code{"no records"}. Extra, unexpected columns don't cause a skip -
-#' only a missing expected column does.
+#' file missing one or more of them, or with a header row but zero data
+#' rows, is not merged into \code{sm4logs.merged} - see the
+#' \code{log.file} redesign below for how this is now reported. Extra,
+#' unexpected columns don't cause a skip - only a missing expected column
+#' does.
 #'
 #' \strong{ARU name:} taken from the file name, everything before the first
 #' \code{"_"} (e.g. \code{"AYERS_A_Summary.txt"} -> \code{"AYERS"}).
@@ -85,6 +89,49 @@
 #' degrees-minutes-seconds parse. The original \code{$lat}/\code{$ns}/
 #' \code{$lon}/\code{$ew} columns are kept alongside the new \code{$Y}/
 #' \code{$X} columns, not replaced.
+#'
+#' \strong{Follow-up, 2026-09-22, per Josh - \code{log.file} completely
+#' redesigned.} Previously, \code{sm4logs.merged_log.file} only had a row
+#' for a SKIPPED file (\code{$filepath}/\code{$reason} only). Josh asked for
+#' a richer log covering every file examined, success or failure, with a
+#' per-file date/record summary. \code{sm4logs.merged_log.file} (when
+#' \code{log.file = TRUE}) now has exactly one row per file matched by
+#' \code{load.pattern}, with columns \code{$aru.name} (always set, parsed
+#' from the file name the same way as \code{sm4logs.merged}'s own
+#' \code{$aru.name}), \code{$file.name} (the file's base name, always set),
+#' \code{$filepath} (always set), \code{$load.status} (\code{"Success"} if
+#' the file had all 11 expected headers AND at least one data row,
+#' \code{"Failure"} otherwise), \code{$reason} (Josh's literal text: for a
+#' success, \code{"All headers present and observation in file"}; for a
+#' failure, \code{"no data"} (headers fine, zero rows), \code{"These
+#' headers are missing: <list>"} (>=1 row but headers missing), or
+#' \code{"no data and These headers are missing: <list>"} (both) - plus
+#' \code{"could not read file"} for a file \code{read.csv()} itself
+#' errored on, an edge case outside Josh's given reason list, added for
+#' parity with the (removed) old scheme's equivalent case), and, for a
+#' \code{"Success"} row only (\code{NA} on every \code{"Failure"} row, per
+#' Josh's explicit "all other headers = NA"): \code{$date.start}/
+#' \code{$date.end} (earliest/latest \code{$date} value in that one file,
+#' after the same \code{YYYY-MM-DD} conversion \code{sm4logs.merged} itself
+#' uses - a plain string min/max is chronologically correct here since
+#' zero-padded ISO dates sort the same as strings or as dates),
+#' \code{$date.unique} (count of distinct \code{$date} values in that
+#' file), \code{$date.range} (the number of calendar days from
+#' \code{$date.start} to \code{$date.end} inclusive - compare against
+#' \code{$date.unique} to spot gap days with no records), and
+#' \code{$records} (row count of that one file, before the
+#' package-level \code{duplicates.remove} step below, which only ever
+#' operates on the final merged \code{sm4logs.merged}, never per-file).
+#' \strong{Flagged, not in Josh's spec:} a \code{$date} value that
+#' \code{convert.date()} doesn't recognize (see "Date conversion" above)
+#' is still counted in \code{$date.unique} but excluded from the
+#' \code{$date.start}/\code{$date.end}/\code{$date.range} calculation (via
+#' an ISO-format validity check), so one malformed date value can't corrupt
+#' the file's chronological summary; no real file has been seen to trigger
+#' this. This is a full replacement of the previous \code{log.file}
+#' behavior - a workflow reading the old \code{$filepath}/\code{$reason}-
+#' only schema (skipped-files only) needs to be updated for the new
+#' 10-column, one-row-per-file schema.
 #'
 #' @examples
 #' \dontrun{
@@ -132,31 +179,58 @@ batz.merge_sm4.logfile <- function(dir.load = getwd(),
     out
   }
 
+  ## per-file log row builder (per Josh, 2026-09-22 log.file redesign) - see
+  ## @details "Follow-up, 2026-09-22" above for the full column semantics.
+  make.log.row <- function(aru.name, file.name, filepath, load.status, reason,
+                            date.start = NA_character_, date.end = NA_character_,
+                            date.unique = NA_integer_, date.range = NA_integer_,
+                            records = NA_integer_) {
+    data.frame(aru.name = aru.name, file.name = file.name,
+               date.start = date.start, date.end = date.end,
+               date.unique = date.unique, date.range = date.range,
+               records = records, load.status = load.status, reason = reason,
+               filepath = filepath, stringsAsFactors = FALSE)
+  }
+
   process.one.file <- function(f) {
+    base.name <- basename(f)
+    file.aru.name <- sub("_.*$", "", base.name)
+
     raw <- tryCatch(
       read.csv(f, stringsAsFactors = FALSE, check.names = FALSE, strip.white = TRUE),
       error = function(e) NULL
     )
-    if (is.null(raw)) return(list(data = NULL, reason = "could not read file"))
+    if (is.null(raw)) {
+      return(list(data = NULL,
+                   log = make.log.row(file.aru.name, base.name, f, "Failure", "could not read file")))
+    }
 
     ## header standardization (per Josh, 2026-09-14 project preference) -
     ## replaces the previous bare trimws(names(raw)); see @details above.
     names(raw) <- standardize.headers(names(raw))
     present <- expected.headers %in% names(raw)
-    if (!all(present)) {
-      return(list(data = NULL, reason = paste0("mismatched headers (missing: ",
-                                                paste(expected.headers[!present], collapse = ", "), ")")))
-    }
+    headers.missing <- !all(present)
+    no.data <- nrow(raw) == 0
 
-    if (nrow(raw) == 0) {
-      return(list(data = NULL, reason = "no records"))
+    if (headers.missing || no.data) {
+      ## per Josh's 2026-09-22 spec: reason text depends on which
+      ## condition(s) actually failed.
+      missing.list <- paste(expected.headers[!present], collapse = ", ")
+      reason <- if (headers.missing && no.data) {
+        paste0("no data and These headers are missing: ", missing.list)
+      } else if (headers.missing) {
+        paste0("These headers are missing: ", missing.list)
+      } else {
+        "no data"
+      }
+      return(list(data = NULL,
+                   log = make.log.row(file.aru.name, base.name, f, "Failure", reason)))
     }
 
     tmp <- raw[expected.headers]
     for (cn in names(tmp)) if (is.character(tmp[[cn]])) tmp[[cn]] <- trimws(tmp[[cn]])
 
-    base.name <- basename(f)
-    tmp$aru.name <- sub("_.*$", "", base.name)
+    tmp$aru.name <- file.aru.name
 
     tmp$date <- convert.date(tmp$date)
 
@@ -167,7 +241,28 @@ batz.merge_sm4.logfile <- function(dir.load = getwd(),
 
     tmp <- tmp[c("aru.name", expected.headers, "X", "Y")]
 
-    list(data = tmp, reason = NA_character_)
+    ## per-file date summary (per Josh, 2026-09-22 log.file redesign) - see
+    ## @details "Follow-up, 2026-09-22" above.
+    date.vals <- tmp$date
+    date.unique.n <- length(unique(date.vals))
+    iso.ok <- grepl("^[0-9]{4}-[0-9]{2}-[0-9]{2}$", date.vals) &
+      !is.na(suppressWarnings(as.Date(date.vals, format = "%Y-%m-%d")))
+    if (any(iso.ok)) {
+      date.start.val <- min(date.vals[iso.ok])
+      date.end.val   <- max(date.vals[iso.ok])
+      date.range.val <- as.integer(as.Date(date.end.val) - as.Date(date.start.val)) + 1L
+    } else {
+      date.start.val <- NA_character_
+      date.end.val   <- NA_character_
+      date.range.val <- NA_integer_
+    }
+
+    list(data = tmp,
+         log = make.log.row(file.aru.name, base.name, f, "Success",
+                             "All headers present and observation in file",
+                             date.start = date.start.val, date.end = date.end.val,
+                             date.unique = date.unique.n, date.range = date.range.val,
+                             records = nrow(tmp)))
   }
 
   all.files <- list.files(dir.load, pattern = pattern.regex(load.pattern),
@@ -183,9 +278,9 @@ batz.merge_sm4.logfile <- function(dir.load = getwd(),
   } else {
     for (f in all.files) {
       r <- process.one.file(f)
+      log.rows[[length(log.rows) + 1]] <- r$log
       if (is.null(r$data)) {
-        cat("  [skipped] ", f, " - ", r$reason, "\n", sep = "")
-        log.rows[[length(log.rows) + 1]] <- data.frame(filepath = f, reason = r$reason, stringsAsFactors = FALSE)
+        cat("  [skipped] ", f, " - ", r$log$reason, "\n", sep = "")
       } else {
         cat("  loaded ", f, " (", nrow(r$data), " rows)\n", sep = "")
         sm4logs.merged <- if (is.null(sm4logs.merged)) r$data else rbind(sm4logs.merged, r$data)
@@ -196,7 +291,12 @@ batz.merge_sm4.logfile <- function(dir.load = getwd(),
   sm4logs.merged_log.file <- if (length(log.rows) > 0) {
     do.call(rbind, log.rows)
   } else {
-    data.frame(filepath = character(0), reason = character(0), stringsAsFactors = FALSE)
+    data.frame(aru.name = character(0), file.name = character(0),
+               date.start = character(0), date.end = character(0),
+               date.unique = integer(0), date.range = integer(0),
+               records = integer(0), load.status = character(0),
+               reason = character(0), filepath = character(0),
+               stringsAsFactors = FALSE)
   }
 
   if (is.null(sm4logs.merged)) {
