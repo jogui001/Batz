@@ -58,20 +58,17 @@ or is blank for that row).}
 token in the saved file name (see \code{project.name} above); falls
 back to the literal \code{"heatmap"} when left blank - same judgment
 call as \code{\link{batz.plotactivity_daily.count}}'s own
-\code{site.label} (see that function's own \code{@details}). A
-non-blank value gets a \code{"-heatmap"} suffix appended before it
-reaches the file name - see Details, "Filename collision, found and
-fixed while testing".}
+\code{site.label} (see that function's own \code{@details}).}
 
 \item{dir.save}{Character, default \code{getwd()}. Directory the
 generated PNG is saved into.}
 }
 \value{
 Invisibly, a list with \code{data} (the complete night x bin
-  grid actually plotted: \code{$monnight.date}, \code{$bin.index},
-  \code{$n} - one row per night per bin, zero-filled where a night had no
-  detections in that bin) and \code{ggplot} (the ggplot object, only
-  populated when \code{ggplot2} is available).
+grid actually plotted: \code{$monnight.date}, \code{$bin.index},
+\code{$n} - one row per night per bin, zero-filled where a night had no
+detections in that bin) and \code{ggplot} (the ggplot object, only
+populated when \code{ggplot2} is available).
 }
 \description{
 Given per-detection data with a monitoring-night date and a time-of-night
@@ -165,10 +162,33 @@ month tick by default (\code{"\%b"}) - simpler and safe for any dataset,
 at the cost of a busier X axis on a long, densely-sampled one. A minor
 (unlabeled) tick still marks every month in between, same as the
 original script.
-}
-\seealso{
-\code{\link{batz.plotactivity_daily.count}}, whose own
-  \code{$data} return value is the natural \code{data} input here.
+
+\strong{Header check for \code{data} now canonicalizes casing/separator
+differences (per Josh, 2026-09-22 - auditing and extending the
+2026-09-21 header-canonicalization fix package-wide).} The required-header
+check for \code{data} previously did a literal \code{setdiff()} against
+\code{date.col}/\code{time.col}, which meant a real, present column would
+be falsely reported "missing" if it round-tripped through anything that
+changes case or separator style (e.g. a CSV save/reload, or
+\code{standardize.headers()} itself) before reaching this function - even
+though \code{data} is still expected to be the OUTPUT of an upstream
+\code{batz} function (see "Header standardization" above), just not
+necessarily byte-for-byte identical to it anymore. This now goes through
+the shared \code{canonicalize.headers()} helper instead (the same fix
+already applied to \code{\link{batz.generate_plotframe.bat}}/
+\code{\link{batz.plotdetections_first.last}}/
+\code{\link{batz.plotactivity_observations}} on 2026-09-21): it matches
+\code{data}'s real columns against \code{date.col}/\code{time.col}
+tolerant of case/separator differences, then renames only the MATCHED
+columns of a local copy back to this function's own \code{date.col}/
+\code{time.col} spelling before anything downstream touches them by name -
+\code{data} is deliberately NOT run through \code{standardize.headers()}
+wholesale, since that would rename every column and break this function's
+expectation of specific dot-style names. Separately, when both
+\code{aes.default} and \code{data} are missing headers in the same call,
+the combined error message now joins the two frames' complaints with a
+blank line (\code{"\n\n"}) rather than a single newline, matching the
+blank-line convention already used elsewhere in this package.
 }
 \examples{
 \dontrun{
@@ -183,4 +203,8 @@ heatmap.result <- batz.plotactivity_heatmap(
 heatmap.result$ggplot
 }
 
+}
+\seealso{
+\code{\link{batz.plotactivity_daily.count}}, whose own
+\code{$data} return value is the natural \code{data} input here.
 }

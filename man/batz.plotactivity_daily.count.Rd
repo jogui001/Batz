@@ -17,7 +17,8 @@ batz.plotactivity_daily.count(
   aes.style = "overide.value",
   site.label = "",
   write.csv.data = FALSE,
-  dir.save = getwd()
+  dir.save = getwd(),
+  snake_case = FALSE
 )
 }
 \arguments{
@@ -52,8 +53,10 @@ counting/plotting.}
 \item{date.start, date.end}{A Date, or a character string in
 \code{"YYYY-MM-DD"}/\code{"MM/DD/YYYY"} form, or \code{NULL} (the
 default for both). When either is \code{NULL}, both default to July 1
-- December 31 of \code{data}'s own earliest monitoring-night year -
-see Details, "Default date window", for why and how to override it.}
+\itemize{
+\item December 31 of \code{data}'s own earliest monitoring-night year -
+see Details, "Default date window", for why and how to override it.
+}}
 
 \item{aes.default}{A data frame of default plot settings, one row per
 parameter (e.g. \code{plotopts_dailycount.csv}). Must have
@@ -78,10 +81,10 @@ token in the saved file name (see \code{project.name} above); falls
 back to the literal \code{"dailycount"} when left blank. Unlike this
 package's \code{fig.list}-driven plot functions, this function has no
 natural per-call "site" concept of its own (one call plots one dataset)
-- \strong{a judgment call, flagged}: pass e.g. an ARU/site name here if
-you want it in the saved file name. A non-blank value gets a
-\code{"-dailycount"} suffix appended before it reaches the file name -
-see Details, "Filename collision, found and fixed while testing".}
+\itemize{
+\item \strong{a judgment call, flagged}: pass e.g. an ARU/site name here if
+you want it in the saved file name.
+}}
 
 \item{write.csv.data}{Logical, default \code{FALSE}. Also write the
 filtered/prepared \code{data} (see Value, \code{$data}) to a CSV in
@@ -92,15 +95,29 @@ convention elsewhere.}
 
 \item{dir.save}{Character, default \code{getwd()}. Directory the
 generated PNG (and CSV, if \code{write.csv.data = TRUE}) is saved into.}
+
+\item{snake_case}{Logical, default \code{FALSE}. Added 2026-09-22, per
+Josh's request to audit and extend the snake_case output option
+package-wide (see \code{\link{batz.generate_plotframe.bat}}'s sibling
+parameter). Controls only the CSV written when \code{write.csv.data =
+TRUE} - applied to a copy of \code{data} right before that write, never
+to the \code{$data} this function returns (see Value; that object still
+needs its usual dot-separated names, e.g. \code{$monnight.date}, to
+chain straight into \code{\link{batz.plotactivity_heatmap}} per
+\code{@seealso} below). \code{FALSE} (default) leaves the written CSV's
+headers exactly as before. \code{TRUE} runs the written copy's column
+names through \code{standardize.headers()} first. See Details, "A
+near-no-op for most columns", for why this mostly only affects one
+column here.}
 }
 \value{
 Invisibly, a list with \code{data} (the filtered per-detection
-  data frame, with \code{$time} and \code{$monnight.date} added -
-  suitable as the \code{data} input to
-  \code{\link{batz.plotactivity_heatmap}}), \code{daily} (the aggregated
-  per-night data frame: \code{$monnight.date}, \code{$obs}), and
-  \code{ggplot} (the ggplot object, only populated when \code{ggplot2}
-  is available).
+data frame, with \code{$time} and \code{$monnight.date} added -
+suitable as the \code{data} input to
+\code{\link{batz.plotactivity_heatmap}}), \code{daily} (the aggregated
+per-night data frame: \code{$monnight.date}, \code{$obs}), and
+\code{ggplot} (the ggplot object, only populated when \code{ggplot2}
+is available).
 }
 \description{
 Given a raw, per-detection vetted-acoustics export (one row per call/
@@ -211,11 +228,43 @@ function-specific suffix to the non-blank \code{site.label} token
 (\code{"-dailycount"} here, \code{"-heatmap"} in the sibling function), so
 the two functions' saved files can never collide even when every other
 naming input matches exactly.
+
+\strong{Added 2026-09-22, per Josh's request to audit and extend the
+snake_case output option package-wide - "A near-no-op for most columns,"
+flagged rather than skipped.} A recent audit flagged this function,
+alongside \code{\link{batz.merge_vetted.acoustics}}, as producing a
+CSV/data-frame output without the \code{snake_case} escape hatch already
+shipped in \code{\link{batz.generate_plotframe.bat}} (2026-09-21).
+Unlike that function's \code{plfr.batsummary} (whose whole schema is this
+package's own invented dot-separated names), the object written here by
+\code{write.csv.data} is mostly \code{data}'s own EXTERNAL, already-
+standardized-on-receipt headers (see "Header standardization" above -
+those already come back lowercase/underscored via
+\code{standardize.headers()}, e.g. \code{spp.id}'s own default
+\code{"kpauto"}/\code{filename.col}'s default \code{"filename"}/
+\code{groupby.date}'s default \code{"monnight"} are all single words
+with nothing for a second pass of \code{standardize.headers()} to
+change) plus three columns this function itself adds - \code{$time},
+\code{$monnight.date}, \code{$obs}. Of those three, only
+\code{$monnight.date} actually contains this package's dot-separated
+convention (\code{$time}/\code{$obs} are single words already). So for
+the realistic default-column-name case, \code{snake_case = TRUE} here
+changes exactly one header - \code{monnight.date} -> \code{monnight_date}
+\itemize{
+\item not a true no-op, but close to one; implemented anyway (rather than
+skipped) for consistency and package-wide API uniformity, per Josh's
+explicit request to add it everywhere a data-frame/CSV output uses this
+package's own dot-style names, however small the practical effect. It is
+applied only to the copy of \code{data} written to \code{dir.save} as a
+CSV, immediately before that \code{write.csv()} call - NOT to the
+\code{$data} element of this function's own return value, since that
+object is documented (see Value/\code{@seealso}) to feed straight into
+\code{\link{batz.plotactivity_heatmap}}'s own \code{data} argument, which
+expects \code{$monnight.date} by its usual dot-separated name; renaming
+the returned object too would silently break that chaining contract for
+no benefit (the CSV file is the only "external output" \code{write.csv.
+data} is actually about).
 }
-\seealso{
-\code{\link{batz.plotactivity_heatmap}}, which takes this
-  function's own \code{$data} return value (or any data frame shaped the
-  same way) as its own \code{data} input.
 }
 \examples{
 \dontrun{
@@ -230,6 +279,19 @@ batz.plotactivity_heatmap(
   data = result$data,
   aes.default = read.csv("plotopts_heatmap.csv", stringsAsFactors = FALSE)
 )
+
+# snake_case the written CSV (write.csv.data = TRUE) without touching
+# the returned $data object used above to chain into the heatmap
+result <- batz.plotactivity_daily.count(
+  data = readxl::read_excel("mine_only.xlsx"),
+  aes.default = read.csv("plotopts_dailycount.csv", stringsAsFactors = FALSE),
+  write.csv.data = TRUE, snake_case = TRUE
+)
 }
 
+}
+\seealso{
+\code{\link{batz.plotactivity_heatmap}}, which takes this
+function's own \code{$data} return value (or any data frame shaped the
+same way) as its own \code{data} input.
 }

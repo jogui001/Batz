@@ -9,7 +9,8 @@ batz.merge_temp.logger(
   load.pattern = c("*templog.csv", "*templog.meta.csv"),
   dir.sub = FALSE,
   dir.save = getwd(),
-  write.output = TRUE
+  write.output = TRUE,
+  snake_case = FALSE
 )
 }
 \arguments{
@@ -43,6 +44,21 @@ defaults to \code{getwd()} for consistency across the package.)}
 \code{templog.merged.csv} and \code{templog.notes.csv} into
 \code{dir.save} (with \code{$rh} rounded to 3 decimal places in the
 written CSV only).}
+
+\item{snake_case}{Logical, default \code{FALSE}. Added 2026-09-22, per
+Josh's request to audit and extend the snake_case output option
+package-wide (see \code{\link{batz.generate_plotframe.bat}}, the first
+function this was added to). Controls only \code{templog.merged}'s/
+\code{templog.notes}'s OWN output column names (and, when
+\code{write.output = TRUE}, the columns of the CSVs written to disk),
+applied as the very last step before either is written/returned.
+\code{FALSE} (default) keeps this function's normal dot-separated
+output column names (\code{$date.time}, \code{$temp.dry.c}, ...)
+exactly as always. \code{TRUE} runs every output column name through
+\code{standardize.headers()} instead (e.g. \code{$date.time} ->
+\code{$date_time}, \code{$temp.dry.c} -> \code{$temp_dry_c}) - for a
+caller who specifically wants a snake_case CSV/data frame out of this
+function, without having to convert it themselves afterward.}
 }
 \value{
 Invisibly, a list with two data frames:
@@ -56,6 +72,8 @@ standardization" above).}
 \code{$date.end}, \code{$temp.type}, \code{$rows.in},
 \code{$rows.out}, \code{$rows.trimmed}, \code{$notes}.}
 }
+(or their snake_case equivalents if \code{snake_case = TRUE} - see
+that parameter above).
 }
 \description{
 Merges raw \verb{*templog.csv} datalogger exports (heterogeneous formats -
@@ -67,7 +85,8 @@ deployment/recovery window.
 }
 \details{
 \strong{Header standardization (per Josh, 2026-09-14 project preference)
-- real, documented output-schema change.} \code{templog.meta.csv}'s own
+\itemize{
+\item real, documented output-schema change.} \code{templog.meta.csv}'s own
 headers are a literal, uninvented copy of that file's real column text
 (not a \code{batz}-invented shorthand), so they are now run through the
 shared package helper \code{standardize.headers()} (trim whitespace,
@@ -89,7 +108,7 @@ the join key) is appended verbatim onto \code{templog.merged} (see
 below), this cascades into a real, visible change in that returned data
 frame's own column names. \strong{This does NOT affect \code{
 templog.merged}'s/\code{templog.notes}'s own \code{$serial.num} column}
-- that one is this function's own INVENTED identifier, parsed from each
+\item that one is this function's own INVENTED identifier, parsed from each
 raw file's NAME (its leading 8-digit serial), not a header loaded from
 any file, so it keeps its existing dot-separated name per this
 project's ordinary output convention. \strong{Anyone with a saved
@@ -98,9 +117,11 @@ it with the new underscore spellings (or simply let it load as-is,
 since \code{standardize.headers()} converts either spelling to the same
 result), and update any downstream script that reads
 \code{templog.merged} by the old dotted meta-column names.}
+}
 
 RH is gated strictly on the matched \code{templog.meta.csv} \code{$logger_type}
-- not on header text or any other heuristic:
+\itemize{
+\item not on header text or any other heuristic:
 \itemize{
 \item \code{logger_type == "H"}: \code{$temp.wet.c} keeps the real
 column-4 reading, and \code{$rh} is calculated from dry/wet bulb.
@@ -109,6 +130,7 @@ both forced to \code{NA}, even if the raw file has a second
 temperature column.
 \item No confident meta match (missing, ambiguous, or no meta.csv at
 all): treated the same as \code{"T"} (both \code{NA}).
+}
 }
 
 The meta join uses ONLY \code{$serial} (the file's real 8-digit serial,
@@ -150,12 +172,31 @@ when unlabeled, date.end = max(), blank-row cleanup scope, RH formula,
 and the "no confident meta match = treat like T" default). Those
 assumptions apply here unchanged and should be reviewed before relying on
 this in production.
+
+\strong{Follow-up, 2026-09-22, per Josh's request to audit and extend the
+snake_case output option package-wide:} added a \code{snake_case}
+parameter (default \code{FALSE}, matching
+\code{\link{batz.generate_plotframe.bat}}'s own). When \code{TRUE}, both
+\code{templog.merged} and \code{templog.notes} have their own output
+column names run through \code{standardize.headers()} as the very last
+step before they're written to CSV (when \code{write.output = TRUE}) and
+returned - e.g. \code{$date.time} becomes \code{$date_time},
+\code{$temp.dry.c} becomes \code{$temp_dry_c}, \code{$serial.num}
+becomes \code{$serial_num}. This is unrelated to, and does not change,
+the existing \code{templog.meta.csv} header standardization described
+above (which already always runs, regardless of this parameter, on the
+loaded meta file's own real headers before they're matched/joined) -
+\code{snake_case} only affects the final output column names of this
+function's own two returned/written data frames.
 }
 \examples{
 \dontrun{
 result <- batz.merge_temp.logger(dir.load = "path/to/data", dir.sub = TRUE)
 result$templog.merged
 result$templog.notes
+
+# snake_case output headers instead of this function's usual dot-style
+result <- batz.merge_temp.logger(dir.load = "path/to/data", snake_case = TRUE)
 }
 
 }
