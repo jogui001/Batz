@@ -78,11 +78,11 @@ this reverses that for consistency.)}
 }
 \value{
 A data frame, \code{plfr.batsummary}, with columns
-\code{$spp.id}, \code{$date}, \code{$group}, \code{$groupedby},
-\code{$groupby.date}, \code{$sunregion}, \code{$obs},
-\code{$mins2.noon.min}, \code{$mins2.noon.max}, \code{$vetting.type}.
-See \strong{$group vs $groupedby} in Details for what
-\code{$group}/\code{$groupedby}/\code{$groupby.date} each hold.
+  \code{$spp.id}, \code{$date}, \code{$group}, \code{$groupedby},
+  \code{$groupby.date}, \code{$sunregion}, \code{$obs},
+  \code{$mins2.noon.min}, \code{$mins2.noon.max}, \code{$vetting.type}.
+  See \strong{$group vs $groupedby} in Details for what
+  \code{$group}/\code{$groupedby}/\code{$groupby.date} each hold.
 }
 \description{
 Given a fully-assembled data frame of vetted bat-acoustic detections
@@ -97,46 +97,43 @@ joins its \code{$sunregion} column onto \code{data} itself (see
 \code{data} does NOT need to already have \code{$sunregion}.
 }
 \details{
-\strong{Required input columns.} \code{data} must have every one of:
+\strong{Header standardization (per Josh, 2026-09-14 project preference) -
+two different things in this function, treated differently.} This
+function's \code{required.headers} list below (\code{filename},
+\code{date.mon}, \code{manid}, ... \code{call.datetime}) is \code{data}'s
+own already-established \code{batz} output schema - every one of those
+names comes straight out of \code{\link{batz.merge_vetted.acoustics}}'s
+own dot-separated, \code{batz}-invented column names, not raw text
+copied from some loaded file's real header row. Renaming these to
+snake_case would break the upstream/downstream contract with every
+function that produces or consumes them by exact name, so they are
+deliberately left untouched - out of scope for this preference, the
+same reasoning already applied elsewhere in this package. The
+\code{*arulist.csv} file loaded in \strong{$sunregion lookup} below is
+different: those are real, loaded-from-disk file headers, so they now
+go through the shared package helper \code{standardize.headers()} (trim
+whitespace, collapse non-alphanumeric runs to underscores, lowercase),
+replacing this function's prior local, more lenient ad hoc normalizer
+(which stripped every non-alphanumeric character with no separator
+instead of substituting an underscore). This is a no-op in practice
+against every real \code{WTG.arulist.csv} checked so far - \code{$aru}/
+\code{$sunregion} are already single lowercase words with nothing for
+either normalizer to differ on - but it brings this function's
+file-loading step in line with every other \code{batz} function that
+loads a file, and guards against a future arulist file whose headers
+pick up stray whitespace, mixed case, or punctuation.
+
+\strong{Required input columns.} `data` must have every one of:
 \code{filename}, \code{date.mon}, \code{manid}, \code{autoid.kp},
 \code{autoid.sb}, \code{lat}, \code{serial}, \code{lon},
 \code{aru.name}, \code{date}, \code{time}, \code{call.datetime}. All
 twelve come straight out of \code{\link{batz.merge_vetted.acoustics}}
-\itemize{
-\item no renaming needed (an earlier version of this function required
+- no renaming needed (an earlier version of this function required
 \code{$call.time} instead, which didn't match that function's own
 \code{$call.datetime} output column; standardized on
 \code{$call.datetime} across both, per Josh, 2026-08-26).
 \code{$sunregion} is deliberately NOT in this list - see
 \strong{$sunregion lookup} below.
-}
-
-\strong{Header standardization (per Josh, 2026-09-14 project
-preference) - two different things in this function, treated
-differently.} This function's \code{required.headers} list above
-(\code{filename}, \code{date.mon}, \code{manid}, ... \code{call.datetime})
-is \code{data}'s own already-established \code{batz} output schema -
-every one of those names comes straight out of
-\code{\link{batz.merge_vetted.acoustics}}'s own dot-separated,
-\code{batz}-invented column names, not raw text copied from some
-loaded file's real header row. Renaming these to snake_case would
-break the upstream/downstream contract with every function that
-produces or consumes them by exact name, so they are deliberately left
-untouched - out of scope for this preference, the same reasoning
-already applied elsewhere in this package. The \code{*arulist.csv}
-file loaded in \strong{$sunregion lookup} below is different: those
-are real, loaded-from-disk file headers, so they now go through the
-shared package helper \code{standardize.headers()} (trim whitespace,
-collapse non-alphanumeric runs to underscores, lowercase), replacing
-this function's prior local, more lenient ad hoc normalizer (which
-stripped every non-alphanumeric character with no separator instead of
-substituting an underscore). This is a no-op in practice against every
-real \code{WTG.arulist.csv} checked so far - \code{$aru}/\code{$sunregion}
-are already single lowercase words with nothing for either normalizer
-to differ on - but it brings this function's file-loading step in line
-with every other \code{batz} function that loads a file, and guards
-against a future arulist file whose headers pick up stray whitespace,
-mixed case, or punctuation.
 
 \strong{$sunregion lookup.} \code{$sunregion} isn't produced by
 \code{\link{batz.merge_vetted.acoustics}} (or any upstream
@@ -149,21 +146,21 @@ running its headers through \code{standardize.headers()} - see
 \strong{Header standardization} above) both an \code{$aru} and a
 \code{$sunregion} column - a file missing either is skipped with a
 \code{message()}, not a hard stop, in case other unrelated files happen
-to also match \code{load.pattern}. Every valid file's
-\code{$aru}/\code{$sunregion} columns are row-bound together, then
-joined onto \code{data} by matching \code{data$aru.name} against the
-arulist's \code{$aru} (always \code{$aru.name} specifically, never
-whatever \code{groupby} is set to - \code{groupby} can be overridden to
-an unrelated column like \code{"serial"} that wouldn't correspond to
-the arulist's \code{$aru} values at all). Any \code{$aru.name} value
-with no match in the loaded arulist gets \code{NA} for
-\code{$sunregion}, with a \code{warning()} listing every such value
-(not a hard stop - matches this function's existing tolerant-but-vocal
-style elsewhere, e.g. \code{trim.noise}/\code{trim.noid}). No matching
-file found at all, or files found but none with the right columns, IS
-a hard stop - there'd be no way to populate \code{$sunregion} at all.
-Any \code{$sunregion} value already present in the \code{data} passed
-in is overwritten by this fresh join, not preserved.
+to also match \code{load.pattern}. Every valid file's \code{$aru}/
+\code{$sunregion} columns are row-bound together, then joined onto
+\code{data} by matching \code{data$aru.name} against the arulist's
+\code{$aru} (always \code{$aru.name} specifically, never whatever
+\code{groupby} is set to - \code{groupby} can be overridden to an
+unrelated column like \code{"serial"} that wouldn't correspond to the
+arulist's \code{$aru} values at all). Any \code{$aru.name} value with no
+match in the loaded arulist gets \code{NA} for \code{$sunregion}, with a
+\code{warning()} listing every such value (not a hard stop - matches
+this function's existing tolerant-but-vocal style elsewhere, e.g.
+\code{trim.noise}/\code{trim.noid}). No matching file found at all, or
+files found but none with the right columns, IS a hard stop - there'd
+be no way to populate \code{$sunregion} at all. Any \code{$sunregion}
+value already present in the \code{data} passed in is overwritten by
+this fresh join, not preserved.
 
 \strong{Steps.} If any required header is missing, stops immediately
 and lists every missing header by name. If \code{duplicates.remove =
@@ -295,8 +292,7 @@ matching style already used by
 \code{TRUE} here (searching subdirectories by default) rather than that
 function's \code{FALSE}, per Josh's explicit spec for this update.
 \code{$sunregion} is REMOVED from the required-input-columns list above
-\itemize{
-\item the previous entry (directly above this one) still describes it as
+- the previous entry (directly above this one) still describes it as
 required because that was true until this change; it no longer is. See
 the new \strong{$sunregion lookup} paragraph, near the top of Details,
 for the full join mechanism (skip-with-message for an arulist file
@@ -321,7 +317,6 @@ resolves to \code{"penobscotbay"}, matching the arulist's own values
 exactly, and a synthetic unmatched \code{$aru.name} correctly triggers
 the new unmatched-value warning with \code{$sunregion = NA}. Full
 dev-script test suite re-run, no regressions.
-}
 
 \strong{Follow-up, 2026-08-28, per Josh: function and two parameters
 renamed; three new/changed output columns added.} Renamed

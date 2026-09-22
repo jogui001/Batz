@@ -32,7 +32,7 @@
 #' @param header.match Logical, default \code{FALSE}. If \code{TRUE}, every
 #'   file - not just ones sharing a file name with something already loaded
 #'   - has its column-name set compared against every already-loaded plain
-#'   data frame (in the order those were created); if one matches 100\%
+#'   data frame (in the order those were created); if one matches 100%
 #'   (same columns, order doesn't matter), the new file is merged into THAT
 #'   object instead of becoming its own. Only ever applies to plain
 #'   single-sheet data frames - a multi-sheet \code{.xlsx}-derived list is

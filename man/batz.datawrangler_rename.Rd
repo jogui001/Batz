@@ -66,12 +66,12 @@ unchanged. Requires \code{data} to be a data frame (errors otherwise).}
 }
 \value{
 If \code{headers.rename = TRUE}, \code{data} unchanged except for
-its column names. Otherwise: if \code{data} is a data frame, a data
-frame of the same shape and column names, with every value recoded
-(columns are returned as character vectors); if \code{data} is a vector,
-a character vector of the same length, with values recoded. The four
-diagnostic arguments only print to the console - they never change what
-is returned.
+  its column names. Otherwise: if \code{data} is a data frame, a data
+  frame of the same shape and column names, with every value recoded
+  (columns are returned as character vectors); if \code{data} is a vector,
+  a character vector of the same length, with values recoded. The four
+  diagnostic arguments only print to the console - they never change what
+  is returned.
 }
 \description{
 Recodes every element of a vector, or every element of every column of a
@@ -85,8 +85,7 @@ instead of recoding the data frame's contents.
 }
 \details{
 \strong{Header standardization (per Josh, 2026-09-14 project preference)
-\itemize{
-\item deliberately NOT applied automatically here, flagged for review.} The
+- deliberately NOT applied automatically here, flagged for review.} The
 project-wide preference is that headers coming from a loaded file or an
 externally-supplied data frame are run through \code{standardize.headers()}
 (trim whitespace, collapse non-alphanumeric runs to underscores,
@@ -107,7 +106,6 @@ typically already standardized upstream (e.g. by
 see its own documentation); if you need standardized headers AND a custom
 rename on top, call \code{standardize.headers()} yourself first and build
 \code{recode.table}'s first column against the standardized spellings.
-}
 
 Matching and replacement are done on the character representation of
 values (\code{as.character}). A value in \code{data} (or, in

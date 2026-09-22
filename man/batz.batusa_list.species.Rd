@@ -4,17 +4,9 @@
 \alias{batz.batusa_list.species}
 \title{List bat species found in given US states/territories, or the states where given bat species are found}
 \usage{
-batz.batusa_list.species(
-  data,
-  grammar.dash = TRUE,
-  statename.format.out = "code2",
-  batname.format.out = "full",
-  bat.code = "code4",
-  table.type = "state",
-  symbol_presence.absence = c("*", "-"),
-  phonic.group = TRUE,
-  species.extirpated = TRUE
-)
+batz.batusa_list.species(data, grammar.dash = TRUE, statename.format.out = "code2",
+  batname.format.out = "full", bat.code = "code4", table.type = "state",
+  symbol_presence.absence = c("*", "-"), phonic.group = TRUE, species.extirpated = TRUE)
 }
 \arguments{
 \item{data}{A vector, or a data frame, of bat species identifiers and/or
@@ -31,8 +23,8 @@ keeps hyphens as written in the reference tables; \code{FALSE} replaces
 every hyphen in an output species/state label with a space instead.}
 
 \item{statename.format.out}{Character, default \code{"code2"}. How states are
-labeled in the output: \code{"code2"} (2-letter code), \code{"official.name"},
-or \code{"short.name"}.}
+labeled in the output: \code{"code2"} (2-letter code),
+\code{"official.name"}, or \code{"short.name"}.}
 
 \item{batname.format.out}{Character, default \code{"full"}. How species are
 labeled in the output's \code{"Bat Species"} field:
@@ -48,9 +40,8 @@ the separate \code{"Species Code"} column: \code{"code4"},
 \code{"code6"}, or \code{"none"} (omits the column entirely).}
 
 \item{table.type}{Character, default \code{"state"}. The output table's
-shape:
-\code{"state"} (matches \code{"batlist model1.csv"}) - one row per
-(state, species) PRESENT pair (a species absent from a given state
+shape: \code{"state"} (matches \code{"batlist model1.csv"}) - one row
+per (state, species) PRESENT pair (a species absent from a given state
 simply has no row for that state). Columns, in order: \code{"State"},
 \code{"Bat Species"}, \code{"Species Code"} (if \code{bat.code !=
 "none"}), \code{"Federal"}, \code{"State"} (again - see Details),
@@ -63,8 +54,8 @@ per \code{symbol_presence.absence} (see Details).}
 
 \item{symbol_presence.absence}{Character vector of length 2, default
 \code{c("*", "-")}. Used for a species that is present in a state but
-not listed there (symbol 1) or absent from a state entirely (symbol
-2). A LISTED species' cell/column shows its listing status instead of
+not listed there (symbol 1) or absent from a state entirely (symbol 2).
+A LISTED species' cell/column shows its listing status instead of
 symbol 1 - see Details.}
 
 \item{phonic.group}{Logical, default \code{TRUE}. Adds a
@@ -81,10 +72,10 @@ a one-time notice (not an error).}
 }
 \value{
 A data frame - one row per (state, species) present pair
-(\code{table.type = "state"}) or one row per species
-(\code{table.type = "matrix"}), with column headers matching Josh's own
-model files literally (not this project's usual \code{$collum.name}
-dot-convention - a deliberate, spec-driven exception).
+  (\code{table.type = "state"}) or one row per species
+  (\code{table.type = "matrix"}), with column headers matching Josh's own
+  model files literally (not this project's usual \code{$collum.name}
+  dot-convention - a deliberate, spec-driven exception).
 }
 \description{
 Given a vector or data frame containing any mix of bat species identifiers

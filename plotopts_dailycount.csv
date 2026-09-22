@@ -1,0 +1,16 @@
+category,parameter,default.value,overide.value,notes
+Axes,y.custom,0;5;30;200;1200;7500,,"Semicolon-separated raw-count Y-axis break values, log1p-spaced on the axis (see @details, 'Aggregation and Y-axis scale')."
+Axes,xaxe.date.format,%b,,strftime-style format for the X-axis month labels.
+Axes,xaxe.date.buffer.days,0.5,,"Padding added to both ends of the plotted X-axis date range, so the boundary day's own bar doesn't get clipped (see @details, 'Boundary-day bar clipping')."
+Bars,bar.fill,grey50,,Bar fill color.
+Bars,bar.width,1,,geom_col() bar width (in date units - 1 = one full day wide).
+Text,plot.title.size,13,,
+Text,axis.title.size,13,,
+Text,axis.text.size,11,,
+Theme,panel.border.linewidth,0.5,,Also used for the axis.line linewidth.
+Save,ggsave.dpi,150,,
+Save,ggsave.units,in,,
+Save,ggsave.width.pad,0,,
+Save,ggsave.height.pad,0,,
+Save,plot.width,8,,
+Save,plot.height,5,,

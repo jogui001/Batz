@@ -94,6 +94,44 @@
 #' match those standardized spellings; no such loading step exists inside
 #' this function itself.
 #'
+#' \strong{Follow-up, 2026-09-21, per Josh: header casing/separator
+#' mismatches are now tolerated here too, via a shared
+#' \code{canonicalize.headers()} helper.} The reasoning immediately above
+#' (this function does no raw-header-loading step of its own) still
+#' explains why \code{standardize.headers()} itself was never applied to
+#' \code{data}/\code{fig.list}/\code{suntimes}/\code{aes.default} wholesale
+#' - but in practice, whatever a caller actually hands this function may
+#' have passed back through a loading/reload step somewhere upstream (a
+#' save-to-CSV-and-reload, for instance) that DOES run
+#' \code{standardize.headers()} on its own raw headers, at which point a
+#' column this function expects to find as e.g. \code{"date.mon"} might
+#' actually arrive as \code{"date_mon"} - and a literal \code{setdiff()}
+#' against this function's own dot-separated required-header constants
+#' would report it (and everything else differing only in separator style)
+#' as entirely missing, even though the data is really all there.
+#' \code{canonicalize.headers()} (see
+#' \code{claude/batz.util_standardize.headers.R}) fixes this by
+#' standardizing both sides (the incoming data frame's own headers, and the
+#' required-header list this function is looking for) purely to MATCH
+#' columns up, then renaming every matched column - IN A LOCAL COPY ONLY,
+#' never touching the caller's own \code{data}/\code{suntimes}/
+#' \code{fig.list}/\code{aes.default} object - back to this function's own
+#' canonical (dot-separated) spelling, regardless of which casing/separator
+#' style it actually arrived in. Applied here to all four input frames (see
+#' the header-check code below). This function has no data-frame/CSV/xlsx
+#' output of its own (it saves PNG files and returns an invisible list of
+#' ggplot objects/prepared data, never a data frame or spreadsheet the
+#' caller would want re-cased), so no new \code{snake_case =} output-header
+#' option applies here - see \code{\link{batz.generate_plotframe.bat}}'s own
+#' \code{@details} for where that option was added instead, since it's the
+#' one of these three sibling functions that actually returns/writes a data
+#' frame. Also per this same follow-up: when more than one of
+#' \code{data}/\code{suntimes}/\code{fig.list}/\code{aes.default} is
+#' missing headers in a single call, each frame's own "... is missing these
+#' headers: ..." message is now joined with a BLANK line between them
+#' (\code{"\n\n"}, not a single \code{"\n"}) for readability, matching the
+#' identical fix made in \code{\link{batz.plotdetections_first.last}}.
+#'
 #' \strong{Iteration 1 ("basic layout"), built 2026-08-28 per Josh's own
 #' framing that this function would be developed iteratively, copying the
 #' structure/steps of \code{batz.plotdetections_first.last()} and modifying
@@ -543,13 +581,17 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
   ## Details/Follow-up 2026-08-28) rather than being a fixed, hardcoded
   ## column data must always have.
   ##
-  ## Header standardization (per Josh, 2026-09-14 project preference): NOT
-  ## applied to any of the five *.REQUIRED*/DATA.REQUIRED constants below -
-  ## `data`/`fig.list`/`suntimes`/`aes.default` are already-loaded data
-  ## frames handed in by the caller (this function loads no file itself),
-  ## and these names are this function's own interface contract with those
-  ## upstream functions'/files' already-established output schemas, not raw
-  ## loaded headers. See @details "Header standardization" above.
+  ## Header standardization (per Josh, 2026-09-14 project preference):
+  ## standardize.headers() itself is still NOT applied directly to any of
+  ## the five *.REQUIRED*/DATA.REQUIRED constants below, or renamed onto
+  ## `data`/`fig.list`/`suntimes`/`aes.default` wholesale - these names
+  ## remain this function's own interface contract with those upstream
+  ## functions'/files' already-established output schemas, not raw loaded
+  ## headers. See @details "Header standardization" above. As of the
+  ## 2026-09-21 follow-up below, though, canonicalize.headers() IS used
+  ## (further down, where the header check happens) so that a column
+  ## arriving in a different casing/separator style still matches
+  ## correctly - see @details "Follow-up, 2026-09-21" above.
   DATA.REQUIRED <- c("spp.id", "date", "obs")
   SUNTIMES.REQUIRED <- c("aru", "date", "date.mon", "sunregion", "time.zone",
                           "sunregion.type", "schedual1", "schedual2", "suns",
@@ -577,16 +619,22 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     "plot.width", "plot.height"
   )
 
-  check.headers <- function(df, required, label) {
-    missing <- setdiff(required, names(df))
-    if (length(missing) > 0) {
-      return(sprintf("%s is missing these headers: %s", label, paste(missing, collapse = ", ")))
+  # canonicalize.headers()/standardize.headers() - see
+  # claude/batz.util_standardize.headers.R and @details "Follow-up,
+  # 2026-09-21" above: standardizes both a data frame's own headers and a
+  # required-header list purely to MATCH columns, then renames every
+  # matched column, IN A LOCAL COPY ONLY, to the required list's own
+  # spelling - never mutates the caller's own data/suntimes/fig.list/
+  # aes.default object, and never changes anything this function returns.
+  missing.msg <- function(canon, label) {
+    if (length(canon$missing) > 0) {
+      return(sprintf("%s is missing these headers: %s", label, paste(canon$missing, collapse = ", ")))
     }
     NULL
   }
 
   check.parameters <- function(df, required, label) {
-    if (!("parameter" %in% names(df))) return(NULL)  # already reported by check.headers above
+    if (!("parameter" %in% names(df))) return(NULL)  # already reported by missing.msg above
     missing <- setdiff(required, df$parameter)
     if (length(missing) > 0) {
       return(sprintf("%s is missing these required $parameter rows: %s - it may be an older copy missing settings added since it was last saved",
@@ -605,20 +653,30 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     NULL
   }
 
+  data.canon        <- canonicalize.headers(data, DATA.REQUIRED)
+  suntimes.canon    <- canonicalize.headers(suntimes, SUNTIMES.REQUIRED)
+  fig.list.canon    <- canonicalize.headers(fig.list, FIG.LIST.REQUIRED)
+  aes.default.canon <- canonicalize.headers(aes.default, AES.DEFAULT.REQUIRED)
+
   problems <- c(
-    check.headers(data, DATA.REQUIRED, "data"),
-    check.headers(suntimes, SUNTIMES.REQUIRED, "suntimes"),
-    check.headers(fig.list, FIG.LIST.REQUIRED, "fig.list"),
-    check.headers(aes.default, AES.DEFAULT.REQUIRED, "aes.default"),
-    check.parameters(aes.default, AES.DEFAULT.REQUIRED.PARAMETERS, "aes.default"),
+    missing.msg(data.canon, "data"),
+    missing.msg(suntimes.canon, "suntimes"),
+    missing.msg(fig.list.canon, "fig.list"),
+    missing.msg(aes.default.canon, "aes.default"),
+    check.parameters(aes.default.canon$df, AES.DEFAULT.REQUIRED.PARAMETERS, "aes.default"),
     check.duplicates(data, "data"),
     check.duplicates(suntimes, "suntimes"),
     check.duplicates(fig.list, "fig.list"),
     check.duplicates(aes.default, "aes.default")
   )
   if (length(problems) > 0) {
-    stop(paste(problems, collapse = "\n"))
+    stop(paste(problems, collapse = "\n\n"))
   }
+
+  data        <- data.canon$df
+  suntimes    <- suntimes.canon$df
+  fig.list    <- fig.list.canon$df
+  aes.default <- aes.default.canon$df
 
   unquote <- function(x) {
     x <- trimws(as.character(x))

@@ -1,0 +1,16 @@
+category,parameter,default.value,overide.value,notes
+Fill,fill.max,100,,"Fill scale is clamped (pmin()) at this value; the top color-bar tick is labeled '<fill.max>+' (see @details, 'Fill scale')."
+Fill,fill.colors,#cde2fb;#9ec5f4;#6da7ec;#3987e5;#256abf;#184f95;#0d366b,,Semicolon-separated sequential hex ramp (dataviz skill default palette).
+Axes,ybreak.hours,2,,Hours between labeled Y-axis (hour-of-monitoring) breaks.
+Text,plot.title.size,12,,
+Text,axis.title.size,12,,
+Text,axis.text.size,11,,
+Text,legend.title.size,11,,
+Text,legend.text.size,10,,
+Theme,panel.border.linewidth,0.5,,Used for the axis.line linewidth.
+Save,ggsave.dpi,150,,
+Save,ggsave.units,in,,
+Save,ggsave.width.pad,0,,
+Save,ggsave.height.pad,0,,
+Save,plot.width,10,,
+Save,plot.height,7,,

@@ -8,7 +8,7 @@
 #'
 #' @param data A data frame of already-summarized per-species,
 #'   per-night detection windows. Must have \code{$spp.id}, \code{$date},
-#'   \code{$aru.groupby}, \code{$obs}, \code{$mins2.noon.min},
+#'   \code{$group}, \code{$obs}, \code{$mins2.noon.min},
 #'   \code{$mins2.noon.max}, \code{$vetting.type}.
 #' @param fig.list A data frame listing the plot(s) to generate - one
 #'   row per plot. Must have \code{$plot.type}, \code{$plot.name},
@@ -79,7 +79,7 @@
 #' \code{AES.DEFAULT.REQUIRED.PARAMETERS} in this function's code are its
 #' own hardcoded interface contracts with those upstream functions'/files'
 #' already-established output schemas (e.g. \code{$spp.id}/\code{$date}/
-#' \code{$aru.groupby}/\code{$obs}), not raw text copied from a loaded
+#' \code{$group}/\code{$obs}), not raw text copied from a loaded
 #' file's real header row, so there is no raw-header step here for the
 #' preference to attach to and none of these names were renamed. If
 #' \code{fig.list}/\code{aes.default}/\code{suntimes} are ever built by
@@ -91,6 +91,40 @@
 #' this function itself. This mirrors the same reasoning already applied
 #' to \code{\link{batz.plotactivity_observations}} - see that function's
 #' own \code{@details} for the identical analysis.
+#'
+#' \strong{BUGFIX (2026-09-21, per Josh's real-world error report of a
+#' header mismatch): two separate, real problems, both fixed here.}
+#' (1) \code{DATA.REQUIRED} still said \code{"aru.groupby"}, a name
+#' \code{\link{batz.generate_plotframe.bat}} stopped producing on
+#' 2026-08-28, when that function's own equivalent output column was
+#' renamed to \code{$group} (see that function's own \code{@details},
+#' "$group vs $groupedby") - this function's own required-header constant
+#' and its one internal reference (\code{pd$aru.groupby}, used to filter
+#' \code{data} down to a single \code{$plot.set}) were simply never updated
+#' to match at the time, so passing this function \code{batz.generate_plotframe.bat}'s
+#' real current output always failed the header check on that one column
+#' name specifically, independent of anything else. Both now say
+#' \code{"group"}/\code{pd$group}. (2) More generally, every one of
+#' \code{data}/\code{suntimes}/\code{fig.list}/\code{aes.default}'s headers
+#' is now matched via the shared package helper
+#' \code{\link{canonicalize.headers}} rather than a plain \code{setdiff()}:
+#' both sides are standardized to snake_case purely to find matching
+#' columns (so a data frame is accepted whether its real column names are
+#' already this function's own dot-separated style, e.g. \code{"date.mon"},
+#' or have come back snake_cased from some intervening save/reload step,
+#' e.g. \code{"date_mon"}), then every matched column is renamed, in this
+#' function's own local working copies only, to the exact dot-separated
+#' spelling this function's code already expects - so nothing below the
+#' header check needed to change. This never mutates the caller's own
+#' \code{data}/\code{suntimes}/\code{fig.list}/\code{aes.default} objects
+#' (R already copies a data frame argument on modification) and this
+#' function has no data-frame/CSV/xlsx output of its own to apply a
+#' \code{snake_case=} option to (it only saves PNGs and returns ggplot
+#' objects) - see \code{\link{batz.generate_plotframe.bat}} for that option
+#' where it does apply. The missing-header message for MULTIPLE data
+#' frames in one call is now also separated by a blank line (previously a
+#' single \code{"\\n"}) for readability when more than one input is missing
+#' headers at once.
 #'
 #' \strong{Iteration 1 ("basic layout") - per Josh's own framing that this
 #' function would be built iteratively.} This covers: header validation
@@ -609,7 +643,7 @@
 #' change, purely an identifier rename.
 #'
 #' \strong{Follow-up, 2026-08-27, later still, per Josh ("change the pattern
-#' from \"batactivity.plotoptions.csv\" to \"plotopts_first.last.csv\"):
+#' from \"batactivity.plotoptions.csv\" to \"plotopts_first.last.csv"):
 #' the on-disk file name this function's `aes.default` input is expected to
 #' be loaded from was renamed - purely a file-naming change, not a
 #' parameter/argument rename (that was the entry above) and not a change to
@@ -834,7 +868,13 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
   ## and these names are this function's own interface contract with those
   ## upstream functions'/files' already-established output schemas, not raw
   ## loaded headers. See @details "Header standardization" above.
-  DATA.REQUIRED <- c("spp.id", "date", "aru.groupby", "obs",
+  ##
+  ## BUGFIX (2026-09-21, per Josh): "aru.groupby" corrected to "group" -
+  ## batz.generate_plotframe.bat() stopped producing $aru.groupby (renamed
+  ## to $group) back on 2026-08-28; this constant (and the one place below
+  ## that reads pd$aru.groupby) were never updated to match at the time.
+  ## See @details, "BUGFIX (2026-09-21...)".
+  DATA.REQUIRED <- c("spp.id", "date", "group", "obs",
                            "mins2.noon.min", "mins2.noon.max", "vetting.type")
   SUNTIMES.REQUIRED <- c("aru", "date", "date.mon", "sunregion", "time.zone",
                              "sunregion.type", "schedual1", "schedual2", "suns",
@@ -887,16 +927,30 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
     "plot.width", "plot.height"
   )
 
-  check.headers <- function(df, required, label) {
-    missing <- setdiff(required, names(df))
-    if (length(missing) > 0) {
-      return(sprintf("%s is missing these headers: %s", label, paste(missing, collapse = ", ")))
+  ## BUGFIX (2026-09-21, per Josh): every input frame's headers are now
+  ## matched via the shared package helper canonicalize.headers() rather
+  ## than a plain setdiff() - both this frame's real column names and the
+  ## required list above are standardized to snake_case purely to find
+  ## matching columns (so a frame is accepted whether its columns are
+  ## already this function's own dot-separated style, e.g. "date.mon", or
+  ## came back snake_cased from some intervening save/reload step, e.g.
+  ## "date_mon"), then every matched column is renamed, in this function's
+  ## own local copy only, to the exact spelling this function's code
+  ## already expects. See @details "BUGFIX (2026-09-21...)" above.
+  data.canon        <- canonicalize.headers(data, DATA.REQUIRED)
+  suntimes.canon    <- canonicalize.headers(suntimes, SUNTIMES.REQUIRED)
+  fig.list.canon    <- canonicalize.headers(fig.list, FIG.LIST.REQUIRED)
+  aes.default.canon <- canonicalize.headers(aes.default, AES.DEFAULT.REQUIRED)
+
+  missing.msg <- function(canon, label) {
+    if (length(canon$missing) > 0) {
+      return(sprintf("%s is missing these headers: %s", label, paste(canon$missing, collapse = ", ")))
     }
     NULL
   }
 
   check.parameters <- function(df, required, label) {
-    if (!("parameter" %in% names(df))) return(NULL)  # already reported by check.headers above
+    if (!("parameter" %in% names(df))) return(NULL)  # already reported by missing.msg above
     missing <- setdiff(required, df$parameter)
     if (length(missing) > 0) {
       return(sprintf("%s is missing these required $parameter rows: %s - it may be an older copy missing settings added since it was last saved",
@@ -915,20 +969,30 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
     NULL
   }
 
+  ## check.duplicates runs on the ORIGINAL (pre-canonicalization) frames -
+  ## a frame with duplicate column names is stopped on before any renaming
+  ## is attempted on it, same as before this round's change.
   problems <- c(
-    check.headers(data, DATA.REQUIRED, "data"),
-    check.headers(suntimes, SUNTIMES.REQUIRED, "suntimes"),
-    check.headers(fig.list, FIG.LIST.REQUIRED, "fig.list"),
-    check.headers(aes.default, AES.DEFAULT.REQUIRED, "aes.default"),
-    check.parameters(aes.default, AES.DEFAULT.REQUIRED.PARAMETERS, "aes.default"),
+    missing.msg(data.canon, "data"),
+    missing.msg(suntimes.canon, "suntimes"),
+    missing.msg(fig.list.canon, "fig.list"),
+    missing.msg(aes.default.canon, "aes.default"),
+    check.parameters(aes.default.canon$df, AES.DEFAULT.REQUIRED.PARAMETERS, "aes.default"),
     check.duplicates(data, "data"),
     check.duplicates(suntimes, "suntimes"),
     check.duplicates(fig.list, "fig.list"),
     check.duplicates(aes.default, "aes.default")
   )
   if (length(problems) > 0) {
-    stop(paste(problems, collapse = "\n"))
+    ## blank line between each data frame's own missing-headers message,
+    ## per Josh (2026-09-21) - was a single "\n" before this round.
+    stop(paste(problems, collapse = "\n\n"))
   }
+
+  data        <- data.canon$df
+  suntimes    <- suntimes.canon$df
+  fig.list    <- fig.list.canon$df
+  aes.default <- aes.default.canon$df
 
   unquote <- function(x) {
     x <- trimws(as.character(x))
@@ -1092,7 +1156,7 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
 
     plot.set.val <- trimws(job$plot.set)
     if (nzchar(plot.set.val)) {
-      pd <- pd[tolower(trimws(pd$aru.groupby)) == tolower(plot.set.val), , drop = FALSE]
+      pd <- pd[tolower(trimws(pd$group)) == tolower(plot.set.val), , drop = FALSE]
     }
     pd <- pd[tolower(trimws(pd$spp.common)) %in% tolower(spp.plot), , drop = FALSE]
 
@@ -1104,7 +1168,7 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
     tz <- get.setting(job, "time.zone")
 
     if (nrow(pd) == 0) {
-      cat(sprintf("NOTE: fig.list row for '%s' (plot.set = '%s', %s to %s) matched 0 rows of data - no plot generated. Check that $aru.groupby/$date in data actually overlap this row's $plot.set/$date.start/$date.end.\n",
+      cat(sprintf("NOTE: fig.list row for '%s' (plot.set = '%s', %s to %s) matched 0 rows of data - no plot generated. Check that $group/$date in data actually overlap this row's $plot.set/$date.start/$date.end.\n",
                    job.label, plot.set.val, date.start, date.end))
       next
     }
@@ -1234,7 +1298,7 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
       # the hood) does not treat as an escape sequence, so it was rendering
       # as the literal two characters "/n" in the axis label instead of a
       # line break. Real bug caught by Josh after the first render - fixed
-      # here by converting any literal "/n" in the format string to an
+      # here by converting any literal "/n" in $date.format to an
       # actual newline before it's used, rather than relying on the source
       # CSV always spelling it correctly.
       xaxe.date.labels.fmt <- gsub("/n", "\n", get.setting(p$job, "date.format"), fixed = TRUE)
@@ -1258,7 +1322,7 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
       # directly. Fixed by computing N evenly-spaced Date breakpoints
       # explicitly across [date.start, date.end] (seq.Date's own
       # length.out= already lands on whole calendar days, first/last break
-      # always exactly date.start/date.end) and passing those as
+      # always exactly date.start/date.end) and passing them to
       # scale_x_date(breaks = ...) instead of date_breaks=.
       xaxe.n.labels <- suppressWarnings(as.numeric(get.setting(p$job, "xaxe.interval")))
       if (is.na(xaxe.n.labels) || xaxe.n.labels < 1) {

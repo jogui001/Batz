@@ -204,6 +204,27 @@
 #' entirely. Column order is unaffected (\code{$serial} still lands in the
 #' same position it always did, immediately before \code{$sunregion}).
 #'
+#' \strong{Added 2026-09-22, per Josh's request to audit and extend the
+#' snake_case output option package-wide.} A recent audit flagged this
+#' function, alongside \code{\link{batz.plotactivity_daily.count}}, as
+#' producing a data-frame output in this package's own dot-separated header
+#' convention without the \code{snake_case} escape hatch already shipped in
+#' \code{\link{batz.generate_plotframe.bat}} (2026-09-21). The new
+#' \code{snake_case} parameter here works exactly the same way: it is
+#' applied, as the very last step, only to \code{vetted.merged}'s OWN output
+#' column names (\code{$date.mon}, \code{$aru.name}, \code{$autoid.kp}, ...
+#' - this function's own invented schema) - never to any raw per-file input
+#' header, which is already standardized separately via
+#' \code{standardize.headers()} upstream of the rename/reorder pipeline (see
+#' \strong{Header standardization} above). It is also applied, when
+#' \code{log.file = TRUE}, to \code{vetted.merged_log.file}'s own headers
+#' (\code{$filepath}, \code{$reason}, \code{$headers.missing}) for the same
+#' output-uniformity reason, even though none of those three names contain a
+#' dot to begin with and so are unaffected in practice by
+#' \code{standardize.headers()} - included anyway so a caller gets a
+#' consistently-cased pair of outputs rather than having to remember that
+#' only one of the two objects responds to \code{snake_case}.
+#'
 #' @param dir.load Character, default \code{getwd()}. Directory to scan.
 #' @param load.pattern Character vector, default \code{c("*vetted.csv")}. A
 #'   wildcard/glob pattern (or vector of patterns) identifying which files to
@@ -237,14 +258,30 @@
 #'   \code{$manid} is \code{"noise"} (case-insensitive). See Details.
 #' @param trim.noid Logical, default \code{FALSE}. Remove rows where
 #'   \code{$manid} is \code{"NoID"} (case-insensitive). See Details.
+#' @param snake_case Logical, default \code{FALSE}. Added 2026-09-22, per
+#'   Josh's request to audit and extend the snake_case output option
+#'   package-wide (see \code{\link{batz.generate_plotframe.bat}}'s sibling
+#'   parameter). Controls only \code{vetted.merged}'s (and, if
+#'   \code{log.file = TRUE}, \code{vetted.merged_log.file}'s) OWN output
+#'   column names, applied as the very last step before either is
+#'   returned/assigned - it has no effect on any raw per-file input header.
+#'   \code{FALSE} (default) keeps this function's normal dot-separated
+#'   output column names (\code{$date.mon}, \code{$aru.name},
+#'   \code{$autoid.kp}, ...) exactly as always. \code{TRUE} runs every
+#'   output column name through \code{standardize.headers()} instead (e.g.
+#'   \code{$date_mon}, \code{$aru_name}) - for a caller who specifically
+#'   wants a snake_case CSV/data frame out of this function, without having
+#'   to convert it themselves afterward.
 #'
 #' @return Invisibly, a named list: \code{vetted.merged} (always), and
-#'   \code{vetted.merged_log.file} (only if \code{log.file = TRUE}). As a
-#'   side effect, the same object(s) are also assigned directly into the
-#'   calling environment (same auto-assign convention as
-#'   \code{batz.merge_aru.meta}/\code{batz.datawrangler_load.files}),
-#'   so a bare call with no assignment populates \code{vetted.merged}
-#'   (and \code{vetted.merged_log.file}) directly.
+#'   \code{vetted.merged_log.file} (only if \code{log.file = TRUE}) - or
+#'   their snake_case equivalents if \code{snake_case = TRUE} (see that
+#'   parameter above). As a side effect, the same object(s) are also
+#'   assigned directly into the calling environment (same auto-assign
+#'   convention as \code{batz.merge_aru.meta}/
+#'   \code{batz.datawrangler_load.files}), so a bare call with no
+#'   assignment populates \code{vetted.merged} (and
+#'   \code{vetted.merged_log.file}) directly.
 #'
 #' @examples
 #' \dontrun{
@@ -253,6 +290,9 @@
 #' batz.merge_vetted.acoustics(dir.sub = TRUE, log.file = TRUE)
 #' head(vetted.merged)
 #' vetted.merged_log.file
+#'
+#' # snake_case output headers instead of this function's usual dot-style
+#' batz.merge_vetted.acoustics(snake_case = TRUE)
 #' }
 #'
 #' @export
@@ -265,7 +305,8 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
                                                manid.kp = TRUE,
                                                manid.sb = TRUE,
                                                trim.noise = TRUE,
-                                               trim.noid = FALSE) {
+                                               trim.noid = FALSE,
+                                               snake_case = FALSE) {
 
   ## header standardization (per Josh, 2026-09-14 project preference):
   ## expected.headers is a literal, uninvented copy of the vetting
@@ -387,12 +428,20 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
   }
 
   rownames(vetted.merged) <- NULL
+
+  ## snake_case output option (per Josh's request to audit and extend this
+  ## package-wide, 2026-09-22) - applied last, only to this function's own
+  ## invented output column names, mirroring batz.generate_plotframe.bat()'s
+  ## established pattern. See @param snake_case.
+  if (snake_case) names(vetted.merged) <- standardize.headers(names(vetted.merged))
+
   result <- list(vetted.merged = vetted.merged)
 
   if (log.file) {
     vetted.merged_log.file <- if (length(log.rows) > 0) do.call(rbind, log.rows) else
       data.frame(filepath = character(0), reason = character(0), headers.missing = character(0))
     rownames(vetted.merged_log.file) <- NULL
+    if (snake_case) names(vetted.merged_log.file) <- standardize.headers(names(vetted.merged_log.file))
     result$vetted.merged_log.file <- vetted.merged_log.file
   }
 

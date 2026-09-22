@@ -4,11 +4,7 @@
 \alias{batz.batusa_recode.names}
 \title{Recode US bat species identifiers between common name, latin name, species codes, and status fields}
 \usage{
-batz.batusa_recode.names(
-  data,
-  batname.format.out = "common",
-  grammar.dash = TRUE
-)
+batz.batusa_recode.names(data, batname.format.out = "common", grammar.dash = TRUE)
 }
 \arguments{
 \item{data}{A vector, or a data frame, of bat species identifiers to
@@ -66,10 +62,10 @@ every hyphen in a matched value with a space instead (e.g.
 }
 \value{
 A vector (if \code{data} is a vector) or data frame (if
-\code{data} is a data frame) of the same length/dimensions as
-\code{data}, with every element re-expressed in \code{batname.format.out}.
-An input element with no match anywhere in the reference table is
-returned unchanged (not \code{NA}, no error).
+  \code{data} is a data frame) of the same length/dimensions as
+  \code{data}, with every element re-expressed in \code{batname.format.out}.
+  An input element with no match anywhere in the reference table is
+  returned unchanged (not \code{NA}, no error).
 }
 \description{
 Given a vector or data frame containing any mix of common name, latin
@@ -82,25 +78,7 @@ input and the reference table (or between different inputs) don't cause a
 false mismatch.
 }
 \details{
-\strong{BUGFIX (2026-09-21, per Josh's real-world error report):} the
-embedded \code{nabat.names} reference table's \code{$fed.proposed} column
-was missing one blank \code{""} element (61 instead of 62), which made
-every single call to this function crash, since \code{reference[] <-
-lapply(reference, ...)} runs unconditionally near the top of the
-function body and R's data-frame replacement validates every column's
-length against the table's declared 62 rows the moment that line runs.
-The missing blank was restored so \code{fed.proposed}'s two real values
-(\code{"Under Review, start year unconfirmed"} at row 39,
-\code{"Proposed Endangered, 2022"} at row 52) now align with the
-matching \code{$fedstatus} rows (\code{"Under Review"} at row 39 -
-\emph{Myotis lucifugus}; \code{"Proposed Endangered"} at row 52 -
-\emph{Perimyotis subflavus}). Verified: all 15 columns are exactly 62
-elements long, and a full \code{batz.merge_vetted.acoustics()} run
-against real vetted-acoustics test data completes with no error.
-
-(Renamed 2026-08-29, per Josh, from \code{output.format} to
-\code{batname.format.out}, to standardize \code{format}-suffixed
-parameters as \code{.in}/\code{.out}.)
+\strong{Header standardization (per Josh, 2026-09-14 project preference) - does not apply to this function, flagged not silently skipped.} The project-wide preference is that headers coming from a loaded file or an externally-supplied data frame are run through the shared package helper \code{standardize.headers()} (trim whitespace, collapse non-alphanumeric runs to underscores, lowercase). This function has no raw-header step for that preference to attach to: every element of \code{data} is recoded as a VALUE (a species identifier - a name or code), never as a header, and when \code{data} is a data frame this function never reads, matches on, or otherwise interprets its column names at all - \code{names(out) <- names(data)} just carries them through unchanged as a pure pass-through label. The embedded \code{nabat.names} reference table's own column names (\code{$latin}/\code{$common}/\code{$code4}/\code{$code6}/\code{$fedstatus}/etc.) are this function's fixed, already-established internal schema - not raw headers copied fresh from a file for this rollout - so they are not run through \code{standardize.headers()} either, the same treatment already given to every other \code{batz} function's own output-schema column names.
 
 If one or more input elements don't match anything in the reference
 table, a warning is printed (not raised via \code{warning()} - a plain
@@ -114,16 +92,35 @@ list).
 The reference table (54 North American bat species, as supplied in
 Josh's \code{NAbat.names.csv}, now including \code{$hibernation.strat}/
 \code{$phonic.group}/\code{$notes} added 2026-08-25, plus 8 non-species
-detection/category label rows added 2026-08-27) is embedded directly in
-this function - there is no reference-file-path argument. To update the
+detection/category label rows added 2026-08-27 - see \code{batname.format.out}
+above) is embedded directly in this function - there is no
+reference-file-path argument, since the spec's inputs are just
+\code{data}/\code{batname.format.out}/\code{grammar.dash}. To update the
 species list later, replace the \code{nabat.names} data frame inside
-this function with a newer export of the same 15-column format (and
-re-check every column's length equals \code{nrow()} before shipping it).
+this function with a newer export of the same 15-column format.
 }
 \examples{
 \dontrun{
 batz.batusa_recode.names(c("epfu", "myotis_lucifugus", "Hoary bat"))
 # -> "Big brown bat"    "Little brown bat"    "Hoary bat"
+
+batz.batusa_recode.names("epfu", batname.format.out = "latin")
+# -> "Eptesicus fuscus"
+
+batz.batusa_recode.names("lano", batname.format.out = "common", grammar.dash = FALSE)
+# -> "Silver haired bat"   (hyphen replaced with a space)
+
+batz.batusa_recode.names("myse", batname.format.out = "fedstatus")
+# -> "Endangered"
+
+batz.batusa_recode.names("tabr", batname.format.out = "hibernation.strat")
+# -> "mixed"   (most populations migrate to Mexico; Florida's is resident)
+
+batz.batusa_recode.names("mylu", batname.format.out = "phonic.group")
+# -> "Hif"
+
+batz.batusa_recode.names(c("hif", "LOFRAG", "40khzmyo"))
+# -> "HiF"      "LoFrag"   "40KHzMyo"
 }
 
 }

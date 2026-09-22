@@ -749,7 +749,7 @@
 #'     new single-line text measures WIDER unwrapped (at the full 12pt
 #'     \code{$plot.title.size} default) than either individual line of the
 #'     old two-line wrapped text did - so the "Title auto-shrink" mechanism
-#'     (see "Figure sizing" above), which previously left the default
+#'     (see @details, "Figure sizing"), which previously left the default
 #'     4-panel \code{auto.scale = TRUE} figure untouched at a plain 6.5in,
 #'     now floors ALL panel titles at 8pt AND still has to widen the total
 #'     figure to about 7.21in to avoid overlap. This is a direct, expected
@@ -907,6 +907,24 @@
 #' visually re-inspected close up to confirm the two adjacent two-line
 #' titles (mic.bar's and mic.bull's) don't touch or overlap each other.
 #'
+#' \strong{mic.bar panel overhaul, per Josh's twentieth follow-up
+#' (2026-09-16) - see the numbered list above for the six scoped changes.}
+#'
+#' \strong{Follow-up, 2026-09-22, per Josh: when both \code{data} and
+#' \code{mic} (and/or \code{aes.default}) are missing headers in the same
+#' call, the "... is missing these headers: ..." messages are now joined
+#' with a BLANK line (\code{\n\n}, not a single \code{\n}) for
+#' readability, matching the identical fix already made in
+#' \code{batz.plotdetections_first.last()}/
+#' \code{batz.plotactivity_observations()}/
+#' \code{batz.generate_plotframe.bat()} on 2026-09-21. No other behavior
+#' changed - \code{data}/\code{mic} were already correctly
+#' \code{standardize.headers()}-tolerant on both sides of the comparison
+#' before this follow-up (confirmed by a fresh audit of every batz
+#' function's header-check logic on 2026-09-22), so this function needed
+#' only the message-joining fix, not the canonicalize.headers() fix
+#' itself.}
+#'
 #' @examples
 #' \dontrun{
 #' aes.default <- read.csv("plotopts_bullseye.csv", stringsAsFactors = FALSE)
@@ -1044,7 +1062,7 @@ batz.plotcover_bullseye <- function(data, mic, aes.default, project.name = "new.
     check.duplicates(mic, "mic"),
     check.duplicates(aes.default, "aes.default")
   )
-  if (length(problems) > 0) stop(paste(problems, collapse = "\n"))
+  if (length(problems) > 0) stop(paste(problems, collapse = "\n\n"))
 
   ## Settings resolution (round nineteen, per Josh's 2026-09-16 follow-up):
   ## $aes.style names a FIXED column to check first (default

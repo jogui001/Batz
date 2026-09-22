@@ -155,6 +155,22 @@
 #' was asked to confirm and explicitly chose this exact literal name over a
 #' convention-conforming alternative, so it was used as given.
 #'
+#' \strong{Follow-up, 2026-09-22, per Josh's request to audit and extend the
+#' snake_case output option package-wide:} added a \code{snake_case}
+#' parameter (default \code{FALSE}, matching
+#' \code{\link{batz.generate_plotframe.bat}}'s own). When \code{TRUE},
+#' \code{aru.suntimes}'s own output column names are run through
+#' \code{standardize.headers()} as the very last step before it's written
+#' to CSV (when \code{write.output = TRUE}) and returned - e.g.
+#' \code{$date.mon} becomes \code{$date_mon}, \code{$sunr.mon.unix} becomes
+#' \code{$sunr_mon_unix}. This is unrelated to, and does not change, the
+#' existing \verb{*arulist.csv} header standardization described above
+#' (which already always runs, regardless of this parameter, on the loaded
+#' file's own real headers before the required-header check). The
+#' \code{efficiency} list element is left untouched either way - its three
+#' columns (\code{aru.date.rows}, \code{site.date.rows},
+#' \code{shared.sites}) have no dot-separated words to convert.
+#'
 #' @param dir.load Directory to search for files matching \code{load.pattern}.
 #'   Default: current working directory. Must actually contain the
 #'   \verb{*arulist.csv} file(s) - if no matching file is found, the
@@ -193,6 +209,20 @@
 #'   (e.g. you passed a prior run's output file name back in), that suffix
 #'   is stripped back off first, so the file gets a fresh stamp instead of
 #'   a second one stacked on top.
+#' @param snake_case Logical, default \code{FALSE}. Added 2026-09-22, per
+#'   Josh's request to audit and extend the snake_case output option
+#'   package-wide (see \code{\link{batz.generate_plotframe.bat}}, the first
+#'   function this was added to). Controls only \code{aru.suntimes}'s OWN
+#'   output column names (and, when \code{write.output = TRUE}, the CSV
+#'   written to disk), applied as the very last step before each is
+#'   written/returned. \code{FALSE} (default) keeps this function's normal
+#'   column names exactly as always. \code{TRUE} runs every output column
+#'   name through \code{standardize.headers()} instead (e.g.
+#'   \code{$sunregion_long} stays \code{$sunregion_long}, \code{$date.mon}
+#'   becomes \code{$date_mon}, \code{$sunr.mon.unix} becomes
+#'   \code{$sunr_mon_unix}) - for a caller who specifically wants a
+#'   snake_case CSV/data frame out of this function, without having to
+#'   convert it themselves afterward.
 #'
 #' @return Invisibly, a list with:
 #'   \describe{
@@ -203,11 +233,14 @@
 #'       \code{$time_zone}, \code{$sunregion_type}, \code{$schedual1},
 #'       \code{$schedual2}, \code{$lat}, \code{$long}, \code{$suns},
 #'       \code{$suns.unix}, \code{$sunr}, \code{$sunr.unix},
-#'       \code{$sunr.mon}, \code{$sunr.mon.unix}.}
+#'       \code{$sunr.mon}, \code{$sunr.mon.unix} (or their snake_case
+#'       equivalents if \code{snake_case = TRUE} - see that parameter
+#'       above).}
 #'     \item{efficiency}{One-row summary: \code{$aru.date.rows} (rows needed
 #'       without de-duplication), \code{$site.date.rows} (unique site-date
 #'       rows actually calculated), \code{$shared.sites} (count of sites
-#'       with more than one ARU sharing the same calculation site).}
+#'       with more than one ARU sharing the same calculation site). Not
+#'       affected by \code{snake_case} - see that parameter above.}
 #'   }
 #'
 #' @examples
@@ -215,6 +248,9 @@
 #' result <- batz.generate_suntimes.arulist(dir.load = "path/to/data")
 #' result$aru.suntimes
 #' result$efficiency
+#'
+#' # snake_case output headers instead of this function's usual dot-style
+#' result <- batz.generate_suntimes.arulist(dir.load = "path/to/data", snake_case = TRUE)
 #' }
 #'
 #' @export
@@ -223,7 +259,8 @@ batz.generate_suntimes.arulist <- function(dir.load = getwd(),
                                     dir.sub = FALSE,
                                     write.output = TRUE,
                                     dir.save = getwd(),
-                                    project.name = "") {
+                                    project.name = "",
+                                    snake_case = FALSE) {
 
   ## convert a plain wildcard/glob suffix pattern (or vector of them) into
   ## one combined regex suitable for list.files()'s pattern= argument
@@ -551,8 +588,21 @@ batz.generate_suntimes.arulist <- function(dir.load = getwd(),
 
     out.file <- paste0(base.name, "_", date1, "to", date2, "_", savestamp, "_suntimes.csv")
 
+    ## snake_case (per Josh, 2026-09-22, project-wide audit/extension of the
+    ## snake_case output option - see @details) is applied here, to a copy
+    ## used only for the CSV write, AFTER the rounding above (which still
+    ## references this function's own dot-separated $suns.unix/$sunr.unix/
+    ## $sunr.mon.unix names regardless of this parameter).
+    if (snake_case) names(aru.suntimes.out) <- standardize.headers(names(aru.suntimes.out))
+
     write.csv(aru.suntimes.out, file.path(dir.save, out.file), row.names = FALSE)
   }
+
+  ## snake_case applied to the invisibly-returned aru.suntimes itself, as
+  ## the very last step before it's returned (kept separate from the
+  ## write.output copy above, since that copy is also rounded/renamed on
+  ## its own timeline) - see @details, "Follow-up, 2026-09-22".
+  if (snake_case) names(aru.suntimes) <- standardize.headers(names(aru.suntimes))
 
   invisible(list(aru.suntimes = aru.suntimes, efficiency = efficiency))
 }

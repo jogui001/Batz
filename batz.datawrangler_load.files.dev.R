@@ -64,7 +64,8 @@
 #      convention - if a file is named with underscores, spaces, or leading
 #      digits (e.g. "2HabitatAssessments_quad"), the created object keeps
 #      that exact name. A name like that isn't a syntactically "plain" R
-#      name, so accessing it back out requires backticks or get() -
+#      name, so accessing it back out requires backticks or get(), e.g.
+#      `` `2HabitatAssessments_quad` `` or get("2HabitatAssessments_quad") -
 #      assign() itself doesn't care, it accepts any string as a name.
 #   2. Following the auto-assign convention already established in
 #      batz.arumeta_merge.format() (per Josh: "can the function be structured

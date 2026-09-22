@@ -46,7 +46,7 @@ source("batz.batusa_recode.names.R")
 
 # -----------------------------------------------------------------------------
 # SYNTHETIC test data - built directly in R (see limitation note above),
-# using the exact column layouts documented for the real device files.
+# using the exact column layouts documented for the real files.
 # -----------------------------------------------------------------------------
 
 make.default.plotaesthetics <- function(overide.col = "overide.value") {

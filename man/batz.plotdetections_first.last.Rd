@@ -4,15 +4,9 @@
 \alias{batz.plotdetections_first.last}
 \title{Plot each species' earliest and latest nightly detections}
 \usage{
-batz.plotdetections_first.last(
-  data,
-  fig.list,
-  suntimes,
-  aes.default,
-  project.name = "new.project",
-  aes.style = "overide.value",
-  dir.save = getwd()
-)
+batz.plotdetections_first.last(data, fig.list, suntimes,
+  aes.default, project.name = "new.project", aes.style = "overide.value",
+  dir.save = getwd())
 }
 \arguments{
 \item{data}{A data frame of already-summarized per-species,
@@ -28,7 +22,7 @@ row per plot. Must have \code{$plot.type}, \code{$plot.name},
 \code{$date.end}, \code{$xaxe.interval}, \code{$xaxe.title}. Column
 names must be unique (see Details for a real duplicate-header bug this
 catches). An optional \code{$midnight} column (\code{"none"}/
-\code{"long"}/\code{"short"}) overrides
+\code{"long"}/\code{"short"}/\code{"dots"}) overrides
 \code{aes.default}'s \code{midnight} setting for this one
 plot row - see Details.}
 
@@ -74,46 +68,20 @@ name itself is now always \code{"<project.name>_<ARU>_<timestamp>.png"}
 }
 \value{
 Invisibly, a list with \code{plots} (one entry per generated
-plot's prepared data - detection rows, suntimes rows, panel labels,
-resolved settings) and \code{ggplots} (the corresponding ggplot objects,
-only populated when the \code{ggplot2} package is available - see
-Details).
+  plot's prepared data - detection rows, suntimes rows, panel labels,
+  resolved settings) and \code{ggplots} (the corresponding ggplot objects,
+  only populated when the \code{ggplot2} package is available - see
+  Details).
 }
 \description{
 Generates the standard report plot showing, for every species (plus an
 "All detections" panel and an optional overlaid 40kHzMyo indicator), the
 earliest-to-latest detection window for each monitoring night, with
 Dawn/Dusk/Midnight reference lines. One plot is produced per row of
-\code{aru.metadata.db} whose \code{$plot.type} is \code{"bat.detection"}.
+\code{fig.list} whose \code{$plot.type} is \code{"bat.detection"}.
 }
 \details{
-\strong{Header standardization (per Josh, 2026-09-14 project preference) -
-does not mechanically apply to this function, flagged not silently
-skipped.} The project-wide preference is that headers coming from a
-loaded file or an externally-supplied data frame are run through the
-shared package helper \code{standardize.headers()} (trim whitespace,
-collapse non-alphanumeric runs to underscores, lowercase). This function
-does not load any file itself, and all four of its arguments
-(\code{data}, \code{fig.list}, \code{suntimes}, \code{aes.default}) are
-already-loaded data frames handed in by the caller - \code{data} in
-particular is expected to be the output of the upstream \code{batz}
-summarizing function. \code{DATA.REQUIRED}/\code{SUNTIMES.REQUIRED}/
-\code{FIG.LIST.REQUIRED}/\code{AES.DEFAULT.REQUIRED}/
-\code{AES.DEFAULT.REQUIRED.PARAMETERS} in this function's code are its
-own hardcoded interface contracts with those upstream functions'/files'
-already-established output schemas (e.g. \code{$spp.id}/\code{$date}/
-\code{$aru.groupby}/\code{$obs}), not raw text copied from a loaded
-file's real header row, so there is no raw-header step here for the
-preference to attach to and none of these names were renamed. If
-\code{fig.list}/\code{aes.default}/\code{suntimes} are ever built by
-reading a CSV/spreadsheet directly (rather than being handed to this
-function pre-loaded), that loading step - wherever it lives - should
-run \code{standardize.headers()} on its own raw headers, and this
-function's own required-header constants would need to be written to
-match those standardized spellings; no such loading step exists inside
-this function itself. This mirrors the same reasoning already applied
-to \code{\link{batz.plotactivity_observations}} - see that function's
-own \code{@details} for the identical analysis.
+\strong{Header standardization (per Josh, 2026-09-14 project preference) - does not mechanically apply to this function, flagged not silently skipped.} The project-wide preference is that headers coming from a loaded file or an externally-supplied data frame are run through the shared package helper \code{standardize.headers()} (trim whitespace, collapse non-alphanumeric runs to underscores, lowercase). This function does not load any file itself, and all four of its arguments (\code{data}, \code{fig.list}, \code{suntimes}, \code{aes.default}) are already-loaded data frames handed in by the caller - \code{data} in particular is expected to be the output of the upstream \code{batz} summarizing function. \code{DATA.REQUIRED}/\code{SUNTIMES.REQUIRED}/\code{FIG.LIST.REQUIRED}/\code{AES.DEFAULT.REQUIRED}/\code{AES.DEFAULT.REQUIRED.PARAMETERS} in this function's code are its own hardcoded interface contracts with those upstream functions'/files' already-established output schemas (e.g. \code{$spp.id}/\code{$date}/\code{$aru.groupby}/\code{$obs}), not raw text copied from a loaded file's real header row, so there is no raw-header step here for the preference to attach to and none of these names were renamed. If \code{fig.list}/\code{aes.default}/\code{suntimes} are ever built by reading a CSV/spreadsheet directly (rather than being handed to this function pre-loaded), that loading step - wherever it lives - should run \code{standardize.headers()} on its own raw headers, and this function's own required-header constants would need to be written to match those standardized spellings; no such loading step exists inside this function itself. This mirrors the same reasoning already applied to \code{\link{batz.plotactivity_observations}} - see that function's own \code{@details} for the identical analysis.
 
 \strong{Iteration 1 ("basic layout") - per Josh's own framing that this
 function would be built iteratively.} This covers: header validation
@@ -360,25 +328,27 @@ legend key was previously shown only when a 40kHzMyo row actually
 survived into that plot's filtered data (an actual detection that
 period) - MY OWN interpretive judgment call from earlier this session,
 not Josh's own original wording ("40kHzMyo if on species list should
-be \link{on the legend} and colored black"). Fixed to key off \verb{$40khzmyo}
-itself (now carried through per-plot as \verb{$khz.flag}) rather than data
-presence - exactly Josh's real \code{plot.meta.csv} (\verb{$40khzmyo = TRUE})
+be [on the legend] and colored black"). Fixed to key off \code{$40khzmyo}
+itself (now carried through per-plot as \code{$khz.flag}) rather than data
+presence - exactly Josh's real \code{plot.meta.csv} (\code{$40khzmyo = TRUE})
 plus \code{vetted.processed.csv} (zero actual 40kHzMyo detections)
 combination. \strong{The first fix attempt (just adding "40kHzMyo" to
-\code{scale_fill_manual()}'s \verb{breaks=}) looked right in code but was
-verified WRONG by actually rendering it}: a manual scale's \verb{breaks=}
+\code{scale_fill_manual()}'s \code{breaks=}) looked right in code but was
+verified WRONG by actually rendering it}: a manual scale's \code{breaks=}
 are silently dropped from the real legend for any level that never
-appears in the mapped data, no matter what's declared in \verb{breaks=} -
+appears in the mapped data, no matter what's declared in \code{breaks=} -
 confirmed with an isolated diagnostic (a bare \code{geom_col()} +
 \code{scale_fill_manual(breaks = "B", ...)} with zero rows using fill
-\code{"B"}: no legend key at all), the same lesson as \verb{$labels$y} earlier
-this session that a ggplot2 scale's declared settings can't always be
-trusted without actually building/rendering. The real fix adds an
-explicit \verb{limits=} to \code{scale_fill_manual()} (\code{c("All detections", "40kHzMyo")} when \verb{$40khzmyo} is TRUE for this plot, \code{"All detections"}
-alone otherwise) so "40kHzMyo" is in the scale's domain independent of
-whether any row actually used that fill value that period - re-verified
-by rendering: the black swatch now shows correctly with zero 40kHzMyo
-detections present, matching Josh's real files exactly.
+\code{"B"}: no legend key at all), the same lesson as \code{$labels$y}
+earlier this session that a ggplot2 scale's declared settings can't
+always be trusted without actually building/rendering. The real fix
+adds an explicit \code{limits=} to \code{scale_fill_manual()}
+(\code{c("All detections", "40kHzMyo")} when \code{$40khzmyo} is TRUE
+for this plot, \code{"All detections"} alone otherwise) so "40kHzMyo" is
+in the scale's domain independent of whether any row actually used that
+fill value that period - re-verified by rendering: the black swatch now
+shows correctly with zero 40kHzMyo detections present, matching Josh's
+real files exactly.
 
 \strong{Follow-up, 2026-08-27, later still, per Josh ("plot.meta$xaxe.interval
 = 4 which should make there only be four labeled dates on the X axes") and
@@ -582,10 +552,11 @@ clean gap at every panel boundary.
 own machine: \code{devtools::document()} succeeded, but calling the function
 against his own real, current objects crashed deep inside grid
 graphics, not in this function's own code.} The actual error was
-\verb{Error in grid.Call.graphics(C_setviewport, vp, TRUE): non-finite location and/or size for viewport} - naming no setting and giving no
+\code{Error in grid.Call.graphics(C_setviewport, vp, TRUE): non-finite
+location and/or size for viewport} - naming no setting and giving no
 hint of the real cause. Root cause: Josh's loaded
 \code{default.plotaesthetics} (his own on-disk \code{batactivity.plotoptions.csv})
-was an OLDER copy from before \verb{$panel.spacing.x} was added earlier this
+was an OLDER copy from before \code{$panel.spacing.x} was added earlier this
 same round - \code{get.default("panel.spacing.x")} silently returns \code{NA} for
 any parameter not present as a row (its own documented, intentional
 fallback behavior), \code{as.numeric(NA)} stayed \code{NA}, and
@@ -600,11 +571,12 @@ already were - a missing row (e.g. an older \code{batactivity.plotoptions.csv}
 that predates a newly-added setting) now stops immediately with a clear
 message naming exactly which parameter row is missing, instead of
 crashing unrecognizably deep in \code{grid}. Verified with a dedicated test:
-a synthetic \code{default.plotaesthetics} with its \verb{$panel.spacing.x} row
-removed now stops with \code{"default.plotaesthetics is missing these required $parameter rows: panel.spacing.x..."} instead of the
+a synthetic \code{default.plotaesthetics} with its \code{$panel.spacing.x} row
+removed now stops with \code{"default.plotaesthetics is missing these
+required $parameter rows: panel.spacing.x..."} instead of the
 grid/viewport error. Immediate fix for Josh: re-save the current
-\code{batactivity.plotoptions.csv} (already sent, with \verb{$panel.spacing.x} and
-the reduced \verb{$axis.text.size}) into his test-data folder and reload it
+\code{batactivity.plotoptions.csv} (already sent, with \code{$panel.spacing.x} and
+the reduced \code{$axis.text.size}) into his test-data folder and reload it
 before calling this function again.
 
 \strong{Follow-up, 2026-08-27, later still, per Josh ("clean up
@@ -614,8 +586,8 @@ argument names were shortened/renamed, with no change in behavior.}
 \code{suntimes.db} -> \code{suntimes}, \code{default.plotaesthetics} ->
 \code{aes.default} (\code{project.name} is unchanged). Every reference to
 these four names inside the function body, the internal
-\verb{*.REQUIRED}/\verb{*.REQUIRED.PARAMETERS} constant names, the
-\verb{@param}/\verb{@examples} documentation, and every call site in the
+\code{*.REQUIRED}/\code{*.REQUIRED.PARAMETERS} constant names, the
+\code{@param}/\code{@examples} documentation, and every call site in the
 \code{.dev.R} test script were updated together (verified with a
 whole-file identifier search after the rename: zero remaining references
 to any of the four old names as bare identifiers). \strong{The \code{Details}
@@ -623,7 +595,7 @@ entries ABOVE this one are left exactly as originally written, still
 using the OLD parameter names throughout} - they are a dated history of
 what was true and named at the time each entry was written, not a
 description of the current interface; only this entry, the
-\verb{@param}/\code{usage}/\code{examples} sections above, and the actual
+\code{@param}/\code{usage}/\code{examples} sections above, and the actual
 code describe the CURRENT (renamed) interface. Full test suite re-run
 clean (all 11 scenarios, no regressions) after the rename - no functional
 change, purely an identifier rename.
@@ -638,8 +610,8 @@ any column/row inside the file itself.} \code{batactivity.plotoptions.csv} ->
 function (\code{first.last}) rather than the more generic "batactivity" name,
 since the project has other \code{batz} plotting functions with their own,
 separate settings files. Updated everywhere this file name appears as a
-CURRENT, forward-looking reference: the \verb{$yaxe.limit.min}/
-\verb{$yaxe.limit.max} HH:MM-format error message below (now names
+CURRENT, forward-looking reference: the \code{$yaxe.limit.min}/
+\code{$yaxe.limit.max} HH:MM-format error message below (now names
 \code{plotopts_first.last.csv}), \code{.dev.R}'s \code{read.csv()} call, and
 \code{build_merged_plotoptions.R}'s \code{write.csv()} call. \strong{The dated
 \code{Details} entries ABOVE this one are left exactly as originally
@@ -683,9 +655,10 @@ currently save to the working directory") - that was true when written
 and is left as historical, per this project's own never-rewrite-history
 convention; it's implemented now. Each plot's own file NAME is still
 entirely driven by \code{aes.default}'s \code{$output.filename.pattern}
-(unchanged); \code{dir.save} only changes which DIRECTORY that name is
-written into (\code{file.path(dir.save, fname)}, right before the
-\code{ggsave()} call). Default \code{getwd()} matches the directory
+(unchanged at the time this entry was written - see "File naming (round
+nineteen)" below for its later deprecation); \code{dir.save} only changes
+which DIRECTORY that name is written into (\code{file.path(dir.save, fname)},
+right before the \code{ggsave()} call). Default \code{getwd()} matches the directory
 every prior call already implicitly saved into (a bare relative file
 name passed to \code{ggsave()} resolves against the working directory),
 so omitting \code{dir.save} changes nothing for existing callers.
@@ -703,7 +676,9 @@ function only ever reads whatever pattern \code{aes.default} gives it
 and does no string-literal matching/fixing of its own. Anyone whose own
 local settings CSV still has the old, misspelled pattern value will keep
 getting the old (misspelled) file names until they update that CSV too -
-this function has no way to detect or correct that on its own.
+this function has no way to detect or correct that on its own. (See
+"File naming (round nineteen)" below: \code{$output.filename.pattern} is
+now deprecated entirely, so this typo no longer matters either way.)
 
 \strong{BUGFIX, 2026-08-27, later still - real bug Josh hit running his
 own real \code{fig.list}: only 1 plot was produced when 9-10 rows should
@@ -738,7 +713,7 @@ real data-overlap difference) now correctly produce 3 entries in both
 \code{$plots} and \code{$ggplots} (previously collapsed to 1). Full
 dev-script test suite re-run clean (14 scenarios, no regressions).
 
-\strong{Follow-up, 2026-08-28, per Josh ("I do not want 100\\% duplicate
+\strong{Follow-up, 2026-08-28, per Josh ("I do not want 100\% duplicate
 rows to produced multiple graphs. Instead remove duplicate rows then go
 row by row producing 1 graph per row"):} the \code{job.key} fix directly
 above guarantees that every \code{fig.list} row - even ones sharing the
@@ -777,7 +752,7 @@ dev-script test suite re-run clean (16 scenarios, no regressions).
 \strong{Settings resolution (round nineteen), per Josh's 2026-09-16
 follow-up ("reorder the headings in all plotopts files to be $category
 $parameter $default.value $overide.value $notes ... add arguments
-aes.style = \"overide.value\" ... Function logic will first look in the
+aes.style = "overide.value" ... Function logic will first look in the
 column with the header = aes.style ... then if that element is blank
 use $default.value"):} the \code{project.name}-matches-a-column-name
 mechanism described several entries above (the "gome" column, etc.) is
@@ -807,7 +782,9 @@ file name is now always \code{"<project.name>_<ARU>_<timestamp>.png"} -
 \code{aes.default}'s \code{$output.filename.pattern} is DEPRECATED and no
 longer read at all (same deprecation pattern as \code{$plot.width} in
 \code{\link{batz.plotcover_bullseye}} - the row is left in place in
-\code{plotopts_first.last.csv}, harmless, simply ignored).
+\code{plotopts_first.last.csv}, harmless, simply ignored). Every saved
+file's name is printed to the console via \code{cat("Saved:", fname,
+"\n")}, as it already was before this round.
 
 Naming convention (per project preferences):
 \code{package.family_action.subject()}. This function is
@@ -820,8 +797,8 @@ species' first and last nightly detection). Requested as
 }
 \examples{
 \dontrun{
-# default dir.save = getwd() - saves into the current working directory,
-# default project.name = "new.project"
+# default dir.save = getwd(), default project.name = "new.project" -
+# saved file name will be "new.project_<ARU>_<timestamp>.png"
 result <- batz.plotdetections_first.last(
   data = vetted.processed,
   fig.list = plot.meta,
@@ -830,7 +807,8 @@ result <- batz.plotdetections_first.last(
 )
 result$ggplots[[1]]
 
-# explicit project.name/dir.save
+# explicit project.name/dir.save - saved file name will be
+# "gome_<ARU>_<timestamp>.png" in the given folder
 result <- batz.plotdetections_first.last(
   data = vetted.processed,
   fig.list = plot.meta,

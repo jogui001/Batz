@@ -4,15 +4,9 @@
 \alias{batz.treeusa_recode.names}
 \title{Recode Maine tree/shrub identifiers between scientific name, common names, and other reference fields}
 \usage{
-batz.treeusa_recode.names(
-  data,
-  head.out = "common_one",
-  dir.load = getwd(),
+batz.treeusa_recode.names(data, head.out = "common_one", dir.load = getwd(),
   load.pattern = c("*USA.treeshrub_recode.names*", "*tree_species_and_shrubs*"),
-  dir.sub = TRUE,
-  pattern = "plant.names.csv",
-  reference.data = "default"
-)
+  dir.sub = TRUE, pattern = "plant.names.csv", reference.data = "default")
 }
 \arguments{
 \item{data}{A vector of tree/shrub identifiers to recode. Must be a plain
@@ -61,11 +55,11 @@ table (see Details for the fallback when nothing usable is found).}
 }
 \value{
 A vector (if \code{head.out} has length 1) or data frame (if
-\code{head.out} has length > 1) of the same length/row count as
-\code{data}, with every element re-expressed in the requested
-header(s). An input element with no match anywhere in the reference
-table is returned unchanged (not \code{NA}, no error) in every
-requested header.
+  \code{head.out} has length > 1) of the same length/row count as
+  \code{data}, with every element re-expressed in the requested
+  header(s). An input element with no match anywhere in the reference
+  table is returned unchanged (not \code{NA}, no error) in every
+  requested header.
 }
 \description{
 Given a vector containing any mix of scientific (Latin) name or either of
@@ -78,13 +72,13 @@ cause a false mismatch. Shares its core lookup/pass-through/reporting
 logic with \code{\link{batz.batusa_recode.names}}, generalized to load
 its reference table from disk (rather than an embedded table) and to
 support more than one output header at once.
-}
-\details{
+
 As of 2026-09-14 (per Josh), the base reference table can optionally be
 supplemented with one or more additional CSV files found on disk -
 see \code{reference.data}/\code{pattern} below and \strong{"Supplemental
 reference data (reference.data/pattern)"} in Details.
-
+}
+\details{
 \strong{Header standardization (per Josh, 2026-09-14 project preference).}
 The reference database's own column names are a literal, uninvented copy
 of that file's real header text (not a \code{batz}-invented shorthand), so
@@ -161,64 +155,64 @@ name, but a wildcard like \code{"*.csv"} works the same way as
 the order \code{list.files()} returns, and folded into a single
 \code{reference.plants.temp} data frame:
 \enumerate{
-\item \strong{Column matching (name AND content).} The file's own
-headers are standardized (see above), then matched to
-\code{reference.plants}'s 10 non-\code{wood_type} columns
-(\code{species}, \code{common_one}, \code{common_two}, \code{genus},
-\code{family}, \code{native_status}, \code{growth_habit},
-\code{grouping_one}, \code{grouping_two}, \code{grouping_three}) in
-three passes: (1) an exact match on the standardized header text;
-(2) for anything left over, a keyword match on the standardized
-header (e.g. a header containing \code{"latin"}/\code{"scientific"}
-maps to \code{species}; \code{"common"} to \code{common_one} then
-\code{common_two}, in file column order; \code{"group"}/
-\code{"grouping"} to \code{grouping_one}/\code{two}/\code{three}, in
-file column order; \code{"genus"}, \code{"family"},
-\code{"native"}/\code{"status"}, \code{"growth"}/\code{"habit"} to
-their like-named column); (3) for anything STILL unmapped, a
-content signature check against whichever of \code{species}/
-\code{native_status}/\code{growth_habit} remain unclaimed (a column
-that's mostly two-word capitalized text - e.g. \code{"Acer negundo"}
-- is treated as \code{species}; a column whose values mostly fall in
-a small native/introduced/invasive vocabulary is treated as
-\code{native_status}; a column whose values mostly fall in a small
-tree/shrub/vine vocabulary is treated as \code{growth_habit}). This
-is a best-effort heuristic, not a guarantee - \strong{flagged, not
-silently perfect:} an odd or ambiguous input file may map incorrectly
-or not at all; any input column that never gets claimed by a
-canonical name is simply dropped (not merged as an extra column).
-\item \strong{Required headers.} A file must end up with (after step
-1) at least \code{species}, at least one of
-\code{common_one}/\code{common_two}, and at least one of
-\code{grouping_one}/\code{grouping_two}/\code{grouping_three} - if
-any of those three categories is entirely missing, the file is
-skipped (not added to \code{reference.plants.temp}) and
-\code{"<basename> <full path> skipped as missing required headers:
+  \item \strong{Column matching (name AND content).} The file's own
+    headers are standardized (see above), then matched to
+    \code{reference.plants}'s 10 non-\code{wood_type} columns
+    (\code{species}, \code{common_one}, \code{common_two}, \code{genus},
+    \code{family}, \code{native_status}, \code{growth_habit},
+    \code{grouping_one}, \code{grouping_two}, \code{grouping_three}) in
+    three passes: (1) an exact match on the standardized header text;
+    (2) for anything left over, a keyword match on the standardized
+    header (e.g. a header containing \code{"latin"}/\code{"scientific"}
+    maps to \code{species}; \code{"common"} to \code{common_one} then
+    \code{common_two}, in file column order; \code{"group"}/
+    \code{"grouping"} to \code{grouping_one}/\code{two}/\code{three}, in
+    file column order; \code{"genus"}, \code{"family"},
+    \code{"native"}/\code{"status"}, \code{"growth"}/\code{"habit"} to
+    their like-named column); (3) for anything STILL unmapped, a
+    content signature check against whichever of \code{species}/
+    \code{native_status}/\code{growth_habit} remain unclaimed (a column
+    that's mostly two-word capitalized text - e.g. \code{"Acer negundo"}
+    - is treated as \code{species}; a column whose values mostly fall in
+    a small native/introduced/invasive vocabulary is treated as
+    \code{native_status}; a column whose values mostly fall in a small
+    tree/shrub/vine vocabulary is treated as \code{growth_habit}). This
+    is a best-effort heuristic, not a guarantee - \strong{flagged, not
+    silently perfect:} an odd or ambiguous input file may map incorrectly
+    or not at all; any input column that never gets claimed by a
+    canonical name is simply dropped (not merged as an extra column).
+  \item \strong{Required headers.} A file must end up with (after step
+    1) at least \code{species}, at least one of
+    \code{common_one}/\code{common_two}, and at least one of
+    \code{grouping_one}/\code{grouping_two}/\code{grouping_three} - if
+    any of those three categories is entirely missing, the file is
+    skipped (not added to \code{reference.plants.temp}) and
+    \code{"<basename> <full path> skipped as missing required headers:
     <list>"} is printed via \code{cat()}.
-\item \strong{Recycling/derivation/padding.} For a file that passes
-step 2: if only one of \code{common_one}/\code{common_two} is
-present, the other is set equal to it (recycled, not left blank);
-if only one or two of \code{grouping_one}/\code{two}/\code{three}
-are present, the missing slot(s) are filled by recycling the
-FIRST present grouping column's value (an arbitrary but consistent
-choice - \strong{flagged}: there's no principled way to pick which
-grouping level to recycle from without more information from Josh);
-if \code{genus} is missing, it's derived as the first
-whitespace-separated word of \code{species}; if \code{family},
-\code{native_status}, or \code{growth_habit} is missing, it's added
-as \code{NA} for every row. Every column that had to be
-recycled/derived/padded this way is collected into one list.
-\item \strong{Notice.} If that list is empty (the file's own headers,
-once matched in step 1, already covered all 10 columns natively -
-nothing needed recycling, deriving, or padding),
-\code{"<basename> <full path> complete success very nice!"} is
-printed. Otherwise, \code{"<basename> <full path> loaded but padded
+  \item \strong{Recycling/derivation/padding.} For a file that passes
+    step 2: if only one of \code{common_one}/\code{common_two} is
+    present, the other is set equal to it (recycled, not left blank);
+    if only one or two of \code{grouping_one}/\code{two}/\code{three}
+    are present, the missing slot(s) are filled by recycling the
+    FIRST present grouping column's value (an arbitrary but consistent
+    choice - \strong{flagged}: there's no principled way to pick which
+    grouping level to recycle from without more information from Josh);
+    if \code{genus} is missing, it's derived as the first
+    whitespace-separated word of \code{species}; if \code{family},
+    \code{native_status}, or \code{growth_habit} is missing, it's added
+    as \code{NA} for every row. Every column that had to be
+    recycled/derived/padded this way is collected into one list.
+  \item \strong{Notice.} If that list is empty (the file's own headers,
+    once matched in step 1, already covered all 10 columns natively -
+    nothing needed recycling, deriving, or padding),
+    \code{"<basename> <full path> complete success very nice!"} is
+    printed. Otherwise, \code{"<basename> <full path> loaded but padded
     as missing these headers: <list>"} is printed, naming every
-recycled/derived/padded column.
-\item \strong{Merge.} The file's reconciled 10-column data frame is
-added onto \code{reference.plants.temp} (row-bound; a file's
-\code{wood_type} is not part of this reconciliation and is simply
-absent - i.e. \code{NA} - for these rows).
+    recycled/derived/padded column.
+  \item \strong{Merge.} The file's reconciled 10-column data frame is
+    added onto \code{reference.plants.temp} (row-bound; a file's
+    \code{wood_type} is not part of this reconciliation and is simply
+    absent - i.e. \code{NA} - for these rows).
 }
 Once every matched file has been processed: \code{reference.plants.all}
 starts as a copy of \code{reference.plants}. If \code{reference.data =

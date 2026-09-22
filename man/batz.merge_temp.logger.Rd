@@ -67,8 +67,7 @@ deployment/recovery window.
 }
 \details{
 \strong{Header standardization (per Josh, 2026-09-14 project preference)
-\itemize{
-\item real, documented output-schema change.} \code{templog.meta.csv}'s own
+- real, documented output-schema change.} \code{templog.meta.csv}'s own
 headers are a literal, uninvented copy of that file's real column text
 (not a \code{batz}-invented shorthand), so they are now run through the
 shared package helper \code{standardize.headers()} (trim whitespace,
@@ -90,7 +89,7 @@ the join key) is appended verbatim onto \code{templog.merged} (see
 below), this cascades into a real, visible change in that returned data
 frame's own column names. \strong{This does NOT affect \code{
 templog.merged}'s/\code{templog.notes}'s own \code{$serial.num} column}
-\item that one is this function's own INVENTED identifier, parsed from each
+- that one is this function's own INVENTED identifier, parsed from each
 raw file's NAME (its leading 8-digit serial), not a header loaded from
 any file, so it keeps its existing dot-separated name per this
 project's ordinary output convention. \strong{Anyone with a saved
@@ -99,11 +98,9 @@ it with the new underscore spellings (or simply let it load as-is,
 since \code{standardize.headers()} converts either spelling to the same
 result), and update any downstream script that reads
 \code{templog.merged} by the old dotted meta-column names.}
-}
 
 RH is gated strictly on the matched \code{templog.meta.csv} \code{$logger_type}
-\itemize{
-\item not on header text or any other heuristic:
+- not on header text or any other heuristic:
 \itemize{
 \item \code{logger_type == "H"}: \code{$temp.wet.c} keeps the real
 column-4 reading, and \code{$rh} is calculated from dry/wet bulb.
@@ -112,7 +109,6 @@ both forced to \code{NA}, even if the raw file has a second
 temperature column.
 \item No confident meta match (missing, ambiguous, or no meta.csv at
 all): treated the same as \code{"T"} (both \code{NA}).
-}
 }
 
 The meta join uses ONLY \code{$serial} (the file's real 8-digit serial,

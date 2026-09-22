@@ -77,9 +77,9 @@ pass - \code{batz.generate_plotframe.bat} was confirmed NOT a plotting
 function and is excluded, exactly as it was excluded from the rest of
 round nineteen's changes. The mapping used:
 \itemize{
-\item \code{batz.plotcover_bullseye} -> \verb{plotopts_bullseye.csv}
-\item \code{batz.plotdetections_first.last} -> \verb{plotopts_first.last.csv}
-\item \code{batz.plotactivity_observations} -> \verb{plotopts_callobs.csv}
+  \item \code{batz.plotcover_bullseye} -> \verb{plotopts_bullseye.csv}
+  \item \code{batz.plotdetections_first.last} -> \verb{plotopts_first.last.csv}
+  \item \code{batz.plotactivity_observations} -> \verb{plotopts_callobs.csv}
 }
 A name in \code{generate.files} that isn't one of these three stops the
 function immediately with a clear error listing the recognized names,
@@ -119,5 +119,4 @@ batz.generate_plotopts(project.name = "acme.wetlands.2026",
 batz.generate_plotopts(generate.files = "batz.plotcover_bullseye",
                         project.name = "acme.wetlands.2026")
 }
-
 }

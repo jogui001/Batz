@@ -4,40 +4,31 @@
 \alias{batz.plotcover_bullseye}
 \title{Plot a "bullseye" habitat-cover diagram (Canopy / Understory) for an ARU}
 \usage{
-batz.plotcover_bullseye(
-  data,
-  mic,
-  aes.default,
-  project.name = "new.project",
-  aes.style = "overide.value",
-  dir.save = getwd(),
-  sub.plots = c("canopy.bull", "mic.bar", "mic.bull", "understory.bull"),
-  cover.arrows = TRUE,
-  mean.cover = TRUE,
-  quadrant.cover = TRUE,
-  auto.scale = TRUE,
-  subplot.size.height = 3,
-  subplot.size.width = 2
-)
+batz.plotcover_bullseye(data, mic, aes.default, project.name = "new.project",
+  aes.style = "overide.value", dir.save = getwd(),
+  sub.plots = c("canopy.bull", "mic.bar", "mic.bull",
+  "understory.bull"), cover.arrows = TRUE, mean.cover = TRUE,
+  quadrant.cover = TRUE, auto.scale = TRUE, subplot.size.height = 3,
+  subplot.size.width = 2)
 }
 \arguments{
-\item{data}{A data frame of the raw habitat-cover assessment (e.g.
-Josh's \code{bulleye_model_data.xlsx}, "cover" sheet). Column headers
-are run through \code{standardize.headers()} on receipt (see Details,
-"Header standardization"), after which it must have (in any original
-spelling that standardizes to): \code{aru.label}, \code{"Select the
-quadrant you are assessing"}, \code{"Canopy cover"}, \code{"Understory
-cover"}. One row per quadrant per \code{aru.label} - every
-\code{aru.label} that will be plotted needs exactly the four quadrant
-values \code{"northeast"}/\code{"southeast"}/\code{"southwest"}/
+\item{data}{A data frame of the raw habitat-cover assessment (e.g. Josh's
+\code{bulleye_model_data.xlsx}, "cover" sheet). Column headers are run
+through \code{standardize.headers()} on receipt (see Details, "Header
+standardization"), after which it must have (in any original spelling
+that standardizes to): \code{aru.label}, \code{"Select the quadrant you
+are assessing"}, \code{"Canopy cover"}, \code{"Understory cover"}. One
+row per quadrant per \code{aru.label} - every \code{aru.label} that
+will be plotted needs exactly the four quadrant values
+\code{"northeast"}/\code{"southeast"}/\code{"southwest"}/
 \code{"northwest"} (case/whitespace-insensitive).}
 
 \item{mic}{A data frame of microphone deployment metadata (e.g. Josh's
 \code{bulleye_model_data.xlsx}, "mic" sheet). Also header-standardized
 on receipt; must have (in any spelling that standardizes to):
 \code{aru.label}, \code{"Microphone Height"}, \code{"Horizontal
-Microphone Orientation"}, \code{"Vertical Microphone Orientation"}.
-One row per \code{aru.label}.}
+Microphone Orientation"}, \code{"Vertical Microphone Orientation"}. One
+row per \code{aru.label}.}
 
 \item{aes.default}{A data frame of default plot settings, one row per
 parameter (e.g. \code{plotopts_bullseye.csv}). Must have
@@ -49,9 +40,10 @@ Details, "Settings resolution (round nineteen)".}
 \item{project.name}{Character, default \code{"new.project"}. Per Josh's
 nineteenth follow-up (2026-09-16), this NO LONGER selects an
 \code{aes.default} override column - it is now used ONLY to build the
-first part of every saved file name: \code{"<project.name>_<ARU>_
-<timestamp>.png"}. See Details, "Settings resolution (round
-nineteen)" for what replaced the old column-matching behavior.}
+first part of every saved file name:
+\code{"<project.name>_<ARU>_<timestamp>.png"}. See Details, "Settings
+resolution (round nineteen)" for what replaced the old column-matching
+behavior.}
 
 \item{aes.style}{Character, default \code{"overide.value"}. Names which
 column of \code{aes.default} is checked FIRST for each parameter
@@ -68,62 +60,61 @@ name itself is now always \code{"<project.name>_<ARU>_<timestamp>.png"}
 
 \item{sub.plots}{Character vector, default \code{c("canopy.bull",
 "mic.bar", "mic.bull", "understory.bull")} (i.e. all four, in that
-order) - which panels to draw, and in what left-to-right order.
-Every element must be one of \code{"canopy.bull"} (the Canopy cover
+order) - which panels to draw, and in what left-to-right order. Every
+element must be one of \code{"canopy.bull"} (the Canopy cover
 bullseye), \code{"mic.bar"} (the Microphone Height bar + Vertical
 Orientation icon), \code{"mic.bull"} (a polar bullseye-style plot of
 the Vertical Microphone Orientation - see Details, "mic.bull panel"),
 or \code{"understory.bull"} (the Understory cover bullseye); an
-unrecognized value stops with an error naming the allowed set.
-Repeats are allowed (the same panel type can appear more than once).}
+unrecognized value stops with an error naming the allowed set. Repeats
+are allowed (the same panel type can appear more than once).}
 
 \item{cover.arrows}{Logical, default \code{TRUE}. Whether the
 Horizontal Microphone Orientation arrow is drawn on
-\code{"canopy.bull"}/\code{"understory.bull"} panels. Does not
-affect \code{"mic.bar"} or \code{"mic.bull"} - \code{"mic.bull"}'s
-own Vertical Microphone Orientation arrow is a required part of that
-panel and is always drawn (see Details, "mic.bull panel").}
+\code{"canopy.bull"}/\code{"understory.bull"} panels. Does not affect
+\code{"mic.bar"} or \code{"mic.bull"} - \code{"mic.bull"}'s own
+Vertical Microphone Orientation arrow is a required part of that panel
+and is always drawn (see Details, "mic.bull panel").}
 
 \item{mean.cover}{Logical, default \code{TRUE}. Whether the dashed
 mean-of-quadrants circle is drawn on
-\code{"canopy.bull"}/\code{"understory.bull"} panels. Does not
-affect \code{"mic.bar"} or \code{"mic.bull"} (neither has quadrants
-or a mean-of-quadrants circle).}
+\code{"canopy.bull"}/\code{"understory.bull"} panels. Does not affect
+\code{"mic.bar"} or \code{"mic.bull"} (neither has quadrants or a
+mean-of-quadrants circle).}
 
 \item{quadrant.cover}{Logical, default \code{TRUE}. Whether the four
 quadrant wedges are drawn on
-\code{"canopy.bull"}/\code{"understory.bull"} panels. Does not
-affect \code{"mic.bar"} or \code{"mic.bull"} (neither has quadrants
-or a mean-of-quadrants circle).}
+\code{"canopy.bull"}/\code{"understory.bull"} panels. Does not affect
+\code{"mic.bar"} or \code{"mic.bull"} (neither has quadrants or a
+mean-of-quadrants circle).}
 
 \item{auto.scale}{Logical, default \code{TRUE}, per Josh's fourteenth
 follow-up (2026-09-15). When \code{TRUE}, the saved combined figure's
 total width is fixed at \code{6.5} inches (per Josh: "the total plot
 size must be 6.5 inches wide"), divided evenly across however many
-panels \code{sub.plots} draws - same auto-fit mechanism as before,
-just a fixed total instead of \code{$plot.width}. Height is
-unaffected by this argument and still comes from \code{$plot.height}.
-When \code{FALSE}, \code{subplot.size.width}/\code{subplot.size.height}
-set each individual panel's size directly instead - see those two
-arguments below. See Details, "Figure sizing" for the full precedence
-(including why \code{$plot.width} is no longer read either way).}
+panels \code{sub.plots} draws - same auto-fit mechanism as before, just
+a fixed total instead of \code{$plot.width}. Height is unaffected by
+this argument and still comes from \code{$plot.height}. When
+\code{FALSE}, \code{subplot.size.width}/\code{subplot.size.height} set
+each individual panel's size directly instead - see those two arguments
+below. See Details, "Figure sizing" for the full precedence (including
+why \code{$plot.width} is no longer read either way).}
 
 \item{subplot.size.height}{Single positive number, default \code{3}.
 Only used when \code{auto.scale = FALSE} - the height, in inches, of
-EACH sub-plot (and thus of the whole combined figure, since every
-panel shares one row). Ignored when \code{auto.scale = TRUE}.}
+EACH sub-plot (and thus of the whole combined figure, since every panel
+shares one row). Ignored when \code{auto.scale = TRUE}.}
 
-\item{subplot.size.width}{Single positive number, default \code{2}.
-Only used when \code{auto.scale = FALSE} - the width, in inches, of
-EACH sub-plot; the combined figure's total width is this times
+\item{subplot.size.width}{Single positive number, default \code{2}. Only
+used when \code{auto.scale = FALSE} - the width, in inches, of EACH
+sub-plot; the combined figure's total width is this times
 \code{length(sub.plots)}. Ignored when \code{auto.scale = TRUE}.}
 }
 \value{
-Invisibly, a list with \code{plots} (one entry per
-\code{aru.label} actually plotted: parsed \code{canopy}/
-\code{understory} quadrant values, the matched \code{mic} row, and the
-saved file path) and \code{ggplots} (the corresponding combined
-\code{patchwork} objects).
+Invisibly, a list with \code{plots} (one entry per \code{aru.label}
+  actually plotted: parsed \code{canopy}/\code{understory} quadrant
+  values, the matched \code{mic} row, and the saved file path) and
+  \code{ggplots} (the corresponding combined \code{patchwork} objects).
 }
 \description{
 Draws a row of polar "bullseye" and bar panels for an ARU's habitat-cover
@@ -136,8 +127,7 @@ panels appear, and in what order). The \code{"canopy.bull"}/
 wedge sized to that quadrant's cover value; the mean of all four
 quadrants as an unfilled, red-outlined dashed circle; and an arrow from
 the plot's center to its edge for the Horizontal Microphone Orientation
-\itemize{
-\item each independently toggleable (see \code{quadrant.cover},
+- each independently toggleable (see \code{quadrant.cover},
 \code{mean.cover}, \code{cover.arrows}). \code{"mic.bar"} shows that
 ARU's mic height as a bar with an icon representing the Vertical
 Microphone Orientation on top (see Details, "Middle panel").
@@ -146,21 +136,17 @@ polar "bullseye" arrow instead, its length equal to the mic height (see
 Details, "mic.bull panel"). One combined figure is produced per
 distinct \code{aru.label} found in \code{mic}.
 }
-}
 \details{
 \strong{Naming - not yet confirmed with Josh.} Requested as "a model
 bulls eye plot" with no function name given. Named
 \code{batz.plotcover_bullseye()} following this package's
-\code{batz.<family>_<action>.<subject>()} convention with the verb
-baked into the family name (\code{family = "plotcover"}, same pattern as
+\code{batz.<family>_<action>.<subject>()} convention with the verb baked
+into the family name (\code{family = "plotcover"}, same pattern as
 \code{batz.plotdetections_first.last}/\code{batz.plotframe_batactivity})
-\itemize{
-\item \strong{please confirm this name is acceptable.}
-}
+- \strong{please confirm this name is acceptable.}
 
 \strong{Header standardization (per Josh, 2026-09-14 project preference)
-\itemize{
-\item DOES apply here, unlike the sibling plotting functions.} \code{data}
+- DOES apply here, unlike the sibling plotting functions.} \code{data}
 and \code{mic} are genuinely raw, externally-supplied headers (straight
 from a spreadsheet Josh fills in by hand), not the already-standardized
 output schema of an upstream \code{batz} function - so both are run
@@ -168,46 +154,45 @@ through the shared package helper \code{standardize.headers()}
 immediately on receipt. This is why the required headers above are
 written as their original human-readable text ("Canopy cover", etc.) -
 they arrive there, then get folded to \code{canopy_cover} etc. before
-this function's own required-header check runs. \code{aes.default}
-is NOT standardized, for the same reason it isn't in
+this function's own required-header check runs. \code{aes.default} is
+NOT standardized, for the same reason it isn't in
 \code{batz.plotdetections_first.last()}: it's this function's own
 invented parameter-name settings sheet, not raw external data.
-}
 
-\strong{Plotopt convention (per Josh: "use the same identifiers as in
-the plotopt for the other functions").} Reuses
+\strong{Plotopt convention (per Josh: "use the same identifiers as in the
+plotopt for the other functions").} Reuses
 \code{aes.default}/\code{get.default()}/\code{project.name}/
 \code{dir.save} exactly as established in
 \code{batz.plotdetections_first.last()} and
 \code{batz.plotactivity_observations()} - \code{$category}/
-\code{$parameter}/\code{$default.value} rows, optional \code{$notes}
-and \code{project.name}-matching override column(s), with a job-row
-value (when one exists) beating a \code{project.name} column value,
-which beats \code{$default.value}. This function has no \code{fig.list}-
-style per-job settings sheet (each \code{aru.label} present in
-\code{mic} IS the "job"), so only the \code{project.name}-column /
-\code{$default.value} half of that precedence applies - there is no
-\code{get.setting()} here, only \code{get.default()}. \strong{This
-paragraph describes the OLD mechanism, kept as dated history - see the
-next entry for what replaced it.}
+\code{$parameter}/\code{$default.value} rows, optional \code{$notes} and
+\code{project.name}-matching override column(s), with a job-row value
+(when one exists) beating a \code{project.name} column value, which
+beats \code{$default.value}. This function has no \code{fig.list}-style
+per-job settings sheet (each \code{aru.label} present in \code{mic} IS
+the "job"), so only the \code{project.name}-column / \code{$default.value}
+half of that precedence applies - there is no \code{get.setting()} here,
+only \code{get.default()}. \strong{This paragraph describes the OLD
+mechanism, kept as dated history - see the next entry for what replaced
+it.}
 
 \strong{Settings resolution (round nineteen), per Josh's 2026-09-16
-follow-up ("reorder the headings in all plotopts files ... add
-arguments aes.style = \"overide.value\" ... Function logic will first
-look in the column with the header = aes.style ... then if that element
-is blank use $default.value"):} the \code{project.name}-matches-a-
-column-name mechanism described just above is REPLACED entirely. Every
+follow-up ("reorder the headings in all plotopts files ... add arguments
+aes.style = \"overide.value\" ... Function logic will first look in the
+column with the header = aes.style ... then if that element is blank use
+$default.value"):} the \code{project.name}-matches-a-column-name
+mechanism described just above is REPLACED entirely. Every
 \code{aes.default} sheet now has a fixed \code{$overide.value} column
-(blank by default, between \code{$default.value} and \code{$notes} -
-see \code{\link{batz.generate_plotopts}}), which the user fills in
-directly on their own copy of the CSV to override a setting. The new
+(blank by default, between \code{$default.value} and \code{$notes} - see
+\code{\link{batz.generate_plotopts}}), which the user fills in directly
+on their own copy of the CSV to override a setting. The new
 \code{aes.style} argument (default \code{"overide.value"}) names which
-column \code{get.default()} checks FIRST; when that column doesn't
-exist (an older sheet) or is blank for a given row, \code{$default.value}
-is used, exactly as before. \code{project.name} no longer participates
-in settings resolution AT ALL - it is now used purely to build the
-saved file name (see "File naming (round nineteen)" below). This is a
-judgment call on backward compatibility, flagged for Josh: an older
+column \code{get.default()} checks FIRST; when that column doesn't exist
+(an older sheet) or is blank for a given row, \code{$default.value} is
+used, exactly as before. \code{project.name} no longer participates in
+settings resolution AT ALL - it is now used purely to build the saved
+file name (see "File naming (round nineteen)" below). This is a judgment
+call on backward compatibility, flagged for Josh: an older
 \code{aes.default} sheet with its own \code{project.name}-matching
 column (e.g. a column literally named \code{"gome"}) will simply be
 ignored now (that column is neither \code{$default.value} nor
@@ -216,12 +201,12 @@ into the new \code{$overide.value} column instead.
 
 \strong{File naming (round nineteen), same follow-up:} every saved PNG's
 file name is now always \code{"<project.name>_<ARU>_<timestamp>.png"} -
-\code{aes.default}'s \code{$output.filename.pattern} is DEPRECATED and
-no longer read at all (same deprecation pattern as \code{$plot.width}/
+\code{aes.default}'s \code{$output.filename.pattern} is DEPRECATED and no
+longer read at all (same deprecation pattern as \code{$plot.width}/
 \code{$axis.text.size} in earlier rounds - the row is left in place in
 \code{plotopts_bullseye.csv}, harmless, simply ignored). Each save also
 now prints its file name to the console (\code{cat("Saved:", fname,
-"\\n")}), matching the convention already used by
+"\n")}), matching the convention already used by
 \code{batz.plotdetections_first.last()}/
 \code{batz.plotactivity_observations()}.
 
@@ -233,31 +218,32 @@ example used a hyphen, \code{"25-50"}) is split on \code{"[_-]+"} and
 averaged (e.g. \code{"51_75"} -> 63, \code{"25-50"} -> 37.5); anything
 else is used as a plain number (e.g. \code{100}, \code{"0"}).
 
-\strong{Quadrant angles and compass orientation.} \code{coord_polar(theta
-= "x", start = 0, direction = 1)} is used so that a plain 0-360 compass
-bearing maps directly onto the polar angle - 0 = North = top, 90 = East
-= right, 180 = South = bottom, 270 = West = left, increasing clockwise -
-confirmed with a synthetic rendered test before writing this function
-(see this function's own \code{.dev.R} header comment). Each quadrant is
-drawn as a \code{geom_col(width = 90)} bar centered on its own midpoint
-angle - northeast = 45, southeast = 135, southwest = 225, northwest =
-315 - so its 90-degree span exactly covers the compass range Josh gave
-(e.g. northeast's bar spans 0-90). The angle-axis grid is labeled
-N/E/S/W at the same 0/90/180/270 breaks as a readability aid (not
-explicitly requested, easy to remove if unwanted).
+\strong{Quadrant angles and compass orientation.}
+\code{coord_polar(theta = "x", start = 0, direction = 1)} is used so
+that a plain 0-360 compass bearing maps directly onto the polar angle -
+0 = North = top, 90 = East = right, 180 = South = bottom, 270 = West =
+left, increasing clockwise - confirmed with a synthetic rendered test
+before writing this function (see this function's own \code{.dev.R}
+header comment). Each quadrant is drawn as a \code{geom_col(width = 90)}
+bar centered on its own midpoint angle - northeast = 45, southeast =
+135, southwest = 225, northwest = 315 - so its 90-degree span exactly
+covers the compass range Josh gave (e.g. northeast's bar spans 0-90).
+The angle-axis grid is labeled N/E/S/W at the same 0/90/180/270 breaks
+as a readability aid (not explicitly requested, easy to remove if
+unwanted).
 
 \strong{Quadrant wedges and mean circle.} Each of the four quadrant
 wedges is filled with one flat color (\code{$quadrant.fill}, default
 \code{"grey70"}) and no outline (\code{$quadrant.color}, default
-\code{"NA"} - any value that reads as \code{"NA"} or blank is treated
-as no outline; a real color name/hex draws one instead, if ever
-wanted). The mean of all four quadrants is drawn via
+\code{"NA"} - any value that reads as \code{"NA"} or blank is treated as
+no outline; a real color name/hex draws one instead, if ever wanted).
+The mean of all four quadrants is drawn via
 \code{geom_hline(yintercept = mean(...))} inside \code{coord_polar} -
 confirmed by a live rendered test that this draws a full circle (not a
 straight line) at that radius - colored \code{$mean.color} (default
-\code{"red"}), DASHED (\code{linetype = "dashed"}, per Josh's
-follow-up - was solid in the first draft); a \code{geom_hline} is a
-line already, so "no fill" is automatic, not a separate setting.
+\code{"red"}), DASHED (\code{linetype = "dashed"}, per Josh's follow-up -
+was solid in the first draft); a \code{geom_hline} is a line already, so
+"no fill" is automatic, not a separate setting.
 
 \strong{Horizontal Microphone Orientation arrow - drawn on BOTH panels,
 not explicitly specified which.} Josh's spec didn't say whether the
@@ -279,19 +265,18 @@ scale expansion padded a few percent beyond \code{$radial.max} on both
 ends, making the plotted area visually read as extending past 100
 toward roughly 125 instead of stopping at a clean \code{$radial.max}
 (110). Both fixed together: \code{scale_x_continuous()}/
-\code{scale_y_continuous()} now pass \code{expand = c(0, 0)} (no
-padding beyond the stated limits), the default \code{axis.text.y} is
-hidden entirely, and the four \code{$radial.breaks} values (25/50/75/
-100) are drawn manually via \code{geom_text()} - at BOTH \code{x = 0}
-(North) and \code{x = 180} (South), per Josh: "Repeat the labels ...
-on the southern axis as well".
+\code{scale_y_continuous()} now pass \code{expand = c(0, 0)} (no padding
+beyond the stated limits), the default \code{axis.text.y} is hidden
+entirely, and the four \code{$radial.breaks} values (25/50/75/100) are
+drawn manually via \code{geom_text()} - at BOTH \code{x = 0} (North) and
+\code{x = 180} (South), per Josh: "Repeat the labels ... on the southern
+axis as well".
 
 \strong{Label styling and draw order.} The labels were originally
-\code{geom_label()} (a white background box behind each number, so it
-stayed legible over a grey wedge or the red circle); Josh asked for the
-box removed ("Remove the white box around the labels"), so this is now
-plain \code{geom_text()} with no background - legibility instead comes
-from draw order (see below).
+\code{geom_label()} (a white background box behind each number); Josh
+asked for the box removed ("Remove the white box around the labels"), so
+this is now plain \code{geom_text()} with no background - legibility
+instead comes from draw order (see below).
 
 \strong{Draw order, per Josh's third follow-up} ("draw order should be
 Quadrats > mean cover > mic direction > scale lines > labels"). The
@@ -305,16 +290,18 @@ each layer renders on top of everything before it. (Draw order in
 \code{ggplot2} follows the sequence of \code{geom_*}/\code{stat_*}
 layers only - \code{scale_*}/\code{coord_*}/\code{theme()} calls don't
 affect it, which is also why the scale lines had to move off
-\code{theme(panel.grid)} entirely - see below.)
+\code{theme(panel.grid)} entirely - see below.) Per Josh's sixth
+follow-up (2026-09-15), the first three of these layers are now each
+individually optional - see "Sub-plot selection and toggles" below.
 
-\strong{Scale lines - converted from theme gridlines to an explicit
-geom layer, styled black/dashed, per Josh's third follow-up} ("make the
+\strong{Scale lines - converted from theme gridlines to an explicit geom
+layer, styled black/dashed, per Josh's third follow-up} ("make the
 scale lines black and dashed"). The 25/50/75/100 reference rings were
 originally drawn via \code{theme(panel.grid.major = element_line(...))}
 colored \code{$panel.grid.color} (grey). \code{ggplot2} always renders
 theme-based gridlines UNDERNEATH all geom/data layers regardless of
-where the \code{theme()} call sits in the \code{+} chain, so there is
-no way to satisfy Josh's draw-order request ("scale lines" after "mic
+where the \code{theme()} call sits in the \code{+} chain, so there is no
+way to satisfy Josh's draw-order request ("scale lines" after "mic
 direction", before "labels") while the rings remain theme-driven. They
 are now drawn as an explicit \code{geom_hline(yintercept =
 radial.breaks)} layer instead - the same "\code{geom_hline} inside
@@ -329,105 +316,114 @@ for it. \code{panel.grid.major.y} is now
 blanked (so the old grey rings don't also draw, underneath, redundantly)
 while \code{panel.grid.major.x} (the N-S/E-W compass cross lines, not
 part of Josh's draw-order or color/linetype request) is left as before,
-colored by \code{$panel.grid.color}. \code{panel.grid.minor} stays
-blank (unchanged from the previous follow-up - see "Grid lines" below).
+colored by \code{$panel.grid.color}. \code{panel.grid.minor} stays blank
+(unchanged from the previous follow-up - see "Grid lines" below).
+Neither the scale lines nor the radial labels are gated by
+\code{cover.arrows}/\code{mean.cover}/\code{quadrant.cover} - both
+always draw.
 
-\strong{Grid lines - diagonal spokes and phantom outer ring removed,
-per Josh's second follow-up.} The first draft left \code{ggplot2}'s
-default MINOR gridlines on: for the x (angle) scale, with major breaks
-only at 0/90/180/270, the auto-computed minor breaks land at
-45/135/225/315 - exactly the quadrant CENTER angles - which
-\code{coord_polar} renders as two diagonal lines through the center
-(southeast-to-northwest and northeast-to-southwest), matching what
-Josh described as "access lines that run southeast to south\link{west}...
-northwest and northwest to southeast". Minor gridlines on the y
-(radial) scale similarly added an extra, unlabeled ring reinforcing the
-"goes past 100 toward 125" impression from the scale-expansion bug
-below. Both removed together with \code{panel.grid.minor =
-element_blank()}. \code{panel.border}/\code{axis.line} are also blanked
-defensively (per Josh's third follow-up restating "remove the scale
-line at 125") so no border or axis line can visually read as an extra
-ring/edge beyond the outermost labeled 100 ring; the plot area itself
-still legitimately extends to \code{$radial.max} (110, unlabeled
-margin) as in the original spec.
+\strong{Grid lines - diagonal spokes and phantom outer ring removed, per
+Josh's second follow-up.} The first draft left \code{ggplot2}'s default
+MINOR gridlines on: for the x (angle) scale, with major breaks only at
+0/90/180/270, the auto-computed minor breaks land at 45/135/225/315 -
+exactly the quadrant CENTER angles - which \code{coord_polar} renders as
+two diagonal lines through the center (southeast-to-northwest and
+northeast-to-southwest), matching what Josh described as "access lines
+that run southeast to south[west]... northwest and northwest to
+southeast". Minor gridlines on the y (radial) scale similarly added an
+extra, unlabeled ring reinforcing the "goes past 100 toward 125"
+impression from the scale-expansion bug below. Both removed together
+with \code{panel.grid.minor = element_blank()}. \code{panel.border}/
+\code{axis.line} are also blanked defensively (per Josh's third
+follow-up restating "remove the scale line at 125") so no border or
+axis line can visually read as an extra ring/edge beyond the outermost
+labeled 100 ring; the plot area itself still legitimately extends to
+\code{$radial.max} (110, unlabeled margin) as in the original spec.
 
-\strong{Background - reverted to plain white, per Josh's third
-follow-up correcting a misreading of his second follow-up.} His second
-follow-up said "the background around the outside to be removed. It
-should be clear see through" - taken at the time to mean the whole
-plot/PNG background, and implemented as a real alpha-transparent PNG
-(\code{panel.background}/\code{plot.background} set transparent in
-each panel's theme, \code{ggsave(..., bg = "transparent")}, plus a
+\strong{Background - reverted to plain white, per Josh's third follow-up
+correcting a misreading of his second follow-up.} His second follow-up
+said "the background around the outside to be removed. It should be
+clear see through" - taken at the time to mean the whole plot/PNG
+background, and implemented as a real alpha-transparent PNG
+(\code{panel.background}/\code{plot.background} set transparent in each
+panel's theme, \code{ggsave(..., bg = "transparent")}, plus a
 transparent \code{theme()} applied to the combined \code{patchwork}
 object to work around \code{wrap_plots()}'s own opaque white wrapper
 background). Josh's third follow-up clarifies that was not the intent:
 "The background should still be white. What I meant was that the text
 boxes for the labels should be clear" - i.e. only the small white boxes
 behind the axis labels (already removed, see "Label styling and draw
-order" above, by switching \code{geom_label()} to \code{geom_text()}
-\itemize{
-\item satisfied even before the transparency work below was mistakenly
-added). All of the transparency changes are now reverted: no
-transparent \code{panel.background}/\code{plot.background} theme
-overrides (falls back to \code{theme_minimal()}'s plain white), no
-transparent override on the combined \code{patchwork} object, and
-\code{ggsave()} now passes \code{bg = "white"} explicitly.
-}
+order" above, by switching \code{geom_label()} to \code{geom_text()} -
+satisfied even before the transparency work below was mistakenly added).
+All of the transparency changes are now reverted: no transparent
+\code{panel.background}/\code{plot.background} theme overrides (falls
+back to \code{theme_minimal()}'s plain white), no transparent override
+on the combined \code{patchwork} object, and \code{ggsave()} now passes
+\code{bg = "white"} explicitly.
 
-\strong{Middle panel - now a real third plot, per Josh's fourth
-follow-up (2026-09-14), replacing the blank placeholder from an earlier
-round.} A single grey \code{geom_col()} bar rises from 0 to that ARU's
+\strong{Middle panel - now a real panel, per Josh's fourth follow-up
+(2026-09-14), replacing the blank placeholder from an earlier round.} A
+single grey \code{geom_col()} bar rises from 0 to that ARU's
 \code{$microphone_height}; its Y axis defaults to 0-\code{$mic.panel.y.
 default.max} (4), per Josh ("Y axes default range is between 0-4 unless
-the mic height \link{needs more}") - only stretched taller when the actual
-\code{microphone_height} (plus the icon's own half-height and a small
-margin) would otherwise run past the default top; X axis has NO title
-at all as of Josh's sixteenth follow-up (2026-09-15) ("Remove 'Ground
-Level' from the mic.bar plot") - \code{$mic.panel.xlab} (formerly
-\code{"Ground Level"}) is no longer read; the X-axis title area is
-hardcoded blank (\code{axis.title.x = element_blank()}) regardless of
-that setting's value, and its row remains in
-\code{plotopts_bullseye.csv} only for backward compatibility (marked
-deprecated in its own \code{$notes}). Y axis title \code{$mic.panel.ylab}
-(default \code{"Microphone Height (m)"}); panel title
-\code{$mic.panel.title} (default \code{"Microphone Height and"} plus
-\code{"Vertical Orientation"} on a second line - an embedded line break
-per Josh's sixteenth follow-up, see "Panel title wrapping" below -
-styled the same as the Canopy/Understory panel titles).
+the mic height [needs more]") - only stretched taller when the actual
+\code{microphone_height} (plus the icon's own full height and a small
+margin) would otherwise run past the default top; X axis has NO title at
+all as of Josh's sixteenth follow-up (2026-09-15) ("Remove 'Ground Level'
+from the mic.bar plot") - \code{$mic.panel.xlab} (formerly \code{"Ground
+Level"}) is no longer read; the X-axis title area is hardcoded blank
+(\code{axis.title.x = element_blank()}) regardless of that setting's
+value, and its row remains in \code{plotopts_bullseye.csv} only for
+backward compatibility (marked deprecated in its own \code{$notes}). Y
+axis title \code{$mic.panel.ylab} (default \code{"Microphone Height
+(m)"}); panel title \code{$mic.panel.title} (default \code{"Microphone
+Height and"} plus \code{"Vertical Orientation"} on a second line - an
+embedded line break per Josh's sixteenth follow-up, see "Panel title
+wrapping" below - styled the same as the Canopy/Understory panel
+titles).
+Combined via \code{patchwork::wrap_plots(panels, ncol = length(sub.plots),
+widths = rep(1, length(sub.plots)))} - implemented this way rather than
+the more commonly-seen \code{plot1 + plot2 + plot_layout(...)} operator
+chain: that chain relies on an operator method \code{patchwork} registers
+on the \code{"gg"} class only once \code{library(patchwork)} has been
+attached by the CALLER, which a package function shouldn't depend on -
+confirmed as a real error ("Can't add \code{plot} to a <ggplot> object")
+when only \code{requireNamespace("patchwork")} was used, and fixed by
+switching to \code{wrap_plots()}, which works from the namespace alone.
 
 \strong{Vertical Microphone Orientation icon set, per Josh's fourth
-follow-up, images swapped to .png in a fifth follow-up same day - a
-real assumption, please confirm.} Josh supplied 5 icon images
-diagramming a microphone tilted at 5 specific angles, using this angle
-convention (his own words): "0 \link{is} parrell \link{parallel} with ground...
-90 is straight up... 270 is straight down... 45 is up on an angle and
-315 \link{is} pointing down on an angle." These 5 files
+follow-up, images swapped to .png in a fifth follow-up same day - a real
+assumption, please confirm.} Josh supplied 5 icon images diagramming a
+microphone tilted at 5 specific angles, using this angle convention
+(his own words): "0 [is] parrell [parallel] with ground... 90 is
+straight up... 270 is straight down... 45 is up on an angle and 315
+[is] pointing down on an angle." These 5 files
 (\code{mic_vert_000.png}/\code{045}/\code{090}/\code{270}/\code{315.png},
-matched to those angles by their sound-wave-squiggle direction) live
-in \code{$icon.dir} (default \code{"img"}, a directory path resolved
-relative to the current working directory when the function is
-called - NOT relative to \code{dir.save} or to this function's own
-file location). Originally supplied as solid-black-icon .jpg files,
-Josh re-sent them as outline-style .png files in his very next
-follow-up ("use the attached .png instead") - see "Icon file format"
-below for why that swap mattered, beyond just a style change. An
-ARU's actual \code{vertical_microphone_orientation} value is matched
-to the NEAREST of these 5 known angles by circular distance (e.g. 350
-degrees is closer to 0 than to 270) - \strong{not yet confirmed with
-Josh whether "nearest" is the right behavior for a value that doesn't
-exactly match, versus only drawing an icon on an exact match, or
-treating a non-matching value as an error} - and only these 5 angles
-have an icon at all right now; if Josh adds icons for other angles
-(e.g. 135, 180, 225) later, only \code{ICON.ANGLES} inside this
+matched to those angles by their sound-wave-squiggle direction) live in
+\code{$icon.dir} (default \code{"img"}, a directory path resolved
+relative to the current working directory when the function is called
+- NOT relative to \code{dir.save} or to this function's own file
+location). Originally supplied as solid-black-icon .jpg files, Josh
+re-sent them as outline-style .png files in his very next follow-up
+("use the attached .png instead") - see "Icon file format and
+placement" below for why that swap mattered, beyond just a style
+change. An ARU's actual \code{vertical_microphone_orientation} value is
+matched to the NEAREST of these 5 known angles by circular distance
+(e.g. 350 degrees is closer to 0 than to 270) - \strong{not yet
+confirmed with Josh whether "nearest" is the right behavior for a value
+that doesn't exactly match, versus only drawing an icon on an exact
+match, or treating a non-matching value as an error} - and only these 5
+angles have an icon at all right now; if Josh adds icons for other
+angles (e.g. 135, 180, 225) later, only \code{ICON.ANGLES} inside this
 function needs updating to include them. If the matched icon file is
-missing from \code{$icon.dir}, a \code{warning()} is issued (naming
-the ARU, the requested angle, and the file path it looked for) and the
-bar is still drawn without an icon on top, rather than stopping the
-whole call.
+missing from \code{$icon.dir}, a \code{warning()} is issued (naming the
+ARU, the requested angle, and the file path it looked for) and the bar
+is still drawn without an icon on top, rather than stopping the whole
+call.
 
 \strong{Icon file format and placement - a real bug fixed, per Josh's
 fifth follow-up} ("The microphone height in the example file was 3m,
-\link{the} plot is short of that as the mic pic is obscuring the top of the
+[the] plot is short of that as the mic pic is obscuring the top of the
 bar, use the attached .png instead"). Two compounding problems, both
 now fixed: (1) the icon used to be drawn CENTERED on the bar's top
 (spanning \code{mic.height +/- icon.height.m/2}), so the icon's own
@@ -435,46 +431,47 @@ image - a solid opaque square, even after being cropped tightly to its
 drawn content - painted over the TOP HALF of the bar's true colored
 height; the bar's underlying data/height was always correct (verified
 with \code{ggplot_build()}), but visually the grey column looked like
-it stopped well short of \code{microphone_height}. Fixed by drawing
-the icon entirely ABOVE the bar instead (\code{ymin = mic.height},
+it stopped well short of \code{microphone_height}. Fixed by drawing the
+icon entirely ABOVE the bar instead (\code{ymin = mic.height},
 \code{ymax = mic.height + icon.height.m}), so nothing ever paints over
 the bar's own colored area, at the cost of needing a full
 \code{icon.height.m} of headroom above \code{mic.height} (not just
 half) when computing the Y axis's upper limit. (2) Separately, the
-original 5 icon images were opaque .jpg files - solid white outside
-the drawn icon shape, with no way to make that background see-through.
+original 5 icon images were opaque .jpg files - solid white outside the
+drawn icon shape, with no way to make that background see-through.
 Even with fix (1) in place, an opaque icon can still visually cover
 whatever it's drawn over; Josh's re-sent .png versions were processed
 (a near-white color threshold, with a small feather band to keep
 anti-aliased edges smooth) to make their background genuinely
-transparent (a real per-pixel alpha channel, not just nominally an
-RGBA file with alpha stuck at fully opaque, which is what the original
-upload turned out to be), then cropped tightly to their non-
-transparent content - read with \code{png::readPNG()} (returns an
-RGBA array) rather than \code{jpeg::readJPEG()} (RGB only, no alpha),
-and \code{grid::rasterGrob()} respects that alpha automatically when
-drawing, so the icon's own bounding box is no longer a solid block
-over anything it happens to be positioned near.
+transparent (a real per-pixel alpha channel, not just nominally an RGBA
+file with alpha stuck at fully opaque, which is what the original
+upload turned out to be), then cropped tightly to their non-transparent
+content - read with \code{png::readPNG()} (returns an RGBA array)
+rather than \code{jpeg::readJPEG()} (RGB only, no alpha), and
+\code{grid::rasterGrob()} respects that alpha automatically when
+drawing, so the icon's own bounding box is no longer a solid block over
+anything it happens to be positioned near.
 
 \strong{Icon sizing - kept undistorted by computing its width from the
 image's own pixel aspect ratio, not a fixed guess.} The icon is drawn
 via \code{grid::rasterGrob()} inside \code{ggplot2::annotation_custom()},
 \code{$icon.height.m} (default \code{1}) tall in Y-axis data units.
-Because the middle panel's X and Y axes don't necessarily span the
-same number of data units per unit of physical panel size, drawing
-the icon at a fixed WIDTH in X units (whatever that width) would
-stretch or squash it relative to its real image proportions; instead,
-the icon's width in X units is computed from its real pixel
-width/height ratio (\code{dim(icon.img)} from \code{png::readPNG()})
-times its Y-unit height, scaled by the ratio of the axes' data-unit
-spans (\code{x.range / y.max}) - this correctly keeps the icon's
-on-page proportions matching its actual image whenever the panel
-itself renders as a SQUARE (true for this function's default
-3-equal-column layout at \code{$plot.width}/\code{$plot.height} =
-10/5 inches, the same assumption that keeps the two \code{coord_polar}
-bullseye panels perfectly circular - not literally guaranteed under
-every possible \code{aes.default} override, e.g. a very different
-\code{plot.width}/\code{plot.height} ratio).
+Because the middle panel's X and Y axes don't necessarily span the same
+number of data units per unit of physical panel size, drawing the icon
+at a fixed WIDTH in X units (whatever that width) would stretch or
+squash it relative to its real image proportions; instead, the icon's
+width in X units is computed from its real pixel width/height ratio
+(\code{dim(icon.img)} from \code{png::readPNG()}) times its Y-unit
+height, scaled by the ratio of the axes' data-unit spans (\code{x.range
+/ y.max}) - this correctly keeps the icon's on-page proportions
+matching its actual image whenever the panel itself renders as a SQUARE
+(true for this function's default 3-equal-column layout at
+\code{$plot.width}/\code{$plot.height} = 10/5 inches, the same
+assumption that keeps the two \code{coord_polar} bullseye panels
+perfectly circular - not literally guaranteed under every possible
+\code{aes.default} override, e.g. a very different
+\code{plot.width}/\code{plot.height} ratio, or a \code{sub.plots} of a
+very different length than 3).
 
 \strong{Sub-plot selection and toggles, per Josh's sixth follow-up
 (2026-09-15) adding \code{sub.plots}/\code{cover.arrows}/\code{mean.cover}/
@@ -484,22 +481,21 @@ drawn and their left-to-right order (an \code{lapply()} over
 name, then combined with \code{patchwork::wrap_plots(..., ncol =
 length(sub.plots))} - so the combined figure always has exactly as many
 columns as \code{sub.plots} has entries, replacing the original fixed
-3-panel/\code{ncol = 3} layout). Panel order was already tied directly
-to \code{sub.plots}'s own order by construction (\code{lapply()}
-preserves the order of what it iterates over, and \code{wrap_plots()}
-lays panels out left to right in the order given) - re-verified per
-Josh's fourteenth follow-up (2026-09-15) with an explicit test checking
-the actual rendered panel titles come back in the same order as
-\code{sub.plots}, not just the same COUNT that earlier rounds' tests
-checked (see this function's own \code{.dev.R}, Test 12). The default,
-\code{c("canopy.bull",
-"mic.bar", "mic.bull", "understory.bull")}, produces FOUR panels -
-Canopy, Microphone Height, Vertical Microphone Orientation
-(\code{"mic.bull"} - see "mic.bull panel" below), and Understory.
-\code{sub.plots} entries may repeat (e.g. \code{c("canopy.bull",
-"canopy.bull")} draws that panel twice); an unrecognized entry stops
-with an error listing the allowed set (\code{"canopy.bull"},
-\code{"mic.bar"}, \code{"mic.bull"}, \code{"understory.bull"}).
+3-panel/\code{ncol = 3} layout). Panel order was already tied directly to
+\code{sub.plots}'s own order by construction (\code{lapply()} preserves
+the order of what it iterates over, and \code{wrap_plots()} lays panels
+out left to right in the order given) - re-verified per Josh's fourteenth
+follow-up (2026-09-15) with an explicit test checking the actual rendered
+panel titles come back in the same order as \code{sub.plots}, not just
+the same COUNT that earlier rounds' tests checked (see this function's
+own \code{.dev.R}, Test 12). The default, \code{c("canopy.bull",
+"mic.bar", "mic.bull", "understory.bull")}, produces FOUR panels - Canopy,
+Microphone Height, Vertical Microphone Orientation (\code{"mic.bull"} -
+see "mic.bull panel" below), and Understory. \code{sub.plots} entries may
+repeat (e.g. \code{c("canopy.bull", "canopy.bull")} draws that panel
+twice); an unrecognized entry stops with an error listing the allowed set
+(\code{"canopy.bull"}, \code{"mic.bar"}, \code{"mic.bull"},
+\code{"understory.bull"}).
 
 The three logical toggles - \code{cover.arrows}, \code{mean.cover},
 \code{quadrant.cover} (all default \code{TRUE}, i.e. unchanged from every
@@ -517,14 +513,14 @@ those two panels are being drawn, not a separate per-panel toggle -
 (e.g. arrows on Canopy but not Understory) would need different
 parameters entirely. None of the three toggles affect \code{"mic.bar"}
 or \code{"mic.bull"} (neither has quadrants, a mean circle, or an
-optional orientation arrow to begin with - \code{"mic.bull"}'s own
-arrow is a required, always-drawn part of that panel, see "mic.bull
-panel" below) - and neither the scale-line rings nor the radial numeric
-labels on \code{"canopy.bull"}/\code{"understory.bull"} are gated by
-any of these three switches; both remain unconditionally drawn last,
-preserving the existing "Quadrants > mean cover > mic direction > scale
-lines > labels" draw order among whichever of the first three layers
-are actually turned on.
+optional orientation arrow to begin with - \code{"mic.bull"}'s own arrow
+is a required, always-drawn part of that panel, see "mic.bull panel"
+below) - and neither the scale-line rings nor the radial numeric labels
+on \code{"canopy.bull"}/\code{"understory.bull"} are gated by any of
+these three switches; both remain unconditionally drawn last, preserving
+the existing "Quadrants > mean cover > mic direction > scale lines >
+labels" draw order among whichever of the first three layers are
+actually turned on.
 
 \strong{Figure sizing - \code{auto.scale}/\code{subplot.size.height}/
 \code{subplot.size.width} added, per Josh's fourteenth follow-up
@@ -532,91 +528,114 @@ are actually turned on.
 combined figure's saved width/height came from the \code{aes.default}
 settings \code{$plot.width} (divided evenly across however many
 \code{sub.plots} panels were drawn) and \code{$plot.height}. Per Josh's
-explicit sizing request, \code{$plot.width} is no longer read at all
-(in either mode below); \code{$plot.height} is still read, but only
-when \code{auto.scale = TRUE}. With \code{auto.scale = TRUE} (the
-default), the saved figure's total width is fixed at \code{6.5} inches
-\itemize{
-\item per Josh, "the total plot size must be 6.5 inches wide" - divided
-evenly across the actual \code{sub.plots} panel count (same
-even-division mechanism as before, just against a fixed total instead
-of a settings value); height still comes from \code{$plot.height}.
-With \code{auto.scale = FALSE}, \code{subplot.size.width} (default
-\code{2}) and \code{subplot.size.height} (default \code{3}) set each
-INDIVIDUAL panel's size directly instead - the saved figure's total
-width becomes \code{subplot.size.width * length(sub.plots)} and its
-height becomes \code{subplot.size.height} (one height for the whole
-row, since every panel shares it) - \code{$plot.height} is NOT
-consulted in this branch. \strong{A real assumption, please confirm:}
-Josh's request only specified a fixed total WIDTH for the
+explicit sizing request, \code{$plot.width} is no longer read at all (in
+either mode below); \code{$plot.height} is still read, but only when
+\code{auto.scale = TRUE}. With \code{auto.scale = TRUE} (the default),
+the saved figure's total width is fixed at \code{6.5} inches - per Josh,
+"the total plot size must be 6.5 inches wide" - divided evenly across the
+actual \code{sub.plots} panel count (same even-division mechanism as
+before, just against a fixed total instead of a settings value); height
+still comes from \code{$plot.height}. With \code{auto.scale = FALSE},
+\code{subplot.size.width} (default \code{2}) and \code{subplot.size.height}
+(default \code{3}) set each INDIVIDUAL panel's size directly instead - the
+saved figure's total width becomes \code{subplot.size.width *
+length(sub.plots)} and its height becomes \code{subplot.size.height} (one
+height for the whole row, since every panel shares it) - \code{$plot.height}
+is NOT consulted in this branch. \strong{A real assumption, please
+confirm:} Josh's request only specified a fixed total WIDTH for the
 \code{auto.scale = TRUE} case ("the total plot size must be 6.5 inches
 wide") and said nothing about height there, so height keeps using the
-pre-existing \code{$plot.height} setting for that case only - it was
-not obviously part of what he meant to change. \code{$plot.width}'s
+pre-existing \code{$plot.height} setting for that case only - it was not
+obviously part of what he meant to change. \code{$plot.width}'s
 settings-sheet row (still present in \code{plotopts_bullseye.csv} for
 backward compatibility) is now unused by the function in every mode -
-flagged rather than silently left ambiguous; Josh may want to remove
-that row or repurpose it later. \code{ggsave.width.pad}/
-\code{ggsave.height.pad} are added on top of whichever width/height
-this section computes, unchanged from every earlier round.
-\strong{A real, visible cosmetic consequence, flagged rather than
-silently worked around:} both new defaults are considerably narrower
-per panel than the old \code{$plot.width} default (10in / up to 4
-panels = 2.5in/panel) - the default \code{auto.scale = TRUE} (6.5in / 4
-panels = 1.625in/panel) and even \code{auto.scale = FALSE}'s own
-default (\code{subplot.size.width = 2}in/panel) both made the default
-4-panel figure's panel TITLES visibly overlap each other (not just the
+flagged rather than silently left ambiguous; Josh may want to remove that
+row or repurpose it later. \code{ggsave.width.pad}/\code{ggsave.height.pad}
+are added on top of whichever width/height this section computes,
+unchanged from every earlier round. \strong{A real, visible cosmetic
+consequence, flagged rather than silently worked around:} both new
+defaults are considerably narrower per panel than the old
+\code{$plot.width} default (10in / up to 4 panels = 2.5in/panel) - the
+default \code{auto.scale = TRUE} (6.5in / 4 panels = 1.625in/panel) and
+even \code{auto.scale = FALSE}'s own default
+(\code{subplot.size.width = 2}in/panel) both made the default 4-panel
+figure's panel TITLES visibly overlap each other (not just the
 already-flagged single-label edge-clipping from earlier rounds) -
-confirmed by rendering the real 4-panel figure under both new
-defaults. \strong{Resolved by the fifteenth follow-up immediately
-below}, which auto-expands the width in exactly this situation instead
-of leaving it as a standing trade-off for Josh to decide on.
-}
+confirmed by rendering the real 4-panel figure under both new defaults.
+\strong{Resolved by the fifteenth follow-up immediately below}, which
+auto-expands the width in exactly this situation instead of leaving it
+as a standing trade-off for Josh to decide on.
 
-\strong{Auto-expand when all four panel types are selected, per Josh's
-fifteenth follow-up (2026-09-15): "if user selects all four options
-sub.plots then expand the size of the plot by the required amount to
-prevent overlap."} Directly resolves the title-overlap consequence
-flagged in the "Figure sizing" section just above. Scoped exactly to
-Josh's wording - triggers only when \code{sub.plots} contains ALL FOUR
-panel types (\code{all(c("canopy.bull", "mic.bar", "mic.bull",
-"understory.bull") \%in\% sub.plots)} - true regardless of their order or
-whether any type repeats; a 2- or 3-panel subset, even a long one via
-repeats, is NOT affected, since Josh's wording specifically named the
-all-four case). When it triggers, \code{$plot.title.size} and each of
-the four fixed panel titles (\code{$canopy.title}, \code{$mic.panel.title},
-\code{$mic.bull.title}, \code{$understory.title}) are measured for
-their REAL rendered text width in inches (via
+\strong{Title auto-shrink (with width auto-expand as a fallback), per
+Josh's seventeenth follow-up (2026-09-16): "have the titles all reduce
+in size so that they don't run together."} This SUPERSEDES the
+fifteenth follow-up's original width-only mechanism (previously
+documented in this section) - the fifteenth follow-up's approach only
+ever WIDENED the figure to make room for full-size titles, and was
+scoped to exactly the "all four panel types selected" case. Now, for
+whichever panels are actually in \code{sub.plots} (not just the
+all-four case, since a narrow enough \code{subplot.size.width} can make
+titles run together for ANY subset), the relevant fixed panel titles
+(\code{$canopy.title}, \code{$mic.panel.title}, \code{$mic.bull.title},
+\code{$understory.title} - whichever of these correspond to the
+selected \code{sub.plots}) are measured for their REAL rendered text
+width in inches at \code{$plot.title.size}, the same
 \code{grid::textGrob()}/\code{grid::grobWidth()}/
-\code{grid::convertWidth()}, on a throwaway null \code{pdf(NULL)}
-device opened and closed around just that measurement, so nothing is
-actually drawn or shown) - not guessed or hardcoded, since the actual
-overlap depends on the real title text/font size in
-\code{aes.default}, which is exactly what the earlier flagged
-consequence showed (the longest title, \code{$mic.panel.title}'s
-default "Microphone Height and Vertical Orientation", drives the whole
-figure's minimum width). The widest of the four titles, plus a small
-\code{0.25}in margin (\code{TITLE.OVERLAP.MARGIN.IN}) so text isn't
-touching the exact panel edge, becomes the minimum width EVERY column
-must have (since \code{patchwork::wrap_plots()}'s
-\code{widths = rep(1, length(sub.plots))} always gives every column
-the same width, a fix sized for the worst-offending title covers every
-other column too); multiplied by \code{length(sub.plots)}, this becomes
-the minimum acceptable total figure width. This is compared against
-whatever \code{auto.scale}/\code{subplot.size.width} already computed
-(see "Figure sizing" above) - the figure is WIDENED to the minimum only
-when that's larger than what was already going to be used; it is NEVER
-narrowed (so a generous \code{subplot.size.width} that already gives
-enough room is left exactly as the caller set it). On the real test
-ARU's default \code{aes.default}, this expands the default 4-panel
-figure's total width to about \code{13.7}in (about \code{3.43}in per
-panel) regardless of whether \code{auto.scale} is \code{TRUE} (its own
-6.5in default) or \code{FALSE} (\code{subplot.size.width = 2}in's own
-8in default) - both confirmed, by rendering the real combined figure
-under each, to eliminate the previously-flagged title overlap
-entirely. Height is untouched by this section (the overlap was purely
-horizontal, from panel titles bleeding sideways into their neighbors'
-space - there was never a vertical/height component to it).
+\code{grid::convertWidth()}-on-a-throwaway-\code{pdf(NULL)}-device
+approach used before. If the widest of them, plus a small \code{0.25}in
+margin (\code{TITLE.OVERLAP.MARGIN.IN}), does not fit within the
+already-decided per-panel width (from "Figure sizing" above - either
+\code{6.5 / length(sub.plots)} or
+\code{subplot.size.width}), ALL displayed titles are shrunk UNIFORMLY
+(the same single reduced font size for every panel, per Josh's "titles
+all reduce") to a size that fits, converged on via a few rounds of
+proportional re-measurement (text width scales very close to linearly
+with font size, so this settles in 1-2 rounds in practice) - down to a
+floor of \code{8}pt so titles never become illegibly small. This keeps
+the figure at whatever width \code{auto.scale}/\code{subplot.size.width}
+already chose - honoring the fourteenth follow-up's "total plot size
+must be 6.5 inches wide" - whenever shrinking alone is enough, which it
+is for the default all-four-panel case: on the real test ARU's default
+\code{aes.default}, titles shrink from the \code{$plot.title.size}
+default of 12pt to about 9.2pt, and the figure stays at exactly 6.5in
+(confirmed by rendering the real combined figure and reading back each
+panel's actual \code{plot.title} font size, not just the saved image
+dimensions). Only if titles STILL would not fit once shrunk all the way
+to the 8pt floor does this fall back to widening the figure instead -
+the same "never narrows, only ever widens whatever
+\code{auto.scale}/\code{subplot.size.width} already computed" guarantee
+the fifteenth follow-up's mechanism provided, now reached via
+\code{required.total.width <- (max(title.widths.at.floor) +
+TITLE.OVERLAP.MARGIN.IN) * length(sub.plots)}. Height is untouched by
+this section (the overlap this addresses is purely horizontal). A
+generous \code{subplot.size.width} that already gives titles enough room
+at full size triggers neither shrinking nor expansion, and a narrower
+\code{sub.plots} subset whose shorter title set already fits is
+likewise left alone - both confirmed by rendering.
+
+\strong{Axis label sizing, per Josh's eighteenth follow-up (2026-09-16):
+"reduce the size of the axis labels to be 2 pts smaller than the current
+title labels at the top of each subplot."} \code{$axis.text.size} is no
+longer an independent setting - it is DERIVED, once per ARU, as whatever
+\code{$plot.title.size} resolved to for that render (see "Title
+auto-shrink" just above - this may be the full \code{$plot.title.size}
+default, or a smaller shrunk/floored value) minus a fixed \code{2}pt gap.
+This governs every axis label this function draws: the N/E/S/W compass
+labels and the manually-drawn 25/50/75/100 radial-scale numbers on the
+canopy/understory panels, the Skyward/Earthward/height-label/1-2-3-4
+scale numbers on the mic.bull panel, and the 0-4 Y-axis numbers on the
+mic.bar panel - all governed by the same single derived value, applied
+uniformly (mirroring how title sizing was already uniform across
+panels). Confirmed by rendering the real default 4-panel figure (titles
+shrunk to about 9.2pt per the "Title auto-shrink" section above; axis
+labels render at exactly 7.2pt, read back from the actual
+\code{ggplot}/\code{patchwork} theme objects) and a narrower subset
+whose titles are NOT shrunk (stay at the full 12pt default; axis labels
+render at exactly 10pt) - the relationship holds in both cases, not just
+when shrinking occurs. \code{$axis.text.size}'s row is left in
+\code{plotopts_bullseye.csv} for backward compatibility (harmless if
+present, simply ignored) rather than deleted, following the same pattern
+as \code{$plot.width} and \code{$mic.panel.xlab} in earlier rounds.
 
 \strong{mic.bull panel, per Josh's seventh follow-up (2026-09-15),
 replacing the placeholder (an exact alias of \code{"understory.bull"})
@@ -649,8 +668,9 @@ label for E or W"; angle 180 (W) renders at the LEFT and carries
 \code{$mic.bull.height.label} (default \code{"(m)"}, shortened from
 "Microphone Height (m)" via "Height (m)" over the eleventh and twelfth
 follow-ups), per the tenth follow-up ("Microphone Height (m) on
-left"). A single arrow shows the Vertical Microphone Orientation
-itself: angle = that ARU's \code{vertical_microphone_orientation}, length = its
+left"). A single
+arrow shows the Vertical Microphone Orientation itself: angle = that
+ARU's \code{vertical_microphone_orientation}, length = its
 \code{microphone_height} - "the tip of the arrow ending at the total
 height of the mic", per Josh - drawn via the same
 \code{geom_segment()}/\code{grid::arrow()} approach, reusing
@@ -664,22 +684,23 @@ height, reusing \code{$scale.line.color}/\code{$scale.line.linetype}/
 when the actual \code{microphone_height} (plus a small margin so the
 arrowhead never touches the outer edge) needs more room, the same
 pattern \code{build.mic.panel()}'s bar/icon Y axis already uses. Per
-the thirteenth follow-up ("Make the labels for the scale occur along
-the left horizonal axis, offset the label by enough space to fit the
-label"), the 1/2/3/4 numeric scale labels are drawn exactly on angle
-180 (W) - the same ray as \code{$mic.bull.height.label} - with
-clearance provided RADIALLY instead of angularly: the plot's Y-axis
-extends \code{0.7} past \code{$mic.bull.radial.max} so the height-label
-axis text (which renders right at that boundary) has room. This
-replaces the tenth follow-up's fix for the same underlying collision -
-back then, with both labels anchored at the exact same point (the plot
-boundary), the numbers were nudged 15 degrees off that ray instead
-(angle 165); that worked, but per this follow-up's explicit request
-for the exact left horizontal axis, the offset is now radial, not
-angular. These labels are drawn with \code{geom_label()} (white fill,
-no border), per the ninth follow-up ("add a white background to make
-the label clearer"), instead of the plain \code{geom_text()} used
-everywhere else - scoped ONLY to this
+the tenth follow-up ("Scale labels on left"), and per his thirteenth follow-up
+("Make the labels for the scale occur along the left horizonal axis,
+offset the label by enough space to fit the label"), the 1/2/3/4
+numeric scale labels are drawn exactly on angle 180 (W) - the same ray
+as \code{$mic.bull.height.label} - with clearance provided RADIALLY
+instead of angularly: the plot's Y-axis extends \code{0.7} past
+\code{$mic.bull.radial.max} so the height-label axis text (which
+renders right at that boundary) has room. This replaces the tenth
+follow-up's fix for the same underlying collision - back then, with
+both labels anchored at the exact same point (the plot boundary), the
+numbers were nudged 15 degrees off that ray instead (angle 165); that
+worked, but per this follow-up's explicit request for the exact left
+horizontal axis, the offset is now radial, not angular. These labels
+are drawn with
+\code{geom_label()} (white fill, no border), per the ninth follow-up
+("add a white background to make the label clearer"), instead of the
+plain \code{geom_text()} used everywhere else - scoped ONLY to this
 panel; \code{build.panel()}'s own radial labels on
 \code{canopy.bull}/\code{understory.bull} remain background-less, per
 the deliberate choice described in "Label styling and draw order"
@@ -688,119 +709,151 @@ Height and"} / \code{"Vertical Orientation"} on two lines, per Josh's
 sixteenth follow-up (2026-09-15) - "use that as the title for mic.bull
 plot as well" - now IDENTICAL text to \code{$mic.panel.title} (the
 mic.bar panel's own title), replacing this panel's previously distinct
-"Microphone Vertical Orientation" text set in the seventh follow-up;
-the sixth round's original placeholder default, "Understory Cover", no
-longer applies either way now that this panel has its own real
-design). See "Panel title wrapping" below for the two-line mechanism
-itself.
+"Microphone Vertical Orientation" text set in the seventh follow-up; the
+sixth round's original placeholder default, "Understory Cover", no
+longer applies either way now that this panel has its own real design).
+See "Panel title wrapping" below for the two-line mechanism itself.
 
 \strong{Panel title wrapping, per Josh's sixteenth follow-up
-(2026-09-15): "make \link{the} title occur over two lines instead of one."}
-\code{$mic.panel.title}/\code{$mic.bull.title}'s shared default text
-now has a literal embedded line break (an actual newline character
-inside the \code{aes.default} CSV's quoted field, round-tripped
-correctly by \code{read.csv()}/\code{write.csv()} - confirmed
-empirically) splitting it into "Microphone Height and" / "Vertical
-Orientation" instead of one long line. This needed NO code change:
-\code{ggplot2}'s \code{plot.title} element already renders an embedded
-\code{"\\n"} as a real second line, the same way \code{geom_text()}/
-\code{geom_label()} do elsewhere in this function. A useful side
-effect, re-confirmed by testing: the "Figure sizing" auto-expand step
-(see @details, "Figure sizing" and "Auto-expand when all four panel
-types are selected") measures a title's rendered width via
-\code{grid::grobWidth()} on a (possibly multi-line) \code{textGrob()},
-which correctly returns the width of the WIDEST LINE, not the full
-string's length - so wrapping this title onto two shorter lines
-substantially reduces the minimum width that step computes (from
-about 13.7in down to a bit over 8in for the real default 4-panel
-figure, re-verified by rendering it) rather than requiring any change
-to that step's own logic.
+(2026-09-15): "make [the] title occur over two lines instead of one."}
+\code{$mic.panel.title}/\code{$mic.bull.title}'s shared default text now
+has a literal embedded line break (an actual newline character inside
+the \code{aes.default} CSV's quoted field, round-tripped correctly by
+\code{read.csv()}/\code{write.csv()} - confirmed empirically) splitting
+it into "Microphone Height and" / "Vertical Orientation" instead of one
+long line. This needed NO code change: \code{ggplot2}'s \code{plot.title}
+element already renders an embedded \code{"\n"} as a real second line,
+the same way \code{geom_text()}/\code{geom_label()} do elsewhere in this
+function. A useful side effect, re-confirmed by testing: the title
+measurement step (see Details, "Figure sizing" and "Title auto-shrink
+(with width auto-expand as a fallback)") measures a title's rendered
+width via \code{grid::grobWidth()} on a (possibly multi-line)
+\code{textGrob()}, which correctly returns the width of the WIDEST LINE,
+not the full string's length - so wrapping this title onto two shorter
+lines substantially reduces how much shrinking/expansion is ever needed
+(at the time this was originally measured against the fifteenth
+follow-up's now-superseded width-only mechanism, it cut that step's
+computed minimum width from about 13.7in down to a bit over 8in for the
+real default 4-panel figure) rather than requiring any change to that
+step's own logic.
+
+\strong{Panel height matching, per Josh's seventeenth follow-up
+(2026-09-16): "Adjust the mic.bar subplot to be the same height as the
+other subplots."} \code{ggplot2}'s \code{coord_polar()} always forces
+its panel to render as a perfect SQUARE (\code{CoordPolar}'s internal
+aspect is fixed at 1), regardless of how much width/height the
+surrounding layout actually gives it - so the three bullseye panels
+(\code{canopy.bull}/\code{mic.bull}/\code{understory.bull}) were always
+drawn as a square centered within their cell. \code{mic.bar}, the one
+panel using plain Cartesian coordinates, had no such constraint and
+instead stretched to fill its ENTIRE cell - under the tall, narrow
+per-panel cells this function's sizing defaults produce (e.g. a
+default 4-panel figure's cells are noticeably taller than wide), this
+made the \code{mic.bar} panel's drawn content look substantially TALLER
+than the bullseye circles, with the circles leaving visible blank space
+above and below them that the bar panel did not (confirmed by rendering
+the real default figure and measuring each panel's actual non-white
+pixel extent: before this fix, \code{mic.bar}'s drawn content spanned
+essentially the full ~950+ pixel cell height while the bullseye panels
+spanned only ~510 pixels, centered within that same cell). Fixed by
+adding \code{aspect.ratio = 1} to \code{build.mic.panel()}'s own
+\code{theme()} - this makes \code{ggplot2} size and center THIS panel's
+plot area as a square exactly the same way \code{coord_polar} already
+does for the other three, so all four panels now occupy the same drawn
+height (re-verified after the fix: all four panels' measured content
+heights matched to within a couple of pixels). Because this is driven
+by the SAME per-column width every panel already shares (via
+\code{patchwork::wrap_plots(..., widths = rep(1, length(sub.plots)))}),
+the fix keeps all four panels visually consistent under any
+\code{subplot.size.width}/\code{subplot.size.height} combination, not
+just the defaults - confirmed by re-rendering a 3-panel subset
+(\code{canopy.bull}/\code{mic.bar}/\code{understory.bull}) as well.
 
 \strong{mic.bar panel overhaul, per Josh's twentieth follow-up
 (2026-09-16), six changes scoped to \code{"mic.bar"} only:}
 \enumerate{
-\item \strong{Bar width x1.3} ("Make the bar 1.3 its current size"):
-\code{$mic.bar.width} is now multiplied by a fixed \code{1.3}
-(\code{MIC.BAR.WIDTH.SCALE} inside \code{build.mic.panel()}) rather
-than baking the multiplier into the CSV default, so an
-\code{$aes.style}/\code{$overide.value} override to
-\code{$mic.bar.width} still scales proportionally.
-\item \strong{Y-axis reference lines every 0.5 units} ("with a line
-every 0.5 interval"): breaks (and their matching horizontal
-gridlines) are now \code{seq(0, y.max, by = 0.5)} instead of one
-per whole unit; \code{panel.grid.major.y} is drawn (reusing
-\code{$panel.grid.color} for visual consistency with the angular
-gridlines on the other panels) instead of being fully blanked -
-\code{panel.grid.major.x}/\code{panel.grid.minor} stay blank (no
-X-axis lines, no unlabeled sub-0.5 lines).
-\item \strong{Font size matched to the other panels} ("reduce the
-font size to be the same size as the other two plots"): a real,
-previously-unnoticed gap - \code{axis.title.y} (the "Microphone
-Height (m)" label) had no explicit \code{size} set at all, so it
-fell back to \code{theme_minimal()}'s own default rather than the
-derived \code{axis.text.size} every other element on this panel
-(and its siblings) already uses. Now explicitly pinned to
-\code{axis.text.size}.
-\item \strong{Icon re-centered on the bar's top edge} ("move the mic
-png to be centered at the top of the bar") - \strong{a deliberate
-reversion, flagged explicitly.} This undoes the CENTERED-vs-ABOVE
-half of the fifth follow-up's bugfix (see "Icon file format and
-placement" above): \code{ymin}/\code{ymax} are back to
-\code{mic.height -/+ icon.height.m / 2} (was entirely above:
-\code{mic.height} to \code{mic.height + icon.height.m}). The
-original complaint that motivated drawing it entirely above was an
-OPAQUE icon painting over the bar's true height; the icon set has
-used real per-pixel transparency since the very next follow-up
-that same day, so the original failure mode mostly shouldn't recur
-- but the icon's own drawn (non-transparent) content can still
-visually sit on the bar's top edge again. If this reads as the
-original problem once rendered, this is the section to revert.
-Y-axis headroom above \code{mic.height} for the icon was reduced to
-match (\code{icon.height.m / 2} instead of a full
-\code{icon.height.m}).
-\item \strong{Column width = 2/3 of the other panels} ("scale the
-size of the mic.bar plot to be 2/3 the size of the canopy plots"):
-\code{patchwork::wrap_plots()}'s \code{widths=} argument is no
-longer a flat \code{rep(1, length(sub.plots))} - \code{"mic.bar"}'s
-own column now gets a relative weight of \code{2/3} against every
-other panel type's \code{1}. Combined with \code{aspect.ratio = 1}
-(see "Panel height matching" above), a narrower column renders as
-a proportionally smaller SQUARE panel - "2/3 the size" directly.
-\strong{Judgment call, flagged:} the "Figure sizing"/"Title
-auto-shrink" sections above still assume every column gets an
-EQUAL share of \code{plot.width} when deciding whether titles need
-to shrink - i.e. \code{mic.bar}'s own title is measured against
-that same equal share (matching item 3's "same font size as the
-other two plots"), not against its actual, now-narrower rendered
-column. This was left as a uniform calculation rather than
-generalized to per-panel actual widths, since it wasn't asked for -
-worth a second look if a different title/width combination ever
-looks tight (the item-6 title change below already forces a
-shrink/expand for an unrelated reason, so this simplification's own
-effect on fit hasn't yet been isolated in practice).
-\item \strong{Title changed} ("Change the title to be 'Microphone
-Vertical Orientation'"): \code{$mic.panel.title}'s default value in
-\code{plotopts_bullseye.csv} changed from the two-line
-"Microphone Height and\\nVertical Orientation" (shared with
-\code{$mic.bull.title} since the sixteenth follow-up) to the
-single-line "Microphone Vertical Orientation" - a settings-data
-change only, no code change. \strong{This un-syncs \code{"mic.bar"}'s
-title from \code{"mic.bull"}'s} (\code{$mic.bull.title} is
-untouched and keeps the two-line shared text) - scoped this way
-because Josh's request named \code{"mic.bar"} specifically, not
-both panels; flagged in case the sixteenth follow-up's "share the
-same title" intent was meant to still apply going forward.
-\strong{Side effect, confirmed via the dev-script test suite:} the
-new single-line text measures WIDER unwrapped (at the full 12pt
-\code{$plot.title.size} default) than either individual line of the
-old two-line wrapped text did - so the "Title auto-shrink" mechanism
-(see "Figure sizing" above), which previously left the default
-4-panel \code{auto.scale = TRUE} figure untouched at a plain 6.5in,
-now floors ALL panel titles at 8pt AND still has to widen the total
-figure to about 7.21in to avoid overlap. This is a direct, expected
-consequence of shortening the text to one line rather than a bug -
-but it does mean the default combined figure is visibly wider and
-smaller-titled than it was before this round.
+  \item \strong{Bar width x1.3} ("Make the bar 1.3 its current size"):
+    \code{$mic.bar.width} is now multiplied by a fixed \code{1.3}
+    (\code{MIC.BAR.WIDTH.SCALE} inside \code{build.mic.panel()}) rather
+    than baking the multiplier into the CSV default, so an
+    \code{$aes.style}/\code{$overide.value} override to
+    \code{$mic.bar.width} still scales proportionally.
+  \item \strong{Y-axis reference lines every 0.5 units} ("with a line
+    every 0.5 interval"): breaks (and their matching horizontal
+    gridlines) are now \code{seq(0, y.max, by = 0.5)} instead of one
+    per whole unit; \code{panel.grid.major.y} is drawn (reusing
+    \code{$panel.grid.color} for visual consistency with the angular
+    gridlines on the other panels) instead of being fully blanked -
+    \code{panel.grid.major.x}/\code{panel.grid.minor} stay blank (no
+    X-axis lines, no unlabeled sub-0.5 lines).
+  \item \strong{Font size matched to the other panels} ("reduce the
+    font size to be the same size as the other two plots"): a real,
+    previously-unnoticed gap - \code{axis.title.y} (the "Microphone
+    Height (m)" label) had no explicit \code{size} set at all, so it
+    fell back to \code{theme_minimal()}'s own default rather than the
+    derived \code{axis.text.size} every other element on this panel
+    (and its siblings) already uses. Now explicitly pinned to
+    \code{axis.text.size}.
+  \item \strong{Icon re-centered on the bar's top edge} ("move the mic
+    png to be centered at the top of the bar") - \strong{a deliberate
+    reversion, flagged explicitly.} This undoes the CENTERED-vs-ABOVE
+    half of the fifth follow-up's bugfix (see "Icon file format and
+    placement" above): \code{ymin}/\code{ymax} are back to
+    \code{mic.height -/+ icon.height.m / 2} (was entirely above:
+    \code{mic.height} to \code{mic.height + icon.height.m}). The
+    original complaint that motivated drawing it entirely above was an
+    OPAQUE icon painting over the bar's true height; the icon set has
+    used real per-pixel transparency since the very next follow-up
+    that same day, so the original failure mode mostly shouldn't recur
+    - but the icon's own drawn (non-transparent) content can still
+    visually sit on the bar's top edge again. If this reads as the
+    original problem once rendered, this is the section to revert.
+    Y-axis headroom above \code{mic.height} for the icon was reduced to
+    match (\code{icon.height.m / 2} instead of a full
+    \code{icon.height.m}).
+  \item \strong{Column width = 2/3 of the other panels} ("scale the
+    size of the mic.bar plot to be 2/3 the size of the canopy plots"):
+    \code{patchwork::wrap_plots()}'s \code{widths=} argument is no
+    longer a flat \code{rep(1, length(sub.plots))} - \code{"mic.bar"}'s
+    own column now gets a relative weight of \code{2/3} against every
+    other panel type's \code{1}. Combined with \code{aspect.ratio = 1}
+    (see "Panel height matching" above), a narrower column renders as
+    a proportionally smaller SQUARE panel - "2/3 the size" directly.
+    \strong{Judgment call, flagged:} the "Figure sizing"/"Title
+    auto-shrink" sections above still assume every column gets an
+    EQUAL share of \code{plot.width} when deciding whether titles need
+    to shrink - i.e. \code{mic.bar}'s own title is measured against
+    that same equal share (matching item 3's "same font size as the
+    other two plots"), not against its actual, now-narrower rendered
+    column. This was left as a uniform calculation rather than
+    generalized to per-panel actual widths, since it wasn't asked for -
+    worth a second look if a different title/width combination ever
+    looks tight (the item-6 title change below already forces a
+    shrink/expand for an unrelated reason, so this simplification's own
+    effect on fit hasn't yet been isolated in practice).
+  \item \strong{Title changed} ("Change the title to be 'Microphone
+    Vertical Orientation'"): \code{$mic.panel.title}'s default value in
+    \code{plotopts_bullseye.csv} changed from the two-line
+    "Microphone Height and\nVertical Orientation" (shared with
+    \code{$mic.bull.title} since the sixteenth follow-up) to the
+    single-line "Microphone Vertical Orientation" - a settings-data
+    change only, no code change. \strong{This un-syncs \code{"mic.bar"}'s
+    title from \code{"mic.bull"}'s} (\code{$mic.bull.title} is
+    untouched and keeps the two-line shared text) - scoped this way
+    because Josh's request named \code{"mic.bar"} specifically, not
+    both panels; flagged in case the sixteenth follow-up's "share the
+    same title" intent was meant to still apply going forward.
+    \strong{Side effect, confirmed via the dev-script test suite:} the
+    new single-line text measures WIDER unwrapped (at the full 12pt
+    \code{$plot.title.size} default) than either individual line of the
+    old two-line wrapped text did - so the "Title auto-shrink" mechanism
+    (see "Figure sizing" above), which previously left the default
+    4-panel \code{auto.scale = TRUE} figure untouched at a plain 6.5in,
+    now floors ALL panel titles at 8pt AND still has to widen the total
+    figure to about 7.21in to avoid overlap. This is a direct, expected
+    consequence of shortening the text to one line rather than a bug -
+    but it does mean the default combined figure is visibly wider and
+    smaller-titled than it was before this round.
 }
 Rendered and visually verified at \code{vertical_microphone_orientation}
 = 90, 45, 0, 315, and 270 (the same five angles with a known icon) on
@@ -814,134 +867,132 @@ missing) rather than stopping the whole call - so one bad/incomplete
 ARU doesn't block plotting the rest.
 
 \strong{Tested against Josh's real uploaded model data}
-(\code{bulleye_model_data.xlsx}, one ARU: \code{Canopy cover} = 63/13/13/100
-and \code{Understory cover} = 63/13/13/0 for NE/SE/SW/NW, Horizontal
-Microphone Orientation 192 degrees, Vertical Microphone Orientation 45
-degrees, Microphone Height 3 meters) - rendered and visually verified
-after each follow-up round, most recently: correct quadrant
-placement/sizing, correctly-sized dashed mean circles (~47 for Canopy,
-~22 for Understory), an arrow pointing just past South toward West
-(matching 192 degrees), a clean 0-110 radial scale with no phantom
-padding or diagonal gridlines, solid black scale-line rings drawn in
-the requested order (on top of the quadrant wedges/mean circle/arrow,
-underneath the labels), the 25/50/75/100 labels reading cleanly (no
-background box) at both the North and South ends of the vertical line
-on both panels, a plain opaque white saved PNG background (confirmed
-by reading the file's own pixel data back, not just by eye), and the
-middle panel correctly drawing a bar to height 3 (m) on a 0-4 axis
-with the 45-degree icon (\code{mic_vert_045.png}, matching this ARU's
-real Vertical Microphone Orientation of 45 degrees) sitting flush and
-undistorted on the bar's top - most recently re-verified that the bar
-visibly reaches all the way to the 3m gridline with nothing painted
-over it, per Josh's fifth follow-up bugfix above. Per Josh's sixth
-follow-up (2026-09-15), also re-verified: the default \code{sub.plots}
-renders all FOUR panels, left to right; a 2-panel \code{sub.plots =
-c("canopy.bull", "understory.bull")} subset renders correctly with no
-gap or leftover mic panel; each of \code{cover.arrows}/\code{mean.cover}/
-\code{quadrant.cover} individually, and all three together, correctly
-hides only its own layer on \code{canopy.bull}/\code{understory.bull}
-while leaving the scale lines/radial labels/mic panels untouched; and an
-unrecognized \code{sub.plots} value, or a non-\code{TRUE}/\code{FALSE}
-toggle value, both stop with a clear error naming the offending value.
-Per Josh's seventh follow-up (2026-09-15, same day), the real
-\code{"mic.bull"} panel was also re-verified against the same test ARU
-(Vertical Microphone Orientation 45 degrees, Microphone Height 3
-meters): an arrow from center to radius 3 at angle 45, the 1/2/3/4
-scale-line rings all inside a 0-4 plot area (not auto-stretched, since
-3 < 4), and no text at the angle-0/180 positions - plus a taller
-synthetic 5m-mic test confirming the radial max auto-stretches so the
-arrow tip stays inside the plot area. Per Josh's eighth follow-up
-(2026-09-15, later the same day, repositioning "Sky ward"/"Earthward"
-to top/bottom and the numeric scale to the left side only), re-rendered
-test plots at all 5 known Vertical Microphone Orientation angles (0,
-45, 90, 270, 315 - matching the 5 icon images used by \code{"mic.bar"})
-confirmed: "Sky ward" reads at the top and "Earthward" at the bottom in
-every case; the 1/2/3/4 labels read only on the left, never duplicated
-on the right; the arrow at 90 degrees points straight up (to "Sky
-ward"), at 270 straight down (to "Earthward"), at 0 straight left, at
-45 up-and-left, and at 315 down-and-left - all consistent with that
-round's quarter-turn rotation. Per Josh's ninth follow-up (2026-09-15,
-later still: reverting to the standard \code{start = 0} mapping used
-by every other panel, adding \code{$mic.bull.height.label} at the W/
-bottom position, a white background on the scale numbers, and the
-"Skyward" one-word spelling), the same 5 angles were re-rendered again
-and confirmed: "Skyward" read at the RIGHT and "Earthward" at the LEFT
-in every case (the mirror image of the eighth follow-up's top/bottom
-placement); "Microphone Height (m)" read at the BOTTOM; the 1/2/3/4
-labels read at the TOP, each on a visible white background; and the
-arrow at 90 degrees pointed right (to "Skyward"), at 270 left (to
-"Earthward"), at 0 straight up, at 45 up-and-right, and at 315
-down-and-right. Per Josh's tenth follow-up (2026-09-15, later still:
-"Top = 90, right 0, Bottom = 270, left = 180 / Earthward label at
-bottom / Skyward label at top / Microphone Height (m) on left / Scale
-labels on left"), the rotation was corrected once more
-(\code{start = -pi / 2, direction = -1}) and the same 5 angles
-re-rendered a third time confirmed: "Skyward" read at the TOP and
-"Earthward" at the BOTTOM in every case; "Microphone Height (m)" read
-at the LEFT; the 1/2/3/4 labels read near the left (offset slightly
-toward the top to avoid overlapping the height label - a real
-text-collision bug found and fixed that round, see "mic.bull panel"
-above), each on a visible white background; and the arrow at 90
-degrees pointed straight up (to "Skyward"), at 270 straight down (to
-"Earthward"), at 0 straight right, at 45 up-and-right, and at 315
-down-and-right. Per Josh's eleventh follow-up (2026-09-15, later
+(\code{bulleye_model_data.xlsx}, one ARU: \code{Canopy cover} =
+63/13/13/100 and \code{Understory cover} = 63/13/13/0 for
+NE/SE/SW/NW, Horizontal Microphone Orientation 192 degrees, Vertical
+Microphone Orientation 45 degrees, Microphone Height 3 meters) -
+rendered and visually verified after each follow-up round, most
+recently: correct quadrant placement/sizing, correctly-sized dashed
+mean circles (~47 for Canopy, ~22 for Understory), an arrow pointing
+just past South toward West (matching 192 degrees), a clean 0-110
+radial scale with no phantom padding or diagonal gridlines, solid black
+scale-line rings drawn in the requested order (on top of the quadrant
+wedges/mean circle/arrow, underneath the labels), the 25/50/75/100
+labels reading cleanly (no background box) at both the North and South
+ends of the vertical line on both panels, a plain opaque white saved
+PNG background (confirmed by reading the file's own pixel data back,
+not just by eye), and the middle panel correctly drawing a bar to
+height 3 (m) on a 0-4 axis with the 45-degree icon
+(\code{mic_vert_045.png}, matching this ARU's real Vertical Microphone
+Orientation of 45 degrees) sitting flush and undistorted on the bar's
+top - most recently re-verified that the bar visibly reaches all the
+way to the 3m gridline with nothing painted over it, per Josh's fifth
+follow-up bugfix above. Per Josh's sixth follow-up (2026-09-15), also
+re-verified: the default \code{sub.plots} renders all FOUR panels, left
+to right; a 2-panel \code{sub.plots = c("canopy.bull",
+"understory.bull")} subset renders correctly with no gap or leftover mic
+panel; each of \code{cover.arrows}/\code{mean.cover}/\code{quadrant.cover}
+individually, and all three together, correctly hides only its own layer
+on \code{canopy.bull}/\code{understory.bull} while leaving the scale
+lines/radial labels/mic panels untouched; and an unrecognized
+\code{sub.plots} value, or a non-\code{TRUE}/\code{FALSE} toggle value,
+both stop with a clear error naming the offending value. Per Josh's
+seventh follow-up (2026-09-15, same day), the real \code{"mic.bull"}
+panel was also re-verified against the same test ARU (Vertical
+Microphone Orientation 45 degrees, Microphone Height 3 meters): an arrow
+from center to radius 3 at angle 45, the 1/2/3/4 scale-line rings all
+inside a 0-4 plot area (not auto-stretched, since 3 < 4), and no text at
+the angle-0/180 positions - plus a taller synthetic 5m-mic test
+confirming the radial max auto-stretches so the arrow tip stays inside
+the plot area. Per Josh's eighth follow-up (2026-09-15, later the same
+day, repositioning "Sky ward"/"Earthward" to top/bottom and the numeric
+scale to the left side only), re-rendered test plots at all 5 known
+Vertical Microphone Orientation angles (0, 45, 90, 270, 315 - matching
+the 5 icon images used by \code{"mic.bar"}) confirmed: "Sky ward" reads
+at the top and "Earthward" at the bottom in every case; the 1/2/3/4
+labels read only on the left, never duplicated on the right; the arrow
+at 90 degrees points straight up (to "Sky ward"), at 270 straight down
+(to "Earthward"), at 0 straight left, at 45 up-and-left, and at 315
+down-and-left - all consistent with that round's quarter-turn rotation.
+Per Josh's ninth follow-up (2026-09-15, later still: reverting to the
+standard \code{start = 0} mapping used by every other panel, adding
+\code{$mic.bull.height.label} at the W/bottom position, a white
+background on the scale numbers, and the "Skyward" one-word spelling),
+the same 5 angles were re-rendered again and confirmed: "Skyward" read
+at the RIGHT and "Earthward" at the LEFT in every case (the mirror
+image of the eighth follow-up's top/bottom placement); "Microphone
+Height (m)" read at the BOTTOM; the 1/2/3/4 labels read at the TOP,
+each on a visible white background; and the arrow at 90 degrees
+pointed right (to "Skyward"), at 270 left (to "Earthward"), at 0
+straight up, at 45 up-and-right, and at 315 down-and-right. Per Josh's
+tenth follow-up (2026-09-15, later still: "Top = 90, right 0, Bottom =
+270, left = 180 / Earthward label at bottom / Skyward label at top /
+Microphone Height (m) on left / Scale labels on left"), the rotation
+was corrected once more (\code{start = -pi / 2, direction = -1}) and
+the same 5 angles re-rendered a third time confirmed: "Skyward" read at
+the TOP and "Earthward" at the BOTTOM in every case; "Microphone
+Height (m)" read at the LEFT; the 1/2/3/4 labels read near the left
+(offset slightly toward the top to avoid overlapping the height
+label - a real text-collision bug found and fixed that round, see
+"mic.bull panel" above), each on a visible white background; and the
+arrow at 90 degrees pointed straight up (to "Skyward"), at 270 straight
+down (to "Earthward"), at 0 straight right, at 45 up-and-right, and at
+315 down-and-right. Per Josh's eleventh follow-up (2026-09-15, later
 still: "orientation is correct / Change 'Microphone Height (m)' to
 'Height (m)'"), confirming the tenth follow-up's rotation as final,
 \code{$mic.bull.height.label}'s default was shortened to
-\code{"Height (m)"} - a text-only change (\code{plotopts_bullseye.csv}/
-\code{.dev.R} test data, no code change), re-verified with the same 5
+\code{"Height (m)"} - a text-only change, re-verified with the same 5
 angles re-rendered once more: "Height (m)" read at the LEFT in every
 case, shorter and with less risk of the panel-width clipping noted
 above; the 1/2/3/4 labels remained clear of it. Per Josh's twelfth
 follow-up (2026-09-15, later still: "Change left label '(m)'"),
 \code{$mic.bull.height.label}'s default was shortened once more, to
 just \code{"(m)"} - again a text-only change, re-verified with the
-same 5 angles re-rendered again: "(m)" read at the LEFT in every case,
-essentially eliminating the panel-width clipping (only 2 characters
-plus the parentheses); the 1/2/3/4 labels' 15-degree offset remained
-clear of it, with even more margin than before. Per Josh's thirteenth
-follow-up (2026-09-15, later still: "Make the labels for the scale
-occur along the left horizonal axis, offset the label by enough space
-to fit the label"), the 1/2/3/4 labels were moved off their 15-degree
-offset (angle 165) back onto the exact left horizontal axis (angle
-180, the same ray as \code{$mic.bull.height.label}), with clearance now
+same 5 angles re-rendered again: "(m)" reads at the LEFT in
+every case, essentially eliminating the panel-width clipping; the
+1/2/3/4 labels' 15-degree offset remained clear of it, with
+even more margin than before. Per Josh's thirteenth follow-up
+(2026-09-15, later still: "Make the labels for the scale occur along
+the left horizonal axis, offset the label by enough space to fit the
+label"), the 1/2/3/4 labels were moved off their 15-degree offset
+(angle 165) back onto the exact left horizontal axis (angle 180, the
+same ray as \code{$mic.bull.height.label}), with clearance now
 provided by extending the Y-axis \code{0.7} past
 \code{$mic.bull.radial.max} rather than by an angular offset,
 re-verified with the same 5 angles re-rendered a final time and the
 real combined 4-panel figure: the 1/2/3/4 labels read exactly along
-the horizontal left line in every case, clearly separated from
-"(m)" (no text-on-text overlap), and the rings/arrow directions are
-otherwise unchanged. Per Josh's fourteenth follow-up (2026-09-15,
-later still: order-matching re-verification plus \code{auto.scale}/
+the horizontal left line in every case, clearly separated from "(m)"
+(no text-on-text overlap), and the rings/arrow directions are
+otherwise unchanged. Per Josh's fourteenth follow-up (2026-09-15, later
+still: order-matching re-verification plus \code{auto.scale}/
 \code{subplot.size.height}/\code{subplot.size.width}), a new panel-order
 test (comparing the actual rendered panel titles, not just their count)
 confirmed \code{sub.plots} order was already correctly reflected in the
 combined figure and remains so; the new sizing arguments were verified
 by reading each saved PNG's own real pixel dimensions back
 (\code{png::readPNG()}) against the expected inches x dpi, for both
-\code{auto.scale = TRUE} (fixed 6.5in total width at 2 and 4 panels)
-and \code{auto.scale = FALSE} (a non-default
-\code{subplot.size.width}/\code{subplot.size.height} combination) -
-all matched to within rounding. Also confirmed (see @details, "Figure
+\code{auto.scale = TRUE} (fixed 6.5in total width at 2 and 4 panels) and
+\code{auto.scale = FALSE} (a non-default
+\code{subplot.size.width}/\code{subplot.size.height} combination) - all
+matched to within rounding. Also confirmed (see Details, "Figure
 sizing"): both new sizing defaults produce visibly overlapping panel
 titles in the default 4-panel figure, a real cosmetic consequence
 flagged for Josh's review rather than silently patched. Per Josh's
-fifteenth follow-up (2026-09-15, later still: "if user selects all
-four options sub.plots then expand the size of the plot by the
-required amount to prevent overlap"), this was resolved: a new test
-independently re-computes the expected minimum width from the real
-title text/font size (the same measurement approach the function
-itself uses) and confirms the actual saved figure matches it exactly,
-for all four types under both \code{auto.scale = TRUE} and
-\code{auto.scale = FALSE}; a separate test confirms a subset that is
-NOT all four types is left at its plain, un-expanded width. The real
-combined 4-panel figure was also re-rendered under both
-\code{auto.scale} settings and visually confirmed clean - all four
-panel titles now read with clear separation, no overlap, at the
-auto-expanded ~13.7in total width. Per Josh's sixteenth follow-up
-(2026-09-15, later still: two-line panel title, shared with mic.bull,
-and removing the mic.bar panel's X-axis title), re-verified: the real
-combined figure now shows "Microphone Height and" / "Vertical
+fifteenth follow-up (2026-09-15, later still: "if user selects all four
+options sub.plots then expand the size of the plot by the required
+amount to prevent overlap"), this was resolved: a new test independently
+re-computes the expected minimum width from the real title text/font
+size (the same measurement approach the function itself uses) and
+confirms the actual saved figure matches it exactly, for all four types
+under both \code{auto.scale = TRUE} and \code{auto.scale = FALSE}; a
+separate test confirms a subset that is NOT all four types is left at
+its plain, un-expanded width. The real combined 4-panel figure was also
+re-rendered under both \code{auto.scale} settings and visually confirmed
+clean - all four panel titles now read with clear separation, no
+overlap, at the auto-expanded ~13.7in total width. Per Josh's sixteenth
+follow-up (2026-09-15, later still: two-line panel title, shared with
+mic.bull, and removing the mic.bar panel's X-axis title), re-verified:
+the real combined figure now shows "Microphone Height and" / "Vertical
 Orientation" on two lines on BOTH the mic.bar and mic.bull panels, no
 "Ground Level" text anywhere on the mic.bar panel's X axis, and (a
 useful side effect of the shorter wrapped lines) the "Figure sizing"
@@ -951,6 +1002,79 @@ tests still pass (Test 16's own expected-width values recomputed to
 match the new, shorter title text), and the real combined figure was
 visually re-inspected close up to confirm the two adjacent two-line
 titles (mic.bar's and mic.bull's) don't touch or overlap each other.
+Per Josh's seventeenth follow-up (2026-09-16: "Adjust the mic.bar
+subplot to be the same height as the other subplots and have the
+titles all reduce in size so that they don't run together"), both
+parts were verified against the real default 4-panel figure before any
+code was written, then re-verified after: (1) \code{mic.bar}'s panel
+was measured, via each panel's actual non-white pixel extent in the
+rendered PNG, to be drawn noticeably taller than the three
+\code{coord_polar} bullseye panels (the bullseye panels were squeezed
+into a centered square, leaving blank space \code{mic.bar} did not);
+adding \code{aspect.ratio = 1} to \code{build.mic.panel()}'s theme
+(see Details, "Panel height matching") brought all four panels'
+measured heights to within a couple of pixels of each other, re-checked
+under both the default 4-panel figure and a 3-panel subset; (2) the
+fifteenth/sixteenth follow-ups' width-only auto-expand mechanism was
+replaced with a title auto-shrink mechanism that tries first (see
+Details, "Title auto-shrink (with width auto-expand as a fallback)") -
+for the default all-four-panel case this now shrinks all four titles
+uniformly from 12pt to about 9.2pt and leaves the figure at its plain
+6.5in width (previously auto-expanded to ~8.4in), confirmed both by
+reading back each panel's actual applied \code{plot.title} font size
+from the returned \code{ggplot}/\code{patchwork} object and by
+re-rendering the figure and visually confirming clear separation
+between all four titles. New/updated tests: Test 16 was rewritten
+around the new mechanism (uniform-shrink-fits case at the real default
+settings; a deliberately too-narrow \code{subplot.size.width} where
+shrinking to the 8pt floor still isn't enough and the width-expand
+fallback correctly engages; a generous \code{subplot.size.width} left
+unshrunk and unexpanded; a narrower \code{sub.plots} subset likewise
+left alone) and a new Test 17 renders the real default figure and
+confirms \code{mic.bar}'s measured content height matches the bullseye
+panels' to within a small pixel tolerance. All 17 tests pass, and the
+final \code{.R} smoke test against the real CSV data still passes
+unchanged.
+Per Josh's eighteenth follow-up (2026-09-16: "reduce the size of the
+axis labels to be 2 pts smaller than the current title labels at the
+top of each subplot"), \code{$axis.text.size} was changed from an
+independent fixed setting to a value DERIVED each render from whatever
+\code{$plot.title.size} actually resolved to (see Details, "Axis label
+sizing") minus a fixed 2pt gap - \code{build.panel()},
+\code{build.mic.bullseye()}, and \code{build.mic.panel()} each gained an
+\code{axis.text.size.override} parameter (mirroring the seventeenth
+follow-up's \code{title.size.override}), and the main per-ARU loop now
+computes and passes both the resolved title size and the derived axis
+label size to every panel builder. Verified against the real default
+4-panel figure (titles shrunk to ~9.2pt per the seventeenth follow-up;
+axis labels confirmed, by reading back the actual applied
+\code{ggplot}/\code{patchwork} theme values, to render at exactly
+7.2pt - 2pt below) and re-rendered visually to confirm the compass/scale
+labels read cleanly at the new smaller size. A new Test 18 checks the
+derived relationship holds in three cases: the default call (titles
+shrunk), a subset whose titles are NOT shrunk (stay at the full 12pt
+default - axis labels still land at exactly 10pt, confirming this isn't
+wired up only for the shrunk case), and a deliberately too-narrow
+\code{subplot.size.width} case where titles are floored at 8pt (axis
+labels land at exactly 6pt). All 18 tests pass, and the final
+\code{.R} smoke test still passes unchanged.
+
+Per Josh's nineteenth follow-up (2026-09-16), the old
+\code{project.name}-matches-a-column-name settings-override mechanism
+was replaced by a fixed \code{$overide.value} column (checked via the
+new \code{aes.style} argument, default \code{"overide.value"}), and
+\code{project.name} (default now \code{"new.project"}) was repurposed
+to drive the saved file name (\code{"<project.name>_<ARU>_<timestamp>.png"})
+instead - \code{$output.filename.pattern} is deprecated and no longer
+read. A new Test 19 checks: a value in \code{$overide.value} overrides
+\code{$default.value}; a blank \code{$overide.value} cell falls through
+to \code{$default.value}; an older sheet with no \code{$overide.value}
+column at all still works (backward compatible); \code{aes.style} can
+point at a differently-named column; \code{project.name} correctly
+drives the saved file name prefix, defaulting to \code{"new.project"}
+when omitted; and the function runs fine with
+\code{$output.filename.pattern} removed from \code{aes.default}
+entirely. All 19 tests pass.
 }
 \examples{
 \dontrun{
@@ -959,4 +1083,5 @@ cover <- read.csv("cover.csv", stringsAsFactors = FALSE, check.names = FALSE)
 mic <- read.csv("mic.csv", stringsAsFactors = FALSE, check.names = FALSE)
 batz.plotcover_bullseye(cover, mic, aes.default, dir.save = getwd())
 }
+
 }

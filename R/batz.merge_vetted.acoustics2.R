@@ -55,6 +55,19 @@
 #'   \code{"<project.name>_<Date>_merge_vetted.acoustics.xlsx"} into
 #'   \code{dir.load}. Guarded with \code{requireNamespace("openxlsx", ...)} -
 #'   warns and skips the save (does not error) if not installed.
+#' @param snake_case Logical, default \code{FALSE}. Added 2026-09-22, per
+#'   Josh, alongside the tolerant-header-matching fix above. Controls only
+#'   \code{data}/\code{log.file}'s OWN output column names, applied as the
+#'   very last step before the optional xlsx write and before they're
+#'   returned/auto-assigned - it has no effect on how an incoming file's
+#'   headers are matched/validated. \code{FALSE} (default) keeps this
+#'   function's normal dot-separated output column names (\code{
+#'   $mon.ngh}, \code{$auto.kp}, \code{$aru.serial}, ...) exactly as
+#'   always. \code{TRUE} runs every output column name through
+#'   \code{standardize.headers()} instead (e.g. \code{$mon_ngh}, \code{
+#'   $aru_serial}) - for a caller who specifically wants a snake_case
+#'   CSV/xlsx/data frame out of this function, without having to convert it
+#'   themselves afterward.
 #'
 #' @return Invisibly, a named list of exactly two data frames: \code{data}
 #'   (the merged/processed table) and \code{log.file} (one row per file the
@@ -274,6 +287,59 @@
 #'     should confirm the real two-sheet save on his own machine.
 #' }
 #'
+#' \strong{BUGFIX (2026-09-22, per Josh's request to audit and extend the
+#' 2026-09-21 header-canonicalization fix - see
+#' \code{\link{batz.generate_plotframe.bat}}'s own \code{canonicalize.headers}
+#' \code{@details} entry - package-wide):} \code{required.headers}/\code{
+#' results.headers}/\code{optional.headers} - this function's own canonical
+#' short target names (\code{mon.ngh}, \code{auto.kp}, \code{auto.sb}, \code{
+#' aru.serial}, etc.) - were never themselves standardized on the comparison
+#' side, even though every incoming raw header IS run through
+#' \code{standardize.headers()} before comparison (see "Header
+#' standardization" above). In practice this meant a column that already
+#' legitimately carried (or standardized to) one of these canonical names,
+#' just spelled in a different case/separator style (e.g. \code{Mon_Ngh},
+#' \code{MON.NGH}, \code{mon_ngh}), was falsely reported as MISSING unless
+#' \code{header.rename.path} happened to have an exact row for that specific
+#' raw spelling - the same class of bug already fixed elsewhere in this
+#' package via \code{\link{canonicalize.headers}}. Fixed the same way here:
+#' after the existing \code{header.rename.path}-based rename step runs
+#' (unchanged - it's still needed for genuinely different raw names, e.g.
+#' mapping Kaleidoscope's own native column names onto these short canonical
+#' ones), any of \code{required.headers}/\code{results.headers}/\code{
+#' optional.headers} not yet present under its exact canonical spelling is
+#' ALSO run through a \code{\link{canonicalize.headers}}-style pass - both
+#' \code{tmp}'s current column names and the still-needed canonical name(s)
+#' are standardized purely to match them up, and any match found is renamed,
+#' in this function's own per-file working copy only, to the exact canonical
+#' spelling - as a supplementary fallback layer on top of the rename table,
+#' not a replacement for it. Every other existing behavior (the
+#' \code{results.headers} "at least one of" logic, the all-NA auto-id-column
+#' drop, the \code{manid.kp}/\code{manid.sb} fill-in logic, duplicate
+#' handling, the \code{$lat}/\code{$lon}/\code{$long}/\code{X}/\code{Y}
+#' location handling, everything) is unchanged. Full dev-script test suite
+#' re-run (no regressions), plus a new test confirming a file whose headers
+#' are already spelled like the canonical names in a different case/
+#' separator style (e.g. \code{Mon_Ngh}, \code{AUTO.KP}), with no
+#' corresponding row in \code{arumerge.headerrename.csv}, now loads/merges
+#' successfully instead of being rejected as missing required headers.
+#'
+#' \strong{NEW (2026-09-22, per Josh, alongside the BUGFIX above):} added the
+#' \code{snake_case} parameter (see below) - mirroring the identically-named,
+#' identically-behaved parameter already shipped in
+#' \code{\link{batz.generate_plotframe.bat}}. \code{FALSE} (default) leaves
+#' \code{data}/\code{log.file}'s own output column names exactly as always
+#' (this function's usual dot-separated convention, e.g. \code{$mon.ngh},
+#' \code{$aru.serial}). \code{TRUE} runs both \code{data}'s and \code{
+#' log.file}'s column names through \code{standardize.headers()} as the very
+#' last step before the optional xlsx write and before they're returned/
+#' auto-assigned into the caller's environment - so a caller who specifically
+#' wants a snake_case CSV/xlsx/data frame out of this function (e.g.
+#' \code{$mon_ngh}, \code{$aru_serial}, \code{$missing_headers}) gets one
+#' without converting it themselves afterward. This has no effect on how an
+#' incoming file's own raw headers are standardized/matched/validated -
+#' those steps are entirely upstream of this, and unaffected either way.
+#'
 #' @examples
 #' \dontrun{
 #' # bare call - creates `data` and `log.file` directly in the calling
@@ -297,7 +363,8 @@ batz.merge_vetted.acoustics2 <- function(dir.load = getwd(),
                                           trim.noise = TRUE,
                                           trim.noid = FALSE,
                                           project.name = "",
-                                          save.xlsx = TRUE) {
+                                          save.xlsx = TRUE,
+                                          snake_case = FALSE) {
 
   ## ---- three header categories - location is under "optional" ----
   required.headers <- c("filename", "mon.ngh", "manid")
@@ -390,6 +457,21 @@ batz.merge_vetted.acoustics2 <- function(dir.load = getwd(),
 
     if (rename && nrow(header.rename.table) > 0) {
       tmp <- batz.datawrangler_rename(tmp, header.rename.table, headers.rename = TRUE)
+    }
+
+    ## fallback tolerant match (per Josh, 2026-09-22 - see @details): for any
+    ## of required.headers/results.headers/optional.headers not yet present
+    ## under its exact canonical spelling after the rename-table step above,
+    ## also try a canonicalize.headers()-style match - standardizing both
+    ## tmp's current column names and the canonical name itself - so a
+    ## column already spelled close to (or exactly like) the canonical name
+    ## in a different case/separator style is recognized even with no
+    ## header.rename.path row for it. This never touches a column already
+    ## present under its exact canonical name.
+    target.headers <- c(required.headers, results.headers, optional.headers)
+    still.needed <- setdiff(target.headers, names(tmp))
+    if (length(still.needed) > 0) {
+      tmp <- canonicalize.headers(tmp, still.needed)$df
     }
 
     tmp <- apply.location(tmp)
@@ -513,6 +595,16 @@ batz.merge_vetted.acoustics2 <- function(dir.load = getwd(),
     data.frame(filename = character(0), status = character(0), reason = character(0),
                `missing headers` = character(0), stringsAsFactors = FALSE, check.names = FALSE)
   rownames(log.file.df) <- NULL
+
+  ## snake_case (per Josh, 2026-09-22): controls only these OUTPUT data
+  ## frames' own column names, applied as the very last step before the
+  ## xlsx write and the return/auto-assign below - mirrors the pattern
+  ## already used in batz.generate_plotframe.bat(). FALSE (default) keeps
+  ## this function's normal dot-separated names exactly as always.
+  if (snake_case) {
+    names(data.merged) <- standardize.headers(names(data.merged))
+    names(log.file.df) <- standardize.headers(names(log.file.df))
+  }
 
   result <- list(data = data.merged, log.file = log.file.df)
 

@@ -92,6 +92,22 @@
 #' assumptions apply here unchanged and should be reviewed before relying on
 #' this in production.
 #'
+#' \strong{Follow-up, 2026-09-22, per Josh's request to audit and extend the
+#' snake_case output option package-wide:} added a \code{snake_case}
+#' parameter (default \code{FALSE}, matching
+#' \code{\link{batz.generate_plotframe.bat}}'s own). When \code{TRUE}, both
+#' \code{templog.merged} and \code{templog.notes} have their own output
+#' column names run through \code{standardize.headers()} as the very last
+#' step before they're written to CSV (when \code{write.output = TRUE}) and
+#' returned - e.g. \code{$date.time} becomes \code{$date_time},
+#' \code{$temp.dry.c} becomes \code{$temp_dry_c}, \code{$serial.num}
+#' becomes \code{$serial_num}. This is unrelated to, and does not change,
+#' the existing \code{templog.meta.csv} header standardization described
+#' above (which already always runs, regardless of this parameter, on the
+#' loaded meta file's own real headers before they're matched/joined) -
+#' \code{snake_case} only affects the final output column names of this
+#' function's own two returned/written data frames.
+#'
 #' @param dir.load Directory to search for files matching \code{load.pattern}.
 #'   Default: current working directory.
 #' @param load.pattern Character vector of length 2, default
@@ -118,6 +134,20 @@
 #'   \code{templog.merged.csv} and \code{templog.notes.csv} into
 #'   \code{dir.save} (with \code{$rh} rounded to 3 decimal places in the
 #'   written CSV only).
+#' @param snake_case Logical, default \code{FALSE}. Added 2026-09-22, per
+#'   Josh's request to audit and extend the snake_case output option
+#'   package-wide (see \code{\link{batz.generate_plotframe.bat}}, the first
+#'   function this was added to). Controls only \code{templog.merged}'s/
+#'   \code{templog.notes}'s OWN output column names (and, when
+#'   \code{write.output = TRUE}, the columns of the CSVs written to disk),
+#'   applied as the very last step before either is written/returned.
+#'   \code{FALSE} (default) keeps this function's normal dot-separated
+#'   output column names (\code{$date.time}, \code{$temp.dry.c}, ...)
+#'   exactly as always. \code{TRUE} runs every output column name through
+#'   \code{standardize.headers()} instead (e.g. \code{$date.time} ->
+#'   \code{$date_time}, \code{$temp.dry.c} -> \code{$temp_dry_c}) - for a
+#'   caller who specifically wants a snake_case CSV/data frame out of this
+#'   function, without having to convert it themselves afterward.
 #'
 #' @return Invisibly, a list with two data frames:
 #'   \describe{
@@ -130,12 +160,17 @@
 #'       \code{$date.end}, \code{$temp.type}, \code{$rows.in},
 #'       \code{$rows.out}, \code{$rows.trimmed}, \code{$notes}.}
 #'   }
+#'   (or their snake_case equivalents if \code{snake_case = TRUE} - see
+#'   that parameter above).
 #'
 #' @examples
 #' \dontrun{
 #' result <- batz.merge_temp.logger(dir.load = "path/to/data", dir.sub = TRUE)
 #' result$templog.merged
 #' result$templog.notes
+#'
+#' # snake_case output headers instead of this function's usual dot-style
+#' result <- batz.merge_temp.logger(dir.load = "path/to/data", snake_case = TRUE)
 #' }
 #'
 #' @export
@@ -143,7 +178,8 @@ batz.merge_temp.logger <- function(dir.load = getwd(),
                                           load.pattern = c("*templog.csv", "*templog.meta.csv"),
                                           dir.sub = FALSE,
                                           dir.save = getwd(),
-                                          write.output = TRUE) {
+                                          write.output = TRUE,
+                                          snake_case = FALSE) {
 
   ## ---- internal helpers ----------------------------------------------------
   ## convert a plain wildcard/glob suffix pattern (or vector of them) into one
@@ -550,6 +586,16 @@ batz.merge_temp.logger <- function(dir.load = getwd(),
       ))
       templog.merged <- rbind.fill(templog.merged, file.df)
     }
+  }
+
+  ## snake_case (per Josh, 2026-09-22, project-wide audit/extension of the
+  ## snake_case output option - see @details) is applied here, as the very
+  ## last step for BOTH returned data frames, before write.output (below)
+  ## copies/rounds/writes templog.merged - so the written CSV(s) and the
+  ## invisibly-returned list agree on column naming.
+  if (snake_case) {
+    names(templog.merged) <- standardize.headers(names(templog.merged))
+    names(templog.notes)  <- standardize.headers(names(templog.notes))
   }
 
   if (write.output) {

@@ -50,6 +50,26 @@
 #' against a future arulist file whose headers pick up stray whitespace,
 #' mixed case, or punctuation.
 #'
+#' \strong{BUGFIX/NEW (2026-09-21, per Josh's real-world report of a
+#' header mismatch caused by header-standardization elsewhere in the
+#' pipeline):} \code{data}'s own headers (matched against
+#' \code{required.headers} above) are now canonicalized via the shared
+#' package helper \code{\link{canonicalize.headers}} rather than a plain
+#' \code{setdiff()}: both \code{data}'s real column names and
+#' \code{required.headers} are standardized to snake_case purely to MATCH
+#' them up, so \code{data} is accepted whether its columns are already
+#' this function's own dot-separated convention (\code{"date.mon"}), have
+#' come back snake_cased from some intervening save/reload step
+#' (\code{"date_mon"}), or anything equivalent in between - every matched
+#' column is renamed, in this function's own local working copy only, back
+#' to the exact dot-separated spelling in \code{required.headers}, so
+#' every line of code below this check keeps referencing \code{$date.mon}/
+#' \code{$aru.name}/etc. exactly as before. This never mutates the
+#' \code{data} object the caller passed in (R already copies a data frame
+#' argument on modification) and never changes \code{plfr.batsummary}'s
+#' own output column names - see the new \code{snake_case} parameter below
+#' for that.
+#'
 #' \strong{$sunregion lookup.} \code{$sunregion} isn't produced by
 #' \code{\link{batz.merge_vetted.acoustics}} (or any upstream
 #' \code{batz} function) as a column of \code{data} itself, so this
@@ -259,7 +279,10 @@
 #' \code{FALSE}. No other behavior changed.
 #'
 #' @param data A data frame with every column listed above already
-#'   present (see Details for how to assemble one).
+#'   present (see Details for how to assemble one). Column headers may
+#'   arrive in this function's own dot-separated style OR already
+#'   snake_cased (e.g. by an intervening save/reload step) - see the
+#'   BUGFIX/NEW entry in Details, "canonicalize.headers".
 #' @param duplicates.remove Logical, default \code{TRUE}. Drop exact
 #'   duplicate rows from \code{data} before summarizing.
 #' @param spp.id Character, default \code{"manid.sb"}. Name of the column
@@ -304,13 +327,27 @@
 #'   match every other \code{batz} function's \code{dir.sub} default -
 #'   previously deliberately \code{TRUE} per an earlier explicit spec;
 #'   this reverses that for consistency.)
+#' @param snake_case Logical, default \code{FALSE}. Added 2026-09-21, per
+#'   Josh, alongside the \code{canonicalize.headers} fix above. Controls
+#'   only \code{plfr.batsummary}'s OWN output column names, applied as the
+#'   very last step before it's returned - it has no effect on
+#'   \code{data}, which is never modified beyond this function's own local
+#'   working copy. \code{FALSE} (default) keeps this function's normal
+#'   dot-separated output column names (\code{$spp.id}, \code{$date},
+#'   \code{$group}, ...) exactly as always. \code{TRUE} runs every output
+#'   column name through \code{standardize.headers()} instead (e.g.
+#'   \code{$spp_id}, \code{$mins2_noon_min}) - for a caller who
+#'   specifically wants a snake_case CSV/data frame out of this function,
+#'   without having to convert it themselves afterward.
 #'
 #' @return A data frame, \code{plfr.batsummary}, with columns
 #'   \code{$spp.id}, \code{$date}, \code{$group}, \code{$groupedby},
 #'   \code{$groupby.date}, \code{$sunregion}, \code{$obs},
-#'   \code{$mins2.noon.min}, \code{$mins2.noon.max}, \code{$vetting.type}.
-#'   See \strong{$group vs $groupedby} in Details for what
-#'   \code{$group}/\code{$groupedby}/\code{$groupby.date} each hold.
+#'   \code{$mins2.noon.min}, \code{$mins2.noon.max}, \code{$vetting.type}
+#'   (or their snake_case equivalents if \code{snake_case = TRUE} - see
+#'   that parameter above). See \strong{$group vs $groupedby} in Details
+#'   for what \code{$group}/\code{$groupedby}/\code{$groupby.date} each
+#'   hold.
 #'
 #' @examples
 #' \dontrun{
@@ -326,6 +363,9 @@
 #' # group by deployment type instead of detector
 #' plfr.batsummary <- batz.generate_plotframe.bat(vetted.merged,
 #'   groupby = "deployment.type")
+#'
+#' # snake_case output headers instead of this function's usual dot-style
+#' plfr.batsummary <- batz.generate_plotframe.bat(vetted.merged, snake_case = TRUE)
 #' }
 #'
 #' @export
@@ -339,7 +379,8 @@ batz.generate_plotframe.bat <- function(data,
                                          trim.noid = FALSE,
                                          dir.load = getwd(),
                                          load.pattern = c("*.arulist.csv"),
-                                         dir.sub = FALSE) {
+                                         dir.sub = FALSE,
+                                         snake_case = FALSE) {
 
   if (!is.data.frame(data)) stop("`data` must be a data frame.")
 
@@ -348,17 +389,26 @@ batz.generate_plotframe.bat <- function(data,
   ## joined on below, replacing the old "join it in yourself first"
   ## requirement. See Details/Follow-up. These twelve names are `data`'s
   ## own already-established batz output schema (from
-  ## batz.merge_vetted.acoustics()), not raw loaded headers, so they are
-  ## NOT run through standardize.headers() - see Details/"Header
-  ## standardization".
+  ## batz.merge_vetted.acoustics()), not raw loaded headers.
+  ##
+  ## BUGFIX/NEW (2026-09-21, per Josh): matched via canonicalize.headers()
+  ## rather than a plain setdiff() - both `data`'s real column names and
+  ## required.headers below are standardized to snake_case purely to match
+  ## them up (so a `data` whose headers came back snake_cased from some
+  ## intervening save/reload step is still recognized), then every matched
+  ## column of `data` is renamed, in this function's own local copy only,
+  ## back to the exact dot-separated spelling below - everything after
+  ## this check keeps referencing $date.mon/$aru.name/etc. exactly as
+  ## before. See @details, "Header standardization"/"BUGFIX/NEW".
   required.headers <- c("filename", "date.mon", "manid", "autoid.kp",
                          "autoid.sb", "lat", "serial", "lon", "aru.name",
                          "date", "time", "call.datetime")
-  missing.headers <- setdiff(required.headers, names(data))
-  if (length(missing.headers) > 0) {
+  data.canon <- canonicalize.headers(data, required.headers)
+  if (length(data.canon$missing) > 0) {
     stop("`data` is missing required header(s): ",
-         paste(missing.headers, collapse = ", "))
+         paste(data.canon$missing, collapse = ", "))
   }
+  data <- data.canon$df
 
   for (colname in c(spp.id, groupby.date, groupby)) {
     if (!(colname %in% names(data))) {
@@ -529,6 +579,7 @@ batz.generate_plotframe.bat <- function(data,
   if (!alldetections) {
     plfr.batsummary <- build.summary(data)
     plfr.batsummary$vetting.type <- spp.id
+    if (snake_case) names(plfr.batsummary) <- standardize.headers(names(plfr.batsummary))
     return(plfr.batsummary)
   }
 
@@ -553,6 +604,8 @@ batz.generate_plotframe.bat <- function(data,
                                             plfr.batsummary$date,
                                             plfr.batsummary$spp.id), ]
   rownames(plfr.batsummary) <- NULL
+
+  if (snake_case) names(plfr.batsummary) <- standardize.headers(names(plfr.batsummary))
 
   plfr.batsummary
 }
