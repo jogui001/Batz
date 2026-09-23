@@ -29,6 +29,31 @@
 # synthetic suntimes.synth stand-in below is updated to match. No function-
 # body reference needed changing - suntimes is accepted and header-checked
 # here but not otherwise used, exactly as in the shipped .R file.
+#
+# Follow-up, 2026-09-23, per Josh: two changes mirrored here from the shipped
+# .R file (see its own @details "Follow-up, 2026-09-23" for the full
+# history/design-alternatives discussion) -
+#   (1) fig.list's $plot.sets column is renamed to $plot.set (a pure
+#       header-name change - parsing behavior is unchanged, still splits on
+#       whitespace/quotes into one or more tokens). aru.metadata.db.synth
+#       below is updated to use $plot.set; FIG.LIST.REQUIRED and the
+#       parse.plot.sets() call site are updated to match.
+#   (2) $plot.group is no longer a REQUIRED fig.list header - removed from
+#       FIG.LIST.REQUIRED; a blank value, or the column missing from
+#       fig.list entirely, now defaults to the fixed column name "group"
+#       (matching batz.generate_plotframe.bat()'s own output column and
+#       batz.plotdetections_first.last()'s fixed grouping column) instead of
+#       skipping the row. A row can still supply its own $plot.group to
+#       override this default - aru.metadata.db.synth's existing
+#       $plot.group = "aru.groupby" continues to exercise that override
+#       path unchanged, so every pre-existing test below (TEST 1-9) still
+#       passes with no behavior change. Three new tests (TEST 10-12) added
+#       at the end specifically exercise the new default-to-"group"
+#       behavior: a fig.list row with no $plot.group column at all resolving
+#       like an explicit override; an explicit override still taking
+#       priority; and a blank/absent $plot.group with no $group column in
+#       `data` either still skipping with the expected NOTE rather than
+#       erroring.
 # =============================================================================
 
 source("batz.batusa_recode.names.R")
@@ -97,6 +122,14 @@ plot.data.synth <- do.call(rbind, lapply(test.dates, function(d) {
   )
 }))
 
+# Follow-up, 2026-09-23: a second synthetic `data` stand-in that carries a
+# $group column instead of $aru.groupby - matching
+# batz.generate_plotframe.bat()'s own output column name, and exactly what
+# $plot.group now defaults to when blank/absent (see TEST 10/12 below). Same
+# values/shape as plot.data.synth, just the grouping column itself renamed.
+plot.data.group.synth <- plot.data.synth
+names(plot.data.group.synth)[names(plot.data.group.synth) == "aru.groupby"] <- "group"
+
 suntimes.synth <- data.frame(
   aru.name = "WTG-GOM102", date = "06/01/2026", date.mon = "06/02/2026",
   sunregion = "WTG", time.zone = "UTC", sunregion.type = "coordinates",
@@ -118,7 +151,7 @@ aru.metadata.db.synth <- data.frame(
   "40khzmyo"     = TRUE,
   facet.label    = "common",
   plot.group     = "aru.groupby",
-  plot.sets      = "WTG-GOM102",
+  plot.set       = "WTG-GOM102",
   pool           = FALSE,
   date.format    = "%b-%d/n%Y",
   date.start     = format(date.start.synth, "%m/%d/%Y"),
@@ -127,6 +160,20 @@ aru.metadata.db.synth <- data.frame(
   check.names = FALSE,
   stringsAsFactors = FALSE
 )
+
+# Follow-up, 2026-09-23 (TEST 10/11): a fig.list row identical to
+# aru.metadata.db.synth above but with NO $plot.group column at all - so
+# group.col must resolve via the new default ("group") rather than the
+# explicit "aru.groupby" override.
+aru.metadata.db.nogroupcol.synth <- aru.metadata.db.synth
+aru.metadata.db.nogroupcol.synth$plot.group <- NULL
+
+# Follow-up, 2026-09-23 (TEST 12): a fig.list row with $plot.group present
+# but blank - same default-resolution path as the "column missing entirely"
+# case above (both should behave identically - see @details "Follow-up,
+# 2026-09-23" in the shipped .R file).
+aru.metadata.db.blankgroup.synth <- aru.metadata.db.synth
+aru.metadata.db.blankgroup.synth$plot.group <- ""
 
 cat("=== synthetic aes.default (round nineteen: category/parameter/default.value/overide.value/notes) ===\n")
 print(head(default.plotaesthetics.synth))
@@ -142,9 +189,12 @@ DATA.REQUIRED <- c("spp.id", "date", "obs")
 SUNTIMES.REQUIRED <- c("aru.name", "date", "date.mon", "sunregion", "time.zone",
                         "sunregion.type", "schedual1", "schedual2", "suns",
                         "suns.unix", "sunr", "sunr.unix", "sunr.mon", "sunr.mon.unix")
+# "plot.group" removed 2026-09-23 (per Josh, see the header comment above) -
+# it's now optional, resolved per-row below with a "group" default.
+# "plot.sets" renamed to "plot.set" the same round.
 FIG.LIST.REQUIRED <- c("plot.type", "plot.name", "facet", "facet.set", "MYSO",
                         "Alldect", "facet.panel", "40khzmyo", "facet.label",
-                        "plot.group", "plot.sets", "pool", "date.format",
+                        "plot.set", "pool", "date.format",
                         "date.start", "date.end", "xaxe.interval")
 AES.DEFAULT.REQUIRED <- c("category", "parameter", "default.value")
 
@@ -207,6 +257,8 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     x <- trimws(as.character(x))
     gsub('^"(.*)"$', "\\1", x)
   }
+  # Parses $plot.set (2026-08-28, renamed from $plot.sets 2026-09-23) into a
+  # character vector of one or more values.
   parse.plot.sets <- function(x) {
     x <- trimws(as.character(x))
     if (length(x) == 0 || is.na(x) || !nzchar(x)) return(character(0))
@@ -304,11 +356,24 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     pd$spp.common <- batz.batusa_recode.names(pd$spp.id, batname.format.out = "common")
     pd$spp.common[is.khz.raw] <- "40khzmyo"
 
-    group.col <- trimws(job$plot.group)
-    if (!nzchar(group.col)) { cat(sprintf("NOTE: '%s' blank $plot.group - skipped.\n", job.label)); next }
-    if (!(group.col %in% names(pd))) { cat(sprintf("NOTE: '%s' $plot.group='%s' not a column - skipped.\n", job.label, group.col)); next }
+    # --- $plot.group: which column of `data` to filter/group by. Follow-up,
+    # 2026-09-23, per Josh: no longer a REQUIRED fig.list header - a blank
+    # value, or the column not existing in fig.list at all, now defaults to
+    # "group" (matching batz.generate_plotframe.bat()'s own output column
+    # and batz.plotdetections_first.last()'s fixed grouping column) instead
+    # of skipping the row. A row can still supply its own $plot.group value
+    # to override this. ---
+    group.col <- if ("plot.group" %in% names(job)) trimws(as.character(job$plot.group)) else ""
+    if (!nzchar(group.col)) {
+      group.col <- "group"
+    }
+    if (!(group.col %in% names(pd))) {
+      cat(sprintf("NOTE: fig.list row for '%s' has $plot.group = '%s', which is not a column of `data` - skipped.\n",
+                   job.label, group.col))
+      next
+    }
 
-    plot.sets.vals <- parse.plot.sets(job$plot.sets)
+    plot.sets.vals <- parse.plot.sets(job$plot.set)
     if (length(plot.sets.vals) > 0) {
       pd <- pd[tolower(trimws(as.character(pd[[group.col]]))) %in% tolower(plot.sets.vals), , drop = FALSE]
     }
@@ -574,5 +639,35 @@ cat("\n\n########## TEST 9: exact full-row fig.list duplicates are removed befor
 jobs.dup <- rbind(aru.metadata.db.synth, aru.metadata.db.synth, aru.metadata.db.synth)
 result9 <- batz.plotactivity_observations(plot.data.synth, jobs.dup, suntimes.synth, default.plotaesthetics.synth)
 cat("$plots entries produced (expected 1 - 2 duplicates removed):", length(result9$plots), "\n")
+
+cat("\n\n########## TEST 10 (2026-09-23 follow-up): no $plot.group column at all + `data` has a $group column -> resolves like an explicit override ##########\n")
+result10 <- batz.plotactivity_observations(plot.data.group.synth, aru.metadata.db.nogroupcol.synth, suntimes.synth, default.plotaesthetics.synth)
+cat("group.col resolved (expected 'group'):", result10$plots[[1]]$group.col, "\n")
+cat("$plots entries (expected 1, same as an equivalent row with $plot.group = \"group\" explicitly given):", length(result10$plots), "\n")
+cat("data rows matched (expected 15, same as TEST 2/8's identical explicit-override run):", nrow(result10$plots[[1]]$pd), "\n")
+
+cat("\n\n########## TEST 11 (2026-09-23 follow-up): a blank $plot.group (column present but empty) behaves identically to the column being absent ##########\n")
+result11 <- batz.plotactivity_observations(plot.data.group.synth, aru.metadata.db.blankgroup.synth, suntimes.synth, default.plotaesthetics.synth)
+cat("group.col resolved (expected 'group'):", result11$plots[[1]]$group.col, "\n")
+cat("$plots entries (expected 1):", length(result11$plots), "\n")
+
+cat("\n\n########## TEST 12 (2026-09-23 follow-up): an explicit $plot.group override still takes priority over the \"group\" default ##########\n")
+# aru.metadata.db.synth's own $plot.group = "aru.groupby" (unchanged from
+# every earlier test above) - re-run here against plot.data.synth (which has
+# $aru.groupby, NOT $group) to confirm the explicit override is still what
+# gets used, exactly as before this round's change.
+result12 <- batz.plotactivity_observations(plot.data.synth, aru.metadata.db.synth, suntimes.synth, default.plotaesthetics.synth)
+cat("group.col resolved (expected 'aru.groupby', the explicit override - NOT the 'group' default):",
+    result12$plots[[1]]$group.col, "\n")
+cat("$plots entries (expected 1):", length(result12$plots), "\n")
+
+cat("\n\n########## TEST 13 (2026-09-23 follow-up): blank/absent $plot.group AND `data` has no $group column either -> still skips with a NOTE, not an error ##########\n")
+result13 <- tryCatch({
+  batz.plotactivity_observations(plot.data.synth, aru.metadata.db.nogroupcol.synth, suntimes.synth, default.plotaesthetics.synth)
+}, error = function(e) { cat("UNEXPECTED ERROR (should have skipped with a NOTE instead):\n", conditionMessage(e), "\n"); NULL })
+if (!is.null(result13)) {
+  cat("$plots entries (expected 0 - plot.data.synth has no $group column, only $aru.groupby, so the row is skipped):",
+      length(result13$plots), "\n")
+}
 
 cat("\n\nALL TESTS COMPLETED\n")

@@ -801,6 +801,27 @@ verb "plot" is baked into the family name, same pattern as
 species' first and last nightly detection). Requested as
 \code{batz.plotdections_first.last()} - "plotdections" was a typo for
 "plotdetections", fixed here; nothing else changed.
+
+\strong{Follow-up, 2026-09-23, per Josh: fig.list's \code{$plot.sets}
+column was renamed to \code{$plot.set} in \code{\link{batz.plotactivity_observations}}
+this same round (standardizing on the singular spelling, since
+\code{fig.list.csv} is one file shared across every \code{batz} plotting
+function) - checked and confirmed NO code change was needed here.} This
+function's own \code{FIG.LIST.REQUIRED} already listed \code{"plot.set"}
+(singular), and its one internal reference (\code{job$plot.set}, matched
+against a single literal value via \code{tolower(trimws(pd$group)) ==
+tolower(plot.set.val)} - never parsed into multiple tokens the way
+\code{\link{batz.plotactivity_observations}}'s \code{$plot.set} is) was
+already using this spelling from the start (see the "clean up
+batz.plotdect_first.last()" identifier-rename entry above, 2026-08-27),
+so the two sibling functions' \code{fig.list} column names were already
+aligned before this round - only \code{batz.plotactivity_observations}
+itself needed the rename, per Josh's confirmed design there (see that
+function's own \code{@details}, "Follow-up, 2026-09-23", for the full
+\code{$plot.group}-optional design discussion, which likewise doesn't
+apply here - this function's grouping column has always been the fixed,
+non-configurable \code{$group}, with no per-row \code{$plot.group}
+override to begin with). No test or behavior change here.
 }
 \examples{
 \dontrun{

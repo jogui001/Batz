@@ -10,14 +10,18 @@
 #' @param data A data frame of already-summarized per-species, per-night
 #'   observation counts. Must have \code{$spp.id}, \code{$date},
 #'   \code{$obs}, plus whatever column each \code{fig.list} row's own
-#'   \code{$plot.group} names (see Details - this is no longer a fixed,
-#'   hardcoded column).
+#'   \code{$plot.group} names when given - see Details, "Follow-up,
+#'   2026-09-23 ($plot.group made optional)" - defaults to \code{$group}
+#'   (matching \code{\link{batz.generate_plotframe.bat}}'s own output
+#'   column) when \code{fig.list} doesn't specify one.
 #' @param fig.list A data frame listing the plot(s) to generate - one row
 #'   per plot. Must have \code{$plot.type}, \code{$plot.name}, \code{$facet},
 #'   \code{$facet.set}, \code{$MYSO}, \code{$Alldect}, \code{$facet.panel},
-#'   \code{$40khzmyo}, \code{$facet.label}, \code{$plot.group},
-#'   \code{$plot.sets}, \code{$pool}, \code{$date.format}, \code{$date.start},
-#'   \code{$date.end}, \code{$xaxe.interval}. Column names must be unique. Five further
+#'   \code{$40khzmyo}, \code{$facet.label}, \code{$plot.set}, \code{$pool},
+#'   \code{$date.format}, \code{$date.start}, \code{$date.end},
+#'   \code{$xaxe.interval}. Column names must be unique. \code{$plot.group}
+#'   is OPTIONAL (see Details, "Follow-up, 2026-09-23") - when blank or not
+#'   present at all, defaults to the column \code{$group}. Five further
 #'   columns are read PER-ROW if present but are entirely optional (each
 #'   falls back to \code{aes.default} when blank or the column doesn't
 #'   exist at all - see Details): \code{$Yaxe.trans} (\code{"none"}/
@@ -26,7 +30,7 @@
 #'   break values, only read when \code{$y.scale = "custom"}),
 #'   \code{$ymax} (the top value plotted on the Y axis), and \code{$legend}
 #'   (\code{TRUE}/\code{FALSE} - whether to show a legend distinguishing
-#'   which \code{$plot.sets} value each dodged bar is, when \code{$pool =
+#'   which \code{$plot.set} value each dodged bar is, when \code{$pool =
 #'   FALSE} and more than one value is selected - see \strong{Follow-up,
 #'   2026-08-29} in Details).
 #' @param suntimes A data frame of sunrise/sunset times, e.g. the output of
@@ -188,8 +192,26 @@
 #' this plot (e.g. gray out or omit un-monitored nights), say so and it can
 #' be wired in.
 #'
+#' \strong{Follow-up, 2026-09-22, per Josh's request ("change all functions
+#' that have aru as an header to \"aru.name\"", "update \"Batz reference
+#' db_*.xlxs\""):} \code{SUNTIMES.REQUIRED}'s first element is renamed from
+#' \code{"aru"} to \code{"aru.name"}, matching \code{\link{batz.generate_suntimes.arulist}}'s
+#' own renamed output column (see that function's own \code{@details}) and
+#' the identical rename already applied to \code{\link{batz.generate_plotframe.bat}}
+#' and \code{\link{batz.plotdetections_first.last}}. No reference in this
+#' function's own body needed to change to match, since - per the entry
+#' directly above - \code{suntimes} is accepted and header-checked but not
+#' otherwise read anywhere in this iteration's code. Per this function's
+#' existing \code{canonicalize.headers()}-based header check (both
+#' \code{suntimes}'s real column names and the required-header list are
+#' standardized purely to find matching columns, then renamed to the exact
+#' spelling expected), a \code{suntimes} data frame still spelled with the
+#' OLD bare \code{$aru} column name continues to be accepted without
+#' complaint - only a data frame missing the column entirely now fails the
+#' check.
+#'
 #' \strong{Follow-up, 2026-08-28, per Josh: \code{$plot.group}/
-#' \code{$plot.sets}/\code{$pool} replace the old fixed \code{$aru.groupby}/
+#' \code{$plot.set}/\code{$pool} replace the old fixed \code{$aru.groupby}/
 #' \code{$plot.set} single-detector-column design.} Previously, this
 #' function always filtered \code{data} on a hardcoded \code{$aru.groupby}
 #' column, matched against a single \code{$plot.set} value. Three
@@ -203,15 +225,19 @@
 #'     This is what gives a single \code{fig.list}/this function the
 #'     flexibility to plot other sheets/groupings without a code change -
 #'     \code{data} no longer needs a column literally called
-#'     \code{$aru.groupby} at all. A row with a blank \code{$plot.group}, or
-#'     one naming a column \code{data} doesn't actually have, is skipped
-#'     with a console \code{NOTE} (same tolerant, skip-don't-crash style
-#'     used for an unrecognized \code{$plot.type}/\code{$facet}).
-#'   \item \code{$plot.sets} (renamed from the old singular
-#'     \code{$plot.set}) lists every value of the \code{$plot.group} column
-#'     to include in this plot - now MULTIPLE values, not just one. Every
-#'     double-quote character in the raw value is treated as a token
-#'     delimiter (alongside whitespace) and stripped, so
+#'     \code{$aru.groupby} at all. \strong{As of Follow-up, 2026-09-23
+#'     below, this column is optional} - a blank value, or the column not
+#'     existing in \code{fig.list} at all, now defaults to \code{"group"}
+#'     rather than skipping the row (see that entry for the full history).
+#'     A row whose (given or defaulted) \code{$plot.group} names a column
+#'     \code{data} doesn't actually have is still skipped with a console
+#'     \code{NOTE} (same tolerant, skip-don't-crash style used for an
+#'     unrecognized \code{$plot.type}/\code{$facet}).
+#'   \item \code{$plot.set} (renamed from the old plural \code{$plot.sets}
+#'     - see Follow-up, 2026-09-23 below) lists every value of the
+#'     \code{$plot.group} column to include in this plot - MULTIPLE values,
+#'     not just one. Every double-quote character in the raw value is
+#'     treated as a token delimiter (alongside whitespace) and stripped, so
 #'     \code{"105059-NW3" "105059-SE3" "105059-SW3"}-shaped values parse
 #'     into three tokens - this was deliberately NOT implemented as
 #'     matching well-formed quote PAIRS, because Josh's own real
@@ -220,19 +246,20 @@
 #'     own outer CSV quoting consumes it) - a quote-pair parser would
 #'     silently drop that first token on real data. A single bare,
 #'     unquoted value (e.g. \code{105059-NW3}, exactly like the old
-#'     \code{$plot.set}) or several bare whitespace-separated values with
-#'     no quoting at all also work. A blank \code{$plot.sets} matches every
+#'     singular \code{$plot.set} this column itself replaced back on
+#'     2026-08-28) or several bare whitespace-separated values with no
+#'     quoting at all also work. A blank \code{$plot.set} matches every
 #'     value of the \code{$plot.group} column (same as the old
 #'     blank-\code{$plot.set} behavior). \strong{Limitation, flagged for
 #'     Josh}: a value containing a literal space would be split into two -
 #'     not expected for detector/group names, but worth knowing.
 #'   \item \code{$pool} (\code{TRUE}/\code{FALSE}) controls how the
-#'     (possibly several) selected \code{$plot.sets} values are combined:
+#'     (possibly several) selected \code{$plot.set} values are combined:
 #'     \code{TRUE} sums \code{$obs} across all of them into ONE pooled bar
 #'     per date/panel (as if they were a single group); \code{FALSE} keeps
 #'     each selected value as its own bar, drawn side-by-side (dodged)
 #'     within the same date/panel. Bars are dodged via \code{ggplot2}'s own
-#'     \code{position_dodge2()} at each date; WHICH \code{$plot.sets} value
+#'     \code{position_dodge2()} at each date; WHICH \code{$plot.set} value
 #'     a given dodged bar is is shown via bar color, when \code{$legend} is
 #'     on - see \strong{Follow-up, 2026-08-29 (round 2)} below for the
 #'     current design (an earlier round used an outline color instead;
@@ -245,7 +272,7 @@
 #' row, optional - falls back to \code{aes.default}'s own \code{legend}
 #' parameter, default \code{TRUE}), and three new \code{aes.default}
 #' parameters, resolve the "no legend for dodged bars" gap flagged
-#' above.} When \code{$pool = FALSE} and more than one \code{$plot.sets}
+#' above.} When \code{$pool = FALSE} and more than one \code{$plot.set}
 #' value is actually selected (nothing to distinguish otherwise - a single
 #' value, or a pooled bar, never shows this legend regardless of
 #' \code{$legend}), every dodged bar's OUTLINE color is mapped to its own
@@ -264,18 +291,18 @@
 #' \code{legend.groupval.outline.linewidth} (how thick that outline stroke
 #' is drawn - "size" in Josh's own wording). \strong{Two interpretive
 #' calls, flagged for Josh}: (1) the new legend distinguishes
-#' \code{$plot.sets} values by bar OUTLINE color rather than fill, since
+#' \code{$plot.set} values by bar OUTLINE color rather than fill, since
 #' \code{fill} was already spoken for by the all-detections/40kHzMyo
 #' distinction - a shared "fill" legend covering both dimensions at once
 #' isn't something \code{ggplot2} supports natively without extra
 #' packages; if a single combined legend is what's actually wanted instead,
 #' say so. (2) \code{legend.groupval.colors} cycling (rather than erroring,
 #' or auto-generating additional colors) when there are more selected
-#' \code{$plot.sets} values than colors listed was chosen to keep behavior
+#' \code{$plot.set} values than colors listed was chosen to keep behavior
 #' predictable and non-fatal; a plot with more distinct values than
 #' distinct colors will have two values sharing a color, which is worth
 #' knowing about if it happens. Verified with a new test: 3 selected
-#' \code{$plot.sets} values, 3 configured colors, each value gets its own
+#' \code{$plot.set} values, 3 configured colors, each value gets its own
 #' distinct outline color and shows up in the legend; \code{$legend =
 #' FALSE} (or a single selected value, or \code{$pool = TRUE}) renders
 #' exactly as before this change, with no outline-color mapping/legend at
@@ -284,7 +311,7 @@
 #' \strong{Follow-up, 2026-08-29 (dodge legibility), per Josh ("different
 #' groups plots on top of each other, add a dodge as default so they are
 #' side by side")}: \code{position_dodge2()} was already the default
-#' whenever \code{$pool = FALSE} and more than one \code{$plot.sets} value
+#' whenever \code{$pool = FALSE} and more than one \code{$plot.set} value
 #' is selected (see the \strong{Follow-up, 2026-08-28} entry above) - this
 #' was verified directly (built-plot layer data shows each selected
 #' value's bars offset to distinct, non-overlapping x positions on the
@@ -308,7 +335,7 @@
 #' (no longer an \code{aes.default} parameter at all; an older
 #' \code{plotopts_callobs.csv} that still has that row is unaffected, it's
 #' simply ignored now) and no border/outline is drawn on any bar. Instead,
-#' when dodging (\code{$pool = FALSE}, >1 selected \code{$plot.sets}
+#' when dodging (\code{$pool = FALSE}, >1 selected \code{$plot.set}
 #' value) and \code{$legend} is on, each bar's FILL itself is its own
 #' selected value's color (from \code{legend.groupval.colors}, same
 #' cycling behavior as before) - the \code{"40kHzMyo"} bar keeps its own
@@ -335,7 +362,7 @@
 #' full set of selected values were always present, leaving a gap where a
 #' value has no data that night rather than stretching its neighbors to
 #' fill the space. \strong{Flagged for Josh}: this only changes anything
-#' on nights where not every selected \code{$plot.sets} value has data -
+#' on nights where not every selected \code{$plot.set} value has data -
 #' if every night has all 3 values, \code{"total"} and \code{"single"}
 #' look identical; \code{"single"} was chosen since it's the reading that
 #' matches "keep the bar sizes constant" literally.
@@ -536,34 +563,14 @@
 #' \code{aes.default}'s \code{$output.filename.pattern} is DEPRECATED and no
 #' longer read at all (the row is left in place in \code{plotopts_callobs.csv},
 #' harmless, simply ignored). The \code{<ARU>} token is this function's own
-#' \code{aru.token} - the selected \code{$plot.sets} value(s) joined with
+#' \code{aru.token} - the selected \code{$plot.set} value(s) joined with
 #' \code{"+"} (falling back to \code{$plot.group}'s own column name when no
 #' specific values were selected), with a \code{"-pooled"} suffix appended
 #' when \code{$pool = TRUE} - unchanged from how that token was already
 #' computed before this round, just now spliced directly into the fixed
 #' \code{"<project.name>_<ARU>_<timestamp>.png"} pattern instead of a
 #' user-editable one. Every saved file's name is printed to the console via
-#' \code{cat("Saved:", fname, "\\n")}, as it already was before this round.
-#'
-#' \strong{Follow-up, 2026-09-22, per Josh's request ("change all functions
-#' that have aru as an header to \"aru.name\"", found via the project's own
-#' reference workbook and cross-checked against this function's live
-#' source): \code{SUNTIMES.REQUIRED}'s \code{"aru"} entry is now
-#' \code{"aru.name"}.} This brings the required-header contract in line
-#' with \code{\link{batz.generate_suntimes.arulist}()}'s own matching
-#' rename (that function's output column, previously bare \code{$aru}, is
-#' now \code{$aru.name} - see its own \code{@details} for the full history)
-#' and with the rest of the package's established convention
-#' (\code{\link{batz.merge_sm4.logfile}}, \code{batz.merge_vetted.acoustics}/
-#' \code{acoustics2}, and \code{\link{batz.generate_plotframe.bat}} all
-#' already use \code{$aru.name}). No function-body reference needed
-#' changing - as documented above, \code{suntimes} is accepted and header-
-#' checked here but not otherwise used in this iteration, so this is purely
-#' a header-name update. Because \code{canonicalize.headers()} is already
-#' used here (2026-09-21 follow-up above), a \code{suntimes} argument
-#' supplied with either the old (\code{$aru}) or new (\code{$aru.name})
-#' spelling is still matched and accepted - this rename does not break
-#' existing callers.
+#' \code{cat("Saved:", fname, "\n")}, as it already was before this round.
 #'
 #' Naming convention (per project preferences):
 #' \code{package.family_action.subject()}. This function is
@@ -574,6 +581,62 @@
 #' "plotactivity" (transposed letters), fixed here; nothing else about the
 #' name changed. Please flag if a different family/subject split was
 #' actually intended.}
+#'
+#' \strong{Follow-up, 2026-09-23, per Josh: two changes - fig.list's
+#' \code{$plot.sets} column renamed to \code{$plot.set} (standardizing on
+#' the singular spelling \code{\link{batz.plotdetections_first.last}}
+#' already used, since \code{fig.list.csv} is one file shared across every
+#' \code{batz} plotting function), and \code{$plot.group} is no longer a
+#' REQUIRED \code{fig.list} header.} Purely a header-name change for
+#' \code{$plot.sets} -> \code{$plot.set}: nothing about the underlying
+#' value-parsing behavior changed - a \code{$plot.set} cell can still hold
+#' several whitespace/quote-separated tokens exactly as \code{$plot.sets}
+#' did (see \strong{Follow-up, 2026-08-28} above), this is purely which
+#' column name \code{fig.list} is expected to use.
+#' \code{\link{batz.plotdetections_first.last}} already used the singular
+#' \code{$plot.set} spelling (matched against a single literal value there,
+#' not parsed into multiple tokens) - no code change was needed in that
+#' function, only this one, to bring the two into naming alignment; see
+#' that function's own \code{@details} for a one-line confirmation note.
+#'
+#' \code{$plot.group} - previously a REQUIRED \code{fig.list} header (a
+#' blank value, or a missing column, skipped the whole row with a console
+#' \code{NOTE}) - is now OPTIONAL: removed from \code{FIG.LIST.REQUIRED}
+#' entirely, and a blank value (or the column not existing in
+#' \code{fig.list} at all) now defaults to the fixed column name
+#' \code{"group"} - matching \code{\link{batz.generate_plotframe.bat}}'s
+#' own output column and the fixed (non-configurable) column
+#' \code{\link{batz.plotdetections_first.last}} has always grouped by -
+#' rather than skipping the row. A row can still supply its own
+#' \code{$plot.group} value to filter/group by a different column, exactly
+#' as before; only the FALLBACK when it's blank/absent changed (previously
+#' skip, now default to \code{"group"}). \strong{This was a genuine design
+#' choice among a few reasonable readings of "remove the requirement" -
+#' confirmed directly with Josh before implementing}: the alternatives
+#' considered (dropping the \code{$plot.group} mechanism entirely in favor
+#' of always using the fixed \code{"group"} column with no per-row
+#' override, or not filtering/grouping \code{data} by any column at all
+#' when blank) were both rejected in favor of this one, since it keeps
+#' every existing \code{$plot.set}/\code{$pool}/\code{$legend} behavior
+#' working completely unchanged for any \code{fig.list} row that already
+#' specifies \code{$plot.group} (every existing test in the \code{.dev.R}
+#' script continues to pass unmodified), while making the common case (a
+#' \code{data} frame already carrying \code{batz.generate_plotframe.bat()}'s
+#' own \code{$group} column) require one less \code{fig.list} column to be
+#' filled in. If the DEFAULTED column name (\code{"group"}) itself isn't
+#' present in \code{data} either, the row is still skipped with a console
+#' \code{NOTE} naming \code{"group"}, exactly the same tolerant
+#' skip-don't-crash behavior as an explicitly-given but nonexistent
+#' \code{$plot.group} value always had. Verified with new dev-script tests:
+#' a \code{fig.list} row with no \code{$plot.group} column at all, run
+#' against \code{data} with a \code{$group} column, resolves and plots
+#' exactly like an equivalent row that explicitly set
+#' \code{$plot.group = "group"}; an explicit \code{$plot.group} override
+#' (e.g. \code{"aru.groupby"}, as already exercised by the existing test
+#' suite) continues to take priority over the \code{"group"} default; and a
+#' blank/absent \code{$plot.group} against \code{data} with no \code{$group}
+#' column either still skips with the expected \code{NOTE}, rather than
+#' erroring.
 #'
 #' @examples
 #' \dontrun{
@@ -599,7 +662,11 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
   ## $aru.groupby is NOT in this list anymore - which column of `data` to
   ## filter/group by is now named per fig.list row via $plot.group (see
   ## Details/Follow-up 2026-08-28) rather than being a fixed, hardcoded
-  ## column data must always have.
+  ## column data must always have. Follow-up, 2026-09-23 (per Josh):
+  ## $plot.group is no longer REQUIRED here at all - it's now resolved
+  ## per-row below, defaulting to "group" when blank/absent - see Details.
+  ## $plot.sets was also renamed to $plot.set this same round, standardizing
+  ## on the singular spelling batz.plotdetections_first.last() already used.
   ##
   ## Header standardization (per Josh, 2026-09-14 project preference):
   ## standardize.headers() itself is still NOT applied directly to any of
@@ -618,9 +685,12 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
   SUNTIMES.REQUIRED <- c("aru.name", "date", "date.mon", "sunregion", "time.zone",
                           "sunregion.type", "schedual1", "schedual2", "suns",
                           "suns.unix", "sunr", "sunr.unix", "sunr.mon", "sunr.mon.unix")
+  # "plot.group" removed from this required list 2026-09-23 (per Josh, see
+  # @details "Follow-up, 2026-09-23") - it's now optional, resolved per-row
+  # below. "plot.sets" renamed to "plot.set" the same round.
   FIG.LIST.REQUIRED <- c("plot.type", "plot.name", "facet", "facet.set", "MYSO",
                           "Alldect", "facet.panel", "40khzmyo", "facet.label",
-                          "plot.group", "plot.sets", "pool", "date.format",
+                          "plot.set", "pool", "date.format",
                           "date.start", "date.end", "xaxe.interval")
   AES.DEFAULT.REQUIRED <- c("category", "parameter", "default.value")
 
@@ -705,8 +775,8 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     gsub('^"(.*)"$', "\\1", x)
   }
 
-  # Parses $plot.sets (2026-08-28) into a character vector of one or more
-  # values - see @details above.
+  # Parses $plot.set (2026-08-28, renamed from $plot.sets 2026-09-23) into a
+  # character vector of one or more values - see @details above.
   parse.plot.sets <- function(x) {
     x <- trimws(as.character(x))
     if (length(x) == 0 || is.na(x) || !nzchar(x)) return(character(0))
@@ -839,12 +909,16 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     pd$spp.common[is.khz.raw] <- "40khzmyo"
 
     # --- $plot.group: which column of `data` to filter/group by (2026-08-28
-    # follow-up - see Details). Replaces the old hardcoded $aru.groupby. ---
-    group.col <- trimws(job$plot.group)
+    # follow-up - see Details). Follow-up, 2026-09-23, per Josh: no longer a
+    # REQUIRED fig.list header - a blank value, or the column not existing
+    # in fig.list at all, now defaults to "group" (matching
+    # batz.generate_plotframe.bat()'s own output column and
+    # batz.plotdetections_first.last()'s fixed grouping column) instead of
+    # skipping the row - see Details for the full history/judgment call. A
+    # row can still supply its own $plot.group value to override this. ---
+    group.col <- if ("plot.group" %in% names(job)) trimws(as.character(job$plot.group)) else ""
     if (!nzchar(group.col)) {
-      cat(sprintf("NOTE: fig.list row for '%s' has a blank $plot.group - skipped (need the name of a column in `data` to filter/group by).\n",
-                   job.label))
-      next
+      group.col <- "group"
     }
     if (!(group.col %in% names(pd))) {
       cat(sprintf("NOTE: fig.list row for '%s' has $plot.group = '%s', which is not a column of `data` - skipped.\n",
@@ -852,7 +926,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
       next
     }
 
-    plot.sets.vals <- parse.plot.sets(job$plot.sets)
+    plot.sets.vals <- parse.plot.sets(job$plot.set)
     if (length(plot.sets.vals) > 0) {
       pd <- pd[tolower(trimws(as.character(pd[[group.col]]))) %in% tolower(plot.sets.vals), , drop = FALSE]
     }
@@ -864,7 +938,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     pd <- pd[!is.na(pd$date.parsed) & pd$date.parsed >= date.start & pd$date.parsed <= date.end, , drop = FALSE]
 
     if (nrow(pd) == 0) {
-      cat(sprintf("NOTE: fig.list row for '%s' (plot.group = '%s', plot.sets = '%s', %s to %s) matched 0 rows of data - no plot generated. Check that $%s/$date in data actually overlap this row's $plot.sets/$date.start/$date.end.\n",
+      cat(sprintf("NOTE: fig.list row for '%s' (plot.group = '%s', plot.set = '%s', %s to %s) matched 0 rows of data - no plot generated. Check that $%s/$date in data actually overlap this row's $plot.set/$date.start/$date.end.\n",
                    job.label, group.col, paste(plot.sets.vals, collapse = ", "), date.start, date.end, group.col))
       next
     }
@@ -874,7 +948,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     pd$bar.type <- ifelse(tolower(pd$spp.common) == "40khzmyo", "40kHzMyo", "All detections")
     pd$group.val <- as.character(pd[[group.col]])
 
-    # --- $pool: TRUE sums $obs across every selected $plot.sets value into
+    # --- $pool: TRUE sums $obs across every selected $plot.set value into
     # ONE pooled bar per date/panel; FALSE keeps each selected value as its
     # own bar (drawn side-by-side/dodged at plotting time below) - see
     # Details/Follow-up 2026-08-28. ---
@@ -886,7 +960,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     }
 
     # --- $legend (2026-08-29 follow-up, round 2 - see Details): whether to
-    # color each dodged bar by which $plot.sets value it is. Optional
+    # color each dodged bar by which $plot.set value it is. Optional
     # per-row, falls back to aes.default's own "legend" parameter (default
     # TRUE) - same get.setting()/get.default() pattern as $Yaxe.trans/
     # $y.scale/etc.
@@ -1027,7 +1101,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
       # fixed.
       #
       # $pool = FALSE (2026-08-28 follow-up - see Details): when more than
-      # one $plot.sets value is selected and not pooled, each is drawn as
+      # one $plot.set value is selected and not pooled, each is drawn as
       # its own bar, dodged side-by-side within the same date (via
       # position_dodge2(), grouped by $group.val - the raw $plot.group
       # column's value for that row). $pool = TRUE (or only one selected
@@ -1043,8 +1117,8 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
       }
 
       # $legend / per-bar coloring (2026-08-29 follow-up, round 2 - see
-      # Details): when dodging (pool = FALSE, >1 selected $plot.sets value)
-      # AND $legend is on, every bar is FILLED with its own $plot.sets
+      # Details): when dodging (pool = FALSE, >1 selected $plot.set value)
+      # AND $legend is on, every bar is FILLED with its own $plot.set
       # value's own color. The "40kHzMyo" bar keeps its own fixed color
       # regardless of which value it belongs to - both live in ONE combined
       # fill scale/legend, since fill can only be mapped to one variable at
@@ -1123,7 +1197,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
       ## Round nineteen, per Josh (2026-09-16): every saved file name is now
       ## always "<project.name>_<ARU>_<timestamp>.png" -
       ## $output.filename.pattern is DEPRECATED and no longer read.
-      # <ARU> token: the selected $plot.sets value(s), joined with "+" (was
+      # <ARU> token: the selected $plot.set value(s), joined with "+" (was
       # the single $plot.set value pre-2026-08-28); "-pooled" suffix added
       # when $pool = TRUE, since that collapses them into one bar/value.
       aru.token <- paste(p$plot.sets.vals, collapse = "+")

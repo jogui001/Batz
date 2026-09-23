@@ -18,15 +18,19 @@ batz.plotactivity_observations(
 \item{data}{A data frame of already-summarized per-species, per-night
 observation counts. Must have \code{$spp.id}, \code{$date},
 \code{$obs}, plus whatever column each \code{fig.list} row's own
-\code{$plot.group} names (see Details - this is no longer a fixed,
-hardcoded column).}
+\code{$plot.group} names when given - see Details, "Follow-up,
+2026-09-23 ($plot.group made optional)" - defaults to \code{$group}
+(matching \code{\link{batz.generate_plotframe.bat}}'s own output
+column) when \code{fig.list} doesn't specify one.}
 
 \item{fig.list}{A data frame listing the plot(s) to generate - one row
 per plot. Must have \code{$plot.type}, \code{$plot.name}, \code{$facet},
 \code{$facet.set}, \code{$MYSO}, \code{$Alldect}, \code{$facet.panel},
-\code{$40khzmyo}, \code{$facet.label}, \code{$plot.group},
-\code{$plot.sets}, \code{$pool}, \code{$date.format}, \code{$date.start},
-\code{$date.end}, \code{$xaxe.interval}. Column names must be unique. Five further
+\code{$40khzmyo}, \code{$facet.label}, \code{$plot.set}, \code{$pool},
+\code{$date.format}, \code{$date.start}, \code{$date.end},
+\code{$xaxe.interval}. Column names must be unique. \code{$plot.group}
+is OPTIONAL (see Details, "Follow-up, 2026-09-23") - when blank or not
+present at all, defaults to the column \code{$group}. Five further
 columns are read PER-ROW if present but are entirely optional (each
 falls back to \code{aes.default} when blank or the column doesn't
 exist at all - see Details): \code{$Yaxe.trans} (\code{"none"}/
@@ -35,7 +39,7 @@ exist at all - see Details): \code{$Yaxe.trans} (\code{"none"}/
 break values, only read when \code{$y.scale = "custom"}),
 \code{$ymax} (the top value plotted on the Y axis), and \code{$legend}
 (\code{TRUE}/\code{FALSE} - whether to show a legend distinguishing
-which \code{$plot.sets} value each dodged bar is, when \code{$pool =
+which \code{$plot.set} value each dodged bar is, when \code{$pool =
 FALSE} and more than one value is selected - see \strong{Follow-up,
 2026-08-29} in Details).}
 
@@ -119,6 +123,44 @@ function's own required-header constants would need to be written to
 match those standardized spellings; no such loading step exists inside
 this function itself.
 
+\strong{Follow-up, 2026-09-21, per Josh: header casing/separator
+mismatches are now tolerated here too, via a shared
+\code{canonicalize.headers()} helper.} The reasoning immediately above
+(this function does no raw-header-loading step of its own) still
+explains why \code{standardize.headers()} itself was never applied to
+\code{data}/\code{fig.list}/\code{suntimes}/\code{aes.default} wholesale
+- but in practice, whatever a caller actually hands this function may
+have passed back through a loading/reload step somewhere upstream (a
+save-to-CSV-and-reload, for instance) that DOES run
+\code{standardize.headers()} on its own raw headers, at which point a
+column this function expects to find as e.g. \code{"date.mon"} might
+actually arrive as \code{"date_mon"} - and a literal \code{setdiff()}
+against this function's own dot-separated required-header constants
+would report it (and everything else differing only in separator style)
+as entirely missing, even though the data is really all there.
+\code{canonicalize.headers()} (see
+\code{claude/batz.util_standardize.headers.R}) fixes this by
+standardizing both sides (the incoming data frame's own headers, and the
+required-header list this function is looking for) purely to MATCH
+columns up, then renaming every matched column - IN A LOCAL COPY ONLY,
+never touching the caller's own \code{data}/\code{suntimes}/
+\code{fig.list}/\code{aes.default} object - back to this function's own
+canonical (dot-separated) spelling, regardless of which casing/separator
+style it actually arrived in. Applied here to all four input frames (see
+the header-check code below). This function has no data-frame/CSV/xlsx
+output of its own (it saves PNG files and returns an invisible list of
+ggplot objects/prepared data, never a data frame or spreadsheet the
+caller would want re-cased), so no new \code{snake_case =} output-header
+option applies here - see \code{\link{batz.generate_plotframe.bat}}'s own
+\code{@details} for where that option was added instead, since it's the
+one of these three sibling functions that actually returns/writes a data
+frame. Also per this same follow-up: when more than one of
+\code{data}/\code{suntimes}/\code{fig.list}/\code{aes.default} is
+missing headers in a single call, each frame's own "... is missing these
+headers: ..." message is now joined with a BLANK line between them
+(\code{"\n\n"}, not a single \code{"\n"}) for readability, matching the
+identical fix made in \code{\link{batz.plotdetections_first.last}}.
+
 \strong{Iteration 1 ("basic layout"), built 2026-08-28 per Josh's own
 framing that this function would be developed iteratively, copying the
 structure/steps of \code{batz.plotdetections_first.last()} and modifying
@@ -194,7 +236,7 @@ complaint - only a data frame missing the column entirely now fails the
 check.
 
 \strong{Follow-up, 2026-08-28, per Josh: \code{$plot.group}/
-\code{$plot.sets}/\code{$pool} replace the old fixed \code{$aru.groupby}/
+\code{$plot.set}/\code{$pool} replace the old fixed \code{$aru.groupby}/
 \code{$plot.set} single-detector-column design.} Previously, this
 function always filtered \code{data} on a hardcoded \code{$aru.groupby}
 column, matched against a single \code{$plot.set} value. Three
@@ -208,15 +250,19 @@ column, matched against a single \code{$plot.set} value. Three
     This is what gives a single \code{fig.list}/this function the
     flexibility to plot other sheets/groupings without a code change -
     \code{data} no longer needs a column literally called
-    \code{$aru.groupby} at all. A row with a blank \code{$plot.group}, or
-    one naming a column \code{data} doesn't actually have, is skipped
-    with a console \code{NOTE} (same tolerant, skip-don't-crash style
-    used for an unrecognized \code{$plot.type}/\code{$facet}).
-  \item \code{$plot.sets} (renamed from the old singular
-    \code{$plot.set}) lists every value of the \code{$plot.group} column
-    to include in this plot - now MULTIPLE values, not just one. Every
-    double-quote character in the raw value is treated as a token
-    delimiter (alongside whitespace) and stripped, so
+    \code{$aru.groupby} at all. \strong{As of Follow-up, 2026-09-23
+    below, this column is optional} - a blank value, or the column not
+    existing in \code{fig.list} at all, now defaults to \code{"group"}
+    rather than skipping the row (see that entry for the full history).
+    A row whose (given or defaulted) \code{$plot.group} names a column
+    \code{data} doesn't actually have is still skipped with a console
+    \code{NOTE} (same tolerant, skip-don't-crash style used for an
+    unrecognized \code{$plot.type}/\code{$facet}).
+  \item \code{$plot.set} (renamed from the old plural \code{$plot.sets}
+    - see Follow-up, 2026-09-23 below) lists every value of the
+    \code{$plot.group} column to include in this plot - MULTIPLE values,
+    not just one. Every double-quote character in the raw value is
+    treated as a token delimiter (alongside whitespace) and stripped, so
     \code{"105059-NW3" "105059-SE3" "105059-SW3"}-shaped values parse
     into three tokens - this was deliberately NOT implemented as
     matching well-formed quote PAIRS, because Josh's own real
@@ -225,19 +271,20 @@ column, matched against a single \code{$plot.set} value. Three
     own outer CSV quoting consumes it) - a quote-pair parser would
     silently drop that first token on real data. A single bare,
     unquoted value (e.g. \code{105059-NW3}, exactly like the old
-    \code{$plot.set}) or several bare whitespace-separated values with
-    no quoting at all also work. A blank \code{$plot.sets} matches every
+    singular \code{$plot.set} this column itself replaced back on
+    2026-08-28) or several bare whitespace-separated values with no
+    quoting at all also work. A blank \code{$plot.set} matches every
     value of the \code{$plot.group} column (same as the old
     blank-\code{$plot.set} behavior). \strong{Limitation, flagged for
     Josh}: a value containing a literal space would be split into two -
     not expected for detector/group names, but worth knowing.
   \item \code{$pool} (\code{TRUE}/\code{FALSE}) controls how the
-    (possibly several) selected \code{$plot.sets} values are combined:
+    (possibly several) selected \code{$plot.set} values are combined:
     \code{TRUE} sums \code{$obs} across all of them into ONE pooled bar
     per date/panel (as if they were a single group); \code{FALSE} keeps
     each selected value as its own bar, drawn side-by-side (dodged)
     within the same date/panel. Bars are dodged via \code{ggplot2}'s own
-    \code{position_dodge2()} at each date; WHICH \code{$plot.sets} value
+    \code{position_dodge2()} at each date; WHICH \code{$plot.set} value
     a given dodged bar is is shown via bar color, when \code{$legend} is
     on - see \strong{Follow-up, 2026-08-29 (round 2)} below for the
     current design (an earlier round used an outline color instead;
@@ -250,7 +297,7 @@ like size and colors"): a new \code{$legend} column (per-\code{fig.list}
 row, optional - falls back to \code{aes.default}'s own \code{legend}
 parameter, default \code{TRUE}), and three new \code{aes.default}
 parameters, resolve the "no legend for dodged bars" gap flagged
-above.} When \code{$pool = FALSE} and more than one \code{$plot.sets}
+above.} When \code{$pool = FALSE} and more than one \code{$plot.set}
 value is actually selected (nothing to distinguish otherwise - a single
 value, or a pooled bar, never shows this legend regardless of
 \code{$legend}), every dodged bar's OUTLINE color is mapped to its own
@@ -269,18 +316,18 @@ color if there are more selected values than colors given), and
 \code{legend.groupval.outline.linewidth} (how thick that outline stroke
 is drawn - "size" in Josh's own wording). \strong{Two interpretive
 calls, flagged for Josh}: (1) the new legend distinguishes
-\code{$plot.sets} values by bar OUTLINE color rather than fill, since
+\code{$plot.set} values by bar OUTLINE color rather than fill, since
 \code{fill} was already spoken for by the all-detections/40kHzMyo
 distinction - a shared "fill" legend covering both dimensions at once
 isn't something \code{ggplot2} supports natively without extra
 packages; if a single combined legend is what's actually wanted instead,
 say so. (2) \code{legend.groupval.colors} cycling (rather than erroring,
 or auto-generating additional colors) when there are more selected
-\code{$plot.sets} values than colors listed was chosen to keep behavior
+\code{$plot.set} values than colors listed was chosen to keep behavior
 predictable and non-fatal; a plot with more distinct values than
 distinct colors will have two values sharing a color, which is worth
 knowing about if it happens. Verified with a new test: 3 selected
-\code{$plot.sets} values, 3 configured colors, each value gets its own
+\code{$plot.set} values, 3 configured colors, each value gets its own
 distinct outline color and shows up in the legend; \code{$legend =
 FALSE} (or a single selected value, or \code{$pool = TRUE}) renders
 exactly as before this change, with no outline-color mapping/legend at
@@ -289,7 +336,7 @@ all.
 \strong{Follow-up, 2026-08-29 (dodge legibility), per Josh ("different
 groups plots on top of each other, add a dodge as default so they are
 side by side")}: \code{position_dodge2()} was already the default
-whenever \code{$pool = FALSE} and more than one \code{$plot.sets} value
+whenever \code{$pool = FALSE} and more than one \code{$plot.set} value
 is selected (see the \strong{Follow-up, 2026-08-28} entry above) - this
 was verified directly (built-plot layer data shows each selected
 value's bars offset to distinct, non-overlapping x positions on the
@@ -313,7 +360,7 @@ design entirely - \code{legend.groupval.outline.linewidth} is REMOVED
 (no longer an \code{aes.default} parameter at all; an older
 \code{plotopts_callobs.csv} that still has that row is unaffected, it's
 simply ignored now) and no border/outline is drawn on any bar. Instead,
-when dodging (\code{$pool = FALSE}, >1 selected \code{$plot.sets}
+when dodging (\code{$pool = FALSE}, >1 selected \code{$plot.set}
 value) and \code{$legend} is on, each bar's FILL itself is its own
 selected value's color (from \code{legend.groupval.colors}, same
 cycling behavior as before) - the \code{"40kHzMyo"} bar keeps its own
@@ -340,7 +387,7 @@ each individual bar's own width constant everywhere, sized as if the
 full set of selected values were always present, leaving a gap where a
 value has no data that night rather than stretching its neighbors to
 fill the space. \strong{Flagged for Josh}: this only changes anything
-on nights where not every selected \code{$plot.sets} value has data -
+on nights where not every selected \code{$plot.set} value has data -
 if every night has all 3 values, \code{"total"} and \code{"single"}
 look identical; \code{"single"} was chosen since it's the reading that
 matches "keep the bar sizes constant" literally.
@@ -541,14 +588,14 @@ file name is now always \code{"<project.name>_<ARU>_<timestamp>.png"} -
 \code{aes.default}'s \code{$output.filename.pattern} is DEPRECATED and no
 longer read at all (the row is left in place in \code{plotopts_callobs.csv},
 harmless, simply ignored). The \code{<ARU>} token is this function's own
-\code{aru.token} - the selected \code{$plot.sets} value(s) joined with
+\code{aru.token} - the selected \code{$plot.set} value(s) joined with
 \code{"+"} (falling back to \code{$plot.group}'s own column name when no
 specific values were selected), with a \code{"-pooled"} suffix appended
 when \code{$pool = TRUE} - unchanged from how that token was already
 computed before this round, just now spliced directly into the fixed
 \code{"<project.name>_<ARU>_<timestamp>.png"} pattern instead of a
 user-editable one. Every saved file's name is printed to the console via
-\code{cat("Saved:", fname, "\\n")}, as it already was before this round.
+\code{cat("Saved:", fname, "\n")}, as it already was before this round.
 
 Naming convention (per project preferences):
 \code{package.family_action.subject()}. This function is
@@ -559,6 +606,63 @@ verb "plot" is baked into the family name), subject = "observations"
 "plotactivity" (transposed letters), fixed here; nothing else about the
 name changed. Please flag if a different family/subject split was
 actually intended.}
+
+\strong{Follow-up, 2026-09-23, per Josh: two changes - fig.list's
+\code{$plot.sets} column renamed to \code{$plot.set} (standardizing on
+the singular spelling \code{\link{batz.plotdetections_first.last}}
+already used, since \code{fig.list.csv} is one file shared across every
+\code{batz} plotting function), and \code{$plot.group} is no longer a
+REQUIRED \code{fig.list} header.} Purely a header-name change for
+\code{$plot.sets} -> \code{$plot.set}: nothing about the underlying
+value-parsing behavior changed - a \code{$plot.set} cell can still hold
+several whitespace/quote-separated tokens exactly as \code{$plot.sets}
+did (see \strong{Follow-up, 2026-08-28} above), this is purely which
+column name \code{fig.list} is expected to use.
+\code{\link{batz.plotdetections_first.last}} already used the singular
+\code{$plot.set} spelling (matched against a single literal value there,
+not parsed into multiple tokens) - no code change was needed in that
+function, only this one, to bring the two into naming alignment; see
+that function's own \code{@details} for a one-line confirmation note.
+
+\code{$plot.group} - previously a REQUIRED \code{fig.list} header (a
+blank value, or a missing column, skipped the whole row with a console
+\code{NOTE}) - is now OPTIONAL: removed from \code{FIG.LIST.REQUIRED}
+entirely, and a blank value (or the column not existing in
+\code{fig.list} at all) now defaults to the fixed column name
+\code{"group"} - matching \code{\link{batz.generate_plotframe.bat}}'s
+own output column and the fixed (non-configurable) column
+\code{\link{batz.plotdetections_first.last}} has always grouped by -
+rather than skipping the row. A row can still supply its own
+\code{$plot.group} value to filter/group by a different column, exactly
+as before; only the FALLBACK when it's blank/absent changed (previously
+skip, now default to \code{"group"}). \strong{This was a genuine design
+choice among a few reasonable readings of "remove the requirement" -
+confirmed directly with Josh before implementing}: the alternatives
+considered (dropping the \code{$plot.group} mechanism entirely in favor
+of always using the fixed \code{"group"} column with no per-row
+override, or not filtering/grouping \code{data} by any column at all
+when blank) were both rejected in favor of this one, since it keeps
+every existing \code{$plot.set}/\code{$pool}/\code{$legend} behavior
+working completely unchanged for any \code{fig.list} row that already
+specifies \code{$plot.group} (every existing test in the \code{.dev.R}
+script continues to pass unmodified), while making the common case (a
+\code{data} frame already carrying \code{batz.generate_plotframe.bat()}'s
+own \code{$group} column) require one less \code{fig.list} column to be
+filled in. If the DEFAULTED column name (\code{"group"}) itself isn't
+present in \code{data} either, the row is still skipped with a console
+\code{NOTE} naming \code{"group"}, exactly the same tolerant
+skip-don't-crash behavior as an explicitly-given but nonexistent
+\code{$plot.group} value always had. Verified with new dev-script tests:
+a \code{fig.list} row with no \code{$plot.group} column at all, run
+against \code{data} with a \code{$group} column, resolves and plots
+exactly like an equivalent row that explicitly set
+\code{$plot.group = "group"}; an explicit \code{$plot.group} override
+(e.g. \code{"aru.groupby"}, as already exercised by the existing test
+suite) continues to take priority over the \code{"group"} default; and a
+blank/absent \code{$plot.group} against \code{data} with no \code{$group}
+column either still skips with the expected \code{NOTE}, rather than
+erroring.
+
 }
 \examples{
 \dontrun{
