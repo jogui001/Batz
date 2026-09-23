@@ -40,12 +40,14 @@ FALSE} and more than one value is selected - see \strong{Follow-up,
 2026-08-29} in Details).}
 
 \item{suntimes}{A data frame of sunrise/sunset times, e.g. the output of
-\code{batz.generate_suntimes.arulist()}. Must have \code{$aru}, \code{$date},
+\code{batz.generate_suntimes.arulist()}. Must have \code{$aru.name}, \code{$date},
 \code{$date.mon}, \code{$sunregion}, \code{$time.zone},
 \code{$sunregion.type}, \code{$schedual1}, \code{$schedual2},
 \code{$suns}, \code{$suns.unix}, \code{$sunr}, \code{$sunr.unix},
-\code{$sunr.mon}, \code{$sunr.mon.unix}. \strong{Accepted and header-
-checked, but not otherwise used yet this iteration} - see Details.}
+\code{$sunr.mon}, \code{$sunr.mon.unix} - see \strong{Follow-up,
+2026-09-22 (aru -> aru.name)} in Details for the renamed column.
+\strong{Accepted and header-checked, but not otherwise used yet this
+iteration} - see Details.}
 
 \item{aes.default}{A data frame of default plot settings, one row per
 parameter (e.g. \code{plotopts_callobs.csv}). Must have
@@ -79,8 +81,8 @@ name itself is now always \code{"<project.name>_<ARU>_<timestamp>.png"}
 }
 \value{
 Invisibly, a list with \code{plots} (one entry per generated
-plot's prepared data) and \code{ggplots} (the corresponding ggplot
-objects, only populated when the \code{ggplot2} package is available).
+  plot's prepared data) and \code{ggplots} (the corresponding ggplot
+  objects, only populated when the \code{ggplot2} package is available).
 }
 \description{
 Generates the standard report plot showing, for every species (plus an
@@ -103,8 +105,8 @@ already-loaded data frames handed in by the caller - \code{data} in
 particular is expected to be \code{\link{batz.generate_plotframe.bat}}'s
 own output. \code{DATA.REQUIRED}/\code{SUNTIMES.REQUIRED}/
 \code{FIG.LIST.REQUIRED}/\code{AES.DEFAULT.REQUIRED}/
-\code{AES.DEFAULT.REQUIRED.PARAMETERS} below are this function's own
-hardcoded interface contracts with those upstream functions'/files'
+\code{AES.DEFAULT.REQUIRED.PARAMETERS} in this function's code are its
+own hardcoded interface contracts with those upstream functions'/files'
 already-established output schemas (e.g. \code{$spp.id}/\code{$date}/
 \code{$obs} from \code{batz.generate_plotframe.bat()}), not raw text
 copied from a loaded file's real header row, so there is no raw-header
@@ -116,46 +118,6 @@ should run \code{standardize.headers()} on its own raw headers, and this
 function's own required-header constants would need to be written to
 match those standardized spellings; no such loading step exists inside
 this function itself.
-
-\strong{Follow-up, 2026-09-21, per Josh: header casing/separator
-mismatches are now tolerated here too, via a shared
-\code{canonicalize.headers()} helper.} The reasoning immediately above
-(this function does no raw-header-loading step of its own) still
-explains why \code{standardize.headers()} itself was never applied to
-\code{data}/\code{fig.list}/\code{suntimes}/\code{aes.default} wholesale
-\itemize{
-\item but in practice, whatever a caller actually hands this function may
-have passed back through a loading/reload step somewhere upstream (a
-save-to-CSV-and-reload, for instance) that DOES run
-\code{standardize.headers()} on its own raw headers, at which point a
-column this function expects to find as e.g. \code{"date.mon"} might
-actually arrive as \code{"date_mon"} - and a literal \code{setdiff()}
-against this function's own dot-separated required-header constants
-would report it (and everything else differing only in separator style)
-as entirely missing, even though the data is really all there.
-\code{canonicalize.headers()} (see
-\code{claude/batz.util_standardize.headers.R}) fixes this by
-standardizing both sides (the incoming data frame's own headers, and the
-required-header list this function is looking for) purely to MATCH
-columns up, then renaming every matched column - IN A LOCAL COPY ONLY,
-never touching the caller's own \code{data}/\code{suntimes}/
-\code{fig.list}/\code{aes.default} object - back to this function's own
-canonical (dot-separated) spelling, regardless of which casing/separator
-style it actually arrived in. Applied here to all four input frames (see
-the header-check code below). This function has no data-frame/CSV/xlsx
-output of its own (it saves PNG files and returns an invisible list of
-ggplot objects/prepared data, never a data frame or spreadsheet the
-caller would want re-cased), so no new \code{snake_case =} output-header
-option applies here - see \code{\link{batz.generate_plotframe.bat}}'s own
-\code{@details} for where that option was added instead, since it's the
-one of these three sibling functions that actually returns/writes a data
-frame. Also per this same follow-up: when more than one of
-\code{data}/\code{suntimes}/\code{fig.list}/\code{aes.default} is
-missing headers in a single call, each frame's own "... is missing these
-headers: ..." message is now joined with a BLANK line between them
-(\code{"\n\n"}, not a single \code{"\n"}) for readability, matching the
-identical fix made in \code{\link{batz.plotdetections_first.last}}.
-}
 
 \strong{Iteration 1 ("basic layout"), built 2026-08-28 per Josh's own
 framing that this function would be developed iteratively, copying the
@@ -213,6 +175,24 @@ explicitly for Josh}: if \code{suntimes} should actually do something in
 this plot (e.g. gray out or omit un-monitored nights), say so and it can
 be wired in.
 
+\strong{Follow-up, 2026-09-22, per Josh's request ("change all functions
+that have aru as an header to \"aru.name\"", "update \"Batz reference
+db_*.xlxs\""):} \code{SUNTIMES.REQUIRED}'s first element is renamed from
+\code{"aru"} to \code{"aru.name"}, matching \code{\link{batz.generate_suntimes.arulist}}'s
+own renamed output column (see that function's own \code{@details}) and
+the identical rename already applied to \code{\link{batz.generate_plotframe.bat}}
+and \code{\link{batz.plotdetections_first.last}}. No reference in this
+function's own body needed to change to match, since - per the entry
+directly above - \code{suntimes} is accepted and header-checked but not
+otherwise read anywhere in this iteration's code. Per this function's
+existing \code{canonicalize.headers()}-based header check (both
+\code{suntimes}'s real column names and the required-header list are
+standardized purely to find matching columns, then renamed to the exact
+spelling expected), a \code{suntimes} data frame still spelled with the
+OLD bare \code{$aru} column name continues to be accepted without
+complaint - only a data frame missing the column entirely now fails the
+check.
+
 \strong{Follow-up, 2026-08-28, per Josh: \code{$plot.group}/
 \code{$plot.sets}/\code{$pool} replace the old fixed \code{$aru.groupby}/
 \code{$plot.set} single-detector-column design.} Previously, this
@@ -220,48 +200,48 @@ function always filtered \code{data} on a hardcoded \code{$aru.groupby}
 column, matched against a single \code{$plot.set} value. Three
 \code{fig.list} columns now generalize this:
 \itemize{
-\item \code{$plot.group} names WHICH column of \code{data} to filter/
-group by, per \code{fig.list} row - e.g. \code{"aru.name"} to plot by
-detector (matching \code{\link{batz.generate_plotframe.bat}}'s own
-\code{groupby} parameter and its \code{$groupedby} output column) or
-\code{"deployment.type"} to plot by some other category entirely.
-This is what gives a single \code{fig.list}/this function the
-flexibility to plot other sheets/groupings without a code change -
-\code{data} no longer needs a column literally called
-\code{$aru.groupby} at all. A row with a blank \code{$plot.group}, or
-one naming a column \code{data} doesn't actually have, is skipped
-with a console \code{NOTE} (same tolerant, skip-don't-crash style
-used for an unrecognized \code{$plot.type}/\code{$facet}).
-\item \code{$plot.sets} (renamed from the old singular
-\code{$plot.set}) lists every value of the \code{$plot.group} column
-to include in this plot - now MULTIPLE values, not just one. Every
-double-quote character in the raw value is treated as a token
-delimiter (alongside whitespace) and stripped, so
-\code{"105059-NW3" "105059-SE3" "105059-SW3"}-shaped values parse
-into three tokens - this was deliberately NOT implemented as
-matching well-formed quote PAIRS, because Josh's own real
-\code{fig.list.csv} value for this column, once CSV-unescaped, comes
-through missing the very first value's leading quote (the field's
-own outer CSV quoting consumes it) - a quote-pair parser would
-silently drop that first token on real data. A single bare,
-unquoted value (e.g. \code{105059-NW3}, exactly like the old
-\code{$plot.set}) or several bare whitespace-separated values with
-no quoting at all also work. A blank \code{$plot.sets} matches every
-value of the \code{$plot.group} column (same as the old
-blank-\code{$plot.set} behavior). \strong{Limitation, flagged for
-Josh}: a value containing a literal space would be split into two -
-not expected for detector/group names, but worth knowing.
-\item \code{$pool} (\code{TRUE}/\code{FALSE}) controls how the
-(possibly several) selected \code{$plot.sets} values are combined:
-\code{TRUE} sums \code{$obs} across all of them into ONE pooled bar
-per date/panel (as if they were a single group); \code{FALSE} keeps
-each selected value as its own bar, drawn side-by-side (dodged)
-within the same date/panel. Bars are dodged via \code{ggplot2}'s own
-\code{position_dodge2()} at each date; WHICH \code{$plot.sets} value
-a given dodged bar is is shown via bar color, when \code{$legend} is
-on - see \strong{Follow-up, 2026-08-29 (round 2)} below for the
-current design (an earlier round used an outline color instead;
-see \strong{Follow-up, 2026-08-29} directly below for that history).
+  \item \code{$plot.group} names WHICH column of \code{data} to filter/
+    group by, per \code{fig.list} row - e.g. \code{"aru.name"} to plot by
+    detector (matching \code{\link{batz.generate_plotframe.bat}}'s own
+    \code{groupby} parameter and its \code{$groupedby} output column) or
+    \code{"deployment.type"} to plot by some other category entirely.
+    This is what gives a single \code{fig.list}/this function the
+    flexibility to plot other sheets/groupings without a code change -
+    \code{data} no longer needs a column literally called
+    \code{$aru.groupby} at all. A row with a blank \code{$plot.group}, or
+    one naming a column \code{data} doesn't actually have, is skipped
+    with a console \code{NOTE} (same tolerant, skip-don't-crash style
+    used for an unrecognized \code{$plot.type}/\code{$facet}).
+  \item \code{$plot.sets} (renamed from the old singular
+    \code{$plot.set}) lists every value of the \code{$plot.group} column
+    to include in this plot - now MULTIPLE values, not just one. Every
+    double-quote character in the raw value is treated as a token
+    delimiter (alongside whitespace) and stripped, so
+    \code{"105059-NW3" "105059-SE3" "105059-SW3"}-shaped values parse
+    into three tokens - this was deliberately NOT implemented as
+    matching well-formed quote PAIRS, because Josh's own real
+    \code{fig.list.csv} value for this column, once CSV-unescaped, comes
+    through missing the very first value's leading quote (the field's
+    own outer CSV quoting consumes it) - a quote-pair parser would
+    silently drop that first token on real data. A single bare,
+    unquoted value (e.g. \code{105059-NW3}, exactly like the old
+    \code{$plot.set}) or several bare whitespace-separated values with
+    no quoting at all also work. A blank \code{$plot.sets} matches every
+    value of the \code{$plot.group} column (same as the old
+    blank-\code{$plot.set} behavior). \strong{Limitation, flagged for
+    Josh}: a value containing a literal space would be split into two -
+    not expected for detector/group names, but worth knowing.
+  \item \code{$pool} (\code{TRUE}/\code{FALSE}) controls how the
+    (possibly several) selected \code{$plot.sets} values are combined:
+    \code{TRUE} sums \code{$obs} across all of them into ONE pooled bar
+    per date/panel (as if they were a single group); \code{FALSE} keeps
+    each selected value as its own bar, drawn side-by-side (dodged)
+    within the same date/panel. Bars are dodged via \code{ggplot2}'s own
+    \code{position_dodge2()} at each date; WHICH \code{$plot.sets} value
+    a given dodged bar is is shown via bar color, when \code{$legend} is
+    on - see \strong{Follow-up, 2026-08-29 (round 2)} below for the
+    current design (an earlier round used an outline color instead;
+    see \strong{Follow-up, 2026-08-29} directly below for that history).
 }
 
 \strong{Follow-up, 2026-08-29, per Josh ("add legend option to
@@ -494,11 +474,9 @@ whether \code{"40kMyo"} should be renamed to \code{"40KHzMyo"} at the
 source (in whatever produces \code{plfr.bats.csv}), or whether
 \code{"40kMyo"} should be added as a recognized alias directly in
 \code{batz.batusa_recode.names()}'s own reference table (\code{NAbat.names.csv})
-\itemize{
-\item either fix would make this function's own local workaround
+- either fix would make this function's own local workaround
 unnecessary, but isn't required for this function to work correctly as
 delivered.
-}
 
 \strong{\code{$output.filename.pattern} is DEPRECATED as of Josh's
 nineteenth follow-up (2026-09-16)} - see "File naming (round nineteen)"
@@ -584,7 +562,8 @@ actually intended.}
 }
 \examples{
 \dontrun{
-# default dir.save = getwd(), default project.name = "new.project"
+# default dir.save = getwd(), default project.name = "new.project" -
+# saved file name will be "new.project_<ARU>_<timestamp>.png"
 result <- batz.plotactivity_observations(
   data = plfr.bats,
   fig.list = fig.list,

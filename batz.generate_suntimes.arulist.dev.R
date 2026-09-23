@@ -181,6 +181,28 @@
 #      names, per the project's ordinary (unrelated) dot-separated output
 #      convention. See batz.generate_suntimes.arulist.R's own @details
 #      "Header standardization" paragraph for the full explanation.
+#
+#  11. **Follow-up, 2026-09-22, per Josh's request ("change all functions
+#      that have aru as an header to \"aru.name\"", found via the
+#      project's own reference workbook and cross-checked against this
+#      script's own R/ counterpart).** The required-header check itself
+#      (SECTION 3a below, and required.headers) is UNCHANGED - a real
+#      *arulist.csv file still needs a raw column that standardizes to
+#      literal "aru" (standardize.headers() can never produce a literal
+#      dot, so a required-header check can never look for "aru.name"
+#      directly). Instead, immediately after that check succeeds, the
+#      matched in-memory column is renamed from "aru" to "aru.name" - see
+#      the single new line right after the missing.headers stop() below -
+#      and every downstream reference (SECTION 3b's consistency NOTEs,
+#      SECTION 4's expand.one(), and this script's own final aru.suntimes
+#      output column) uses $aru.name from that point on. This brings this
+#      script's own output column in line with the rest of the package's
+#      established $aru.name convention (batz.merge_sm4.logfile,
+#      batz.merge_vetted.acoustics/acoustics2, batz.generate_plotframe.bat)
+#      - see batz.generate_suntimes.arulist.R's own @details "Follow-up,
+#      2026-09-22" paragraph for the full explanation, including
+#      confirmation that this rename creates no collision with anything
+#      else in this script.
 # ---------------------------------------------------------------------------
 
 ## base R only - no package dependencies required
@@ -407,6 +429,12 @@ if (length(missing.headers) > 0) {
   stop("inputfile is missing these headers: ", paste(missing.headers, collapse = ", "))
 }
 
+## Follow-up, 2026-09-22, per Josh (see assumption #11 above): rename the
+## just-verified "aru" column to "aru.name" for every reference from here
+## on - the raw-file requirement above is unchanged (still "aru"), only
+## this in-memory column is renamed.
+names(aru.list)[names(aru.list) == "aru"] <- "aru.name"
+
 ## ---- parse types -----------------------------------------------------------
 aru.list$lat  <- as.numeric(aru.list$lat)
 aru.list$long <- as.numeric(aru.list$long)
@@ -459,7 +487,7 @@ if (any(!keep.rows)) {
   excluded <- aru.list[!keep.rows, ]
   cat("NOTE:", nrow(excluded), "row(s) excluded - $sunregion_type is not",
       "\"fixed.unique\"/\"fixed.pooled\":",
-      paste(unique(paste0(excluded$aru, " (", excluded$sunregion_type, ")")), collapse = ", "),
+      paste(unique(paste0(excluded$aru.name, " (", excluded$sunregion_type, ")")), collapse = ", "),
       "\n\n")
 }
 aru.list <- aru.list[keep.rows, , drop = FALSE]
@@ -468,16 +496,16 @@ if (nrow(aru.list) == 0) {
        "\"fixed.pooled\" - nothing to generate.")
 }
 
-## fixed.unique sanity check: spec says $sunregion should equal $aru for this
-## type. Flagging a mismatch rather than silently ignoring it or guessing -
-## does not block the run, since the lat/long-based grouping below is
-## unaffected either way.
+## fixed.unique sanity check: spec says $sunregion should equal $aru.name for
+## this type. Flagging a mismatch rather than silently ignoring it or
+## guessing - does not block the run, since the lat/long-based grouping
+## below is unaffected either way.
 is.fixed.unique <- aru.list$sunregion_type == "fixed.unique"
-mismatched.unique <- is.fixed.unique & (aru.list$sunregion != aru.list$aru)
+mismatched.unique <- is.fixed.unique & (aru.list$sunregion != aru.list$aru.name)
 if (any(mismatched.unique)) {
   cat("NOTE:", sum(mismatched.unique), "row(s) marked \"fixed.unique\" have",
-      "$sunregion != $aru (spec says these should match for this type):",
-      paste(aru.list$aru[mismatched.unique], collapse = ", "), "\n\n")
+      "$sunregion != $aru.name (spec says these should match for this type):",
+      paste(aru.list$aru.name[mismatched.unique], collapse = ", "), "\n\n")
 }
 
 ## flag a $sunregion used with more than one $sunregion_type across its ARUs
@@ -519,7 +547,7 @@ expand.one <- function(i) {
   row <- aru.list[i, ]
   dates <- seq(row$date_start, row$date_end, by = "day")
   data.frame(
-    aru            = row$aru,
+    aru.name       = row$aru.name,
     sunregion      = row$sunregion,
     sunregion_type = row$sunregion_type,
     lat            = row$lat,
@@ -611,7 +639,7 @@ today <- lookup[match(aru.expand$calc.key, lookup$calc.key), ]
 nextd <- lookup[match(aru.expand$next.day.key, lookup$calc.key), ]
 
 aru.suntimes <- data.frame(
-  aru            = aru.expand$aru,
+  aru.name       = aru.expand$aru.name,
   date           = aru.expand$date,
   date.mon       = as.POSIXct(paste(aru.expand$date, "12:00:00")),
   sunregion      = aru.expand$sunregion,

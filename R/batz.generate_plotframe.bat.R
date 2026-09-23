@@ -82,20 +82,22 @@
 #' \code{$sunregion} column - a file missing either is skipped with a
 #' \code{message()}, not a hard stop, in case other unrelated files happen
 #' to also match \code{load.pattern}. Every valid file's
-#' \code{$aru}/\code{$sunregion} columns are row-bound together, then
+#' \code{$aru}/\code{$sunregion} columns are row-bound together (with
+#' \code{$aru} immediately renamed to \code{$aru.name} in this function's
+#' own local lookup table - see \strong{Follow-up, 2026-09-22} below), then
 #' joined onto \code{data} by matching \code{data$aru.name} against the
-#' arulist's \code{$aru} (always \code{$aru.name} specifically, never
-#' whatever \code{groupby} is set to - \code{groupby} can be overridden to
-#' an unrelated column like \code{"serial"} that wouldn't correspond to
-#' the arulist's \code{$aru} values at all). Any \code{$aru.name} value
-#' with no match in the loaded arulist gets \code{NA} for
-#' \code{$sunregion}, with a \code{warning()} listing every such value
-#' (not a hard stop - matches this function's existing tolerant-but-vocal
-#' style elsewhere, e.g. \code{trim.noise}/\code{trim.noid}). No matching
-#' file found at all, or files found but none with the right columns, IS
-#' a hard stop - there'd be no way to populate \code{$sunregion} at all.
-#' Any \code{$sunregion} value already present in the \code{data} passed
-#' in is overwritten by this fresh join, not preserved.
+#' arulist's own \code{$aru.name} (always \code{$aru.name} specifically,
+#' never whatever \code{groupby} is set to - \code{groupby} can be
+#' overridden to an unrelated column like \code{"serial"} that wouldn't
+#' correspond to the arulist's \code{$aru.name} values at all). Any
+#' \code{$aru.name} value with no match in the loaded arulist gets
+#' \code{NA} for \code{$sunregion}, with a \code{warning()} listing every
+#' such value (not a hard stop - matches this function's existing
+#' tolerant-but-vocal style elsewhere, e.g. \code{trim.noise}/\code{trim.noid}).
+#' No matching file found at all, or files found but none with the right
+#' columns, IS a hard stop - there'd be no way to populate \code{$sunregion}
+#' at all. Any \code{$sunregion} value already present in the \code{data}
+#' passed in is overwritten by this fresh join, not preserved.
 #'
 #' \strong{Steps.} If any required header is missing, stops immediately
 #' and lists every missing header by name. If \code{duplicates.remove =
@@ -278,6 +280,93 @@
 #' consistency). \code{trim.noid}'s default changed from \code{TRUE} to
 #' \code{FALSE}. No other behavior changed.
 #'
+#' \strong{Follow-up, 2026-09-22, per Josh's request ("change all functions
+#' that have aru as an header to \"aru.name\"", found via the project's own
+#' reference workbook and cross-checked against this function's live
+#' source): the \code{*arulist.csv} lookup table this function builds
+#' internally now uses \code{$aru.name} instead of bare \code{$aru}.} This
+#' is a purely internal rename, entirely local to this function's own
+#' \code{arulist} lookup object (never returned or exposed to the caller,
+#' and never merged as a COLUMN with \code{data} - only its VALUES are
+#' ever joined via \code{match()}) - done for consistency with the rest of
+#' the package's ARU-identifier naming convention (\code{$aru.name} is
+#' already required in \code{data}'s own schema above, and is now also
+#' \code{\link{batz.generate_suntimes.arulist}}'s own output column name,
+#' renamed the same day). \strong{The raw \code{*arulist.csv} file itself
+#' does NOT need to change} - the per-file check just below (see
+#' \strong{$sunregion lookup}) still looks for a column that standardizes
+#' to literal \code{"aru"}, exactly as before; immediately after a file
+#' passes that check, its \code{$aru} column is renamed, in this
+#' function's own local lookup table only, to \code{$aru.name} before
+#' being row-bound in - the same rename-after-match idiom already used by
+#' \code{canonicalize.headers()} elsewhere in this function (see
+#' "BUGFIX/NEW" above), applied here directly since this particular check
+#' is a plain per-file \code{%in%} test, not a \code{canonicalize.headers()}
+#' call. The join itself (\code{match(data$aru.name, arulist$aru)}) now
+#' reads \code{match(data$aru.name, arulist$aru.name)} - both sides
+#' already meant the same thing, this just makes the column names agree
+#' too. No functional/behavioral change: every real \code{WTG.arulist.csv}
+#' still needs the same raw columns it always did, and the join still
+#' matches the same values the same way. Full dev-script test suite
+#' re-run clean after the rename (no regressions).
+#'
+#' \strong{Follow-up, 2026-09-22, per Josh's request ("Update function
+#' batz.generate_plotframe.bat() spp.id = 'manid.sb' if value = '' then
+#' replace with 'NOID'"): a blank \code{$spp.id} value is now standardized
+#' to the literal string \code{"NOID"}.} Applied immediately after the
+#' spp.id/groupby.date/groupby column-existence check, before the
+#' \code{$sunregion} lookup or any summarizing - so every downstream step
+#' (the per-species breakdown, \code{trim.noid}'s case-insensitive
+#' \code{"NoID"} filter, and the \code{$vetting.type} column) sees
+#' \code{"NOID"} rather than an empty string for these rows. A "blank"
+#' value covers an empty string, \code{NA}, and a whitespace-only string
+#' (all coerced to character first) - read as the natural reading of
+#' Josh's literal \code{value = ""}, since a real loaded CSV can produce
+#' any of the three for a genuinely missing manual ID. \strong{Judgment
+#' call, flagged for Josh}: the replacement is case-sensitive uppercase
+#' \code{"NOID"} (matching Josh's own literal spelling), which is a
+#' distinct string from the existing lowercase-insensitive \code{"NoID"}
+#' that \code{trim.noid} already recognized before this change - the two
+#' now coexist as the same case-insensitive value (\code{trim.noid}'s
+#' check is \code{tolower(...) == "noid"}, so both spellings match it
+#' identically), so no existing behavior changes for rows that already
+#' said "NoID"; this only affects rows that were previously blank.
+#'
+#' \strong{Follow-up, 2026-09-23, per Josh's request ("if spp.id =
+#' manid.sb and trim.noid = TRUE then remove any records that are
+#' blank"): blank \code{$manid.sb} records are now removed entirely,
+#' instead of filled in with "NOID", when this specific combination
+#' applies.} A narrower, opt-in alternative to the blanket "NOID" fill-in
+#' immediately above: when \code{spp.id} is still specifically the
+#' default column name \code{"manid.sb"} \strong{and} \code{trim.noid =
+#' TRUE}, a row with a blank value in that column (empty string, or
+#' \code{NA}/whitespace-only - the same "blank" definition as the NOID
+#' fill-in above) is dropped from \code{data} entirely, before any
+#' summarizing, rather than having its \code{spp.id} value replaced with
+#' \code{"NOID"}. Every other combination - a non-default \code{spp.id}
+#' column, or \code{trim.noid = FALSE} - keeps the unconditional "NOID"
+#' fill-in exactly as before. \strong{This is a different mechanism from
+#' the pre-existing \code{trim.noise}/\code{trim.noid} behavior described
+#' above} (which only excludes \code{"noise"}/\code{"NoID"} rows from the
+#' collapsed \code{"All Detections"} copy, while those rows still appear
+#' in the per-species breakdown): this new removal deletes the
+#' originally-blank rows from \code{data} itself, so they disappear from
+#' \strong{both} the per-species table and the \code{"All Detections"}
+#' total - there is no row left for them to appear as \code{"NOID"} in
+#' either place. \strong{Judgment call, flagged for Josh}: read
+#' \code{spp.id = manid.sb} in the request as testing the \emph{current
+#' value of the \code{spp.id} parameter} (i.e. still its default,
+#' whether left at the default or explicitly passed as
+#' \code{"manid.sb"}), not testing some other column named
+#' \code{manid.sb} while \code{spp.id} points elsewhere - the two are the
+#' same column in every real call seen so far, so this only matters if
+#' \code{spp.id} is ever overridden to a different column while a
+#' \code{$manid.sb} column also happens to exist in \code{data}, which is
+#' not one of the two documented columns. Full dev-script test suite
+#' re-run, including a new test confirming the general/unconditional NOID
+#' fill-in is unchanged for every other \code{spp.id}/\code{trim.noid}
+#' combination.
+#'
 #' @param data A data frame with every column listed above already
 #'   present (see Details for how to assemble one). Column headers may
 #'   arrive in this function's own dot-separated style OR already
@@ -286,7 +375,13 @@
 #' @param duplicates.remove Logical, default \code{TRUE}. Drop exact
 #'   duplicate rows from \code{data} before summarizing.
 #' @param spp.id Character, default \code{"manid.sb"}. Name of the column
-#'   in \code{data} holding the species identifier to summarize by.
+#'   in \code{data} holding the species identifier to summarize by. A
+#'   blank value in this column (empty string, or \code{NA}/whitespace-only)
+#'   is replaced with the literal string \code{"NOID"} before summarizing -
+#'   see \strong{Follow-up, 2026-09-22} in Details - UNLESS \code{spp.id}
+#'   is still \code{"manid.sb"} and \code{trim.noid = TRUE}, in which case
+#'   those blank-valued rows are removed from \code{data} entirely instead
+#'   - see \strong{Follow-up, 2026-09-23} in Details.
 #' @param groupby.date Character, default \code{"date.mon"}. Name of the
 #'   column in \code{data} holding the date/interval to summarize by.
 #'   (Named \code{"groupby.date"} rather than the originally-specced
@@ -311,7 +406,10 @@
 #'   \code{"trim.noID"}, to match the identically-purposed parameter
 #'   already shipped in \code{\link{batz.merge_vetted.acoustics}}.
 #'   Standardized 2026-08-29, per Josh: default changed from \code{TRUE}
-#'   to \code{FALSE}.)
+#'   to \code{FALSE}.) When \code{TRUE} and \code{spp.id} is still
+#'   \code{"manid.sb"}, this ALSO causes originally-blank \code{spp.id}
+#'   rows to be removed from \code{data} entirely rather than filled in
+#'   with \code{"NOID"} - see \strong{Follow-up, 2026-09-23} in Details.
 #' @param dir.load Character, default \code{getwd()}. Directory to search
 #'   for the \code{*arulist.csv} file(s) used to look up \code{$sunregion}.
 #'   See \strong{$sunregion lookup} in Details.
@@ -417,17 +515,62 @@ batz.generate_plotframe.bat <- function(data,
     }
   }
 
+  ## Follow-up (2026-09-22, per Josh: "spp.id = 'manid.sb' if value = ''
+  ## then replace with 'NOID'"). A blank $spp.id value (empty string, or
+  ## NA/whitespace-only after coercion to character) is standardized to
+  ## the literal string "NOID" before anything downstream reads it - so a
+  ## blank value participates as its own explicit category (matching the
+  ## existing case-insensitive "NoID" recognized by trim.noid, and every
+  ## per-species/$vetting.type breakdown) instead of silently blending
+  ## into whatever key an empty string happens to produce. See @details,
+  ## "Follow-up, 2026-09-22...blank $spp.id" below.
+  spp.id.vals <- as.character(data[[spp.id]])
+  is.blank.spp.id <- is.na(spp.id.vals) | !nzchar(trimws(spp.id.vals))
+
+  ## Follow-up (2026-09-23, per Josh: "if spp.id = manid.sb and trim.noid =
+  ## TRUE then remove any records that are blank"). A narrower, opt-in
+  ## alternative to the blanket NOID fill-in just above: when `spp.id` is
+  ## still specifically the default column name ("manid.sb") AND
+  ## `trim.noid = TRUE`, a blank value in that column means the row is
+  ## dropped from `data` entirely - before any summarizing - rather than
+  ## folded into a "NOID" category. This is NOT the same thing as the
+  ## pre-existing $trim.noise/$trim.noid mechanism further below (the
+  ## `trimmed <- ...` block), which only excludes "noise"/"NoID" rows from
+  ## the collapsed "All Detections" copy while leaving them in the
+  ## per-species breakdown: this removal deletes the rows from `data`
+  ## itself, so they disappear from BOTH the per-species table and the
+  ## "All Detections" total. Every other combination of spp.id/trim.noid
+  ## (a non-default spp.id column, or trim.noid = FALSE) keeps the
+  ## unconditional NOID fill-in exactly as before. See @details,
+  ## "Follow-up, 2026-09-23...remove blank $manid.sb records" below.
+  if (identical(spp.id, "manid.sb") && isTRUE(trim.noid)) {
+    data <- data[!is.blank.spp.id, , drop = FALSE]
+    spp.id.vals <- spp.id.vals[!is.blank.spp.id]
+  } else {
+    spp.id.vals[is.blank.spp.id] <- "NOID"
+  }
+  data[[spp.id]] <- spp.id.vals
+
   ## --- load $sunregion from an *arulist.csv file and join it onto `data`
-  ## by matching `data$aru.name` against the arulist file's own `$aru`
+  ## by matching `data$aru.name` against the arulist file's own $aru.name
   ## column (always $aru.name specifically, regardless of what groupby
   ## points to - groupby can be overridden to an unrelated column like
-  ## "serial", which wouldn't correspond to the arulist's $aru values at
-  ## all) - see Details/Follow-up ----------------------------------------
+  ## "serial", which wouldn't correspond to the arulist's $aru.name values
+  ## at all) - see Details/Follow-up ----------------------------------------
   ## header standardization (per Josh, 2026-09-14 project preference): the
   ## arulist file's own headers are real loaded-file headers, so they're
   ## run through the shared package helper standardize.headers() instead
   ## of this function's prior local, more lenient ad hoc normalizer - see
   ## @details "Header standardization" above.
+  ##
+  ## Follow-up (2026-09-22, per Josh: "change all functions that have aru
+  ## as an header to \"aru.name\""): the loaded file itself is still
+  ## checked for a column that standardizes to literal "aru" (unchanged -
+  ## no real *arulist.csv file needs to be edited for this), but that
+  ## column is renamed to $aru.name in this function's own local lookup
+  ## table immediately after the check, so the join below reads
+  ## $aru.name on both sides - see @details, "Follow-up, 2026-09-22...aru
+  ## as an header".
   arulist.regex <- paste(utils::glob2rx(load.pattern), collapse = "|")
   arulist.files <- list.files(dir.load, pattern = arulist.regex, recursive = dir.sub,
                                full.names = TRUE, ignore.case = TRUE)
@@ -437,7 +580,7 @@ batz.generate_plotframe.bat <- function(data,
          "an arulist file is required to look up $sunregion.")
   }
 
-  arulist <- data.frame(aru = character(0), sunregion = character(0), stringsAsFactors = FALSE)
+  arulist <- data.frame(aru.name = character(0), sunregion = character(0), stringsAsFactors = FALSE)
   arulist.skipped <- character(0)
   for (f in arulist.files) {
     tmp <- tryCatch(read.csv(f, stringsAsFactors = FALSE, check.names = FALSE),
@@ -447,7 +590,9 @@ batz.generate_plotframe.bat <- function(data,
     if (!all(c("aru", "sunregion") %in% names(tmp))) {
       arulist.skipped <- c(arulist.skipped, paste0(f, " (missing $aru and/or $sunregion column)")); next
     }
-    arulist <- rbind(arulist, tmp[, c("aru", "sunregion"), drop = FALSE])
+    tmp.sub <- tmp[, c("aru", "sunregion"), drop = FALSE]
+    names(tmp.sub)[names(tmp.sub) == "aru"] <- "aru.name"
+    arulist <- rbind(arulist, tmp.sub)
   }
   if (length(arulist.skipped) > 0) {
     message("batz.generate_plotframe.bat: skipped arulist file(s) that didn't have ",
@@ -458,7 +603,7 @@ batz.generate_plotframe.bat <- function(data,
          "but none had both an `$aru` and `$sunregion` column - cannot look up $sunregion.")
   }
 
-  data$sunregion <- arulist$sunregion[match(data$aru.name, arulist$aru)]
+  data$sunregion <- arulist$sunregion[match(data$aru.name, arulist$aru.name)]
   unmatched.arus <- unique(data$aru.name[is.na(data$sunregion)])
   if (length(unmatched.arus) > 0) {
     warning("$aru.name value(s) not found in the loaded arulist - $sunregion will be NA for: ",

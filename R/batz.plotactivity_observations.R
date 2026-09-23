@@ -30,7 +30,7 @@
 #'   FALSE} and more than one value is selected - see \strong{Follow-up,
 #'   2026-08-29} in Details).
 #' @param suntimes A data frame of sunrise/sunset times, e.g. the output of
-#'   \code{batz.generate_suntimes.arulist()}. Must have \code{$aru}, \code{$date},
+#'   \code{batz.generate_suntimes.arulist()}. Must have \code{$aru.name}, \code{$date},
 #'   \code{$date.mon}, \code{$sunregion}, \code{$time.zone},
 #'   \code{$sunregion.type}, \code{$schedual1}, \code{$schedual2},
 #'   \code{$suns}, \code{$suns.unix}, \code{$sunr}, \code{$sunr.unix},
@@ -545,6 +545,26 @@
 #' user-editable one. Every saved file's name is printed to the console via
 #' \code{cat("Saved:", fname, "\\n")}, as it already was before this round.
 #'
+#' \strong{Follow-up, 2026-09-22, per Josh's request ("change all functions
+#' that have aru as an header to \"aru.name\"", found via the project's own
+#' reference workbook and cross-checked against this function's live
+#' source): \code{SUNTIMES.REQUIRED}'s \code{"aru"} entry is now
+#' \code{"aru.name"}.} This brings the required-header contract in line
+#' with \code{\link{batz.generate_suntimes.arulist}()}'s own matching
+#' rename (that function's output column, previously bare \code{$aru}, is
+#' now \code{$aru.name} - see its own \code{@details} for the full history)
+#' and with the rest of the package's established convention
+#' (\code{\link{batz.merge_sm4.logfile}}, \code{batz.merge_vetted.acoustics}/
+#' \code{acoustics2}, and \code{\link{batz.generate_plotframe.bat}} all
+#' already use \code{$aru.name}). No function-body reference needed
+#' changing - as documented above, \code{suntimes} is accepted and header-
+#' checked here but not otherwise used in this iteration, so this is purely
+#' a header-name update. Because \code{canonicalize.headers()} is already
+#' used here (2026-09-21 follow-up above), a \code{suntimes} argument
+#' supplied with either the old (\code{$aru}) or new (\code{$aru.name})
+#' spelling is still matched and accepted - this rename does not break
+#' existing callers.
+#'
 #' Naming convention (per project preferences):
 #' \code{package.family_action.subject()}. This function is
 #' \code{batz.plotactivity_observations()}: family = "plotactivity" (the
@@ -590,10 +610,12 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
   ## headers. See @details "Header standardization" above. As of the
   ## 2026-09-21 follow-up below, though, canonicalize.headers() IS used
   ## (further down, where the header check happens) so that a column
-  ## arriving in a different casing/separator style still matches
-  ## correctly - see @details "Follow-up, 2026-09-21" above.
+  ## arriving in a different casing/separator style than these constants
+  ## still matches correctly - see @details "Follow-up, 2026-09-21" above.
   DATA.REQUIRED <- c("spp.id", "date", "obs")
-  SUNTIMES.REQUIRED <- c("aru", "date", "date.mon", "sunregion", "time.zone",
+  # Renamed 2026-09-22 (per Josh, see @details "Follow-up, 2026-09-22"):
+  # matches batz.generate_suntimes.arulist()'s own renamed output column.
+  SUNTIMES.REQUIRED <- c("aru.name", "date", "date.mon", "sunregion", "time.zone",
                           "sunregion.type", "schedual1", "schedual2", "suns",
                           "suns.unix", "sunr", "sunr.unix", "sunr.mon", "sunr.mon.unix")
   FIG.LIST.REQUIRED <- c("plot.type", "plot.name", "facet", "facet.set", "MYSO",

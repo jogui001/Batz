@@ -20,6 +20,15 @@
 # column layouts documented for the real files. This fully exercises the
 # settings-resolution/file-naming logic that actually changed this round;
 # please re-run against your own real files when you have a chance.
+#
+# Follow-up, 2026-09-22, per Josh's request ("change all functions that have
+# aru as an header to \"aru.name\"", found via the project's own reference
+# workbook and cross-checked against this script's own R/ counterpart):
+# SUNTIMES.REQUIRED's "aru" entry is now "aru.name", matching
+# batz.generate_suntimes.arulist()'s own renamed output column; the
+# synthetic suntimes.synth stand-in below is updated to match. No function-
+# body reference needed changing - suntimes is accepted and header-checked
+# here but not otherwise used, exactly as in the shipped .R file.
 # =============================================================================
 
 source("batz.batusa_recode.names.R")
@@ -89,7 +98,7 @@ plot.data.synth <- do.call(rbind, lapply(test.dates, function(d) {
 }))
 
 suntimes.synth <- data.frame(
-  aru = "WTG-GOM102", date = "06/01/2026", date.mon = "06/02/2026",
+  aru.name = "WTG-GOM102", date = "06/01/2026", date.mon = "06/02/2026",
   sunregion = "WTG", time.zone = "UTC", sunregion.type = "coordinates",
   schedual1 = "civil", schedual2 = "civil",
   suns = "06/01/2026 20:00", suns.unix = 0,
@@ -128,7 +137,9 @@ print(head(default.plotaesthetics.synth))
 PLOT.TYPE <- "call.observations"
 
 DATA.REQUIRED <- c("spp.id", "date", "obs")
-SUNTIMES.REQUIRED <- c("aru", "date", "date.mon", "sunregion", "time.zone",
+# Renamed 2026-09-22 (per Josh, see the header comment above): matches
+# batz.generate_suntimes.arulist()'s own renamed output column.
+SUNTIMES.REQUIRED <- c("aru.name", "date", "date.mon", "sunregion", "time.zone",
                         "sunregion.type", "schedual1", "schedual2", "suns",
                         "suns.unix", "sunr", "sunr.unix", "sunr.mon", "sunr.mon.unix")
 FIG.LIST.REQUIRED <- c("plot.type", "plot.name", "facet", "facet.set", "MYSO",

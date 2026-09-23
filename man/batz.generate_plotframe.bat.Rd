@@ -15,22 +15,25 @@ batz.generate_plotframe.bat(
   trim.noid = FALSE,
   dir.load = getwd(),
   load.pattern = c("*.arulist.csv"),
-  dir.sub = FALSE,
-  snake_case = FALSE
+  dir.sub = FALSE
 )
 }
 \arguments{
 \item{data}{A data frame with every column listed above already
-present (see Details for how to assemble one). Column headers may
-arrive in this function's own dot-separated style OR already
-snake_cased (e.g. by an intervening save/reload step) - see the
-BUGFIX/NEW entry in Details, "canonicalize.headers".}
+present (see Details for how to assemble one).}
 
 \item{duplicates.remove}{Logical, default \code{TRUE}. Drop exact
 duplicate rows from \code{data} before summarizing.}
 
 \item{spp.id}{Character, default \code{"manid.sb"}. Name of the column
-in \code{data} holding the species identifier to summarize by.}
+in \code{data} holding the species identifier to summarize by. A
+blank value in this column (empty string, or \code{NA}/whitespace-only)
+is replaced with the literal string \code{"NOID"} before summarizing -
+see \strong{Follow-up, 2026-09-22 (blank $spp.id)} in Details -
+UNLESS \code{spp.id} is still \code{"manid.sb"} and \code{trim.noid =
+TRUE}, in which case those blank-valued rows are removed from
+\code{data} entirely instead - see \strong{Follow-up, 2026-09-23
+(remove blank $manid.sb records)} in Details.}
 
 \item{groupby.date}{Character, default \code{"date.mon"}. Name of the
 column in \code{data} holding the date/interval to summarize by.
@@ -60,7 +63,11 @@ summary. (Named \code{"trim.noid"} rather than the originally-specced
 \code{"trim.noID"}, to match the identically-purposed parameter
 already shipped in \code{\link{batz.merge_vetted.acoustics}}.
 Standardized 2026-08-29, per Josh: default changed from \code{TRUE}
-to \code{FALSE}.)}
+to \code{FALSE}.) When \code{TRUE} and \code{spp.id} is still
+\code{"manid.sb"}, this ALSO causes originally-blank \code{spp.id}
+rows to be removed from \code{data} entirely rather than filled in
+with \code{"NOID"} - see \strong{Follow-up, 2026-09-23 (remove blank
+$manid.sb records)} in Details.}
 
 \item{dir.load}{Character, default \code{getwd()}. Directory to search
 for the \code{*arulist.csv} file(s) used to look up \code{$sunregion}.
@@ -79,29 +86,14 @@ per Josh: default changed from \code{TRUE} back to \code{FALSE} to
 match every other \code{batz} function's \code{dir.sub} default -
 previously deliberately \code{TRUE} per an earlier explicit spec;
 this reverses that for consistency.)}
-
-\item{snake_case}{Logical, default \code{FALSE}. Added 2026-09-21, per
-Josh, alongside the \code{canonicalize.headers} fix above. Controls
-only \code{plfr.batsummary}'s OWN output column names, applied as the
-very last step before it's returned - it has no effect on
-\code{data}, which is never modified beyond this function's own local
-working copy. \code{FALSE} (default) keeps this function's normal
-dot-separated output column names (\code{$spp.id}, \code{$date},
-\code{$group}, ...) exactly as always. \code{TRUE} runs every output
-column name through \code{standardize.headers()} instead (e.g.
-\code{$spp_id}, \code{$mins2_noon_min}) - for a caller who
-specifically wants a snake_case CSV/data frame out of this function,
-without having to convert it themselves afterward.}
 }
 \value{
 A data frame, \code{plfr.batsummary}, with columns
-\code{$spp.id}, \code{$date}, \code{$group}, \code{$groupedby},
-\code{$groupby.date}, \code{$sunregion}, \code{$obs},
-\code{$mins2.noon.min}, \code{$mins2.noon.max}, \code{$vetting.type}
-(or their snake_case equivalents if \code{snake_case = TRUE} - see
-that parameter above). See \strong{$group vs $groupedby} in Details
-for what \code{$group}/\code{$groupedby}/\code{$groupby.date} each
-hold.
+  \code{$spp.id}, \code{$date}, \code{$group}, \code{$groupedby},
+  \code{$groupby.date}, \code{$sunregion}, \code{$obs},
+  \code{$mins2.noon.min}, \code{$mins2.noon.max}, \code{$vetting.type}.
+  See \strong{$group vs $groupedby} in Details for what
+  \code{$group}/\code{$groupedby}/\code{$groupby.date} each hold.
 }
 \description{
 Given a fully-assembled data frame of vetted bat-acoustic detections
@@ -116,66 +108,43 @@ joins its \code{$sunregion} column onto \code{data} itself (see
 \code{data} does NOT need to already have \code{$sunregion}.
 }
 \details{
-\strong{Required input columns.} \code{data} must have every one of:
+\strong{Header standardization (per Josh, 2026-09-14 project preference) -
+two different things in this function, treated differently.} This
+function's \code{required.headers} list below (\code{filename},
+\code{date.mon}, \code{manid}, ... \code{call.datetime}) is \code{data}'s
+own already-established \code{batz} output schema - every one of those
+names comes straight out of \code{\link{batz.merge_vetted.acoustics}}'s
+own dot-separated, \code{batz}-invented column names, not raw text
+copied from some loaded file's real header row. Renaming these to
+snake_case would break the upstream/downstream contract with every
+function that produces or consumes them by exact name, so they are
+deliberately left untouched - out of scope for this preference, the
+same reasoning already applied elsewhere in this package. The
+\code{*arulist.csv} file loaded in \strong{$sunregion lookup} below is
+different: those are real, loaded-from-disk file headers, so they now
+go through the shared package helper \code{standardize.headers()} (trim
+whitespace, collapse non-alphanumeric runs to underscores, lowercase),
+replacing this function's prior local, more lenient ad hoc normalizer
+(which stripped every non-alphanumeric character with no separator
+instead of substituting an underscore). This is a no-op in practice
+against every real \code{WTG.arulist.csv} checked so far - \code{$aru}/
+\code{$sunregion} are already single lowercase words with nothing for
+either normalizer to differ on - but it brings this function's
+file-loading step in line with every other \code{batz} function that
+loads a file, and guards against a future arulist file whose headers
+pick up stray whitespace, mixed case, or punctuation.
+
+\strong{Required input columns.} `data` must have every one of:
 \code{filename}, \code{date.mon}, \code{manid}, \code{autoid.kp},
 \code{autoid.sb}, \code{lat}, \code{serial}, \code{lon},
 \code{aru.name}, \code{date}, \code{time}, \code{call.datetime}. All
 twelve come straight out of \code{\link{batz.merge_vetted.acoustics}}
-\itemize{
-\item no renaming needed (an earlier version of this function required
+- no renaming needed (an earlier version of this function required
 \code{$call.time} instead, which didn't match that function's own
 \code{$call.datetime} output column; standardized on
 \code{$call.datetime} across both, per Josh, 2026-08-26).
 \code{$sunregion} is deliberately NOT in this list - see
 \strong{$sunregion lookup} below.
-}
-
-\strong{Header standardization (per Josh, 2026-09-14 project
-preference) - two different things in this function, treated
-differently.} This function's \code{required.headers} list above
-(\code{filename}, \code{date.mon}, \code{manid}, ... \code{call.datetime})
-is \code{data}'s own already-established \code{batz} output schema -
-every one of those names comes straight out of
-\code{\link{batz.merge_vetted.acoustics}}'s own dot-separated,
-\code{batz}-invented column names, not raw text copied from some
-loaded file's real header row. Renaming these to snake_case would
-break the upstream/downstream contract with every function that
-produces or consumes them by exact name, so they are deliberately left
-untouched - out of scope for this preference, the same reasoning
-already applied elsewhere in this package. The \code{*arulist.csv}
-file loaded in \strong{$sunregion lookup} below is different: those
-are real, loaded-from-disk file headers, so they now go through the
-shared package helper \code{standardize.headers()} (trim whitespace,
-collapse non-alphanumeric runs to underscores, lowercase), replacing
-this function's prior local, more lenient ad hoc normalizer (which
-stripped every non-alphanumeric character with no separator instead of
-substituting an underscore). This is a no-op in practice against every
-real \code{WTG.arulist.csv} checked so far - \code{$aru}/\code{$sunregion}
-are already single lowercase words with nothing for either normalizer
-to differ on - but it brings this function's file-loading step in line
-with every other \code{batz} function that loads a file, and guards
-against a future arulist file whose headers pick up stray whitespace,
-mixed case, or punctuation.
-
-\strong{BUGFIX/NEW (2026-09-21, per Josh's real-world report of a
-header mismatch caused by header-standardization elsewhere in the
-pipeline):} \code{data}'s own headers (matched against
-\code{required.headers} above) are now canonicalized via the shared
-package helper \code{\link{canonicalize.headers}} rather than a plain
-\code{setdiff()}: both \code{data}'s real column names and
-\code{required.headers} are standardized to snake_case purely to MATCH
-them up, so \code{data} is accepted whether its columns are already
-this function's own dot-separated convention (\code{"date.mon"}), have
-come back snake_cased from some intervening save/reload step
-(\code{"date_mon"}), or anything equivalent in between - every matched
-column is renamed, in this function's own local working copy only, back
-to the exact dot-separated spelling in \code{required.headers}, so
-every line of code below this check keeps referencing \code{$date.mon}/
-\code{$aru.name}/etc. exactly as before. This never mutates the
-\code{data} object the caller passed in (R already copies a data frame
-argument on modification) and never changes \code{plfr.batsummary}'s
-own output column names - see the new \code{snake_case} parameter below
-for that.
 
 \strong{$sunregion lookup.} \code{$sunregion} isn't produced by
 \code{\link{batz.merge_vetted.acoustics}} (or any upstream
@@ -188,21 +157,23 @@ running its headers through \code{standardize.headers()} - see
 \strong{Header standardization} above) both an \code{$aru} and a
 \code{$sunregion} column - a file missing either is skipped with a
 \code{message()}, not a hard stop, in case other unrelated files happen
-to also match \code{load.pattern}. Every valid file's
-\code{$aru}/\code{$sunregion} columns are row-bound together, then
-joined onto \code{data} by matching \code{data$aru.name} against the
-arulist's \code{$aru} (always \code{$aru.name} specifically, never
-whatever \code{groupby} is set to - \code{groupby} can be overridden to
-an unrelated column like \code{"serial"} that wouldn't correspond to
-the arulist's \code{$aru} values at all). Any \code{$aru.name} value
-with no match in the loaded arulist gets \code{NA} for
-\code{$sunregion}, with a \code{warning()} listing every such value
-(not a hard stop - matches this function's existing tolerant-but-vocal
-style elsewhere, e.g. \code{trim.noise}/\code{trim.noid}). No matching
-file found at all, or files found but none with the right columns, IS
-a hard stop - there'd be no way to populate \code{$sunregion} at all.
-Any \code{$sunregion} value already present in the \code{data} passed
-in is overwritten by this fresh join, not preserved.
+to also match \code{load.pattern}. Every valid file's \code{$aru}/
+\code{$sunregion} columns are row-bound together (with \code{$aru}
+immediately renamed to \code{$aru.name} in this function's own local
+lookup table - see \strong{Follow-up, 2026-09-22 (aru -> aru.name)}
+below), then joined onto \code{data} by matching \code{data$aru.name}
+against the arulist's own \code{$aru.name} (always \code{$aru.name}
+specifically, never whatever \code{groupby} is set to - \code{groupby}
+can be overridden to an unrelated column like \code{"serial"} that
+wouldn't correspond to the arulist's \code{$aru.name} values at all).
+Any \code{$aru.name} value with no match in the loaded arulist gets
+\code{NA} for \code{$sunregion}, with a \code{warning()} listing every
+such value (not a hard stop - matches this function's existing
+tolerant-but-vocal style elsewhere, e.g. \code{trim.noise}/\code{trim.noid}).
+No matching file found at all, or files found but none with the right
+columns, IS a hard stop - there'd be no way to populate \code{$sunregion}
+at all. Any \code{$sunregion} value already present in the \code{data}
+passed in is overwritten by this fresh join, not preserved.
 
 \strong{Steps.} If any required header is missing, stops immediately
 and lists every missing header by name. If \code{duplicates.remove =
@@ -218,16 +189,17 @@ assumed fixed (see below).
 
 A per-\code{spp.id}/\code{groupby.date}/\code{groupby} summary
 (\code{plfr.batsummary}) is always built first, with columns
-\code{$spp.id} (the VALUES of whichever column \code{spp.id} names),
-\code{$date} (the values of the \code{groupby.date} column),
-\code{$group} (the values of the \code{groupby} column - e.g. a
-detector name like \code{"105059-NW3"} - see \strong{$group vs
-$groupedby} below), \code{$groupedby}/\code{$groupby.date} (metadata -
-see below), \code{$sunregion} (the \code{data}'s own \code{$sunregion}
-value for that group - see \strong{Follow-up} below), \code{$obs}
-(count of detections in that group), and \code{$mins2.noon.min}/
-\code{$mins2.noon.max} (the smallest/largest \code{$mins2.noon} in
-that group).
+\code{$spp.id} (the VALUES of whichever column \code{spp.id} names -
+see \strong{Follow-up, 2026-09-22 (blank $spp.id)} below for how a
+blank value is handled), \code{$date} (the values of the
+\code{groupby.date} column), \code{$group} (the values of the
+\code{groupby} column - e.g. a detector name like \code{"105059-NW3"} -
+see \strong{$group vs $groupedby} below), \code{$groupedby}/
+\code{$groupby.date} (metadata - see below), \code{$sunregion} (the
+\code{data}'s own \code{$sunregion} value for that group - see
+\strong{Follow-up} below), \code{$obs} (count of detections in that
+group), and \code{$mins2.noon.min}/\code{$mins2.noon.max} (the
+smallest/largest \code{$mins2.noon} in that group).
 
 \strong{$group vs $groupedby/$groupby.date - a new, flagged
 interpretive call (2026-08-28), per Josh's request to add
@@ -334,8 +306,7 @@ matching style already used by
 \code{TRUE} here (searching subdirectories by default) rather than that
 function's \code{FALSE}, per Josh's explicit spec for this update.
 \code{$sunregion} is REMOVED from the required-input-columns list above
-\itemize{
-\item the previous entry (directly above this one) still describes it as
+- the previous entry (directly above this one) still describes it as
 required because that was true until this change; it no longer is. See
 the new \strong{$sunregion lookup} paragraph, near the top of Details,
 for the full join mechanism (skip-with-message for an arulist file
@@ -360,7 +331,6 @@ resolves to \code{"penobscotbay"}, matching the arulist's own values
 exactly, and a synthetic unmatched \code{$aru.name} correctly triggers
 the new unmatched-value warning with \code{$sunregion = NA}. Full
 dev-script test suite re-run, no regressions.
-}
 
 \strong{Follow-up, 2026-08-28, per Josh: function and two parameters
 renamed; three new/changed output columns added.} Renamed
@@ -386,6 +356,82 @@ function's \code{dir.sub} default (the earlier \code{TRUE} default
 was per an explicit spec at the time - this reverses that for
 consistency). \code{trim.noid}'s default changed from \code{TRUE} to
 \code{FALSE}. No other behavior changed.
+
+\strong{Follow-up, 2026-09-22, per Josh's request ("change all functions
+that have aru as an header to \"aru.name\"", found via the project's own
+reference workbook and cross-checked against this function's live
+source): the \code{*arulist.csv} lookup table this function builds
+internally now uses \code{$aru.name} instead of bare \code{$aru}.} This
+is a purely internal rename, entirely local to this function's own
+\code{arulist} lookup object (never returned or exposed to the caller,
+and never merged as a COLUMN with \code{data} - only its VALUES are
+ever joined via \code{match()}) - done for consistency with the rest of
+the package's ARU-identifier naming convention (\code{$aru.name} is
+already required in \code{data}'s own schema above, and is now also
+\code{\link{batz.generate_suntimes.arulist}}'s own output column name,
+renamed the same day). The raw \code{*arulist.csv} file itself does NOT
+need to change - it still needs a column that standardizes to literal
+\code{"aru"}; immediately after a file passes that check, its \code{$aru}
+column is renamed, in this function's own local lookup table only, to
+\code{$aru.name} before being row-bound in. The join itself now reads
+\code{match(data$aru.name, arulist$aru.name)} (was
+\code{match(data$aru.name, arulist$aru)}) - both sides already meant the
+same thing, this just makes the column names agree too. No
+functional/behavioral change. Full dev-script test suite re-run clean
+after the rename (no regressions).
+
+\strong{Follow-up, 2026-09-22, per Josh's request ("Update function
+batz.generate_plotframe.bat() spp.id = 'manid.sb' if value = '' then
+replace with 'NOID'"): a blank \code{$spp.id} value is now standardized
+to the literal string \code{"NOID"}.} Applied immediately after the
+spp.id/groupby.date/groupby column-existence check, before the
+\code{$sunregion} lookup or any summarizing - so every downstream step
+(the per-species breakdown, \code{trim.noid}'s case-insensitive
+\code{"NoID"} filter, and the \code{$vetting.type} column) sees
+\code{"NOID"} rather than an empty string for these rows. A "blank"
+value covers an empty string, \code{NA}, and a whitespace-only string
+(all coerced to character first). \strong{Judgment call, flagged for
+Josh}: the replacement is uppercase \code{"NOID"} (Josh's own literal
+spelling), a distinct string from the pre-existing lowercase
+\code{"NoID"} already recognized by \code{trim.noid} - but since
+\code{trim.noid}'s check is already case-insensitive
+(\code{tolower(...) == "noid"}), both spellings are treated identically
+by that filter, so no existing behavior changes for rows that already
+said \code{"NoID"}; this only affects rows that were previously blank.
+
+\strong{Follow-up, 2026-09-23, per Josh's request ("if spp.id =
+manid.sb and trim.noid = TRUE then remove any records that are
+blank"): blank \code{$manid.sb} records are now removed entirely,
+instead of filled in with "NOID", when this specific combination
+applies.} A narrower, opt-in alternative to the blanket "NOID" fill-in
+described immediately above: when \code{spp.id} is still specifically
+the default column name \code{"manid.sb"} \strong{and} \code{trim.noid
+= TRUE}, a row with a blank value in that column (empty string, or
+\code{NA}/whitespace-only - the same "blank" definition as the NOID
+fill-in above) is dropped from \code{data} entirely, before any
+summarizing, rather than having its \code{spp.id} value replaced with
+\code{"NOID"}. Every other combination - a non-default \code{spp.id}
+column, or \code{trim.noid = FALSE} - keeps the unconditional "NOID"
+fill-in exactly as before. \strong{This is a different mechanism from
+the pre-existing \code{trim.noise}/\code{trim.noid} behavior described
+above} (which only excludes \code{"noise"}/\code{"NoID"} rows from the
+collapsed \code{"All Detections"} copy, while those rows still appear
+in the per-species breakdown): this new removal deletes the
+originally-blank rows from \code{data} itself, so they disappear from
+\strong{both} the per-species table and the \code{"All Detections"}
+total - there is no row left for them to appear as \code{"NOID"} in
+either place. \strong{Judgment call, flagged for Josh}: read
+\code{spp.id = manid.sb} in the request as testing the \emph{current
+value of the \code{spp.id} parameter} (i.e. still its default, whether
+left at the default or explicitly passed as \code{"manid.sb"}), not
+testing some other column named \code{manid.sb} while \code{spp.id}
+points elsewhere - the two are the same column in every real call seen
+so far, so this only matters if \code{spp.id} is ever overridden to a
+different column while a \code{$manid.sb} column also happens to exist
+in \code{data}, which is not one of the two documented columns. Full
+dev-script test suite re-run, including a new test confirming the
+general/unconditional NOID fill-in is unchanged for every other
+\code{spp.id}/\code{trim.noid} combination.
 }
 \examples{
 \dontrun{
@@ -401,9 +447,6 @@ plfr.batsummary <- batz.generate_plotframe.bat(vetted.merged,
 # group by deployment type instead of detector
 plfr.batsummary <- batz.generate_plotframe.bat(vetted.merged,
   groupby = "deployment.type")
-
-# snake_case output headers instead of this function's usual dot-style
-plfr.batsummary <- batz.generate_plotframe.bat(vetted.merged, snake_case = TRUE)
 }
 
 }

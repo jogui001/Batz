@@ -22,7 +22,7 @@
 #'   \code{aes.default}'s \code{midnight} setting for this one
 #'   plot row - see Details.
 #' @param suntimes A data frame of sunrise/sunset times, e.g. the output
-#'   of \code{batz.generate_suntimes.arulist()}. Must have \code{$aru}, \code{$date},
+#'   of \code{batz.generate_suntimes.arulist()}. Must have \code{$aru.name}, \code{$date},
 #'   \code{$date.mon}, \code{$sunregion}, \code{$time.zone},
 #'   \code{$sunregion.type}, \code{$schedual1}, \code{$schedual2},
 #'   \code{$suns}, \code{$suns.unix}, \code{$sunr}, \code{$sunr.unix},
@@ -832,6 +832,22 @@
 #' \code{batz.plotdections_first.last()} - "plotdections" was a typo for
 #' "plotdetections", fixed here; nothing else changed.
 #'
+#' \strong{Follow-up, 2026-09-22, per Josh's request ("change all functions
+#' that have aru as an header to \"aru.name\"", found via the project's own
+#' reference workbook and cross-checked against this function's live
+#' source): \code{SUNTIMES.REQUIRED}'s \code{"aru"} entry is now
+#' \code{"aru.name"}, matching \code{\link{batz.generate_suntimes.arulist}}'s
+#' own output column, renamed the same day.} This function's own internal
+#' reference (\code{sdb$aru}, used to filter \code{suntimes} down to a
+#' single \code{$plot.set}) is now \code{sdb$aru.name}. Since
+#' \code{suntimes}'s required headers are matched via
+#' \code{canonicalize.headers()} (see "BUGFIX (2026-09-21...)" above), a
+#' \code{suntimes} argument arriving with either the old bare \code{$aru}
+#' spelling or the new \code{$aru.name} spelling is still accepted and
+#' renamed to this function's own canonical spelling before use - this
+#' change only affects what that canonical spelling now IS. Full test
+#' suite re-run clean after the rename (no regressions).
+#'
 #' @examples
 #' \dontrun{
 #' # default dir.save = getwd() - saves into the current working directory,
@@ -874,9 +890,15 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
   ## to $group) back on 2026-08-28; this constant (and the one place below
   ## that reads pd$aru.groupby) were never updated to match at the time.
   ## See @details, "BUGFIX (2026-09-21...)".
+  ##
+  ## Follow-up (2026-09-22, per Josh: "change all functions that have aru
+  ## as an header to \"aru.name\""): SUNTIMES.REQUIRED's "aru" entry is now
+  ## "aru.name", matching batz.generate_suntimes.arulist()'s own renamed
+  ## output column - see @details, "Follow-up, 2026-09-22...aru as an
+  ## header".
   DATA.REQUIRED <- c("spp.id", "date", "group", "obs",
                            "mins2.noon.min", "mins2.noon.max", "vetting.type")
-  SUNTIMES.REQUIRED <- c("aru", "date", "date.mon", "sunregion", "time.zone",
+  SUNTIMES.REQUIRED <- c("aru.name", "date", "date.mon", "sunregion", "time.zone",
                              "sunregion.type", "schedual1", "schedual2", "suns",
                              "suns.unix", "sunr", "sunr.unix", "sunr.mon", "sunr.mon.unix")
   FIG.LIST.REQUIRED <- c("plot.type", "plot.name", "facet", "facet.set", "MYSO",
@@ -1192,12 +1214,12 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
     sdb <- suntimes
     sdb$date.parsed <- parse.flex.date(sdb$date)
     if (nzchar(plot.set.val)) {
-      sdb <- sdb[tolower(trimws(sdb$aru)) == tolower(plot.set.val), , drop = FALSE]
+      sdb <- sdb[tolower(trimws(sdb$aru.name)) == tolower(plot.set.val), , drop = FALSE]
     }
     sdb <- sdb[!is.na(sdb$date.parsed) & sdb$date.parsed >= date.start & sdb$date.parsed <= date.end, , drop = FALSE]
 
     if (nrow(sdb) == 0) {
-      cat(sprintf("NOTE: fig.list row for '%s' matched 0 rows of suntimes for plot.set = '%s' between %s and %s - Dawn/Dusk/Midnight reference lines will be empty. Check that suntimes's $aru/$date actually cover this plot.set/date range.\n",
+      cat(sprintf("NOTE: fig.list row for '%s' matched 0 rows of suntimes for plot.set = '%s' between %s and %s - Dawn/Dusk/Midnight reference lines will be empty. Check that suntimes's $aru.name/$date actually cover this plot.set/date range.\n",
                    job.label, plot.set.val, date.start, date.end))
     }
 
@@ -1298,7 +1320,7 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
       # the hood) does not treat as an escape sequence, so it was rendering
       # as the literal two characters "/n" in the axis label instead of a
       # line break. Real bug caught by Josh after the first render - fixed
-      # here by converting any literal "/n" in $date.format to an
+      # here by converting any literal "/n" in the format string to an
       # actual newline before it's used, rather than relying on the source
       # CSV always spelling it correctly.
       xaxe.date.labels.fmt <- gsub("/n", "\n", get.setting(p$job, "date.format"), fixed = TRUE)

@@ -46,7 +46,7 @@ source("batz.batusa_recode.names.R")
 
 # -----------------------------------------------------------------------------
 # SYNTHETIC test data - built directly in R (see limitation note above),
-# using the exact column layouts documented for the real files.
+# using the exact column layouts documented for the real device files.
 # -----------------------------------------------------------------------------
 
 make.default.plotaesthetics <- function(overide.col = "overide.value") {
@@ -129,7 +129,7 @@ suntimes.synth <- do.call(rbind, lapply(seq_along(test.dates), function(i) {
   d <- test.dates[i]
   d.next <- test.dates[i] + 1
   data.frame(
-    aru             = "WTG-GOM102",
+    aru.name        = "WTG-GOM102",
     date            = format(d, "%m/%d/%Y"),
     date.mon        = format(d.next, "%m/%d/%Y"),
     sunregion       = "WTG",
@@ -196,7 +196,11 @@ check.duplicates <- function(df, label) {
 
 DATA.REQUIRED <- c("spp.id", "date", "aru.groupby", "obs",
                          "mins2.noon.min", "mins2.noon.max", "vetting.type")
-SUNTIMES.REQUIRED <- c("aru", "date", "date.mon", "sunregion", "time.zone",
+# Renamed 2026-09-22 (per Josh's request, "change all functions that have
+# aru as an header to \"aru.name\"", found via the project's own reference
+# workbook and cross-checked against this script's own R/ counterpart):
+# matches batz.generate_suntimes.arulist()'s own renamed output column.
+SUNTIMES.REQUIRED <- c("aru.name", "date", "date.mon", "sunregion", "time.zone",
                            "sunregion.type", "schedual1", "schedual2", "suns",
                            "suns.unix", "sunr", "sunr.unix", "sunr.mon", "sunr.mon.unix")
 FIG.LIST.REQUIRED <- c("plot.type", "plot.name", "facet", "facet.set", "MYSO",
@@ -414,7 +418,7 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
     sdb <- suntimes
     sdb$date.parsed <- parse.flex.date(sdb$date)
     if (nzchar(plot.set.val)) {
-      sdb <- sdb[tolower(trimws(sdb$aru)) == tolower(plot.set.val), , drop = FALSE]
+      sdb <- sdb[tolower(trimws(sdb$aru.name)) == tolower(plot.set.val), , drop = FALSE]
     }
     sdb <- sdb[!is.na(sdb$date.parsed) & sdb$date.parsed >= date.start & sdb$date.parsed <= date.end, , drop = FALSE]
 

@@ -110,9 +110,9 @@
 #' \code{$sunregion_type}-consistency \code{NOTE} below.
 #'
 #' A row marked \code{"fixed.unique"} whose \code{$sunregion} does not equal
-#' its \code{$aru} is flagged with a console \code{NOTE} (per the spec's own
-#' definition that the two should match for this type) but does not block
-#' the run.
+#' its \code{$aru.name} is flagged with a console \code{NOTE} (per the
+#' spec's own definition that the two should match for this type) but does
+#' not block the run.
 #'
 #' \strong{Assumptions made (spec was ambiguous on these - flag for
 #' review):}
@@ -171,6 +171,40 @@
 #' columns (\code{aru.date.rows}, \code{site.date.rows},
 #' \code{shared.sites}) have no dot-separated words to convert.
 #'
+#' \strong{Follow-up, 2026-09-22, per Josh's request ("change all functions
+#' that have aru as an header to \"aru.name\"", found via the project's own
+#' reference workbook and cross-checked against this function's live
+#' source): the ARU-identifier column is now \code{$aru.name} everywhere in
+#' this function's own internals and output, not bare \code{$aru}.} This
+#' is an internal/output rename only, done for consistency with the rest of
+#' the package's ARU-identifier naming convention (\code{$aru.name} is
+#' already the standard name in \code{\link{batz.merge_sm4.logfile}},
+#' \code{\link{batz.merge_vetted.acoustics}}/\code{\link{batz.merge_vetted.acoustics2}},
+#' and \code{\link{batz.generate_plotframe.bat}}'s own required \code{data}
+#' schema). \strong{The raw \verb{*arulist.csv} file itself does NOT need to
+#' change} - the required-header check just above (see "Required input
+#' headers") still expects a column that standardizes to literal
+#' \code{"aru"}, exactly as before; immediately after that check succeeds,
+#' the matched column is renamed, in this function's own working copy, from
+#' \code{aru} to \code{aru.name} - the same rename-after-match idiom already
+#' used by \code{canonicalize.headers()} elsewhere in this package, just
+#' applied here directly since this function's own required-header check is
+#' a plain \code{setdiff()}, not a \code{canonicalize.headers()} call. Every
+#' downstream reference (\code{aru.list$aru}, the \code{fixed.unique}
+#' mismatch check, \code{expand.one()}'s per-row expansion, and the final
+#' \code{aru.suntimes} data frame) was updated to \code{$aru.name}
+#' accordingly - see \code{@return} above, updated to match. This does NOT
+#' collide with anything: this rename lives entirely inside this function's
+#' own \code{aru.list}/\code{aru.expand}/\code{aru.suntimes} objects, never
+#' merged as columns with any other function's \code{data} argument (only
+#' VALUES are ever joined by \code{match()}, e.g. in
+#' \code{\link{batz.generate_plotframe.bat}}'s own arulist lookup, which
+#' received the identical rename the same day). Full dev-script test suite
+#' re-run clean after the rename (no regressions) - verified by directly
+#' inspecting \code{names(aru.suntimes)} and \code{names(result$aru.suntimes)}
+#' for \code{"aru.name"} (not \code{"aru"}) in the real-file-shaped test
+#' cases.
+#'
 #' @param dir.load Directory to search for files matching \code{load.pattern}.
 #'   Default: current working directory. Must actually contain the
 #'   \verb{*arulist.csv} file(s) - if no matching file is found, the
@@ -220,14 +254,14 @@
 #'   name through \code{standardize.headers()} instead (e.g.
 #'   \code{$sunregion_long} stays \code{$sunregion_long}, \code{$date.mon}
 #'   becomes \code{$date_mon}, \code{$sunr.mon.unix} becomes
-#'   \code{$sunr_mon_unix}) - for a caller who specifically wants a
-#'   snake_case CSV/data frame out of this function, without having to
-#'   convert it themselves afterward.
+#'   \code{$sunr_mon_unix}, \code{$aru.name} becomes \code{$aru_name}) -
+#'   for a caller who specifically wants a snake_case CSV/data frame out of
+#'   this function, without having to convert it themselves afterward.
 #'
 #' @return Invisibly, a list with:
 #'   \describe{
 #'     \item{aru.suntimes}{One row per (aru, date), \code{"fixed.unique"}/
-#'       \code{"fixed.pooled"} rows only: \code{$aru}, \code{$date},
+#'       \code{"fixed.pooled"} rows only: \code{$aru.name}, \code{$date},
 #'       \code{$date.mon}, \code{$sunregion}, \code{$sunregion_long},
 #'       \code{$sunregion_lat}, \code{$date_start}, \code{$date_end},
 #'       \code{$time_zone}, \code{$sunregion_type}, \code{$schedual1},
@@ -235,7 +269,9 @@
 #'       \code{$suns.unix}, \code{$sunr}, \code{$sunr.unix},
 #'       \code{$sunr.mon}, \code{$sunr.mon.unix} (or their snake_case
 #'       equivalents if \code{snake_case = TRUE} - see that parameter
-#'       above).}
+#'       above). \strong{\code{$aru.name} was renamed from bare \code{$aru}
+#'       2026-09-22, per Josh - see @details, "Follow-up, 2026-09-22...aru
+#'       as an header".}}
 #'     \item{efficiency}{One-row summary: \code{$aru.date.rows} (rows needed
 #'       without de-duplication), \code{$site.date.rows} (unique site-date
 #'       rows actually calculated), \code{$shared.sites} (count of sites
@@ -386,7 +422,10 @@ batz.generate_suntimes.arulist <- function(dir.load = getwd(),
   ## ===========================================================================
   ## required-header check (added 2026-08-26, per Josh) - runs on the raw
   ## loaded columns, before any parsing/filtering below. Message text is
-  ## Josh's own, used verbatim.
+  ## Josh's own, used verbatim. This check still looks for a column that
+  ## standardizes to literal "aru" - the raw *arulist.csv file itself does
+  ## NOT need to change (see @details, "Follow-up, 2026-09-22...aru as an
+  ## header").
   ## ===========================================================================
   required.headers <- c("aru", "long", "lat", "sunregion", "sunregion_long",
                          "sunregion_lat", "date_start", "date_end", "time_zone",
@@ -395,6 +434,15 @@ batz.generate_suntimes.arulist <- function(dir.load = getwd(),
   if (length(missing.headers) > 0) {
     stop("inputfile is missing these headers: ", paste(missing.headers, collapse = ", "))
   }
+
+  ## Follow-up, 2026-09-22, per Josh ("change all functions that have aru
+  ## as an header to \"aru.name\""): renamed here, immediately after the
+  ## required-header check above succeeds, from bare $aru (the raw file's
+  ## own standardized spelling, still checked-for above unchanged) to
+  ## $aru.name (this project's own established ARU-identifier convention -
+  ## see @details for the full rationale). Every reference below this line
+  ## uses $aru.name.
+  names(aru.list)[names(aru.list) == "aru"] <- "aru.name"
 
   aru.list$lat  <- as.numeric(aru.list$lat)
   aru.list$long <- as.numeric(aru.list$long)
@@ -419,7 +467,7 @@ batz.generate_suntimes.arulist <- function(dir.load = getwd(),
     excluded <- aru.list[!keep.rows, ]
     cat("NOTE:", nrow(excluded), "row(s) excluded - $sunregion_type is not",
         "\"fixed.unique\"/\"fixed.pooled\":",
-        paste(unique(paste0(excluded$aru, " (", excluded$sunregion_type, ")")), collapse = ", "),
+        paste(unique(paste0(excluded$aru.name, " (", excluded$sunregion_type, ")")), collapse = ", "),
         "\n\n")
   }
   aru.list <- aru.list[keep.rows, , drop = FALSE]
@@ -429,11 +477,11 @@ batz.generate_suntimes.arulist <- function(dir.load = getwd(),
   }
 
   is.fixed.unique <- aru.list$sunregion_type == "fixed.unique"
-  mismatched.unique <- is.fixed.unique & (aru.list$sunregion != aru.list$aru)
+  mismatched.unique <- is.fixed.unique & (aru.list$sunregion != aru.list$aru.name)
   if (any(mismatched.unique)) {
     cat("NOTE:", sum(mismatched.unique), "row(s) marked \"fixed.unique\" have",
-        "$sunregion != $aru (spec says these should match for this type):",
-        paste(aru.list$aru[mismatched.unique], collapse = ", "), "\n\n")
+        "$sunregion != $aru.name (spec says these should match for this type):",
+        paste(aru.list$aru.name[mismatched.unique], collapse = ", "), "\n\n")
   }
 
   type.per.region <- aggregate(sunregion_type ~ sunregion, data = aru.list,
@@ -472,7 +520,7 @@ batz.generate_suntimes.arulist <- function(dir.load = getwd(),
     row <- aru.list[i, ]
     dates <- seq(row$date_start, row$date_end, by = "day")
     data.frame(
-      aru = row$aru, sunregion = row$sunregion,
+      aru.name = row$aru.name, sunregion = row$sunregion,
       sunregion_type = row$sunregion_type,
       lat = row$lat, long = row$long,
       sunregion_long = row$sunregion_long, sunregion_lat = row$sunregion_lat,
@@ -531,7 +579,7 @@ batz.generate_suntimes.arulist <- function(dir.load = getwd(),
   nextd  <- lookup[match(aru.expand$next.day.key, lookup$calc.key), ]
 
   aru.suntimes <- data.frame(
-    aru            = aru.expand$aru,
+    aru.name       = aru.expand$aru.name,
     date           = aru.expand$date,
     date.mon       = as.POSIXct(paste(aru.expand$date, "12:00:00")),
     sunregion      = aru.expand$sunregion,

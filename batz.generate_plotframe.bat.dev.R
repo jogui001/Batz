@@ -260,6 +260,26 @@
 #     SECTION 1) are NOT touched - those are `data`'s own already-
 #     established `batz` output schema (from
 #     batz.merge_vetted.acoustics()), not raw loaded headers.
+#
+# 17. **Follow-up, 2026-09-22, per Josh's request ("change all functions
+#     that have aru as an header to \"aru.name\"", found via the project's
+#     own reference workbook and cross-checked against this script's own
+#     R/ counterpart).** The per-file raw-column check in SECTION 1 below
+#     (`if (!all(c("aru", "sunregion") %in% names(tmp)))`) is UNCHANGED -
+#     the real *arulist.csv files on disk still need a raw column that
+#     standardizes to literal "aru". Immediately after that check
+#     succeeds, the matched column is renamed from "aru" to "aru.name" in
+#     the local `arulist` lookup table (see the new `tmp.sub`/rename lines
+#     just below the check), and the join a few lines later now matches
+#     `data$aru.name` against `arulist$aru.name` (was `arulist$aru`). This
+#     `arulist` lookup table is entirely local/internal to this function -
+#     it is never merged as a column onto `data` (only its `$sunregion`
+#     VALUES are joined in via `match()`) - so this rename creates no
+#     collision with `data`'s own separate, pre-existing `$aru.name`
+#     requirement (see `required.headers` in SECTION 1). TEST 9/TEST
+#     10/TEST 13/TEST 14/TEST 15 below already build their own synthetic
+#     arulist CSVs with a raw "aru" column and already used "$aru.name" on
+#     the `data`/test-data side - unaffected by this change.
 # ---------------------------------------------------------------------------
 
 ## ===========================================================================
@@ -328,6 +348,25 @@ batz.generate_plotframe.bat <- function(data,
     }
   }
 
+  ## Follow-up (2026-09-22, per Josh: "spp.id = 'manid.sb' if value = ''
+  ## then replace with 'NOID'") - mirrors the shipped .R file. See TEST 17
+  ## below.
+  spp.id.vals <- as.character(data[[spp.id]])
+  is.blank.spp.id <- is.na(spp.id.vals) | !nzchar(trimws(spp.id.vals))
+
+  ## Follow-up (2026-09-23, per Josh: "if spp.id = manid.sb and trim.noid
+  ## = TRUE then remove any records that are blank") - mirrors the
+  ## shipped .R file. When spp.id is still the default "manid.sb" AND
+  ## trim.noid = TRUE, blank-source rows are dropped from `data` entirely
+  ## instead of being folded into "NOID". See TEST 18 below.
+  if (identical(spp.id, "manid.sb") && isTRUE(trim.noid)) {
+    data <- data[!is.blank.spp.id, , drop = FALSE]
+    spp.id.vals <- spp.id.vals[!is.blank.spp.id]
+  } else {
+    spp.id.vals[is.blank.spp.id] <- "NOID"
+  }
+  data[[spp.id]] <- spp.id.vals
+
   ## --- load $sunregion from an *arulist.csv file and join it onto `data`
   ## by matching `data$aru.name` against the arulist file's own `$aru`
   ## column (always $aru.name specifically, regardless of what groupby
@@ -348,7 +387,12 @@ batz.generate_plotframe.bat <- function(data,
          "an arulist file is required to look up $sunregion.")
   }
 
-  arulist <- data.frame(aru = character(0), sunregion = character(0), stringsAsFactors = FALSE)
+  ## Renamed 2026-09-22 (per Josh, see assumption #17 above): this lookup
+  ## table's own $aru column is renamed to $aru.name below, right after
+  ## the raw per-file header check succeeds - the raw-file check itself
+  ## (just below) is unchanged, still requiring a raw column that
+  ## standardizes to literal "aru".
+  arulist <- data.frame(aru.name = character(0), sunregion = character(0), stringsAsFactors = FALSE)
   arulist.skipped <- character(0)
   for (f in arulist.files) {
     tmp <- tryCatch(read.csv(f, stringsAsFactors = FALSE, check.names = FALSE),
@@ -358,7 +402,9 @@ batz.generate_plotframe.bat <- function(data,
     if (!all(c("aru", "sunregion") %in% names(tmp))) {
       arulist.skipped <- c(arulist.skipped, paste0(f, " (missing $aru and/or $sunregion column)")); next
     }
-    arulist <- rbind(arulist, tmp[, c("aru", "sunregion"), drop = FALSE])
+    tmp.sub <- tmp[, c("aru", "sunregion"), drop = FALSE]
+    names(tmp.sub)[names(tmp.sub) == "aru"] <- "aru.name"
+    arulist <- rbind(arulist, tmp.sub)
   }
   if (length(arulist.skipped) > 0) {
     message("batz.generate_plotframe.bat: skipped arulist file(s) that didn't have ",
@@ -369,7 +415,7 @@ batz.generate_plotframe.bat <- function(data,
          "but none had both an `$aru` and `$sunregion` column - cannot look up $sunregion.")
   }
 
-  data$sunregion <- arulist$sunregion[match(data$aru.name, arulist$aru)]
+  data$sunregion <- arulist$sunregion[match(data$aru.name, arulist$aru.name)]
   unmatched.arus <- unique(data$aru.name[is.na(data$sunregion)])
   if (length(unmatched.arus) > 0) {
     warning("$aru.name value(s) not found in the loaded arulist - $sunregion will be NA for: ",
@@ -643,7 +689,11 @@ print(head(r1[, c("group", "sunregion")], 8))
 ## cross-check: for defaults (groupby = aru.name), every output row's
 ## $sunregion should match real.arulist (loaded independently in SECTION 2,
 ## purely for this check) - NOT test.data, which no longer carries its own
-## pre-joined $sunregion column now that the function loads it internally
+## pre-joined $sunregion column now that the function loads it internally.
+## real.arulist is the raw loaded CSV (its own column is still literally
+## "aru" - unaffected by this function's internal aru.name rename, since
+## that rename lives entirely inside batz.generate_plotframe.bat()'s own
+## local `arulist` lookup table, never touching a caller-visible object).
 check.sun <- merge(r1, unique(real.arulist[, c("aru", "sunregion")]),
                     by.x = "group", by.y = "aru", suffixes = c("", ".expected"))
 cat("any mismatch vs real.arulist?", any(check.sun$sunregion != check.sun$sunregion.expected), "\n")
@@ -748,5 +798,43 @@ cat("custom groupby = 'serial' -> $groupedby correctly reports 'serial' (not the
     length(unique(r16$groupedby)) == 1 && unique(r16$groupedby) == "serial", "\n")
 cat("$group values now come from $serial, not $aru.name (should differ from TEST 1's $group values in general)?",
     !identical(sort(unique(r16$group)), sort(unique(r1$group))), "\n\n")
+
+cat("=== TEST 17: blank $spp.id (empty string / NA / whitespace-only) is replaced with 'NOID' ===\n")
+blank.data <- test.data[1:3, ]
+blank.data$manid.sb <- c("", NA, "  ")
+blank.data$date.mon <- blank.data$date.mon[1]
+r17 <- batz.generate_plotframe.bat(blank.data, dir.load = arulist.dir)
+cat("all three blank-source rows collapsed into a 'NOID' spp.id (expected TRUE)?",
+    "NOID" %in% r17$spp.id, "\n")
+cat("no leftover blank/NA/whitespace spp.id values (expected TRUE)?",
+    !any(is.na(r17$spp.id) | !nzchar(trimws(r17$spp.id))), "\n\n")
+
+cat("=== TEST 18: spp.id = 'manid.sb' AND trim.noid = TRUE removes blank-source records entirely, instead of filling them in with 'NOID' ===\n")
+blank.data18 <- test.data[1:5, ]
+blank.data18$manid.sb <- c("", NA, "  ", "EPFU", "LANO")
+blank.data18$date.mon <- blank.data18$date.mon[1]
+r18.removed <- batz.generate_plotframe.bat(blank.data18, trim.noid = TRUE, dir.load = arulist.dir)
+cat("no 'NOID' rows appear anywhere (per-species or All Detections) when spp.id = manid.sb & trim.noid = TRUE (expected TRUE)?",
+    !("NOID" %in% r18.removed$spp.id), "\n")
+cat("the two genuine species (EPFU, LANO) still appear in the per-species breakdown (expected TRUE)?",
+    all(c("EPFU", "LANO") %in% r18.removed$spp.id[r18.removed$spp.id != "All Detections"]), "\n")
+all.obs.removed <- sum(r18.removed[r18.removed$spp.id == "All Detections", "obs"])
+cat("'All Detections' total reflects only the 2 non-blank rows (expected 2)?", all.obs.removed, "\n")
+
+## contrast: same blank rows, but trim.noid left at its default (FALSE) ->
+## the pre-existing unconditional NOID fill-in still applies, exactly as
+## TEST 17 already covers for a fresh call
+r18.filled <- batz.generate_plotframe.bat(blank.data18, trim.noid = FALSE, dir.load = arulist.dir)
+cat("with trim.noid = FALSE (default), blank rows are instead filled in as 'NOID', not removed (expected TRUE)?",
+    "NOID" %in% r18.filled$spp.id, "\n")
+
+## contrast: spp.id overridden away from "manid.sb" (with trim.noid = TRUE)
+## -> the removal condition no longer applies (spp.id is no longer
+## literally "manid.sb"), so the unconditional NOID fill-in still applies
+blank.data18b <- blank.data18
+names(blank.data18b)[names(blank.data18b) == "manid.sb"] <- "manid.kp"
+r18.other.spp.id <- batz.generate_plotframe.bat(blank.data18b, spp.id = "manid.kp", trim.noid = TRUE, dir.load = arulist.dir)
+cat("a non-default spp.id column (\"manid.kp\") with trim.noid = TRUE still gets the NOID fill-in, not removal (expected TRUE)?",
+    "NOID" %in% r18.other.spp.id$spp.id, "\n\n")
 
 cat("\nAll dev-script tests completed.\n")
