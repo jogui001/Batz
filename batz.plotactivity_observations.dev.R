@@ -54,9 +54,28 @@
 #       priority; and a blank/absent $plot.group with no $group column in
 #       `data` either still skipping with the expected NOTE rather than
 #       erroring.
+#
+# Follow-up, 2026-09-23 (fig.list optional-column canonicalization), per
+# Josh's bug report ("I do not get the log values instead 0 57.5 115 172.5
+# 230" when $Yaxe.trans was set to "log10" in fig.list - see the shipped .R
+# file's own @details for the full investigation): this dev copy's header-
+# checking block previously used a plain check.headers()/setdiff() helper,
+# NOT canonicalize.headers() - meaning it had already drifted out of sync
+# with the shipped .R file's own 2026-09-21 canonicalize.headers() follow-up
+# for two days. Brought back in sync here: source(batz.util_standardize.headers.R)
+# added below, and the whole header-checking block (canonicalize.headers()
+# for DATA.REQUIRED/SUNTIMES.REQUIRED/FIG.LIST.REQUIRED/AES.DEFAULT.REQUIRED,
+# plus a new FIG.LIST.OPTIONAL and a second canonicalize.headers() pass over
+# fig.list.canon$df for the nine optional per-row settings columns) is copied
+# over verbatim from the current shipped .R file. New TEST 14 below exercises
+# the FIG.LIST.OPTIONAL fix directly: a fig.list row with messy optional-
+# column names ("Yaxe.trans  " double trailing space, "Y_Scale" different
+# case/separator, "ymax " trailing space) now resolves and plots identically
+# to a clean row, instead of silently falling through to aes.default.
 # =============================================================================
 
 source("batz.batusa_recode.names.R")
+source("batz.util_standardize.headers.R")
 
 make.default.plotaesthetics <- function(overide.col = "overide.value") {
   rows <- list(
@@ -175,6 +194,28 @@ aru.metadata.db.nogroupcol.synth$plot.group <- NULL
 aru.metadata.db.blankgroup.synth <- aru.metadata.db.synth
 aru.metadata.db.blankgroup.synth$plot.group <- ""
 
+# Follow-up, 2026-09-23 (TEST 14): a fig.list row identical to
+# aru.metadata.db.synth above but with three OPTIONAL settings columns
+# renamed to messy variants a spreadsheet loader (openxlsx::read.xlsx()/
+# readxl::read_excel()) can produce without stripping/normalizing them the
+# way read.csv() does - "Yaxe.trans" -> "Yaxe.trans  " (double trailing
+# space), "y.scale" -> "Y_Scale" (different case/separator), "ymax" ->
+# "ymax " (trailing space). Also adds real $Yaxe.trans/$y.scale/$ymax
+# values under those messy names so a correct resolution is actually
+# observable (log-spaced breaks) rather than just "didn't error".
+aru.metadata.db.messyheaders.synth <- aru.metadata.db.synth
+aru.metadata.db.messyheaders.synth$"Yaxe.trans  " <- "log10"
+aru.metadata.db.messyheaders.synth$"Y_Scale" <- "regular"
+aru.metadata.db.messyheaders.synth$"ymax " <- 230
+
+# Same values as aru.metadata.db.messyheaders.synth above, but under the
+# canonical column names - the comparison baseline for TEST 14 (proves the
+# messy-named row resolves IDENTICALLY, not just "doesn't error").
+aru.metadata.db.cleannamed.synth <- aru.metadata.db.synth
+aru.metadata.db.cleannamed.synth$Yaxe.trans <- "log10"
+aru.metadata.db.cleannamed.synth$y.scale <- "regular"
+aru.metadata.db.cleannamed.synth$ymax <- 230
+
 cat("=== synthetic aes.default (round nineteen: category/parameter/default.value/overide.value/notes) ===\n")
 print(head(default.plotaesthetics.synth))
 
@@ -196,6 +237,13 @@ FIG.LIST.REQUIRED <- c("plot.type", "plot.name", "facet", "facet.set", "MYSO",
                         "Alldect", "facet.panel", "40khzmyo", "facet.label",
                         "plot.set", "pool", "date.format",
                         "date.start", "date.end", "xaxe.interval")
+# Follow-up, 2026-09-23 (per Josh's bug report - see the header comment
+# above and the shipped .R file's own @details): every OPTIONAL per-row job
+# setting get.setting()/the $plot.group resolver read via an exact
+# `%in% names(job)` check needs the same canonicalize.headers() tolerance
+# FIG.LIST.REQUIRED's own columns get, below.
+FIG.LIST.OPTIONAL <- c("plot.group", "Yaxe.trans", "loglabels", "y.scale",
+                        "y.custom", "ymax", "legend", "plot.order", "facpan")
 AES.DEFAULT.REQUIRED <- c("category", "parameter", "default.value")
 
 AES.DEFAULT.REQUIRED.PARAMETERS <- c(
@@ -210,10 +258,14 @@ AES.DEFAULT.REQUIRED.PARAMETERS <- c(
   "plot.width", "plot.height"
 )
 
-check.headers <- function(df, required, label) {
-  missing <- setdiff(required, names(df))
-  if (length(missing) > 0) {
-    return(sprintf("%s is missing these headers: %s", label, paste(missing, collapse = ", ")))
+# canonicalize.headers()/standardize.headers() - see
+# claude/batz.util_standardize.headers.R and the shipped .R file's own
+# @details "Follow-up, 2026-09-21"/"Follow-up, 2026-09-23" - brought back in
+# sync here (this dev copy had drifted to a plain check.headers()/setdiff()
+# helper, see the header comment above).
+missing.msg <- function(canon, label) {
+  if (length(canon$missing) > 0) {
+    return(sprintf("%s is missing these headers: %s", label, paste(canon$missing, collapse = ", ")))
   }
   NULL
 }
@@ -240,18 +292,34 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
                                             aes.style = "overide.value",
                                             dir.save = getwd()) {
 
+  data.canon        <- canonicalize.headers(data, DATA.REQUIRED)
+  suntimes.canon    <- canonicalize.headers(suntimes, SUNTIMES.REQUIRED)
+  fig.list.canon    <- canonicalize.headers(fig.list, FIG.LIST.REQUIRED)
+  # Second canonicalize pass over fig.list.canon$df for the OPTIONAL
+  # per-row settings columns - deliberately separate from the required-
+  # header pass immediately above, so an absent OPTIONAL column isn't
+  # treated as a hard-stop missing-header error. Only $df is kept from
+  # this second pass; fig.list.canon$missing is untouched.
+  fig.list.canon$df <- canonicalize.headers(fig.list.canon$df, FIG.LIST.OPTIONAL)$df
+  aes.default.canon <- canonicalize.headers(aes.default, AES.DEFAULT.REQUIRED)
+
   problems <- c(
-    check.headers(data, DATA.REQUIRED, "data"),
-    check.headers(suntimes, SUNTIMES.REQUIRED, "suntimes"),
-    check.headers(fig.list, FIG.LIST.REQUIRED, "fig.list"),
-    check.headers(aes.default, AES.DEFAULT.REQUIRED, "aes.default"),
-    check.parameters(aes.default, AES.DEFAULT.REQUIRED.PARAMETERS, "aes.default"),
+    missing.msg(data.canon, "data"),
+    missing.msg(suntimes.canon, "suntimes"),
+    missing.msg(fig.list.canon, "fig.list"),
+    missing.msg(aes.default.canon, "aes.default"),
+    check.parameters(aes.default.canon$df, AES.DEFAULT.REQUIRED.PARAMETERS, "aes.default"),
     check.duplicates(data, "data"),
     check.duplicates(suntimes, "suntimes"),
     check.duplicates(fig.list, "fig.list"),
     check.duplicates(aes.default, "aes.default")
   )
-  if (length(problems) > 0) stop(paste(problems, collapse = "\n"))
+  if (length(problems) > 0) stop(paste(problems, collapse = "\n\n"))
+
+  data        <- data.canon$df
+  suntimes    <- suntimes.canon$df
+  fig.list    <- fig.list.canon$df
+  aes.default <- aes.default.canon$df
 
   unquote <- function(x) {
     x <- trimws(as.character(x))
@@ -669,5 +737,13 @@ if (!is.null(result13)) {
   cat("$plots entries (expected 0 - plot.data.synth has no $group column, only $aru.groupby, so the row is skipped):",
       length(result13$plots), "\n")
 }
+
+cat("\n\n########## TEST 14 (2026-09-23 follow-up): messy optional-column names ($Yaxe.trans/$y.scale/$ymax) in fig.list still resolve correctly, not silently falling through to aes.default ##########\n")
+result14 <- batz.plotactivity_observations(plot.data.synth, aru.metadata.db.messyheaders.synth, suntimes.synth, default.plotaesthetics.synth)
+cat("break labels with messy fig.list column names (expected log10-spaced values like 0.0, 2.9, 14.2, 58.3, 230.0 - NOT evenly-spaced-in-raw-units values, which is what falling through to aes.default's $Yaxe.trans = \"none\" default would produce):\n  ",
+    paste(result14$plots[[1]]$break.labels, collapse = ", "), "\n")
+result14.clean <- batz.plotactivity_observations(plot.data.synth, aru.metadata.db.cleannamed.synth, suntimes.synth, default.plotaesthetics.synth)
+cat("same breaks as an equivalent clean-named row with the same values (expected TRUE):",
+    identical(result14$plots[[1]]$break.labels, result14.clean$plots[[1]]$break.labels), "\n")
 
 cat("\n\nALL TESTS COMPLETED\n")

@@ -663,6 +663,54 @@ blank/absent \code{$plot.group} against \code{data} with no \code{$group}
 column either still skips with the expected \code{NOTE}, rather than
 erroring.
 
+\strong{Follow-up, 2026-09-23, per Josh's bug report ("I do not get the
+log values instead 0 57.5 115 172.5 230" when \code{$Yaxe.trans} was set
+to \code{"log10"} in \code{fig.list}):} investigated and found that
+\code{0, 57.5, 115, 172.5, 230} is exactly this function's own documented
+PRE-2026-08-28-bugfix output for \code{$Yaxe.trans = "log10"}/
+\code{$y.scale = "regular"}/\code{$ymax = 230} (see the \strong{BUGFIX,
+2026-08-28} entry above) - the current code, run directly against Josh's
+real \code{fig.list.csv} row for this exact scenario, already resolves
+\code{$Yaxe.trans} from \code{fig.list} first (per \code{get.setting()}'s
+documented precedence, unchanged) and produces the correct log-spaced
+breaks (\code{0, 3, 14, 58, 230}) - so the most likely explanation is
+that whatever Josh ran this against was a stale copy of this file (from
+before the 2026-08-28 fix), not a live bug in \code{get.setting()}'s
+fig.list-then-aes.default precedence itself, which was already working
+as designed when tested here. \strong{Action needed on Josh's machine}:
+confirm the \code{Batz} package/source actually running is this current
+file (restart the R session and/or reinstall after pulling the latest
+commit) and re-test.
+
+A separate, real latent bug WAS found and fixed while investigating,
+though: \code{get.setting()}/the \code{$plot.group} resolver both look up
+a \code{fig.list} column by an EXACT name match (\code{param \%in\%
+names(job)}), same as \code{FIG.LIST.REQUIRED}'s own columns - but unlike
+those required columns, the OPTIONAL per-row settings (\code{$plot.group},
+\code{$Yaxe.trans}, \code{$loglabels}, \code{$y.scale}, \code{$y.custom},
+\code{$ymax}, \code{$legend}, \code{$plot.order}, \code{$facpan}) were
+never run through \code{canonicalize.headers()}, so a column arriving as
+e.g. \code{"Yaxe.trans "} (a trailing space) or \code{"Y_Scale"}
+(different case/separator) - which \code{read.csv()} happens to already
+strip/tolerate for a plain CSV, but a spreadsheet loader like
+\code{openxlsx::read.xlsx()}/\code{readxl::read_excel()} does NOT - would
+silently fail the exact match and fall through to \code{aes.default}'s
+default with no warning at all, exactly reproducing Josh's reported
+symptom for that (different, loader-dependent) cause. \strong{Fixed} by
+adding a second \code{canonicalize.headers()} pass over
+\code{fig.list.canon$df} for a new \code{FIG.LIST.OPTIONAL} list covering
+all nine of those columns, run separately from the
+\code{FIG.LIST.REQUIRED} pass so an absent optional column still isn't
+treated as a hard-stop missing-header error - only \code{$df} is kept
+from this second pass, \code{$missing} is untouched. Verified: a
+synthetic \code{fig.list} row with \code{"Yaxe.trans  "} (double trailing
+space), \code{"Y_Scale"}, and \code{"ymax "} instead of the canonical
+spellings now resolves and plots identically to a clean row (breaks
+\code{0, 3, 14, 58, 230}, matching); the existing real-data run (clean
+\code{fig.list.csv}, loaded via \code{read.csv()}) is unaffected (same
+output before and after). This is a real hardening fix, independent of
+whichever explanation above turns out to be Josh's actual cause.
+
 }
 \examples{
 \dontrun{
