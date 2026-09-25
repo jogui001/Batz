@@ -15,9 +15,12 @@
 #'   Details) - this is expected to be the already-standardized output of
 #'   an upstream \code{batz} function, most naturally
 #'   \code{\link{batz.plotactivity_daily.count}}'s own \code{$data}.
-#' @param date.col Character, default \code{"monnight.date"}. Name of the
-#'   column in \code{data} holding the monitoring-night date (a \code{Date},
-#'   or a string \code{as.Date()} can parse in its default ISO form).
+#' @param date.col Character, default \code{"date.monitoringnight"} (renamed
+#'   from \code{"monnight.date"} in round twenty-four, then from
+#'   \code{"date.mon"} to \code{"date.monitoringnight"} in round twenty-five,
+#'   2026-09-25 - see \code{@details}). Name of the column in \code{data} holding the
+#'   monitoring-night date (a \code{Date}, or a string \code{as.Date()}
+#'   can parse in its default ISO form).
 #' @param time.col Character, default \code{"time"}. Name of the column in
 #'   \code{data} holding each detection's own clock time, as
 #'   \code{"HH:MM"} or \code{"HH:MM:SS"}.
@@ -32,9 +35,10 @@
 #'   package's other plot functions (see Details).
 #' @param project.name Character, default \code{"new.project"}. The first
 #'   part of every saved file's name:
-#'   \code{"<project.name>_<site>_<timestamp>.png"} - matches the unified
-#'   file-naming convention already used by every other \code{batz} plot
-#'   function.
+#'   \code{"<project.name>_<site>_<daterange>_<timestamp>.png"} - matches
+#'   the unified file-naming convention already used by every other
+#'   \code{batz} plot function with a date range (see \code{@details},
+#'   "File naming (round twenty-three)").
 #' @param aes.style Character, default \code{"overide.value"}. Names which
 #'   column of \code{aes.default} is checked FIRST for each parameter
 #'   (falling back to \code{$default.value} when that column doesn't exist,
@@ -48,7 +52,8 @@
 #'   generated PNG is saved into.
 #'
 #' @return Invisibly, a list with \code{data} (the complete night x bin
-#'   grid actually plotted: \code{$monnight.date}, \code{$bin.index},
+#'   grid actually plotted: a column named after \code{date.col} (default
+#'   \code{$date.monitoringnight}), \code{$bin.index},
 #'   \code{$n} - one row per night per bin, zero-filled where a night had no
 #'   detections in that bin) and \code{ggplot} (the ggplot object, only
 #'   populated when \code{ggplot2} is available).
@@ -75,7 +80,7 @@
 #' \code{\link{batz.plotdetections_first.last}}: \code{data} is expected to
 #' already be the OUTPUT of an upstream \code{batz} function (most
 #' naturally \code{\link{batz.plotactivity_daily.count}}'s own \code{$data},
-#' whose \code{$monnight.date}/\code{$time} columns are this package's own
+#' whose \code{$date.monitoringnight}/\code{$time} columns are this package's own
 #' invented output schema, not raw external headers) rather than a file
 #' this function loads itself. \code{date.col}/\code{time.col} are still
 #' validated by a plain required-header/duplicate-column check, same as
@@ -131,7 +136,7 @@
 #' correct default. This function instead spans whatever date range
 #' \code{data} actually covers (from the first day of \code{data}'s
 #' earliest month to the first day of its latest month) and labels EVERY
-#' month tick by default (\code{"%b"}) - simpler and safe for any dataset,
+#' month tick by default (\code{"\%b"}) - simpler and safe for any dataset,
 #' at the cost of a busier X axis on a long, densely-sampled one. A minor
 #' (unlabeled) tick still marks every month in between, same as the
 #' original script.
@@ -163,6 +168,98 @@
 #' blank line (\code{"\n\n"}) rather than a single newline, matching the
 #' blank-line convention already used elsewhere in this package.
 #'
+#' \strong{Timestamp format (round twenty-two), 2026-09-24, per Josh's
+#' package-wide request ("Update all functions that save files or charts:
+#' ... <timestamp> format match this format: YYYYMMDDHHHMMSS"):} the
+#' \code{<timestamp>} token in the saved file name is now built as
+#' \code{format(Sys.time(), "\%Y\%m\%d\%H\%M\%S")} (14 digits, no separator
+#' between the date and time halves) instead of \code{"\%Y\%m\%d_\%H\%M\%S"}
+#' - see \code{\link{batz.plotsm4_heatmap}}'s own \code{@details} entry of
+#' the same name for the full reasoning (including the \code{"YYYYMMDDHHHMMSS"}
+#' typo read/flag) and package-wide scope.
+#'
+#' \strong{File naming (round twenty-three), 2026-09-25, per Josh's
+#' correction to round twenty-two ("batz.plotactivity_heatmap() does have a
+#' date range, this is monnight.date"):} round twenty-two's entry
+#' immediately above originally said this function has no
+#' \code{date.start}/\code{date.end} parameter and so was left out of the
+#' "charts that have a date range" bucket - \strong{that was wrong, and is
+#' corrected here.} \code{data}'s own \code{date.col} column (default
+#' \code{"monnight.date"}) IS a real date range, it just isn't passed as a
+#' pair of explicit \code{date.start}/\code{date.end} arguments the way
+#' \code{\link{batz.plotactivity_daily.count}}'s is. The saved file name is
+#' now \code{"<project.name>_<site>_<daterange>_<timestamp>.png"}, matching
+#' every other date-ranged \code{batz} plot function, where
+#' \code{<daterange>} is built from the actual minimum/maximum
+#' \code{date.col} value present in \code{data} (\code{format(min(all.nights),
+#' "\%Y\%m\%d")}/\code{format(max(all.nights), "\%Y\%m\%d")}, reusing the same
+#' \code{all.nights} vector the night x bin grid itself is built from - see
+#' "Complete night x bin grid" above) rather than a per-call
+#' \code{date.start}/\code{date.end} pair, since this function has none of
+#' its own.
+#'
+#' \strong{\code{date.col}'s default renamed \code{"monnight.date"} ->
+#' \code{"date.mon"} (round twenty-four), 2026-09-25, per Josh's correction
+#' and follow-up question.} This entry originally (round twenty-three)
+#' left \code{date.col}'s default as \code{"monnight.date"}, flagging a
+#' rename to \code{date.mon} as a collision with an already-real,
+#' differently-scoped \code{date.mon} used elsewhere in the package
+#' (\code{\link{batz.merge_vetted.acoustics}}/
+#' \code{\link{batz.generate_plotframe.bat}}/
+#' \code{\link{batz.plotsm4_heatmap}}). Josh then asked why a collision
+#' would occur if \code{date.mon} and \code{monnight.date} hold the same
+#' value per record - and he's right: every one of those other functions'
+#' \code{date.mon} means exactly the same thing this function's
+#' \code{monnight.date} always meant (the monitoring-night date a
+#' detection belongs to), not a different, unrelated concept that happens
+#' to share a name. \code{date.col}'s default is renamed here to
+#' \code{"date.mon"}, matching the corresponding rename in
+#' \code{\link{batz.plotactivity_daily.count}} (see that function's own
+#' \code{@details}, "Output column renamed"), which keeps the two
+#' functions' producer/consumer contract intact. See that same entry for
+#' the one pre-existing (not introduced by this rename), non-blocking
+#' wrinkle: the various \code{date.mon} columns elsewhere in the package
+#' don't all share the same R type (raw character, noon-anchored
+#' \code{POSIXct}, or plain \code{Date}) - this function's own
+#' \code{date.col} handling coerces its input with \code{as.Date()}
+#' regardless (see code below), so it accepts any of those representations
+#' the same way it always has.
+#'
+#' \strong{\code{date.col}'s default renamed again, \code{"date.mon"} ->
+#' \code{"date.monitoringnight"} (round twenty-five), 2026-09-25, per Josh:
+#' "I changed my mine and want to use date.monitoringnight instead of
+#' date.mon to be more consistent with collaborators."} This supersedes the
+#' round twenty-four rename immediately above - \code{date.mon} is now
+#' itself a retired spelling, folded into the package's header-rename
+#' reference table (\code{\link{batz.generate_headers.acceptold}}) alongside
+#' \code{monnight.date}/\code{mon.ngh}/\code{monitoringnight}, all pointing
+#' at this same new name. Applied consistently, the same day, everywhere
+#' this concept appears package-wide (see
+#' \code{\link{batz.plotactivity_daily.count}}'s own \code{@details} for the
+#' full list of sibling functions updated alongside this one), rather than
+#' leaving this function and \code{batz.plotactivity_daily.count} on the new
+#' name while every other function kept \code{date.mon} - which would have
+#' silently recreated the exact cross-function mismatch this whole
+#' back-and-forth has been trying to resolve.
+#'
+#' \strong{Internal hardcoded \code{"monnight.date"} literals fixed to use
+#' \code{date.col} dynamically, same round.} While making the rename above,
+#' a separate, pre-existing latent bug was found and fixed: this function's
+#' internal night x bin grid (\code{expand.grid()}/\code{merge()}) and its
+#' \code{ggplot2::aes()} mapping had \code{"monnight.date"} hardcoded
+#' literally in three places, instead of referencing the \code{date.col}
+#' variable - so a caller who passed a non-default \code{date.col} would
+#' have had \code{data[[date.col]]} read correctly everywhere above that
+#' point, but then hit a "not all arguments have the same length"/missing-
+#' column error at the grid-building step, since the grid was always keyed
+#' on the literal name \code{"monnight.date"} no matter what \code{date.col}
+#' actually was. All three spots now build their column name from
+#' \code{date.col} itself (\code{stats::setNames()} for the
+#' \code{aggregate()}/\code{expand.grid()} calls, \code{.data[[date.col]]}
+#' inside \code{aes()}), so \code{$data}'s own returned date column is
+#' now genuinely named after whatever \code{date.col} was passed as,
+#' matching this parameter's own documented contract for the first time.
+#'
 #' @seealso \code{\link{batz.plotactivity_daily.count}}, whose own
 #'   \code{$data} return value is the natural \code{data} input here.
 #'
@@ -181,7 +278,7 @@
 #'
 #' @export
 batz.plotactivity_heatmap <- function(data,
-                                       date.col = "monnight.date",
+                                       date.col = "date.monitoringnight",
                                        time.col = "time",
                                        bin.minutes = 30,
                                        aes.default,
@@ -313,13 +410,26 @@ batz.plotactivity_heatmap <- function(data,
   all.nights <- sort(unique(data[[date.col]]))
   all.bins <- 0:(n.bins - 1)
 
+  ## <daterange> token - round twenty-three, per Josh's correction
+  ## (2026-09-25): this function DOES have a date range after all (data's
+  ## own date.col column), even though it has no explicit date.start/
+  ## date.end parameters of its own the way batz.plotactivity_daily.count()
+  ## does - so the token is built from the actual min/max date.col value
+  ## present in data, not a per-call input. See @details, "File naming
+  ## (round twenty-three)".
+  daterange.token <- sprintf("%sto%s", format(min(all.nights), "%Y%m%d"), format(max(all.nights), "%Y%m%d"))
+
+  ## Built with the column named dynamically after date.col (round
+  ## twenty-four fix - see @details, "Internal hardcoded ... literals
+  ## fixed"), rather than the literal "monnight.date" hardcoded here
+  ## before this round - a caller-supplied date.col now actually works.
   raw.counts <- stats::aggregate(list(n = rep(1, nrow(data))),
-                                  by = list(monnight.date = data[[date.col]], bin.index = bin.index),
+                                  by = stats::setNames(list(data[[date.col]], bin.index), c(date.col, "bin.index")),
                                   FUN = sum)
   # --- complete grid: every night x every bin, missing = 0 - see @details,
   # "Complete night x bin grid". ---
-  full.grid <- expand.grid(monnight.date = all.nights, bin.index = all.bins)
-  counts <- merge(full.grid, raw.counts, by = c("monnight.date", "bin.index"), all.x = TRUE)
+  full.grid <- stats::setNames(expand.grid(all.nights, all.bins), c(date.col, "bin.index"))
+  counts <- merge(full.grid, raw.counts, by = c(date.col, "bin.index"), all.x = TRUE)
   counts$n[is.na(counts$n)] <- 0
 
   cat(sprintf("Binned %d observation row(s) into %d monitoring night(s) x %d bin(s) of %g minute(s) each.\n",
@@ -355,7 +465,10 @@ batz.plotactivity_heatmap <- function(data,
 
     minor.tick.len <- 0.7
 
-    ggplot.obj <- ggplot2::ggplot(counts, ggplot2::aes(x = monnight.date, y = bin.index, fill = n.capped)) +
+    ## x = .data[[date.col]] (round twenty-four fix), not a hardcoded
+    ## "monnight.date" - see @details, "Internal hardcoded ... literals
+    ## fixed".
+    ggplot.obj <- ggplot2::ggplot(counts, ggplot2::aes(x = .data[[date.col]], y = bin.index, fill = n.capped)) +
       ggplot2::geom_tile(color = "white", linewidth = 0.15) +
       ggplot2::geom_segment(
         data = data.frame(x = x.breaks),
@@ -391,7 +504,11 @@ batz.plotactivity_heatmap <- function(data,
       )
 
     site.token <- if (nzchar(trimws(site.label))) paste0(trimws(site.label), "-heatmap") else "heatmap"
-    fname <- sprintf("%s_%s_%s.png", project.name, site.token, format(Sys.time(), "%Y%m%d_%H%M%S"))
+    ## File naming (round twenty-three), per Josh's correction (2026-09-25):
+    ## see @details, "File naming (round twenty-three)" - <daterange> token
+    ## added; timestamp format unchanged from round twenty-two (no
+    ## underscore between the date and time halves).
+    fname <- sprintf("%s_%s_%s_%s.png", project.name, site.token, daterange.token, format(Sys.time(), "%Y%m%d%H%M%S"))
     fname <- file.path(dir.save, fname)
     ggplot2::ggsave(fname, plot = ggplot.obj,
       width = as.numeric(get.default("plot.width")) + as.numeric(get.default("ggsave.width.pad")),

@@ -29,7 +29,7 @@
 #'   \code{FALSE}, headers are only standardized (see "Header
 #'   standardization" below), and only headers that already happen to be
 #'   one of this function's short target names (e.g. a file whose own
-#'   column is already literally called \code{mon.ngh}) will validate.
+#'   column is already literally called \code{date.monitoringnight}) will validate.
 #' @param header.rename.path Character, default
 #'   \code{"arumerge.headerrename.csv"}. Path to the header-rename reference
 #'   CSV, read once via \code{read.csv(header.rename.path)} when
@@ -48,13 +48,21 @@
 #'   \code{$manid} is \code{"noise"} (case-insensitive).
 #' @param trim.noid Logical, default \code{FALSE}. Remove rows where
 #'   \code{$manid} is \code{"NoID"} (case-insensitive).
-#' @param project.name Character, default \code{""}. Used only to build the
-#'   saved xlsx file's name (see \code{save.xlsx} below).
+#' @param project.name Character, default \code{""}. Used to build the saved
+#'   xlsx file's name (see \code{save.xlsx} below). \strong{As of round
+#'   twenty-two (2026-09-24) the saved file name also includes a
+#'   \code{<daterange>} token - see \code{@param save.xlsx} and @details,
+#'   "File naming (round twenty-two)".}
 #' @param save.xlsx Logical, default \code{TRUE}. If \code{TRUE}, writes
-#'   \code{data} and \code{log.file} as two sheets of one xlsx workbook named
-#'   \code{"<project.name>_<Date>_merge_vetted.acoustics.xlsx"} into
-#'   \code{dir.load}. Guarded with \code{requireNamespace("openxlsx", ...)} -
-#'   warns and skips the save (does not error) if not installed.
+#'   \code{data} and \code{log.file} as two sheets of one xlsx workbook into
+#'   \code{dir.load}, named
+#'   \verb{<project.name>_merge_vetted.acoustics_<daterange>_<timestamp>.xlsx}
+#'   (\strong{changed in round twenty-two, 2026-09-24, per Josh's
+#'   package-wide file-naming request - previously
+#'   \code{"<project.name>_<Date>_merge_vetted.acoustics.xlsx"}; see
+#'   @details, "File naming (round twenty-two)"}). Guarded with
+#'   \code{requireNamespace("openxlsx", ...)} - warns and skips the save
+#'   (does not error) if not installed.
 #' @param snake_case Logical, default \code{FALSE}. Added 2026-09-22, per
 #'   Josh, alongside the tolerant-header-matching fix above. Controls only
 #'   \code{data}/\code{log.file}'s OWN output column names, applied as the
@@ -62,7 +70,7 @@
 #'   returned/auto-assigned - it has no effect on how an incoming file's
 #'   headers are matched/validated. \code{FALSE} (default) keeps this
 #'   function's normal dot-separated output column names (\code{
-#'   $mon.ngh}, \code{$auto.kp}, \code{$aru.serial}, ...) exactly as
+#'   $date.monitoringnight}, \code{$auto.kp}, \code{$aru.serial}, ...) exactly as
 #'   always. \code{TRUE} runs every output column name through
 #'   \code{standardize.headers()} instead (e.g. \code{$mon_ngh}, \code{
 #'   $aru_serial}) - for a caller who specifically wants a snake_case
@@ -109,7 +117,7 @@
 #' (\code{monitoringnight}, \code{speciesmanualid}, \code{
 #' wakaleidoscopeautoid}, \code{sppaccp}, \code{serial}) as the actual
 #' working/output column names, this revision uses short abbreviated names
-#' throughout instead: \code{filename}, \code{mon.ngh}, \code{manid},
+#' throughout instead: \code{filename}, \code{date.monitoringnight}, \code{manid},
 #' \code{auto.kp}, \code{auto.sb}, \code{lat}, \code{lon}, \code{aru.serial},
 #' \code{sunregion}. These are this function's own invented output schema
 #' (like the rest of this package's dot-separated naming convention) and are
@@ -133,7 +141,7 @@
 #' target name it becomes. Only column 1 is standardized (via
 #' \code{standardize.headers()}) to match a file's own standardized headers
 #' - column 2 is kept exactly as given (including its dots, e.g. \code{
-#' "mon.ngh"} - standardizing it too would turn the dot into an underscore).
+#' "date.monitoringnight"} - standardizing it too would turn the dot into an underscore).
 #' If the CSV itself has more than one row for the same raw header, only the
 #' FIRST is kept ("ignore conflicting headers") - later duplicate rows are
 #' silently dropped. A header with no match anywhere in the table is left
@@ -145,7 +153,7 @@
 #' \strong{Three header categories.} After standardize + optional rename,
 #' every file's headers are checked against:
 #' \itemize{
-#'   \item \strong{Required} - \code{filename}, \code{mon.ngh}, \code{manid}.
+#'   \item \strong{Required} - \code{filename}, \code{date.monitoringnight}, \code{manid}.
 #'     ALL must be present, or the file fails.
 #'   \item \strong{Results} - \code{auto.kp}, \code{auto.sb}. At least ONE
 #'     must be present, or the file fails; an absent one is carried as NA
@@ -207,8 +215,11 @@
 #'     raw-header-text -> short-target-name pairs; the others, read the
 #'     same way, are equally consistent with that direction (e.g.
 #'     \code{monitoringnight} - the long name a real export normalizes to -
-#'     renamed to the short \code{mon.ngh}). All rows are therefore applied
-#'     uniformly as raw-header-text -> short-target-name.
+#'     renamed to the short \code{mon.ngh}, per \code{arumerge.headerrename.csv}'s
+#'     own target column at the time). All rows are therefore applied
+#'     uniformly as raw-header-text -> short-target-name. \strong{As of
+#'     round twenty-five, \code{mon.ngh} is this function's OLD internal
+#'     target name - see the round-twenty-five entry below.}
 #'   \item The \code{serial} row's given target was \code{serials}, but the
 #'     requested blank-output header is \code{$aru.serial} - read as a typo
 #'     and corrected to \code{serial -> aru.serial} in
@@ -280,7 +291,8 @@
 #'     behavior).
 #'   \item No \code{dir.save} parameter was requested for the xlsx-save
 #'     step - defaults to \code{dir.load}, unchanged from the 2026-09-04
-#'     build.
+#'     build (also unchanged by the round-twenty-two file-naming update
+#'     below - see @details, "File naming (round twenty-two)").
 #'   \item The xlsx save's missing-package fallback (warn + skip, no error)
 #'     is unchanged. This sandbox still has no network access to install
 #'     \pkg{openxlsx}, so only that fallback path was exercised here - Josh
@@ -292,7 +304,7 @@
 #' \code{\link{batz.generate_plotframe.bat}}'s own \code{canonicalize.headers}
 #' \code{@details} entry - package-wide):} \code{required.headers}/\code{
 #' results.headers}/\code{optional.headers} - this function's own canonical
-#' short target names (\code{mon.ngh}, \code{auto.kp}, \code{auto.sb}, \code{
+#' short target names (\code{date.monitoringnight}, \code{auto.kp}, \code{auto.sb}, \code{
 #' aru.serial}, etc.) - were never themselves standardized on the comparison
 #' side, even though every incoming raw header IS run through
 #' \code{standardize.headers()} before comparison (see "Header
@@ -329,7 +341,7 @@
 #' identically-behaved parameter already shipped in
 #' \code{\link{batz.generate_plotframe.bat}}. \code{FALSE} (default) leaves
 #' \code{data}/\code{log.file}'s own output column names exactly as always
-#' (this function's usual dot-separated convention, e.g. \code{$mon.ngh},
+#' (this function's usual dot-separated convention, e.g. \code{$date.monitoringnight},
 #' \code{$aru.serial}). \code{TRUE} runs both \code{data}'s and \code{
 #' log.file}'s column names through \code{standardize.headers()} as the very
 #' last step before the optional xlsx write and before they're returned/
@@ -339,6 +351,78 @@
 #' without converting it themselves afterward. This has no effect on how an
 #' incoming file's own raw headers are standardized/matched/validated -
 #' those steps are entirely upstream of this, and unaffected either way.
+#'
+#' \strong{File naming (round twenty-two), 2026-09-24, per Josh's
+#' package-wide request ("Update all functions that save files or charts:
+#' ... for files follow <project.name>_<filetype.name>_<daterange>_
+#' <timestamp>"):} the saved xlsx workbook's name changes from
+#' \code{"<project.name>_<Date>_merge_vetted.acoustics.xlsx"} (a bare
+#' calendar-day stamp, \code{format(Sys.Date(), "\%Y-\%m-\%d")}, with no
+#' data-range concept at all) to
+#' \verb{<project.name>_merge_vetted.acoustics_<daterange>_<timestamp>.xlsx},
+#' using \code{"merge_vetted.acoustics"} as the \code{<filetype.name>}
+#' token (matching the function's own name/subject). \strong{Flagged as a
+#' judgment call:} the new \code{<daterange>} token is computed from
+#' \code{data.merged$date} - the 8-digit \code{YYYYMMDD} token this
+#' function already parses out of each row's \code{$filename} - rather than
+#' from \code{$call.datetime} (the fuller parsed timestamp derived from
+#' that same \code{$date}/\code{$time} pair); \code{$date} was chosen
+#' because it's the simpler, already-string-formatted source and a
+#' date-only range reads more naturally as a \verb{<DATE1>to<DATE2>} token
+#' than a full datetime would. \strong{Please confirm \code{$date} (not
+#' \code{$call.datetime}) is the right source.} If \code{data.merged} has
+#' zero rows (nothing loaded/merged, or everything trimmed away by
+#' \code{trim.noise}/\code{trim.noid}), the literal token \code{"nodata"}
+#' is used in place of a real date range rather than crashing on an empty
+#' \code{min()}/\code{max()} - also not explicitly specified, likewise a
+#' judgment call. \code{<timestamp>} uses the same 14-digit, no-separator
+#' \code{format(Sys.time(), "\%Y\%m\%d\%H\%M\%S")} shape as every other
+#' \code{batz} function in this round - see each function's own "Timestamp
+#' format (round twenty-two)" \code{@details} entry. \code{dir.load} (not a
+#' separate \code{dir.save}) remains the save location, unchanged - see
+#' "Flagged assumptions" above.
+#'
+#' \strong{\code{mon.ngh} renamed to \code{date.monitoringnight} (round
+#' twenty-five), 2026-09-25, per Josh ("same thing make the change" -
+#' extending item 1's \code{date.mon} -> \code{date.monitoringnight} rename
+#' to this function's own \code{mon.ngh} abbreviation, so every \code{batz}
+#' function agrees on one name for this field).} \code{required.headers},
+#' \code{canonical.headers}, and the final reorder step's column list are
+#' all updated from \code{mon.ngh} to \code{date.monitoringnight} - this
+#' function's OWN internal target name for the field is now
+#' \code{date.monitoringnight} throughout, matching
+#' \code{\link{batz.merge_vetted.acoustics}},
+#' \code{\link{batz.plotactivity_daily.count}},
+#' \code{\link{batz.plotactivity_heatmap}},
+#' \code{\link{batz.generate_suntimes.arulist}},
+#' \code{\link{batz.generate_plotframe.bat}}, and
+#' \code{\link{batz.plotsm4_heatmap}} from this same round.
+#'
+#' \strong{Flagged, important: this does NOT touch
+#' \code{arumerge.headerrename.csv}.} That file lives outside this
+#' package's own \code{R}/\code{man} files (it's read at runtime from
+#' \code{header.rename.path}, default \code{"arumerge.headerrename.csv"},
+#' wherever \code{dir.load} points), so it can't be edited from here - and
+#' as of this round its own target/"standard" column still maps various
+#' raw headers (e.g. \code{monitoringnight}) to the OLD short name
+#' \code{mon.ngh}, not the new \code{date.monitoringnight}. Left as-is,
+#' this means a file processed with \code{rename = TRUE} (the default)
+#' would get its \code{monitoringnight}-style raw header renamed to
+#' \code{mon.ngh} by the CSV, which would then still satisfy
+#' \code{required.headers}/\code{canonical.headers} ONLY because of the
+#' 2026-09-22 \code{canonicalize.headers()}-based tolerant-fallback fix
+#' described above - that fallback matches on standardized
+#' (separator/case-insensitive) spelling, and \code{mon.ngh} does not
+#' standardize to anything close to \code{date.monitoringnight}, so the
+#' fallback will NOT rescue this: a real file run through this function
+#' right now would fail with "missing required headers" for
+#' \code{date.monitoringnight} unless \code{arumerge.headerrename.csv}'s
+#' target column is updated to say \code{date.monitoringnight} instead of
+#' \code{mon.ngh}. \strong{Josh needs to update that CSV's target column
+#' himself (or ask for help doing so) before this function will work
+#' against real data again} - flagged here rather than guessed at, since
+#' this package's own files don't include that CSV's actual current
+#' contents.
 #'
 #' @examples
 #' \dontrun{
@@ -367,10 +451,10 @@ batz.merge_vetted.acoustics2 <- function(dir.load = getwd(),
                                           snake_case = FALSE) {
 
   ## ---- three header categories - location is under "optional" ----
-  required.headers <- c("filename", "mon.ngh", "manid")
+  required.headers <- c("filename", "date.monitoringnight", "manid")
   results.headers  <- c("auto.kp", "auto.sb")
   optional.headers <- c("aru.serial", "sunregion")
-  canonical.headers <- c("filename", "mon.ngh", "manid", "auto.kp", "auto.sb",
+  canonical.headers <- c("filename", "date.monitoringnight", "manid", "auto.kp", "auto.sb",
                           "lat", "lon", "aru.serial", "sunregion")
 
   ## header standardization (per Josh, 2026-09-14 project preference): uses
@@ -395,7 +479,7 @@ batz.merge_vetted.acoustics2 <- function(dir.load = getwd(),
       ## only the RAW/source column is standardized, to match a file's own
       ## standardized headers - the STANDARD/target column is the literal
       ## final column name (kept exactly as given, dots and all - e.g.
-      ## "mon.ngh", "auto.kp" - standardizing it too would turn those dots
+      ## "date.monitoringnight", "auto.kp" - standardizing it too would turn those dots
       ## into underscores)
       raw      = standardize.headers(as.character(user.headers[[1]])),
       standard = trimws(as.character(user.headers[[2]])),
@@ -534,7 +618,7 @@ batz.merge_vetted.acoustics2 <- function(dir.load = getwd(),
     ## included here - none have been dropped yet, so both that were ever
     ## present in canonical.headers still are)
     auto.cols.present <- intersect(c("auto.kp", "auto.sb"), names(data.merged))
-    data.merged <- data.merged[, c("filename", "mon.ngh", "aru.name", "aru.serial",
+    data.merged <- data.merged[, c("filename", "date.monitoringnight", "aru.name", "aru.serial",
                                     "sunregion", "lat", "lon", "manid",
                                     auto.cols.present, "date", "time")]
 
@@ -596,6 +680,23 @@ batz.merge_vetted.acoustics2 <- function(dir.load = getwd(),
                `missing headers` = character(0), stringsAsFactors = FALSE, check.names = FALSE)
   rownames(log.file.df) <- NULL
 
+  ## ---- daterange token (round twenty-two, 2026-09-24, per Josh) - see
+  ## @details, "File naming (round twenty-two)". Computed from
+  ## data.merged$date (the parsed 8-digit YYYYMMDD filename token) BEFORE
+  ## the snake_case rename below, and guarded for the 0-row / no-$date-
+  ## column case (nothing loaded, or everything trimmed away).
+  if ("date" %in% names(data.merged) && nrow(data.merged) > 0) {
+    valid.dates <- as.Date(data.merged$date[!is.na(data.merged$date)], format = "%Y%m%d")
+    valid.dates <- valid.dates[!is.na(valid.dates)]
+  } else {
+    valid.dates <- as.Date(character(0))
+  }
+  daterange.token <- if (length(valid.dates) > 0) {
+    sprintf("%sto%s", format(min(valid.dates), "%Y%m%d"), format(max(valid.dates), "%Y%m%d"))
+  } else {
+    "nodata"
+  }
+
   ## snake_case (per Josh, 2026-09-22): controls only these OUTPUT data
   ## frames' own column names, applied as the very last step before the
   ## xlsx write and the return/auto-assign below - mirrors the pattern
@@ -610,8 +711,13 @@ batz.merge_vetted.acoustics2 <- function(dir.load = getwd(),
 
   if (save.xlsx) {
     if (requireNamespace("openxlsx", quietly = TRUE)) {
-      out.name <- paste0(project.name, "_", format(Sys.Date(), "%Y-%m-%d"),
-                          "_merge_vetted.acoustics.xlsx")
+      ## <project.name>_merge_vetted.acoustics_<daterange>_<timestamp>.xlsx -
+      ## round twenty-two, 2026-09-24, per Josh's package-wide file-naming
+      ## request - see @param save.xlsx and @details, "File naming (round
+      ## twenty-two)". Previously "<project.name>_<Date>_merge_vetted.acoustics.xlsx".
+      out.name <- sprintf("%s_merge_vetted.acoustics_%s_%s.xlsx",
+                           project.name, daterange.token,
+                           format(Sys.time(), "%Y%m%d%H%M%S"))
       out.path <- file.path(dir.load, out.name)
       openxlsx::write.xlsx(list(data = result$data, log.file = result$log.file),
                             file = out.path)

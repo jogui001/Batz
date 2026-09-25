@@ -44,10 +44,8 @@
 #'   are optional - same \code{$aes.style}-driven resolution as this
 #'   package's other plot functions (see Details).
 #' @param project.name Character, default \code{"new.project"}. The first
-#'   part of every saved file's name:
-#'   \code{"<project.name>_<site>_<timestamp>.png"} - matches the unified
-#'   file-naming convention already used by every other \code{batz} plot
-#'   function (see Details, "File naming").
+#'   part of every saved file's name - see Details, "File naming (round
+#'   twenty-two)".
 #' @param aes.style Character, default \code{"overide.value"}. Names which
 #'   column of \code{aes.default} is checked FIRST for each parameter
 #'   (falling back to \code{$default.value} when that column doesn't exist,
@@ -73,7 +71,7 @@
 #'   parameter). Controls only the CSV written when \code{write.csv.data =
 #'   TRUE} - applied to a copy of \code{data} right before that write, never
 #'   to the \code{$data} this function returns (see Value; that object still
-#'   needs its usual dot-separated names, e.g. \code{$monnight.date}, to
+#'   needs its usual dot-separated names, e.g. \code{$date.monitoringnight}, to
 #'   chain straight into \code{\link{batz.plotactivity_heatmap}} per
 #'   \code{@seealso} below). \code{FALSE} (default) leaves the written CSV's
 #'   headers exactly as before. \code{TRUE} runs the written copy's column
@@ -82,10 +80,10 @@
 #'   column here.
 #'
 #' @return Invisibly, a list with \code{data} (the filtered per-detection
-#'   data frame, with \code{$time} and \code{$monnight.date} added -
+#'   data frame, with \code{$time} and \code{$date.monitoringnight} added -
 #'   suitable as the \code{data} input to
 #'   \code{\link{batz.plotactivity_heatmap}}), \code{daily} (the aggregated
-#'   per-night data frame: \code{$monnight.date}, \code{$obs}), and
+#'   per-night data frame: \code{$date.monitoringnight}, \code{$obs}), and
 #'   \code{ggplot} (the ggplot object, only populated when \code{ggplot2}
 #'   is available).
 #'
@@ -144,7 +142,7 @@
 #' \code{\link{batz.plotactivity_observations}} uses \code{stats::aggregate}
 #' directly, not \code{dplyr::count()}). Each row gets a helper \code{$obs =
 #' 1} (same convention \code{\link{batz.generate_plotframe.bat}} uses), then
-#' \code{stats::aggregate(obs ~ monnight.date, ...)} sums it per night - the
+#' \code{stats::aggregate(obs ~ date.monitoringnight, ...)} sums it per night - the
 #' original script's own \code{dplyr::count()} equivalent. The Y axis reuses
 #' the \code{log1p()}-transform-then-label-with-the-real-count approach
 #' already established in \code{\link{batz.plotactivity_observations}}
@@ -172,8 +170,9 @@
 #' \code{@details} for that overhaul's full history) - so it adopts that
 #' mechanism from the start rather than an older one: \code{aes.style}
 #' (default \code{"overide.value"}) names a fixed \code{aes.default} column
-#' checked before \code{$default.value}, and every saved PNG is named
-#' \code{"<project.name>_<site>_<timestamp>.png"}. Unlike this package's
+#' checked before \code{$default.value}. \strong{Superseded by "File naming
+#' (round twenty-two)" below for the saved file name itself} - see that
+#' entry for the current pattern. Unlike this package's
 #' \code{fig.list}-driven plot functions, this function has no natural
 #' per-call "site"/ARU token of its own (see \code{site.label} above -
 #' \strong{a judgment call, flagged}).
@@ -185,9 +184,7 @@
 #' whole-second timestamp, producing an identical filename and silently
 #' overwriting one plot's PNG with the other's. Fixed by appending a
 #' function-specific suffix to the non-blank \code{site.label} token
-#' (\code{"-dailycount"} here, \code{"-heatmap"} in the sibling function), so
-#' the two functions' saved files can never collide even when every other
-#' naming input matches exactly.
+#' (\code{"-dailycount"} here, \code{"-heatmap"} in the sibling function).
 #'
 #' \strong{Added 2026-09-22, per Josh's request to audit and extend the
 #' snake_case output option package-wide - "A near-no-op for most columns,"
@@ -205,11 +202,13 @@
 #' \code{groupby.date}'s default \code{"monnight"} are all single words
 #' with nothing for a second pass of \code{standardize.headers()} to
 #' change) plus three columns this function itself adds - \code{$time},
-#' \code{$monnight.date}, \code{$obs}. Of those three, only
-#' \code{$monnight.date} actually contains this package's dot-separated
+#' \code{$date.monitoringnight} (named \code{$date.mon} when this paragraph
+#' was written - see the round twenty-five entry below for the further
+#' rename), \code{$obs}. Of those three, only
+#' \code{$date.monitoringnight} actually contains this package's dot-separated
 #' convention (\code{$time}/\code{$obs} are single words already). So for
 #' the realistic default-column-name case, \code{snake_case = TRUE} here
-#' changes exactly one header - \code{monnight.date} -> \code{monnight_date}
+#' changes exactly one header - \code{date.monitoringnight} -> \code{date_monitoringnight}
 #' - not a true no-op, but close to one; implemented anyway (rather than
 #' skipped) for consistency and package-wide API uniformity, per Josh's
 #' explicit request to add it everywhere a data-frame/CSV output uses this
@@ -219,10 +218,119 @@
 #' \code{$data} element of this function's own return value, since that
 #' object is documented (see Value/\code{@seealso}) to feed straight into
 #' \code{\link{batz.plotactivity_heatmap}}'s own \code{data} argument, which
-#' expects \code{$monnight.date} by its usual dot-separated name; renaming
+#' expects \code{$date.monitoringnight} by its usual dot-separated name; renaming
 #' the returned object too would silently break that chaining contract for
 #' no benefit (the CSV file is the only "external output" \code{write.csv.
 #' data} is actually about).
+#'
+#' \strong{File naming (round twenty-two), 2026-09-24, per Josh's
+#' package-wide request ("Update all functions that save files or charts...
+#' for charts that have a date range they will follow:
+#' <project.name>_<plot.name>_<daterange>_<timestamp>.png"):} the saved PNG
+#' name is no longer plain \code{"<project.name>_<site>_<timestamp>.png"} -
+#' it now includes a \code{<daterange>} token:
+#' \code{"<project.name>_<site>_<daterange>_<timestamp>.png"}, where
+#' \code{<site>} is this function's existing \code{site.label}-derived
+#' token (unchanged - \code{"dailycount"}, or \code{"<site.label>-
+#' dailycount"} when \code{site.label} is non-blank) and \code{<daterange>}
+#' is this call's resolved \code{date.start}/\code{date.end} (whether
+#' explicitly passed or the "Default date window" fallback above) formatted
+#' as \code{YYYYMMDDtoYYYYMMDD} - the same \code{<daterange>} convention
+#' already used by \code{\link{batz.plotsm4_heatmap}}/
+#' \code{\link{batz.plotdetections_first.last}}/
+#' \code{\link{batz.plotactivity_observations}}. \strong{Scope decision,
+#' flagged explicitly for Josh}: this function was NOT one of the three
+#' functions round twenty-one's \code{<daterange>} token was scoped to (it
+#' didn't exist yet - it was added the very next round, 2026-09-22), but
+#' unlike \code{\link{batz.plotactivity_heatmap}}/
+#' \code{\link{batz.plotcover_bullseye}} (which have no per-call date-range
+#' parameter of their own - see each function's own \code{@details}), this
+#' function DOES take an explicit \code{date.start}/\code{date.end} pair
+#' (see that parameter above) - so it is read here as belonging in Josh's
+#' "charts that have a date range" bucket, and gets the \code{<daterange>}
+#' token added rather than being left in the plain
+#' \code{"<project.name>_<site>_<timestamp>.png"} bucket.
+#' \strong{Please confirm this reading is right} - if this function should
+#' instead be treated like \code{batz.plotactivity_heatmap}/
+#' \code{batz.plotcover_bullseye} (no \code{<daterange>} token), the
+#' \code{<daterange>} token can be dropped from its file name again. The
+#' companion CSV written when \code{write.csv.data = TRUE} picks up the
+#' identical \code{<site>_<daterange>_<timestamp>} token sequence (just with
+#' a \code{.csv} extension), for consistency between the two files a single
+#' call can produce - not separately specified by Josh's "for files follow
+#' ..." wording (that wording describes non-chart data-file outputs
+#' elsewhere in the package - see e.g.
+#' \code{\link{batz.merge_temp.logger}} - not a chart's own companion CSV),
+#' but read as the more consistent choice than inventing a third, unrelated
+#' naming scheme for this one CSV.
+#'
+#' \strong{Timestamp format (round twenty-two), same follow-up:} the
+#' \code{<timestamp>} token (both the PNG and, when written, the CSV) is
+#' now built as \code{format(Sys.time(), "\%Y\%m\%d\%H\%M\%S")} (14 digits, no
+#' separator) instead of \code{"\%Y\%m\%d_\%H\%M\%S"} - see
+#' \code{\link{batz.plotsm4_heatmap}}'s own \code{@details} entry of the
+#' same name for the full reasoning (including the \code{"YYYYMMDDHHHMMSS"}
+#' typo read/flag) and package-wide scope.
+#'
+#' \strong{Output column renamed \code{$monnight.date} -> \code{$date.mon}
+#' (round twenty-four), 2026-09-25, per Josh's correction and follow-up
+#' question.} Round twenty-three (see
+#' \code{\link{batz.plotactivity_heatmap}}'s own \code{@details}) had left
+#' this function's own \code{$monnight.date} column name untouched, flagging
+#' a rename to \code{date.mon} as a collision with an already-real, "
+#' differently-scoped" \code{date.mon} used elsewhere in the package
+#' (\code{\link{batz.merge_vetted.acoustics}}, \code{
+#' \link{batz.generate_plotframe.bat}}, \code{\link{batz.plotsm4_heatmap}}).
+#' Josh then asked why a collision would occur if \code{date.mon} and
+#' \code{monnight.date} hold the same value per record - and on closer
+#' reading of those other functions' actual code, he's right: every one of
+#' them uses \code{date.mon} to mean exactly the same thing this function's
+#' \code{$monnight.date} always meant - the monitoring-night date a
+#' record/detection belongs to - not a different, unrelated concept that
+#' happens to share a name. \strong{This was a real correction to round
+#' twenty-three's own reasoning, not a new request}: there is no actual
+#' collision, so the column is renamed here, from \code{$monnight.date} to
+#' \code{$date.mon}, harmonizing with the name already used package-wide for
+#' this same concept. \strong{One genuine (pre-existing, not created by this
+#' rename) wrinkle, flagged for awareness rather than as a blocker}: the
+#' various \code{date.mon} columns across the package don't all share the
+#' same R type - \code{\link{batz.merge_vetted.acoustics}}'s \code{$date.mon}
+#' is left as the raw, unparsed character string from the loaded CSV;
+#' \code{\link{batz.generate_suntimes.arulist}}'s \code{$date.mon} is a
+#' noon-anchored \code{POSIXct}; this function's own \code{$date.mon} (like
+#' \code{\link{batz.plotsm4_heatmap}}'s input expectation) is a plain
+#' \code{Date}. This inconsistency already existed before this rename and
+#' isn't introduced or worsened by it - the two tables in question here are
+#' never merged/joined with each other in any function in this package, so
+#' no single data frame ever needs to reconcile the different
+#' representations - but a future function that DOES combine data from both
+#' families would need to coerce types explicitly.
+#'
+#' \strong{Output column renamed again, \code{$date.mon} -> \code{$date.monitoringnight}
+#' (round twenty-five), 2026-09-25, per Josh: "I changed my mine and want to
+#' use date.monitoringnight instead of date.mon to be more consistent with
+#' collaborators."} This supersedes round twenty-four's rename immediately
+#' above - \code{date.mon} itself is now a retired spelling, folded into the
+#' package's header-rename reference table
+#' (\code{\link{batz.generate_headers.acceptold}}) alongside
+#' \code{monnight.date}/\code{mon.ngh}/\code{monitoringnight}, all pointing at
+#' this same new name. Applied consistently, the same day, everywhere this
+#' concept appears package-wide - see
+#' \code{\link{batz.plotactivity_heatmap}}'s own \code{date.col} default,
+#' \code{\link{batz.generate_suntimes.arulist}}'s own \code{$date.monitoringnight} field,
+#' \code{\link{batz.generate_plotframe.bat}}'s own \code{groupby.date}
+#' default, \code{\link{batz.merge_vetted.acoustics}}'s own positional
+#' rename, \code{\link{batz.plotsm4_heatmap}}'s own \code{DATA.REQUIRED}/
+#' \code{SUNTIMES.REQUIRED}, and \code{\link{batz.merge_vetted.acoustics2}}'s
+#' own \code{mon.ngh} - each function's own \code{@details} has this same
+#' entry. This was done proactively, beyond fixing just this function and
+#' \code{\link{batz.plotactivity_heatmap}} (the two functions round
+#' twenty-four had actually touched): leaving the other, longer-established
+#' functions on \code{date.mon} while these two moved to
+#' \code{date.monitoringnight} would have silently recreated the exact
+#' cross-function naming mismatch this whole back-and-forth (rounds
+#' twenty-three/twenty-four/twenty-five) has been trying to resolve - the
+#' entire point of Josh's collaborator-consistency request.
 #'
 #' @seealso \code{\link{batz.plotactivity_heatmap}}, which takes this
 #'   function's own \code{$data} return value (or any data frame shaped the
@@ -363,11 +471,12 @@ batz.plotactivity_daily.count <- function(data,
   }
   if (nrow(data) == 0) stop("data has 0 rows with a parseable $time after filename parsing - nothing to plot.")
 
-  # --- $monnight.date - a flexible date parse of the groupby.date column,
-  # same multi-format fallback pattern used elsewhere in this package (e.g.
-  # batz.plotactivity_observations()'s parse.flex.date()). Renamed from the
-  # original ad hoc script's "monnight_date" to this project's own
-  # dot-separated output-column convention. ---
+  # --- $date.monitoringnight - a flexible date parse of the groupby.date
+  # column, same multi-format fallback pattern used elsewhere in this
+  # package (e.g. batz.plotactivity_observations()'s parse.flex.date()).
+  # Renamed from the original ad hoc script's "monnight_date", then
+  # "date.mon" (round twenty-four), to "date.monitoringnight" (round
+  # twenty-five) - see @details. ---
   parse.flex.date <- function(x) {
     out <- as.Date(rep(NA_character_, length(x)))
     for (fmt in c("%Y-%m-%d", "%m/%d/%Y", "%m/%d/%y")) {
@@ -378,17 +487,17 @@ batz.plotactivity_daily.count <- function(data,
     }
     out
   }
-  data$monnight.date <- parse.flex.date(data[[groupby.date]])
-  if (any(is.na(data$monnight.date))) {
+  data$date.monitoringnight <- parse.flex.date(data[[groupby.date]])
+  if (any(is.na(data$date.monitoringnight))) {
     cat(sprintf("NOTE: %d row(s) had a $%s that could not be parsed as a date - dropped.\n",
-                 sum(is.na(data$monnight.date)), groupby.date))
-    data <- data[!is.na(data$monnight.date), , drop = FALSE]
+                 sum(is.na(data$date.monitoringnight)), groupby.date))
+    data <- data[!is.na(data$date.monitoringnight), , drop = FALSE]
   }
-  if (nrow(data) == 0) stop("data has 0 rows with a parseable $monnight.date - nothing to plot.")
+  if (nrow(data) == 0) stop("data has 0 rows with a parseable $date.monitoringnight - nothing to plot.")
 
   # --- date.start/date.end - see @details, "Default date window". ---
   if (is.null(date.start) || is.null(date.end)) {
-    year.val <- format(min(data$monnight.date, na.rm = TRUE), "%Y")
+    year.val <- format(min(data$date.monitoringnight, na.rm = TRUE), "%Y")
     if (is.null(date.start)) date.start <- as.Date(paste0(year.val, "-07-01"))
     if (is.null(date.end)) date.end <- as.Date(paste0(year.val, "-12-31"))
     cat(sprintf("NOTE: date.start/date.end not both given - defaulting to %s to %s (July 1 - Dec 31 of %s).\n",
@@ -398,17 +507,27 @@ batz.plotactivity_daily.count <- function(data,
     date.end <- parse.flex.date(as.character(date.end))
   }
 
-  data <- data[data$monnight.date >= date.start & data$monnight.date <= date.end, , drop = FALSE]
+  data <- data[data$date.monitoringnight >= date.start & data$date.monitoringnight <= date.end, , drop = FALSE]
   if (nrow(data) == 0) {
     stop(sprintf("0 rows of data fall within date.start/date.end (%s to %s) - nothing to plot.", date.start, date.end))
   }
 
+  ## <daterange> token - round twenty-two, per Josh (2026-09-24): see
+  ## @details, "File naming (round twenty-two)". Built from date.start/
+  ## date.end AFTER they're fully resolved just above (whether explicitly
+  ## passed or defaulted), so both the explicit-input and defaulted-window
+  ## cases get a real, correct <daterange> token - same
+  ## sprintf("%sto%s", ...) convention already used by
+  ## batz.plotsm4_heatmap()/batz.plotdetections_first.last()/
+  ## batz.plotactivity_observations().
+  daterange.token <- sprintf("%sto%s", format(date.start, "%Y%m%d"), format(date.end, "%Y%m%d"))
+
   # --- daily aggregate: a helper $obs = 1 per row (same convention
-  # batz.generate_plotframe.bat() uses), summed per $monnight.date - see
-  # @details, "Aggregation and Y-axis scale". ---
+  # batz.generate_plotframe.bat() uses), summed per $date.monitoringnight -
+  # see @details, "Aggregation and Y-axis scale". ---
   data$obs <- 1
-  daily <- stats::aggregate(obs ~ monnight.date, data = data, FUN = sum)
-  daily <- daily[order(daily$monnight.date), , drop = FALSE]
+  daily <- stats::aggregate(obs ~ date.monitoringnight, data = data, FUN = sum)
+  daily <- daily[order(daily$date.monitoringnight), , drop = FALSE]
 
   cat(sprintf("Rows after trim.noid + date filter: %d (%d distinct monitoring night(s)).\n", nrow(data), nrow(daily)))
 
@@ -439,7 +558,7 @@ batz.plotactivity_daily.count <- function(data,
     xaxe.buffer <- suppressWarnings(as.numeric(get.default("xaxe.date.buffer.days")))
     if (is.na(xaxe.buffer)) xaxe.buffer <- 0.5
 
-    ggplot.obj <- ggplot2::ggplot(daily, ggplot2::aes(x = monnight.date, y = obs.plot)) +
+    ggplot.obj <- ggplot2::ggplot(daily, ggplot2::aes(x = date.monitoringnight, y = obs.plot)) +
       ggplot2::geom_col(fill = get.default("bar.fill"), width = as.numeric(get.default("bar.width"))) +
       ggplot2::scale_x_date(breaks = month.breaks, date_labels = date.format,
                              limits = c(date.start - xaxe.buffer, date.end + xaxe.buffer)) +
@@ -457,7 +576,11 @@ batz.plotactivity_daily.count <- function(data,
       )
 
     site.token <- if (nzchar(trimws(site.label))) paste0(trimws(site.label), "-dailycount") else "dailycount"
-    fname <- sprintf("%s_%s_%s.png", project.name, site.token, format(Sys.time(), "%Y%m%d_%H%M%S"))
+    ## File naming (round twenty-two), per Josh (2026-09-24): see @details,
+    ## "File naming (round twenty-two)" - <daterange> token added, and the
+    ## timestamp format is now the 14-digit, no-underscore form (see
+    ## @details, "Timestamp format (round twenty-two)").
+    fname <- sprintf("%s_%s_%s_%s.png", project.name, site.token, daterange.token, format(Sys.time(), "%Y%m%d%H%M%S"))
     fname <- file.path(dir.save, fname)
     ggplot2::ggsave(fname, plot = ggplot.obj,
       width = as.numeric(get.default("plot.width")) + as.numeric(get.default("ggsave.width.pad")),
@@ -470,7 +593,9 @@ batz.plotactivity_daily.count <- function(data,
 
   if (isTRUE(write.csv.data)) {
     site.token <- if (nzchar(trimws(site.label))) paste0(trimws(site.label), "-dailycount") else "dailycount"
-    csv.name <- file.path(dir.save, sprintf("%s_%s_%s.csv", project.name, site.token, format(Sys.time(), "%Y%m%d_%H%M%S")))
+    ## Same <daterange>/<timestamp> tokens as the PNG above - see @details,
+    ## "File naming (round twenty-two)".
+    csv.name <- file.path(dir.save, sprintf("%s_%s_%s_%s.csv", project.name, site.token, daterange.token, format(Sys.time(), "%Y%m%d%H%M%S")))
     ## snake_case output option (per Josh's request to audit and extend
     ## this package-wide, 2026-09-22) - applied only to this written copy,
     ## right before the write, never to the `data` object itself (which is

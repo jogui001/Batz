@@ -30,7 +30,7 @@
 #' \code{"Lat"}) have no separators to begin with. This is purely a
 #' vocabulary change - the POSITIONAL rename immediately below (which maps
 #' these six standardized names, by column position, onto \code{filename,
-#' date.mon, manid, autoid.kp, autoid.sb, lat}) is unaffected, since it never
+#' date.monitoringnight, manid, autoid.kp, autoid.sb, lat}) is unaffected, since it never
 #' refers to the old squished text by name. \strong{Historical note (no
 #' longer applicable after this change):} Josh's original spec gave this
 #' standardization line literally as \code{tolower(gsub("[[:punct:]]", "",
@@ -83,7 +83,7 @@
 #'     existing columns (in the order produced by the steps above:
 #'     \code{filename, monitoringnight, species_manual_id,
 #'     wa_kaleidoscope_auto_id, sppaccp, lat, serial, lon, aru.name, date,
-#'     time}) are renamed POSITIONALLY to \code{filename, date.mon, manid,
+#'     time}) are renamed POSITIONALLY to \code{filename, date.monitoringnight, manid,
 #'     autoid.kp, autoid.sb, lat, serial, lon, aru.name, date, time}.
 #'     \code{"wa_kaleidoscope_auto_id"} becomes \code{"autoid.kp"} and
 #'     \code{"sppaccp"} becomes \code{"autoid.sb"} - this makes sense once
@@ -91,7 +91,7 @@
 #'     ("kp") or SonoBat ("sb") vetting software: Kaleidoscope's own auto
 #'     ID column becomes \code{$autoid.kp}, SonoBat's "accepted species"
 #'     column becomes \code{$autoid.sb}.
-#'   \item \strong{Reorder} to \code{filename, date.mon, aru.name, serial,
+#'   \item \strong{Reorder} to \code{filename, date.monitoringnight, aru.name, serial,
 #'     lat, lon, manid, autoid.kp, autoid.sb, date, time}.
 #'   \item \code{\link{batz.datawrangler_call.datetime}} is run on
 #'     \code{$date}/\code{$time} to add \code{$call.datetime}.
@@ -212,7 +212,7 @@
 #' \code{\link{batz.generate_plotframe.bat}} (2026-09-21). The new
 #' \code{snake_case} parameter here works exactly the same way: it is
 #' applied, as the very last step, only to \code{vetted.merged}'s OWN output
-#' column names (\code{$date.mon}, \code{$aru.name}, \code{$autoid.kp}, ...
+#' column names (\code{$date.monitoringnight}, \code{$aru.name}, \code{$autoid.kp}, ...
 #' - this function's own invented schema) - never to any raw per-file input
 #' header, which is already standardized separately via
 #' \code{standardize.headers()} upstream of the rename/reorder pipeline (see
@@ -224,6 +224,25 @@
 #' \code{standardize.headers()} - included anyway so a caller gets a
 #' consistently-cased pair of outputs rather than having to remember that
 #' only one of the two objects responds to \code{snake_case}.
+#'
+#' \strong{\code{date.mon} renamed to \code{date.monitoringnight} (round
+#' twenty-five), 2026-09-25, per Josh ("I changed my mine and want to use
+#' date.monitoringnight instead of date.mon to be more consistent with
+#' collaborators").} This function's own output column, previously
+#' \code{$date.mon} (set by the positional rename and then carried through
+#' reorder/every downstream step - see "Update (2026-08-26)" above), is now
+#' \code{$date.monitoringnight} - the positional rename's target list and
+#' the reorder's column list are both updated accordingly. This applies the
+#' same package-wide rename already made in
+#' \code{\link{batz.plotactivity_daily.count}},
+#' \code{\link{batz.plotactivity_heatmap}},
+#' \code{\link{batz.generate_suntimes.arulist}}, and
+#' \code{\link{batz.generate_plotframe.bat}} this same round, so every
+#' \code{batz} function agrees on one name for this field rather than
+#' mixing \code{date.mon} and \code{date.monitoringnight} across the
+#' package. Nothing else in this function's logic changes - this is a pure
+#' rename of the string literal in two places (the positional-rename target
+#' vector and the reorder column vector).
 #'
 #' @param dir.load Character, default \code{getwd()}. Directory to scan.
 #' @param load.pattern Character vector, default \code{c("*vetted.csv")}. A
@@ -266,10 +285,10 @@
 #'   column names, applied as the very last step before either is
 #'   returned/assigned - it has no effect on any raw per-file input header.
 #'   \code{FALSE} (default) keeps this function's normal dot-separated
-#'   output column names (\code{$date.mon}, \code{$aru.name},
+#'   output column names (\code{$date.monitoringnight}, \code{$aru.name},
 #'   \code{$autoid.kp}, ...) exactly as always. \code{TRUE} runs every
 #'   output column name through \code{standardize.headers()} instead (e.g.
-#'   \code{$date_mon}, \code{$aru_name}) - for a caller who specifically
+#'   \code{$date_monitoringnight}, \code{$aru_name}) - for a caller who specifically
 #'   wants a snake_case CSV/data frame out of this function, without having
 #'   to convert it themselves afterward.
 #'
@@ -384,13 +403,13 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
 
     ## positional rename ($sunregion, appended right after $serial back in
     ## the per-file loop above, keeps its own name here - no rename needed)
-    names(vetted.merged) <- c("filename", "date.mon", "manid", "autoid.kp",
+    names(vetted.merged) <- c("filename", "date.monitoringnight", "manid", "autoid.kp",
                                "autoid.sb", "lat", "serial", "sunregion", "lon",
                                "aru.name", "date", "time")
 
     ## reorder ($sunregion placed with the other detector-level columns,
     ## next to $serial/$aru.name)
-    vetted.merged <- vetted.merged[, c("filename", "date.mon", "aru.name",
+    vetted.merged <- vetted.merged[, c("filename", "date.monitoringnight", "aru.name",
                                         "serial", "sunregion", "lat", "lon",
                                         "manid", "autoid.kp", "autoid.sb",
                                         "date", "time")]

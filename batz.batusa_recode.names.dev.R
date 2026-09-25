@@ -353,3 +353,55 @@ test.df2 <- data.frame(
 )
 print(test.df2)
 print(batz.batusa_recode.names(test.df2, batname.format.out = "code4"))
+
+# =============================================================================
+# NEW tests, added 2026-09-24, for the typo/variant-correction pre-step
+# (per Josh: "add step at the start which corrects known typos or
+# variations of codes" - "40kMyo" -> "40KHzMyo", "2bat" -> "Multiple").
+#
+# These tests source the REAL, currently-shipped R/batz.batusa_recode.names.R
+# directly (not the older hand-copied recode.vec()/batz.batusa_recode.names()
+# duplicated earlier in this dev script for a pre-embedding, CSV-loading
+# design) - this re-definition intentionally overrides the earlier one for
+# the remainder of this script, so these tests exercise the actual shipped
+# function, not a stale local copy.
+# =============================================================================
+source("R/batz.batusa_recode.names.R")
+
+cat("\n\n========== NEW 2026-09-24: typo/variant-correction pre-step ==========\n")
+
+cat("\n=== TEST: the two typos Josh gave resolve to their canonical labels ===\n")
+print(batz.batusa_recode.names(c("40kMyo", "2bat")))
+
+cat("\n=== TEST: case-insensitive variants of the same typos also resolve\n",
+    "(same normalize() rule as everywhere else in this function) ===\n", sep = "")
+print(batz.batusa_recode.names(c("40KMYO", "40kmyo", " 2Bat ", "2BAT")))
+
+cat("\n=== TEST: typo correction flows through non-default batname.format.out\n",
+    "(code4/code6 - these category rows hold the same literal string in\n",
+    "every match column, so the correction resolves the same way regardless\n",
+    "of requested output format) ===\n", sep = "")
+print(batz.batusa_recode.names(c("40kMyo", "2bat"), batname.format.out = "code4"))
+print(batz.batusa_recode.names(c("40kMyo", "2bat"), batname.format.out = "code6"))
+
+cat("\n=== TEST: typo correction works through the data frame input path too ===\n")
+test.df.typo <- data.frame(
+  col.a = c("epfu", "40kMyo", "not.a.real.bat"),
+  col.b = c("2bat", "labo", "HIF"),
+  stringsAsFactors = FALSE
+)
+print(test.df.typo)
+print(batz.batusa_recode.names(test.df.typo, batname.format.out = "code4"))
+
+cat("\n=== REGRESSION: existing (non-typo) category-label lookups still work,\n",
+    "unaffected by adding the typo-correction step ===\n", sep = "")
+print(batz.batusa_recode.names(c("hif", "LOFRAG", "40khzmyo", "multiple", "social")))
+
+cat("\n=== REGRESSION: ordinary species lookups unaffected ===\n")
+print(batz.batusa_recode.names(c("epfu", "myotis_lucifugus", "Hoary bat")))
+print(batz.batusa_recode.names("epfu", batname.format.out = "latin"))
+print(batz.batusa_recode.names("myse", batname.format.out = "fedstatus"))
+
+cat("\n=== REGRESSION: a genuinely unmatched input is still returned UNCHANGED\n",
+    "(not silently 'corrected' to something) and still triggers the warning ===\n", sep = "")
+print(batz.batusa_recode.names("totally_unknown_bat"))

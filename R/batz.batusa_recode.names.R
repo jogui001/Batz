@@ -132,6 +132,25 @@
 #' optional one, precisely because narrative claims of "verified" in this
 #' file's own history were not sufficient to prevent this recurrence.
 #'
+#' \strong{Known typo/variant corrections, applied BEFORE the normal lookup
+#' (added 2026-09-24, per Josh).} A small \code{typo.corrections} lookup
+#' (name -> canonical spelling) catches known misspellings/shorthand for
+#' the non-species category labels above - currently \code{"40kMyo"} ->
+#' \code{"40KHzMyo"} and \code{"2bat"} -> \code{"Multiple"} - and rewrites a
+#' matching input to its canonical spelling BEFORE the ordinary
+#' \code{latin}/\code{common}/\code{code4}/\code{code6} lookup runs, so it
+#' then matches the reference table the normal way. This correction is
+#' matched the exact same case/whitespace/dash-underscore-insensitive way
+#' as everything else in this function (via the same \code{normalize()}
+#' helper), so \code{"40KMYO"}, \code{"40k_myo"}, \code{" 2Bat "}, etc. are
+#' all caught too - not just the two literal spellings Josh gave. If an
+#' input doesn't match anything even after this correction step (e.g. a
+#' future \code{typo.corrections} entry pointing at a canonical value that
+#' isn't actually in the reference table), the ORIGINAL uncorrected input is
+#' what's returned unchanged, consistent with every other unmatched value.
+#' To add another known typo/variant, add one more
+#' \code{"typo" = "canonical value"} entry to \code{typo.corrections} below.
+#'
 #' If one or more input elements don't match anything in the reference
 #' table, a warning is printed (not raised via \code{warning()} - a plain
 #' \code{cat()} message, matching how similar diagnostics are reported
@@ -175,6 +194,9 @@
 #'
 #' batz.batusa_recode.names(c("hif", "LOFRAG", "40khzmyo"))
 #' # -> "HiF"      "LoFrag"   "40KHzMyo"
+#'
+#' batz.batusa_recode.names(c("40kMyo", "2bat"))
+#' # -> "40KHzMyo"   "Multiple"   (known typo/shorthand corrections)
 #' }
 #'
 #' @export
@@ -378,6 +400,18 @@ batz.batusa_recode.names <- function(data, batname.format.out = "common", gramma
 "Category/detection-type label (not a species), added 2026-08-27 per Josh's request. latin/common/code4/code6 all hold this same literal string, so it matches case-insensitively (same normalize() rule as species rows) and any of those four batname.format.out values return the exact given casing. Species-only batname.format.out columns return \"\"."
 )), row.names = c(NA, -62L), class = "data.frame")
 
+  # ---------------------------------------------------------------------------
+  # Known typo/variant corrections for the non-species category labels -
+  # applied BEFORE the normal latin/common/code4/code6 lookup below, per
+  # Josh (2026-09-24). See @details, "Known typo/variant corrections", for
+  # the full rationale. Add another known typo/variant by adding one more
+  # "typo" = "canonical value" entry here.
+  # ---------------------------------------------------------------------------
+  typo.corrections <- c(
+    "40kMyo" = "40KHzMyo",
+    "2bat"   = "Multiple"
+  )
+
   match.cols <- c("latin", "common", "code4", "code6")
 
   if (!(batname.format.out %in% names(nabat.names))) {
@@ -403,21 +437,35 @@ batz.batusa_recode.names <- function(data, batname.format.out = "common", gramma
                              use.names = FALSE)
     lookup.rowidx <- rep(seq_len(nrow(reference)), times = length(match.cols))
 
-    x.chr  <- as.character(x)
-    x.norm <- normalize(x.chr)
+    x.orig <- as.character(x)
+
+    # Known typo/variant corrections - see typo.corrections above and
+    # @details. A recognized misspelling/shorthand is rewritten to its
+    # canonical spelling BEFORE the ordinary lookup below runs, matched the
+    # same case/whitespace/dash-underscore-insensitive way as everything
+    # else via normalize(). If a corrected value still doesn't match
+    # anything downstream, the ORIGINAL uncorrected input is what's
+    # returned unchanged (see "out <- x.orig" below), not the corrected
+    # guess - consistent with every other unmatched value.
+    typo.idx    <- match(normalize(x.orig), normalize(names(typo.corrections)))
+    typo.found  <- !is.na(typo.idx)
+    x.corrected <- x.orig
+    x.corrected[typo.found] <- unname(typo.corrections[typo.idx[typo.found]])
+
+    x.norm <- normalize(x.corrected)
 
     match.idx <- match(x.norm, lookup.values)
     row.idx   <- lookup.rowidx[match.idx]   # NA where match.idx is NA
     found     <- !is.na(row.idx)
 
-    out <- x.chr
+    out <- x.orig
     out[found] <- as.character(reference[[batname.format.out]][row.idx[found]])
 
     if (!grammar.dash) {
       out[found] <- gsub("-", " ", out[found])
     }
 
-    list(values = out, unmatched = x.chr[!found])
+    list(values = out, unmatched = x.orig[!found])
   }
 
   if (is.data.frame(data)) {

@@ -42,7 +42,7 @@
 #' \code{aru}, \code{long}, \code{lat}, \code{sunregion}, \code{schedual1},
 #' \code{schedual2} have no separators and are unaffected. This does NOT
 #' touch this function's own INVENTED fields, which never came from the
-#' loaded file - \code{date.mon}, \code{suns}, \code{suns.unix}, \code{sunr},
+#' loaded file - \code{date.monitoringnight}, \code{suns}, \code{suns.unix}, \code{sunr},
 #' \code{sunr.unix}, \code{sunr.mon}, \code{sunr.mon.unix}, \code{calc.lat},
 #' \code{calc.long} all keep their existing dot-separated names, per this
 #' project's ordinary (unrelated to this preference) dot-separated output
@@ -121,7 +121,7 @@
 #'     "suns"/"sunr" strongly implies sunset vs. sunrise, and \code{$sunr}
 #'     is separately and explicitly defined as sunrise - having both be
 #'     sunrise would make \code{$suns} a pure duplicate).
-#'   \item \code{$date.mon} is \code{$date} itself at noon (12:00:00), NOT
+#'   \item \code{$date.monitoringnight} is \code{$date} itself at noon (12:00:00), NOT
 #'     \code{$date + 1} - taken literally from "date plus time of
 #'     12:00:00", with no mention of the following day (unlike
 #'     \code{$sunr.mon}, which explicitly says "for the following day").
@@ -162,7 +162,7 @@
 #' \code{aru.suntimes}'s own output column names are run through
 #' \code{standardize.headers()} as the very last step before it's written
 #' to CSV (when \code{write.output = TRUE}) and returned - e.g.
-#' \code{$date.mon} becomes \code{$date_mon}, \code{$sunr.mon.unix} becomes
+#' \code{$date.monitoringnight} becomes \code{$date_monitoringnight}, \code{$sunr.mon.unix} becomes
 #' \code{$sunr_mon_unix}. This is unrelated to, and does not change, the
 #' existing \verb{*arulist.csv} header standardization described above
 #' (which already always runs, regardless of this parameter, on the loaded
@@ -205,6 +205,53 @@
 #' for \code{"aru.name"} (not \code{"aru"}) in the real-file-shaped test
 #' cases.
 #'
+#' \strong{Output field renamed \code{$date.mon} -> \code{$date.monitoringnight}
+#' (round twenty-five), 2026-09-25, per Josh: "I changed my mine and want
+#' to use date.monitoringnight instead of date.mon to be more consistent
+#' with collaborators."} This function's own \code{$date.mon} was never
+#' part of the earlier \code{monnight.date}/\code{date.mon} naming debate
+#' (see \code{\link{batz.plotactivity_daily.count}}'s own \code{@details}
+#' for that history) - it had already used \code{date.mon} for this same
+#' noon-anchored monitoring-night concept all along - but Josh's
+#' collaborator-consistency request applies here identically, so this
+#' field is renamed to \code{$date.monitoringnight} the same day, alongside
+#' every other function using \code{date.mon} for the same concept
+#' package-wide (see that same \code{@details} entry for the full list).
+#'
+#' \strong{File naming (round twenty-two), 2026-09-24, per Josh's
+#' package-wide request ("Update all functions that save files or charts:
+#' ... for files follow <project.name>_<filetype.name>_<daterange>_
+#' <timestamp>"):} the output CSV name's token ORDER is now reshuffled to
+#' put the filetype token (\code{"suntimes"}) in SECOND position, matching
+#' the requested \code{<project.name>_<filetype.name>_<daterange>_
+#' <timestamp>} shape exactly, and the redundant \code{"sav"} prefix that
+#' used to sit directly in front of the timestamp is dropped (it served no
+#' purpose beyond labeling the timestamp as a save-time, which is now
+#' already implied by the unified pattern). Concretely, the output file
+#' name changes from \verb{<base>_<DATE1>to<DATE2>_sav<timestamp>_
+#' suntimes.csv} to \verb{<base>_suntimes_<DATE1>to<DATE2>_<timestamp>.csv}
+#' - e.g. what used to save as
+#' \code{"aru_20250101to20250202_sav20260826113700_suntimes.csv"} now saves
+#' as \code{"aru_suntimes_20250101to20250202_20260924153000.csv"}. The
+#' \code{<timestamp>} token itself keeps the same 14-digit, no-separator
+#' \code{format(Sys.time(), "\%Y\%m\%d\%H\%M\%S")} shape this function
+#' already used before this round (this function's own pre-existing
+#' no-underscore timestamp format was in fact the precedent cited when
+#' extending that same 14-digit shape to every other \code{batz} function
+#' in this round - see each other function's own "Timestamp format (round
+#' twenty-two)" \code{@details} entry). \strong{Flagged as a judgment
+#' call:} \code{strip.autoname()} (used so a prior stamped output file
+#' name can be fed back in as \code{project.name} and get a fresh stamp
+#' rather than a second one stacked on top) was updated to match the new
+#' token order/shape; it now only strips the NEW-format suffix correctly.
+#' A file name saved under the OLD (pre-round-twenty-two) format fed back
+#' in as \code{project.name} will no longer strip cleanly - this was not
+#' explicitly asked about one way or the other, and re-stripping old-format
+#' names was judged not worth the added complexity for what is expected to
+#' be a short-lived transition window. \strong{Please confirm this is
+#' acceptable}, or say if old-format \code{project.name} values still need
+#' to keep stripping correctly going forward.
+#'
 #' @param dir.load Directory to search for files matching \code{load.pattern}.
 #'   Default: current working directory. Must actually contain the
 #'   \verb{*arulist.csv} file(s) - if no matching file is found, the
@@ -229,20 +276,25 @@
 #'   flagged as a bug and fixed.)
 #' @param project.name Character, default \code{""}: base name for the
 #'   output CSV written when \code{write.output = TRUE}. Every output
-#'   file name gets a date-range + save-time stamp appended automatically,
-#'   so no two runs ever silently overwrite each other:
-#'   \verb{<base>_<DATE1>to<DATE2>_sav<timestamp>_suntimes.csv}, where
-#'   \code{DATE1}/\code{DATE2} are the earliest/latest \code{$date} in the
-#'   output (\code{YYYYMMDD}) and \code{<timestamp>} is when the file was
-#'   written (\code{YYYYMMDDHHMMSS}, e.g. \code{sav20260826114426}).
-#'   \code{""} (default) uses \code{"aru"} as \verb{<base>}. Any other
-#'   value is used as \verb{<base>} instead - e.g. \code{project.name =
-#'   "projectname_suntimes.csv"} produces something like
-#'   \code{"projectname_20250101to20250202_sav20260826113700_suntimes.csv"}.
-#'   If the given value already ends in a previously-auto-generated suffix
-#'   (e.g. you passed a prior run's output file name back in), that suffix
-#'   is stripped back off first, so the file gets a fresh stamp instead of
-#'   a second one stacked on top.
+#'   file name gets a filetype token, a date-range token, and a save-time
+#'   stamp appended automatically, so no two runs ever silently overwrite
+#'   each other: \verb{<base>_suntimes_<DATE1>to<DATE2>_<timestamp>.csv},
+#'   where \code{DATE1}/\code{DATE2} are the earliest/latest \code{$date}
+#'   in the output (\code{YYYYMMDD}) and \code{<timestamp>} is when the
+#'   file was written (\code{YYYYMMDDHHMMSS}, e.g. \code{20260826114426}).
+#'   \strong{Reordered and the \code{"sav"} prefix dropped (round
+#'   twenty-two, 2026-09-24, per Josh) - see @details, "File naming (round
+#'   twenty-two)"; the previous shape was \verb{<base>_<DATE1>to<DATE2>_
+#'   sav<timestamp>_suntimes.csv}.} \code{""} (default) uses \code{"aru"}
+#'   as \verb{<base>}. Any other value is used as \verb{<base>} instead -
+#'   e.g. \code{project.name = "projectname"} produces something like
+#'   \code{"projectname_suntimes_20250101to20250202_20260924113700.csv"}.
+#'   If the given value already ends in a previously-auto-generated
+#'   NEW-format suffix (e.g. you passed a prior run's output file name
+#'   back in), that suffix is stripped back off first, so the file gets a
+#'   fresh stamp instead of a second one stacked on top; a name saved
+#'   under the OLD (pre-round-twenty-two) format is not recognized by this
+#'   stripping step - see @details.
 #' @param snake_case Logical, default \code{FALSE}. Added 2026-09-22, per
 #'   Josh's request to audit and extend the snake_case output option
 #'   package-wide (see \code{\link{batz.generate_plotframe.bat}}, the first
@@ -252,8 +304,8 @@
 #'   written/returned. \code{FALSE} (default) keeps this function's normal
 #'   column names exactly as always. \code{TRUE} runs every output column
 #'   name through \code{standardize.headers()} instead (e.g.
-#'   \code{$sunregion_long} stays \code{$sunregion_long}, \code{$date.mon}
-#'   becomes \code{$date_mon}, \code{$sunr.mon.unix} becomes
+#'   \code{$sunregion_long} stays \code{$sunregion_long}, \code{$date.monitoringnight}
+#'   becomes \code{$date_monitoringnight}, \code{$sunr.mon.unix} becomes
 #'   \code{$sunr_mon_unix}, \code{$aru.name} becomes \code{$aru_name}) -
 #'   for a caller who specifically wants a snake_case CSV/data frame out of
 #'   this function, without having to convert it themselves afterward.
@@ -262,7 +314,7 @@
 #'   \describe{
 #'     \item{aru.suntimes}{One row per (aru, date), \code{"fixed.unique"}/
 #'       \code{"fixed.pooled"} rows only: \code{$aru.name}, \code{$date},
-#'       \code{$date.mon}, \code{$sunregion}, \code{$sunregion_long},
+#'       \code{$date.monitoringnight}, \code{$sunregion}, \code{$sunregion_long},
 #'       \code{$sunregion_lat}, \code{$date_start}, \code{$date_end},
 #'       \code{$time_zone}, \code{$sunregion_type}, \code{$schedual1},
 #'       \code{$schedual2}, \code{$lat}, \code{$long}, \code{$suns},
@@ -581,7 +633,7 @@ batz.generate_suntimes.arulist <- function(dir.load = getwd(),
   aru.suntimes <- data.frame(
     aru.name       = aru.expand$aru.name,
     date           = aru.expand$date,
-    date.mon       = as.POSIXct(paste(aru.expand$date, "12:00:00")),
+    date.monitoringnight = as.POSIXct(paste(aru.expand$date, "12:00:00")),
     sunregion      = aru.expand$sunregion,
     sunregion_long = aru.expand$sunregion_long,
     sunregion_lat  = aru.expand$sunregion_lat,
@@ -616,25 +668,28 @@ batz.generate_suntimes.arulist <- function(dir.load = getwd(),
     aru.suntimes.out$sunr.unix     <- round(aru.suntimes.out$sunr.unix)
     aru.suntimes.out$sunr.mon.unix <- round(aru.suntimes.out$sunr.mon.unix)
     # ---- resolve the output file name ----------------------------------
-    # <base>_<DATE1>to<DATE2>_sav<timestamp>_suntimes.csv - see @param
-    # project.name above. Strip any previously-auto-generated suffix off a
-    # user-given `project.name` first, so feeding a prior stamped output
-    # file name back in re-stamps rather than stacking a second stamp on
-    # top of the first.
+    # <base>_suntimes_<DATE1>to<DATE2>_<timestamp>.csv - see @param
+    # project.name above. Round twenty-two, 2026-09-24, per Josh: the
+    # filetype token ("suntimes") moved to second position and the "sav"
+    # prefix in front of the timestamp was dropped - see @details, "File
+    # naming (round twenty-two)". Strip any previously-auto-generated
+    # NEW-format suffix off a user-given `project.name` first, so feeding
+    # a prior stamped output file name back in re-stamps rather than
+    # stacking a second stamp on top of the first.
     strip.autoname <- function(x) {
       x <- sub("\\.csv$", "", x, ignore.case = TRUE)
-      x <- sub("_suntimes$", "", x, ignore.case = TRUE)
-      x <- sub("_sav[0-9]{14}$", "", x, ignore.case = TRUE)
+      x <- sub("_[0-9]{14}$", "", x, ignore.case = TRUE)
       x <- sub("_[0-9]{8}to[0-9]{8}$", "", x, ignore.case = TRUE)
+      x <- sub("_suntimes$", "", x, ignore.case = TRUE)
       x
     }
     base.name <- if (identical(project.name, "")) "aru" else strip.autoname(project.name)
 
     date1     <- format(min(aru.suntimes$date), "%Y%m%d")
     date2     <- format(max(aru.suntimes$date), "%Y%m%d")
-    savestamp <- paste0("sav", format(Sys.time(), "%Y%m%d%H%M%S"))
 
-    out.file <- paste0(base.name, "_", date1, "to", date2, "_", savestamp, "_suntimes.csv")
+    out.file <- paste0(base.name, "_suntimes_", date1, "to", date2, "_",
+                        format(Sys.time(), "%Y%m%d%H%M%S"), ".csv")
 
     ## snake_case (per Josh, 2026-09-22, project-wide audit/extension of the
     ## snake_case output option - see @details) is applied here, to a copy

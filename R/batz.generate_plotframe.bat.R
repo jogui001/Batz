@@ -12,7 +12,7 @@
 #' \code{data} does NOT need to already have \code{$sunregion}.
 #'
 #' \strong{Required input columns.} `data` must have every one of:
-#' \code{filename}, \code{date.mon}, \code{manid}, \code{autoid.kp},
+#' \code{filename}, \code{date.monitoringnight}, \code{manid}, \code{autoid.kp},
 #' \code{autoid.sb}, \code{lat}, \code{serial}, \code{lon},
 #' \code{aru.name}, \code{date}, \code{time}, \code{call.datetime}. All
 #' twelve come straight out of \code{\link{batz.merge_vetted.acoustics}}
@@ -26,7 +26,7 @@
 #' \strong{Header standardization (per Josh, 2026-09-14 project
 #' preference) - two different things in this function, treated
 #' differently.} This function's \code{required.headers} list above
-#' (\code{filename}, \code{date.mon}, \code{manid}, ... \code{call.datetime})
+#' (\code{filename}, \code{date.monitoringnight}, \code{manid}, ... \code{call.datetime})
 #' is \code{data}'s own already-established \code{batz} output schema -
 #' every one of those names comes straight out of
 #' \code{\link{batz.merge_vetted.acoustics}}'s own dot-separated,
@@ -58,12 +58,12 @@
 #' \code{setdiff()}: both \code{data}'s real column names and
 #' \code{required.headers} are standardized to snake_case purely to MATCH
 #' them up, so \code{data} is accepted whether its columns are already
-#' this function's own dot-separated convention (\code{"date.mon"}), have
+#' this function's own dot-separated convention (\code{"date.monitoringnight"}), have
 #' come back snake_cased from some intervening save/reload step
-#' (\code{"date_mon"}), or anything equivalent in between - every matched
+#' (\code{"date_monitoringnight"}), or anything equivalent in between - every matched
 #' column is renamed, in this function's own local working copy only, back
 #' to the exact dot-separated spelling in \code{required.headers}, so
-#' every line of code below this check keeps referencing \code{$date.mon}/
+#' every line of code below this check keeps referencing \code{$date.monitoringnight}/
 #' \code{$aru.name}/etc. exactly as before. This never mutates the
 #' \code{data} object the caller passed in (R already copies a data frame
 #' argument on modification) and never changes \code{plfr.batsummary}'s
@@ -106,7 +106,7 @@
 #' per row as the number of minutes from noon on the date named by
 #' \code{groupby.date} (the start of that monitoring night, since these
 #' are nocturnal-animal records - a night starting at noon on
-#' \code{$date.mon} and ending at noon the next calendar day) to
+#' \code{$date.monitoringnight} and ending at noon the next calendar day) to
 #' \code{$call.datetime} for that row - both columns' formats are
 #' auto-detected against a small built-in candidate list rather than
 #' assumed fixed (see below).
@@ -127,14 +127,14 @@
 #' \strong{$group vs $groupedby/$groupby.date - a new, flagged
 #' interpretive call (2026-08-28), per Josh's request to add
 #' "\code{$groupby.date} = that the date was grouped by e.g.
-#' \code{'date.mon'} or \code{'week.mon'}", "\code{$groupedby} = what the
+#' \code{'date.monitoringnight'} or \code{'week.mon'}", "\code{$groupedby} = what the
 #' data was grouped by e.g. \code{'aru.name'} or \code{'deployment.type'}",
 #' and "\code{$group} = \code{'aru.name'} or \code{'deployment.type'} for
 #' that observation".} \code{$groupedby} and \code{$groupby.date} are
 #' implemented as METADATA columns - constant for every row of a single
 #' call, holding the literal NAME of the column that was grouped by (the
 #' current value of the \code{groupby}/\code{groupby.date} parameters,
-#' e.g. \code{"aru.name"}/\code{"date.mon"}) - while \code{$group} is the
+#' e.g. \code{"aru.name"}/\code{"date.monitoringnight"}) - while \code{$group} is the
 #' actual per-row grouping VALUE (e.g. \code{"105059-NW3"}, not the column
 #' name \code{"aru.name"} again). Josh's own spec text gives \code{$group}
 #' the exact same example values as \code{$groupedby}
@@ -173,7 +173,7 @@
 #' the alternative readings that were considered and set aside).
 #'
 #' \strong{Date/time format auto-detection.} Neither \code{groupby.date}
-#' (e.g. raw \code{$date.mon}/\code{$monitoringnight} values like
+#' (e.g. raw \code{$date.monitoringnight}/\code{$monitoringnight} values like
 #' \code{"6/26/2026"}) nor \code{call.datetime}'s own values (which may
 #' already be in \code{\link{batz.datawrangler_call.datetime}}-style
 #' format OR a raw recorder \code{Timestamp} string like
@@ -367,6 +367,24 @@
 #' fill-in is unchanged for every other \code{spp.id}/\code{trim.noid}
 #' combination.
 #'
+#' \strong{\code{groupby.date}'s default renamed \code{"date.mon"} ->
+#' \code{"date.monitoringnight"} (round twenty-five), 2026-09-25, per
+#' Josh: "I changed my mine and want to use date.monitoringnight instead
+#' of date.mon to be more consistent with collaborators."} This function's
+#' own \code{$date.mon}/\code{groupby.date} default was never part of the
+#' earlier \code{monnight.date}/\code{date.mon} naming debate (see
+#' \code{\link{batz.plotactivity_daily.count}}'s own \code{@details} for
+#' that history) - it had already used \code{date.mon} for this same
+#' monitoring-night concept all along - but Josh's collaborator-
+#' consistency request applies here identically, so \code{groupby.date}'s
+#' default is renamed to \code{"date.monitoringnight"} the same day,
+#' alongside every other function using \code{date.mon} for the same
+#' concept package-wide (see that same \code{@details} entry for the
+#' full list). \code{required.headers} is updated to match, and every
+#' code reference below (which already reads column names dynamically via
+#' the \code{groupby.date} variable, not a hardcoded literal) picks up the
+#' new default automatically.
+#'
 #' @param data A data frame with every column listed above already
 #'   present (see Details for how to assemble one). Column headers may
 #'   arrive in this function's own dot-separated style OR already
@@ -382,7 +400,9 @@
 #'   is still \code{"manid.sb"} and \code{trim.noid = TRUE}, in which case
 #'   those blank-valued rows are removed from \code{data} entirely instead
 #'   - see \strong{Follow-up, 2026-09-23} in Details.
-#' @param groupby.date Character, default \code{"date.mon"}. Name of the
+#' @param groupby.date Character, default \code{"date.monitoringnight"}
+#'   (renamed from \code{"date.mon"} in round twenty-five, 2026-09-25 -
+#'   see Details). Name of the
 #'   column in \code{data} holding the date/interval to summarize by.
 #'   (Named \code{"groupby.date"} rather than the originally-specced
 #'   \code{"date"}, to match the sibling \code{groupby} parameter and
@@ -420,8 +440,8 @@
 #'   \code{\link{batz.merge_vetted.acoustics}} uses for its own
 #'   \code{load.pattern}). Matching is CASE-INSENSITIVE.
 #' @param dir.sub Logical, default \code{FALSE}. Also search subdirectories
-#'   of \code{dir.load} for the arulist file(s). (Standardized 2026-08-29,
-#'   per Josh: default changed from \code{TRUE} back to \code{FALSE} to
+#'   of \code{dir.load}. (Standardized 2026-08-29, per Josh: default
+#'   changed from \code{TRUE} back to \code{FALSE} to
 #'   match every other \code{batz} function's \code{dir.sub} default -
 #'   previously deliberately \code{TRUE} per an earlier explicit spec;
 #'   this reverses that for consistency.)
@@ -470,7 +490,7 @@
 batz.generate_plotframe.bat <- function(data,
                                          duplicates.remove = TRUE,
                                          spp.id = "manid.sb",
-                                         groupby.date = "date.mon",
+                                         groupby.date = "date.monitoringnight",
                                          groupby = "aru.name",
                                          alldetections = TRUE,
                                          trim.noise = TRUE,
@@ -496,9 +516,9 @@ batz.generate_plotframe.bat <- function(data,
   ## intervening save/reload step is still recognized), then every matched
   ## column of `data` is renamed, in this function's own local copy only,
   ## back to the exact dot-separated spelling below - everything after
-  ## this check keeps referencing $date.mon/$aru.name/etc. exactly as
+  ## this check keeps referencing $date.monitoringnight/$aru.name/etc. exactly as
   ## before. See @details, "Header standardization"/"BUGFIX/NEW".
-  required.headers <- c("filename", "date.mon", "manid", "autoid.kp",
+  required.headers <- c("filename", "date.monitoringnight", "manid", "autoid.kp",
                          "autoid.sb", "lat", "serial", "lon", "aru.name",
                          "date", "time", "call.datetime")
   data.canon <- canonicalize.headers(data, required.headers)
