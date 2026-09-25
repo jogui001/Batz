@@ -399,8 +399,21 @@ print(batz.batusa_recode.names(c("hif", "LOFRAG", "40khzmyo", "multiple", "socia
 
 cat("\n=== REGRESSION: ordinary species lookups unaffected ===\n")
 print(batz.batusa_recode.names(c("epfu", "myotis_lucifugus", "Hoary bat")))
-print(batz.batusa_recode.names("epfu", batname.format.out = "latin"))
-print(batz.batusa_recode.names("myse", batname.format.out = "fedstatus"))
+# batname.format.out = "scientific_name"/"listing.status_federal" (was
+# "latin"/"fedstatus" prior to the 2026-09-25 column rename - see
+# batz.batusa_recode.names.R's own @details, "Column-name rename,
+# 2026-09-25")
+print(batz.batusa_recode.names("epfu", batname.format.out = "scientific_name"))
+print(batz.batusa_recode.names("myse", batname.format.out = "listing.status_federal"))
+
+cat("\n=== NEW 2026-09-25: expanded typo/variant corrections, per Josh's\n",
+    "uploaded \"spell check\" tab ===\n", sep = "")
+print(batz.batusa_recode.names(c("HighF", "LowF", "HighF/HiF", "LowF/LoF")))
+cat("(40kmyomyvo corrects to \"40KHzMyomyvo\", which isn't yet one of the 8\n",
+    "category rows - expected to pass through unchanged, with a warning,\n",
+    "until/unless that row is added - see @details, \"Known typo/variant\n",
+    "corrections, expanded (2026-09-25)\"):\n", sep = "")
+print(batz.batusa_recode.names("40kmyomyvo"))
 
 cat("\n=== REGRESSION: a genuinely unmatched input is still returned UNCHANGED\n",
     "(not silently 'corrected' to something) and still triggers the warning ===\n", sep = "")

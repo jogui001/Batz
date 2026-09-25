@@ -6,7 +6,7 @@
 \usage{
 batz.batusa_recode.names(
   data,
-  batname.format.out = "common",
+  batname.format.out = "common_name",
   grammar.dash = TRUE
 )
 }
@@ -17,20 +17,23 @@ way (there is no column-selection argument) and comes back as a data
 frame of the same dimensions, with columns returned as character
 vectors.}
 
-\item{batname.format.out}{Character, default \code{"common"}. The desired
-  output format - must be one of the reference table's own headers:
-  \code{"latin"}, \code{"common"}, \code{"code4"}, \code{"code6"},
-  \code{"fedstatus"}, \code{"iucnstatus"}, \code{"states.listed"},
-  \code{"states.present"}, \code{"states.end"}, \code{"states.the"},
-  \code{"state.soc"}, \code{"fed.proposed"}, \code{"hibernation.strat"},
+\item{batname.format.out}{Character, default \code{"common_name"}. The
+  desired output format - must be one of the reference table's own
+  headers: \code{"scientific_name"}, \code{"common_name"}, \code{"code4"},
+  \code{"code6"}, \code{"listing.status_federal"},
+  \code{"listing.status_iucn"}, \code{"states.listed"},
+  \code{"states.present"}, \code{"states.endangered"},
+  \code{"states.threatened"}, \code{"state.sppofconcern"},
+  \code{"listing.status_federal.proposed"}, \code{"hibernation.strategy"},
   \code{"phonic.group"}, or \code{"notes"}. Matching an input element
-  to a reference row always uses \code{latin}/\code{common}/\code{code4}/
-  \code{code6} only, regardless of \code{batname.format.out} - so, for
-  example, \code{batname.format.out = "fedstatus"} looks a species up by any
-  of its four names/codes and returns its federal listing status instead
-  of another name/code. An unrecognized value is an error.
+  to a reference row always uses \code{scientific_name}/\code{common_name}/
+  \code{code4}/\code{code6} only, regardless of \code{batname.format.out} -
+  so, for example, \code{batname.format.out = "listing.status_federal"}
+  looks a species up by any of its four names/codes and returns its
+  federal listing status instead of another name/code. An unrecognized
+  value is an error.
 
-  \code{"hibernation.strat"} is one of \code{"migratory"} (tree bats that
+  \code{"hibernation.strategy"} is one of \code{"migratory"} (tree bats that
   head south for winter), \code{"hibernating"} (cave bats that go into
   torpor over winter), \code{"resident"} (active year-round, no
   hibernation), \code{"mixed"} (species with both migratory and
@@ -49,12 +52,12 @@ vectors.}
   \code{"LoF"}, \code{"HiFrag"}, \code{"LoFrag"}, \code{"Multiple"},
   \code{"Social"}. They match the same case-insensitive way as species
   names (e.g. \code{"hif"}, \code{"HIF"}, \code{"Hif"} all match), and
-  \code{batname.format.out} values of \code{"latin"}/\code{"common"}/
-  \code{"code4"}/\code{"code6"} all return the exact literal casing shown
-  above. Every other \code{batname.format.out} (\code{"fedstatus"},
-  \code{"states.present"}, \code{"phonic.group"}, etc.) returns
-  \code{""} for these eight, since those columns don't apply to a
-  non-species label.}
+  \code{batname.format.out} values of \code{"scientific_name"}/
+  \code{"common_name"}/\code{"code4"}/\code{"code6"} all return the
+  exact literal casing shown above. Every other \code{batname.format.out}
+  (\code{"listing.status_federal"}, \code{"states.present"},
+  \code{"phonic.group"}, etc.) returns \code{""} for these eight, since
+  those columns don't apply to a non-species label.}
 
 \item{grammar.dash}{Logical, default \code{TRUE}. Hyphens are ignored
 (treated the same as a space) when MATCHING an input value regardless of
@@ -82,7 +85,7 @@ input and the reference table (or between different inputs) don't cause a
 false mismatch.
 }
 \details{
-\strong{Header standardization (per Josh, 2026-09-14 project preference) - does not apply to this function, flagged not silently skipped.} The project-wide preference is that headers coming from a loaded file or an externally-supplied data frame are run through the shared package helper \code{standardize.headers()} (trim whitespace, collapse non-alphanumeric runs to underscores, lowercase). This function has no raw-header step for that preference to attach to: every element of \code{data} is recoded as a VALUE (a species identifier - a name or code), never as a header, and when \code{data} is a data frame this function never reads, matches on, or otherwise interprets its column names at all - \code{names(out) <- names(data)} just carries them through unchanged as a pure pass-through label. The embedded \code{nabat.names} reference table's own column names (\code{$latin}/\code{$common}/\code{$code4}/\code{$code6}/\code{$fedstatus}/etc.) are this function's fixed, already-established internal schema - not raw headers copied fresh from a file for this rollout - so they are not run through \code{standardize.headers()} either, the same treatment already given to every other \code{batz} function's own output-schema column names.
+\strong{Header standardization (per Josh, 2026-09-14 project preference) - does not apply to this function, flagged not silently skipped.} The project-wide preference is that headers coming from a loaded file or an externally-supplied data frame are run through the shared package helper \code{standardize.headers()} (trim whitespace, collapse non-alphanumeric runs to underscores, lowercase). This function has no raw-header step for that preference to attach to: every element of \code{data} is recoded as a VALUE (a species identifier - a name or code), never as a header, and when \code{data} is a data frame this function never reads, matches on, or otherwise interprets its column names at all - \code{names(out) <- names(data)} just carries them through unchanged as a pure pass-through label. The embedded \code{nabat.names} reference table's own column names (\code{$scientific_name}/\code{$common_name}/\code{$code4}/\code{$code6}/\code{$listing.status_federal}/etc.) are this function's fixed, already-established internal schema - not raw headers copied fresh from a file for this rollout - so they are not run through \code{standardize.headers()} either, the same treatment already given to every other \code{batz} function's own output-schema column names.
 
 (Renamed 2026-08-29, per Josh, from \code{output.format} to
 \code{batname.format.out}, to standardize \code{format}-suffixed
@@ -186,22 +189,151 @@ species list later, replace the \code{nabat.names} data frame inside
 this function with a newer export of the same 15-column format (and
 re-check every column's length equals \code{nrow()}, per the bugfix
 above, before shipping it).
+
+\strong{Reference table export, 2026-09-25, per Josh's request
+("generate reference table for batz.batusa_recode.names").} A design
+question raised in an earlier round - whether this function should be
+rewritten to load \code{nabat.names} from \code{NAbat.names.csv} at
+call time, like \code{\link{batz.treeusa_recode.names}} already does,
+instead of embedding it - was put to Josh directly; he chose neither
+rewiring option, opting instead for a plain export/documentation of the
+table exactly as it's embedded here, with no new file dependency added
+to this function. \code{batz.batusa_recode.names_reference.csv} is that
+export: a 62-row x 15-column snapshot of the live \code{nabat.names}
+table above, pulled directly from this function's own source (by
+introspecting \code{body(batz.batusa_recode.names)} and evaluating just
+the \code{nabat.names <-} assignment, not retyped by hand - precisely to
+avoid the transcription slip that caused the 2026-09-21/2026-09-22
+\code{$fed.proposed} bugs above). \strong{This CSV is a read-only
+snapshot for review/audit purposes (diffing against
+\code{NAbat.names.csv}, opening in Excel, sanity-checking a value) - no
+\code{batz} function reads it, and \code{batz.batusa_recode.names()}
+itself is completely unchanged by this: it keeps embedding its own copy
+exactly as before.} It will silently go stale if \code{nabat.names} is
+ever edited inside this function without also re-exporting it; there is
+no automatic sync. To regenerate it: source this file, introspect
+\code{body(batz.batusa_recode.names)} for the \code{nabat.names <-}
+assignment (the same method used to build this export - safer than
+copy/pasting the table by hand), re-run the
+\code{stopifnot(all(sapply(nabat.names, length) == nrow(nabat.names)))}
+check from the bugfix above, then \code{write.csv()} it.
+
+\strong{Data correction, 2026-09-25, per Josh (\"Western yellow bat is
+not listed in OK\"):} the embedded table's \code{$states.the} value for
+\emph{Lasiurus xanthinus} (\code{code4 = "laxa"}, row 25) was
+\code{"OK"} - incorrect, per Josh's direct correction, and inconsistent
+with the rest of that row besides (\code{$states.present} for this
+species is \code{"AZ,CA,NM"}; Oklahoma isn't part of its documented
+range in this table at all, and every other state-listing column for
+this row was already blank) - almost certainly a stray value from an
+earlier data-entry slip in \code{NAbat.names.csv}, the same class of
+issue as the \code{$fed.proposed} row-alignment bugs above, just a
+single cell rather than a whole column shifted. Cleared to blank.
+Applied and verified the same way as every embedded-table change in
+this file: extracted the live table via
+\code{body(batz.batusa_recode.names)} introspection (never retyped by
+hand), the single-cell change confirmed by a full column-by-column diff
+against the table before the edit (exactly one cell differed:
+\code{states.the[25]}, \code{"OK"} -> \code{""}), then re-verified with
+\code{stopifnot(all(sapply(nabat.names, length) == nrow(nabat.names)))}
+before shipping. \code{batz.batusa_recode.names_reference.csv} (see the
+export entry just above) was regenerated from this corrected table, so
+it and the embedded table agree again.
+
+\strong{Column-name rename, 2026-09-25, per Josh's explicit mapping.}
+Nine of the embedded table's 15 column names were renamed - a real
+interface change, since every valid \code{batname.format.out} value is
+literally one of these column names, and the parameter's own default
+changed with them (\code{"common"} -> \code{"common_name"}):
+\tabular{ll}{
+  \strong{old name} \tab \strong{new name} \cr
+  \code{latin} \tab \code{scientific_name} \cr
+  \code{common} \tab \code{common_name} \cr
+  \code{fedstatus} \tab \code{listing.status_federal} \cr
+  \code{iucnstatus} \tab \code{listing.status_iucn} \cr
+  \code{states.end} \tab \code{states.endangered} \cr
+  \code{states.the} \tab \code{states.threatened} \cr
+  \code{state.soc} \tab \code{state.sppofconcern} \cr
+  \code{fed.proposed} \tab \code{listing.status_federal.proposed} \cr
+  \code{hibernation.strat} \tab \code{hibernation.strategy} \cr
+}
+\code{code4}, \code{code6}, \code{states.listed}, \code{states.present},
+\code{phonic.group}, and \code{notes} are unchanged. Only the column
+NAMES changed - every cell's value is untouched (verified: a full
+column-by-column value diff, matched old name to new name, showed zero
+differing cells, on top of the standing
+\code{stopifnot(all(sapply(nabat.names, length) == nrow(nabat.names)))}
+integrity check). \strong{Historical \code{@details} paragraphs above
+this one (the BUGFIX/RECURRENCE entries, and the reference-table-export
+and data-correction entries immediately above) describe the table under
+its PRE-RENAME column names (e.g. \code{$fed.proposed}, \code{$states.the})
+- left as originally written, per this project's standing
+append-don't-rewrite-history convention, rather than retroactively
+edited to the new names.} Anywhere this file's history mentions one of
+the old names in the left column above, read it as referring to what is
+now the corresponding new name on the right.
+\code{batz.batusa_recode.names_reference.csv} was regenerated again
+under the new column names, so the embedded table, this export, and
+this documentation are all consistent going forward.
+
+\strong{Known typo/variant corrections, expanded (2026-09-25), per
+Josh's request ("add step at the start Batz.batusa_recode.names() Use
+the spell check tab to build internal db that corrects common
+misspellings and variations first") and his uploaded workbook
+(\code{batz.batusa_recode.names_reference_20260925.xlsx}, sheet "spell
+check").} The typo-correction step itself already ran first, before the
+ordinary lookup (added 2026-09-24 - see the entry above) - what's new
+here is the \code{typo.corrections} table it's built from: expanded from
+the original 2 entries to the 7 distinct pairs on that sheet (an 8th
+row, \code{"2Bat" -> "Multiple"}, is the same correction as
+\code{"2bat" -> "Multiple"} once case is folded by \code{normalize()},
+so it isn't a separate table entry). Pulled directly from the
+spreadsheet's cells (not retyped by hand), the new entries are:
+\code{"40kmyomyvo" -> "40KHzMyomyvo"}, \code{"HighF/HiF" -> "HiF"},
+\code{"LowF/LoF" -> "LoF"}, \code{"LowF" -> "LoF"}, and
+\code{"HighF" -> "HiF"}.
+
+\strong{Two things flagged for Josh, not silently resolved:} (1) the
+sheet's \code{"In"} values \code{"HighF/HiF"} and \code{"LowF/LoF"} are
+read LITERALLY, as single combined labels some vetting output
+apparently uses (not as "either half maps to the given canonical
+spelling") - matched exactly like every other entry here, case/
+whitespace-insensitively but with the \code{/} itself kept as-is (this
+function's \code{normalize()} only folds \code{-}/\code{_} to a space,
+never \code{/}), so only that exact combined string (in any
+case/whitespace variant) is corrected; a bare \code{"HighF"} or
+\code{"LowF"} is still separately covered by its own row. (2)
+\code{"40kmyomyvo" -> "40KHzMyomyvo"} corrects to a spelling that isn't
+actually one of the 8 non-species category rows in the embedded
+reference table above (only \code{"40KHzMyo"} is) - per the existing
+pass-through convention, an input landing on \code{"40KHzMyomyvo"}
+simply won't match anything downstream and is returned unchanged,
+exactly like any other unmatched value, so this is safe to ship as-is,
+but it means the correction currently has no reference-table row to
+land on. Josh's own \code{"Sheet3"} tab in the same workbook defines
+\code{"40kmyomyvo"} as "Myotis volans or other species of Myotis with
+pulses that have a minimum frequency of approximately 35-45 kHz" - a
+real, distinct category, not a typo for one of the 8 existing rows.
+\strong{Please confirm whether \code{"40KHzMyomyvo"} should be added as
+a 9th non-species category row (same pattern as the existing 8, added
+2026-08-27)} - not added here, since that's a reference-table content
+change beyond what was asked in this round.
 }
 \examples{
 \dontrun{
 batz.batusa_recode.names(c("epfu", "myotis_lucifugus", "Hoary bat"))
 # -> "Big brown bat"    "Little brown bat"    "Hoary bat"
 
-batz.batusa_recode.names("epfu", batname.format.out = "latin")
+batz.batusa_recode.names("epfu", batname.format.out = "scientific_name")
 # -> "Eptesicus fuscus"
 
-batz.batusa_recode.names("lano", batname.format.out = "common", grammar.dash = FALSE)
+batz.batusa_recode.names("lano", batname.format.out = "common_name", grammar.dash = FALSE)
 # -> "Silver haired bat"   (hyphen replaced with a space)
 
-batz.batusa_recode.names("myse", batname.format.out = "fedstatus")
+batz.batusa_recode.names("myse", batname.format.out = "listing.status_federal")
 # -> "Endangered"
 
-batz.batusa_recode.names("tabr", batname.format.out = "hibernation.strat")
+batz.batusa_recode.names("tabr", batname.format.out = "hibernation.strategy")
 # -> "mixed"   (most populations migrate to Mexico; Florida's is resident)
 
 batz.batusa_recode.names("mylu", batname.format.out = "phonic.group")
@@ -212,6 +344,10 @@ batz.batusa_recode.names(c("hif", "LOFRAG", "40khzmyo"))
 
 batz.batusa_recode.names(c("40kMyo", "2bat"))
 # -> "40KHzMyo"   "Multiple"   (known typo/shorthand corrections)
+
+batz.batusa_recode.names(c("HighF", "LowF", "HighF/HiF"))
+# -> "HiF"   "LoF"   "HiF"   (corrections added 2026-09-25, from Josh's
+#    "spell check" tab)
 }
 
 }

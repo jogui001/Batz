@@ -380,11 +380,13 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
     spp.plot <- unique(trimws(spp.plot))
     facpan   <- unique(trimws(facpan))
 
-    spp.plot <- batz.batusa_recode.names(spp.plot, batname.format.out = "common")
-    facpan   <- batz.batusa_recode.names(facpan, batname.format.out = "common")
+    # batname.format.out = "common_name" (was "common" prior to 2026-09-25 -
+    # batz.batusa_recode.names()'s embedded table column was renamed then).
+    spp.plot <- batz.batusa_recode.names(spp.plot, batname.format.out = "common_name")
+    facpan   <- batz.batusa_recode.names(facpan, batname.format.out = "common_name")
 
     pd <- data
-    pd$spp.common <- batz.batusa_recode.names(pd$spp.id, batname.format.out = "common")
+    pd$spp.common <- batz.batusa_recode.names(pd$spp.id, batname.format.out = "common_name")
 
     plot.set.val <- trimws(job$plot.set)
     if (nzchar(plot.set.val)) {
@@ -435,7 +437,8 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
     sdb$midnight.time <- y.ref.noon + 12 * 3600
 
     facet.label.fmt <- unquote(get.setting(job, "facet.label"))
-    if (!nzchar(facet.label.fmt)) facet.label.fmt <- "common"
+    # default was "common" prior to 2026-09-25 (see the note above)
+    if (!nzchar(facet.label.fmt)) facet.label.fmt <- "common_name"
 
     panel.levels.raw <- facpan
     panel.labels <- batz.batusa_recode.names(panel.levels.raw, batname.format.out = facet.label.fmt)

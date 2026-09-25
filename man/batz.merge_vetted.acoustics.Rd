@@ -43,7 +43,9 @@ creates \code{vetted.merged_log.file} (one row per SKIPPED file, with
 \code{batname.format.out} passed to \code{\link{batz.batusa_recode.names}}
 when recoding \code{$manid}/\code{$autoid.kp}/\code{$autoid.sb} - must
 be one of that function's valid \code{batname.format.out} values (e.g.
-\code{"code4"}, \code{"common"}, \code{"code6"}, \code{"latin"}, ...).
+\code{"code4"}, \code{"common_name"}, \code{"code6"},
+\code{"scientific_name"}, ... - \code{"common"}/\code{"latin"} prior to
+2026-09-25, see Details).
 Not specified in the original spec beyond its default; read as "the
 format the recoded manual/auto ID columns end up in" and passed
 straight through to \code{batname.format.out} - see Details.}
@@ -333,6 +335,30 @@ mixing \code{date.mon} and \code{date.monitoringnight} across the
 package. Nothing else in this function's logic changes - this is a pure
 rename of the string literal in two places (the positional-rename target
 vector and the reorder column vector).
+
+\strong{Follow-up, 2026-09-25, per Josh's package-wide audit request ("as
+I make these changes ID any other functions in the package that maybe
+impacted, make changes as needed") following his column rename inside
+\code{\link{batz.batusa_recode.names}}'s embedded reference table -
+checked, and this function is NOT broken by it, only its docs are
+stale.} \code{bat.names.out}'s default (\code{"code4"}) is untouched by
+the rename, so every call in this function's pipeline
+(\code{batname.format.out = bat.names.out}, on \code{$manid}/
+\code{$autoid.kp}/\code{$autoid.sb}) keeps working exactly as before for
+any caller who hasn't touched \code{bat.names.out}. \strong{The dated
+entries above ("Update (2026-08-26, later)") are left exactly as
+originally written, per this project's standing append-don't-rewrite-
+history convention, even though they describe
+\code{batz.batusa_recode.names()}'s OLD internal default as
+\code{"common"} - that default is now \code{"common_name"}.} Only the
+current-interface \code{@param bat.names.out} example list just below
+was updated to the new names (\code{"common_name"}/
+\code{"scientific_name"}), since that describes the CURRENT valid
+values, not a historical snapshot. If a caller explicitly passes
+\code{bat.names.out = "common"} or \code{bat.names.out = "latin"} (the
+old names), that call will now error - same as any other now-invalid
+\code{batname.format.out} literal - but no such call site was found
+anywhere in this package.
 }
 \examples{
 \dontrun{

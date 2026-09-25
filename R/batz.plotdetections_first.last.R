@@ -869,6 +869,31 @@
 #' non-configurable \code{$group}, with no per-row \code{$plot.group}
 #' override to begin with). No test or behavior change here.
 #'
+#' \strong{Follow-up, 2026-09-25, per Josh's package-wide audit request ("as
+#' I make these changes ID any other functions in the package that maybe
+#' impacted, make changes as needed") following his column rename inside
+#' \code{\link{batz.batusa_recode.names}}'s embedded reference table: this
+#' function was broken by that rename and is fixed here.} That table's
+#' \code{common} column (and eight others) was renamed to
+#' \code{common_name}, and \code{batz.batusa_recode.names()}'s own
+#' \code{batname.format.out} default changed from \code{"common"} to
+#' \code{"common_name"} to match - so \code{"common"} is no longer a valid
+#' \code{batname.format.out} value anywhere in the package. This function
+#' calls \code{batz.batusa_recode.names()} four times with the now-invalid
+#' literal \code{"common"}: canonicalizing \code{spp.plot}/\code{facpan} to
+#' the reference table's spelling, building \code{pd$spp.common} from
+#' \code{pd$spp.id}, and as the fallback default for \code{facet.label.fmt}
+#' when a \code{fig.list} row's own \code{$facet.label} is blank - all four
+#' now pass \code{"common_name"} instead, with no other change in behavior
+#' (the reference table's actual name VALUES, e.g. \code{"Big brown bat"},
+#' are unchanged by the rename - only the column name selecting them
+#' changed). The code comment above \code{SPECIAL.FACPAN} referencing the
+#' reference table's \code{$common} column was likewise updated to
+#' \code{$common_name}. Re-verified with the existing dev-script test
+#' suite (no regressions) plus a new check that \code{batz.batusa_recode.names()}
+#' errors as expected if this function is reverted to passing the old,
+#' now-invalid \code{"common"} literal.
+#'
 #' @examples
 #' \dontrun{
 #' # default dir.save = getwd() - saves into the current working directory,
@@ -1113,9 +1138,10 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
   }
 
   NE.ALIASES <- c("new england", "ne")
-  # "Tri-colored bat" (with hyphen) is the reference table's actual $common
-  # spelling - see @details above for why Josh's literal "Tricolored bat"
-  # was corrected here.
+  # "Tri-colored bat" (with hyphen) is the reference table's actual $common_name
+  # spelling (renamed from $common on 2026-09-25 - see @details, "Follow-up,
+  # 2026-09-25...column rename") - see @details above for why Josh's literal
+  # "Tricolored bat" was corrected here.
   SPECIAL.FACPAN <- c("Big brown bat", "Eastern red bat", "Hoary bat", "Silver-haired bat",
                        "Eastern small-footed myotis", "Little brown bat",
                        "Northern long-eared bat", "Tri-colored bat")
@@ -1197,12 +1223,15 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
     # Canonicalize to the reference table's own spelling (see @details) -
     # keeps a slightly-off list (typed by hand, or from an older spec) lined
     # up with data$spp.common, which is always canonical.
-    spp.plot <- batz.batusa_recode.names(spp.plot, batname.format.out = "common")
-    facpan   <- batz.batusa_recode.names(facpan, batname.format.out = "common")
+    #
+    # batname.format.out = "common_name" (was "common" prior to 2026-09-25 -
+    # see @details, "Follow-up, 2026-09-25...column rename").
+    spp.plot <- batz.batusa_recode.names(spp.plot, batname.format.out = "common_name")
+    facpan   <- batz.batusa_recode.names(facpan, batname.format.out = "common_name")
 
     # ---- filter data to this job's ARU + species list ----
     pd <- data
-    pd$spp.common <- batz.batusa_recode.names(pd$spp.id, batname.format.out = "common")
+    pd$spp.common <- batz.batusa_recode.names(pd$spp.id, batname.format.out = "common_name")
 
     plot.set.val <- trimws(job$plot.set)
     if (nzchar(plot.set.val)) {
@@ -1268,7 +1297,9 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
     # Every panel in facpan is shown even with 0 matching detections (see
     # @details) - so the full facpan list defines the facet levels.
     facet.label.fmt <- unquote(get.setting(job, "facet.label"))
-    if (!nzchar(facet.label.fmt)) facet.label.fmt <- "common"
+    # default was "common" prior to 2026-09-25 - see @details, "Follow-up,
+    # 2026-09-25...column rename"
+    if (!nzchar(facet.label.fmt)) facet.label.fmt <- "common_name"
 
     panel.levels.raw <- facpan
     panel.labels <- batz.batusa_recode.names(panel.levels.raw, batname.format.out = facet.label.fmt)
