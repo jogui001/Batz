@@ -72,6 +72,16 @@
 # column names ("Yaxe.trans  " double trailing space, "Y_Scale" different
 # case/separator, "ymax " trailing space) now resolves and plots identically
 # to a clean row, instead of silently falling through to aes.default.
+#
+# Follow-up, 2026-09-26, per Josh's request ("use the current header[]
+# names"): the synthetic suntimes.synth fixture and SUNTIMES.REQUIRED below
+# were still using the OLD, pre-round-26 (2026-09-25) suntimes column
+# spellings (date.mon/suns/suns.unix/sunr/sunr.unix/sunr.mon/sunr.mon.unix) -
+# flagged as a known follow-up in claude/round26_suntimes_audit.md. Updated
+# below to the current spellings (date.monitoringnight/sunset/sunset.unix/
+# sunrise/sunrise.unix/sunrise.monitoringnight/sunrise.monitoringnight.unix).
+# Per this function's own @details, suntimes is accepted and header-checked
+# but never otherwise read in the function body, so no other code changed.
 # =============================================================================
 
 source("batz.batusa_recode.names.R")
@@ -150,12 +160,12 @@ plot.data.group.synth <- plot.data.synth
 names(plot.data.group.synth)[names(plot.data.group.synth) == "aru.groupby"] <- "group"
 
 suntimes.synth <- data.frame(
-  aru.name = "WTG-GOM102", date = "06/01/2026", date.mon = "06/02/2026",
+  aru.name = "WTG-GOM102", date = "06/01/2026", date.monitoringnight = "06/02/2026",
   sunregion = "WTG", time.zone = "UTC", sunregion.type = "coordinates",
   schedual1 = "civil", schedual2 = "civil",
-  suns = "06/01/2026 20:00", suns.unix = 0,
-  sunr = "06/01/2026 06:00", sunr.unix = 0,
-  sunr.mon = "06/02/2026 06:00", sunr.mon.unix = 0,
+  sunset = "06/01/2026 20:00", sunset.unix = 0,
+  sunrise = "06/01/2026 06:00", sunrise.unix = 0,
+  sunrise.monitoringnight = "06/02/2026 06:00", sunrise.monitoringnight.unix = 0,
   stringsAsFactors = FALSE
 )
 
@@ -227,9 +237,23 @@ PLOT.TYPE <- "call.observations"
 DATA.REQUIRED <- c("spp.id", "date", "obs")
 # Renamed 2026-09-22 (per Josh, see the header comment above): matches
 # batz.generate_suntimes.arulist()'s own renamed output column.
-SUNTIMES.REQUIRED <- c("aru.name", "date", "date.mon", "sunregion", "time.zone",
-                        "sunregion.type", "schedual1", "schedual2", "suns",
-                        "suns.unix", "sunr", "sunr.unix", "sunr.mon", "sunr.mon.unix")
+# Follow-up, 2026-09-26, per Josh's request ("use the current header[]
+# names"): these column names were still using the OLD, pre-round-26
+# (2026-09-25) suntimes header spellings (see
+# claude/round26_suntimes_audit.md's "Known follow-up - stale .dev.R
+# fixture data" note). Updated to match batz.generate_suntimes.arulist()'s
+# current output columns: date.mon -> date.monitoringnight, suns ->
+# sunset, suns.unix -> sunset.unix, sunr -> sunrise, sunr.unix ->
+# sunrise.unix, sunr.mon -> sunrise.monitoringnight, sunr.mon.unix ->
+# sunrise.monitoringnight.unix. This function's own @details ("suntimes
+# accepted and header-checked but not otherwise used") means no
+# function-body code reads any $sdb suntimes column beyond this header
+# check, so only this constant and the suntimes.synth fixture above
+# needed updating - no other behavior changed.
+SUNTIMES.REQUIRED <- c("aru.name", "date", "date.monitoringnight", "sunregion", "time.zone",
+                        "sunregion.type", "schedual1", "schedual2", "sunset",
+                        "sunset.unix", "sunrise", "sunrise.unix", "sunrise.monitoringnight",
+                        "sunrise.monitoringnight.unix")
 # "plot.group" removed 2026-09-23 (per Josh, see the header comment above) -
 # it's now optional, resolved per-row below with a "group" default.
 # "plot.sets" renamed to "plot.set" the same round.

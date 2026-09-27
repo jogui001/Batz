@@ -32,17 +32,22 @@
 #' @param duplicates.count Logical, default \code{FALSE}. If \code{TRUE},
 #'   print the number of elements in \code{recode.table}'s first column that
 #'   repeat (all instances of any repeated key, not just the extras). If none
-#'   repeat, prints \code{"all reference elements are unique"}.
+#'   repeat, prints \code{"all reference elements are unique"}. Since
+#'   2026-09-25, two keys that differ only in case (e.g. \code{"Test1"} and
+#'   \code{"test1"}) count as a repeat (see \code{@details}).
 #' @param duplicates.list Logical, default \code{FALSE}. If \code{TRUE},
 #'   print a table of the name and total count of each element in
 #'   \code{recode.table}'s first column that repeats. If none repeat, prints
-#'   \code{"all reference elements are unique"}.
+#'   \code{"all reference elements are unique"}. Since 2026-09-25, keys
+#'   differing only in case are grouped together (see \code{@details}).
 #' @param match.first Logical, default \code{TRUE}. When
 #'   \code{recode.table}'s first column has a duplicate key (e.g. it maps
 #'   the same input value to two different replacements), \code{TRUE} uses
 #'   the FIRST matching row's replacement value (matching R's own
 #'   \code{match()} behavior); \code{FALSE} uses the LAST matching row's
-#'   replacement value instead.
+#'   replacement value instead. Since 2026-09-25, "duplicate key" and
+#'   "matching row" are both determined case-insensitively (see
+#'   \code{@details}).
 #' @param headers.rename Logical, default \code{FALSE}. If \code{TRUE}, the
 #'   function does NOT touch the contents of \code{data} at all - instead it
 #'   looks up each of \code{data}'s column HEADERS in \code{recode.table}'s
@@ -82,6 +87,27 @@
 #' rename on top, call \code{standardize.headers()} yourself first and build
 #' \code{recode.table}'s first column against the standardized spellings.
 #'
+#' \strong{Case-insensitive matching against \code{recode.table} (per Josh,
+#' 2026-09-25) - narrower than, and not in conflict with, the header-
+#' standardization note above.} Every comparison this function makes against
+#' \code{recode.table}'s first column - the main value/header recode lookup,
+#' the missing-element diagnostics, and the duplicate-key diagnostics - now
+#' folds case before comparing (\code{"Test1"} in \code{data} now matches a
+#' \code{"test1"} entry in \code{recode.table}, and vice versa). This is
+#' case-folding ONLY: unlike \code{standardize.headers()}, it does not touch
+#' whitespace or punctuation, so it does not reopen the problem described
+#' above - a literal, caller-supplied rename table still means what it says
+#' beyond letter case. The value actually substituted is always
+#' \code{recode.table}'s second-column entry exactly as supplied (its
+#' original casing, never lowercased), matching the pattern already used in
+#' \code{batz.batusa_recode.names()}, \code{batz.batusa_list.species()}, and
+#' \code{batz.treeusa_recode.names()}. One consequence: if
+#' \code{recode.table}'s first column contains two keys that differ only by
+#' case (e.g. \code{"Test1"} and \code{"test1"}), they are now treated as a
+#' duplicate key for \code{match.first}/\code{duplicates.count}/
+#' \code{duplicates.list} purposes, exactly as if they were spelled
+#' identically - this was not previously the case.
+#'
 #' Matching and replacement are done on the character representation of
 #' values (\code{as.character}). A value in \code{data} (or, in
 #' \code{headers.rename} mode, a column header) with no matching entry in
@@ -103,6 +129,10 @@
 #'                             out = c("out1", "banana"))
 #' batz.datawrangler_rename(c("test1", "test2", "test6"), recode.table)
 #' # "out1"   "banana" "test6"   (test6 has no match, stays unchanged)
+#'
+#' # matching is case-insensitive
+#' batz.datawrangler_rename(c("Test1", "TEST2"), recode.table)
+#' # "out1"   "banana"
 #'
 #' batz.datawrangler_rename(my.dataframe, recode.table,
 #'                           missing.count = TRUE, duplicates.list = TRUE)
@@ -126,17 +156,25 @@ batz.datawrangler_rename <- function(data, recode.table,
                                       match.first      = TRUE,
                                       headers.rename   = FALSE) {
 
+  # Case-insensitive-only normalization for comparison purposes (per Josh,
+  # 2026-09-25) - deliberately does NOT fold whitespace/punctuation the way
+  # standardize.headers() does; see @details above for why.
+  normalize <- function(x) tolower(as.character(x))
+
   recode.vec <- function(x, recode.table, match.first = TRUE) {
     find.vals    <- as.character(recode.table[[1]])
     replace.vals <- as.character(recode.table[[2]])
 
     x.chr <- as.character(x)
 
+    find.norm <- normalize(find.vals)
+    x.norm    <- normalize(x.chr)
+
     if (match.first) {
-      match.idx <- match(x.chr, find.vals)
+      match.idx <- match(x.norm, find.norm)
     } else {
-      n <- length(find.vals)
-      rev.idx <- match(x.chr, rev(find.vals))
+      n <- length(find.norm)
+      rev.idx <- match(x.norm, rev(find.norm))
       match.idx <- ifelse(is.na(rev.idx), NA, n - rev.idx + 1)
     }
     found <- !is.na(match.idx)
@@ -151,17 +189,20 @@ batz.datawrangler_rename <- function(data, recode.table,
   }
 
   ref.find <- as.character(recode.table[[1]])
+  ref.norm <- normalize(ref.find)
 
   # ---- missing-element diagnostics ----
   # In headers.rename mode, "elements" means the column headers being looked
   # up (not the data frame's contents); otherwise it's every data value.
+  # Comparison against recode.table's first column is case-insensitive
+  # (per Josh, 2026-09-25).
   if (missing.count || missing.list) {
     flat.chr <- if (headers.rename) {
       names(data)
     } else {
       as.character(if (is.data.frame(data)) unlist(data, use.names = FALSE) else data)
     }
-    missing.vals <- flat.chr[!(flat.chr %in% ref.find)]
+    missing.vals <- flat.chr[!(normalize(flat.chr) %in% ref.norm)]
 
     if (missing.count) {
       if (length(missing.vals) == 0) {
@@ -183,10 +224,18 @@ batz.datawrangler_rename <- function(data, recode.table,
   }
 
   # ---- duplicate-key diagnostics (reference table's first column) ----
+  # Keys differing only by case are treated as the same key (per Josh,
+  # 2026-09-25) - grouped by their case-folded form, displayed using the
+  # first original-cased spelling encountered for that group.
   if (duplicates.count || duplicates.list) {
-    ref.tbl <- as.data.frame(table(ref.find), stringsAsFactors = FALSE)
-    names(ref.tbl) <- c("value", "count")
-    dup.tbl <- ref.tbl[ref.tbl$count > 1, ]
+    norm.tbl <- as.data.frame(table(ref.norm), stringsAsFactors = FALSE)
+    names(norm.tbl) <- c("value.normalized", "count")
+    dup.tbl <- norm.tbl[norm.tbl$count > 1, , drop = FALSE]
+
+    if (nrow(dup.tbl) > 0) {
+      dup.tbl$value <- ref.find[match(dup.tbl$value.normalized, ref.norm)]
+      dup.tbl <- dup.tbl[, c("value", "count")]
+    }
 
     if (duplicates.count) {
       if (nrow(dup.tbl) == 0) {

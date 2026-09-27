@@ -32,13 +32,17 @@
 #'   (\code{TRUE}/\code{FALSE} - whether to show a legend distinguishing
 #'   which \code{$plot.set} value each dodged bar is, when \code{$pool =
 #'   FALSE} and more than one value is selected - see \strong{Follow-up,
-#'   2026-08-29} in Details).
+#'   2026-08-29 (round 2)} in Details).
 #' @param suntimes A data frame of sunrise/sunset times, e.g. the output of
-#'   \code{batz.generate_suntimes.arulist()}. Must have \code{$aru.name}, \code{$date},
-#'   \code{$date.mon}, \code{$sunregion}, \code{$time.zone},
-#'   \code{$sunregion.type}, \code{$schedual1}, \code{$schedual2},
-#'   \code{$suns}, \code{$suns.unix}, \code{$sunr}, \code{$sunr.unix},
-#'   \code{$sunr.mon}, \code{$sunr.mon.unix}. \strong{Accepted and header-
+#'   \code{batz.generate_suntimes.arulist()}. Must have \code{$aru.name},
+#'   \code{$date}, \code{$date.monitoringnight}, \code{$sunregion},
+#'   \code{$time.zone}, \code{$sunregion.type}, \code{$schedual1},
+#'   \code{$schedual2}, \code{$sunset}, \code{$sunset.unix},
+#'   \code{$sunrise}, \code{$sunrise.unix}, \code{$sunrise.monitoringnight},
+#'   \code{$sunrise.monitoringnight.unix} - renamed from
+#'   \code{$suns}/\code{$suns.unix}/\code{$sunr}/\code{$sunr.unix}/
+#'   \code{$sunr.mon}/\code{$sunr.mon.unix} on 2026-09-25 (round
+#'   twenty-six) - see Details. \strong{Accepted and header-
 #'   checked, but not otherwise used yet this iteration} - see Details.
 #' @param aes.default A data frame of default plot settings, one row per
 #'   parameter (e.g. \code{plotopts_callobs.csv}). Must have
@@ -50,9 +54,10 @@
 #'   nineteenth follow-up (2026-09-16), this NO LONGER selects an
 #'   \code{aes.default} override column - it is now used ONLY to build the
 #'   first part of every saved file name:
-#'   \code{"<project.name>_<ARU>_<timestamp>.png"}. See Details, "Settings
-#'   resolution (round nineteen)" for what replaced the old column-matching
-#'   behavior.
+#'   \code{"<project.name>_<plot.name>_<daterange>_<timestamp>.png"}. See
+#'   Details, "Settings resolution (round nineteen)" for what replaced the
+#'   old column-matching behavior, and "File naming (round twenty-one)" for
+#'   this function's current save-name format.
 #' @param aes.style Character, default \code{"overide.value"}. Names which
 #'   column of \code{aes.default} is checked FIRST for each parameter
 #'   (falling back to \code{$default.value} when that column doesn't exist,
@@ -63,9 +68,11 @@
 #'   (round nineteen)" for the full precedence.
 #' @param dir.save Character, default \code{getwd()}. Directory every
 #'   generated PNG is saved into. Per Josh's nineteenth follow-up, the file
-#'   name itself is now always \code{"<project.name>_<ARU>_<timestamp>.png"}
-#'   (see \code{project.name} above) - \code{aes.default}'s
-#'   \code{$output.filename.pattern} is DEPRECATED and no longer read.
+#'   name itself is now always
+#'   \code{"<project.name>_<plot.name>_<daterange>_<timestamp>.png"} (see
+#'   \code{project.name} above and Details, "File naming (round
+#'   twenty-one)") - \code{aes.default}'s \code{$output.filename.pattern}
+#'   is DEPRECATED and no longer read.
 #'
 #' @return Invisibly, a list with \code{plots} (one entry per generated
 #'   plot's prepared data) and \code{ggplots} (the corresponding ggplot
@@ -546,7 +553,8 @@
 #' exist (an older sheet) or is blank for a given row, \code{$default.value}
 #' is used, exactly as before. \code{project.name} no longer participates
 #' in settings resolution AT ALL - it is now used purely to build the saved
-#' file name (see "File naming (round nineteen)" below). The THIRD tier of
+#' file name (see "File naming (round nineteen)" below, superseded by
+#' "File naming (round twenty-one)" further below). The THIRD tier of
 #' the old precedence - a \code{fig.list} row's own value beating both the
 #' column and the default - is UNCHANGED: \code{get.setting(job, param)}
 #' still checks \code{job} first, then falls through to the (now
@@ -558,11 +566,12 @@
 #' now - re-fill any values that were in that column into the new
 #' \code{$overide.value} column instead.
 #'
-#' \strong{File naming (round nineteen), same follow-up:} every saved PNG's
-#' file name is now always \code{"<project.name>_<ARU>_<timestamp>.png"} -
+#' \strong{File naming (round nineteen), same follow-up - SUPERSEDED by
+#' round twenty-one below.} Every saved PNG's
+#' file name was now always \code{"<project.name>_<ARU>_<timestamp>.png"} -
 #' \code{aes.default}'s \code{$output.filename.pattern} is DEPRECATED and no
 #' longer read at all (the row is left in place in \code{plotopts_callobs.csv},
-#' harmless, simply ignored). The \code{<ARU>} token is this function's own
+#' harmless, simply ignored). The \code{<ARU>} token was this function's own
 #' \code{aru.token} - the selected \code{$plot.set} value(s) joined with
 #' \code{"+"} (falling back to \code{$plot.group}'s own column name when no
 #' specific values were selected), with a \code{"-pooled"} suffix appended
@@ -571,6 +580,71 @@
 #' \code{"<project.name>_<ARU>_<timestamp>.png"} pattern instead of a
 #' user-editable one. Every saved file's name is printed to the console via
 #' \code{cat("Saved:", fname, "\n")}, as it already was before this round.
+#'
+#' \strong{File naming (round twenty-one), 2026-09-24, per Josh ("The plots
+#' come out too fast resulting in overwriting of plots"):} round
+#' nineteen's \code{"<project.name>_<ARU>_<timestamp>.png"} pattern
+#' (\code{<ARU>} = this function's own \code{aru.token} - the selected
+#' \code{$plot.set} value(s) joined with \code{"+"}, with a
+#' \code{"-pooled"} suffix when \code{$pool = TRUE}) is replaced with
+#' \code{"<project.name>_<plot.name>_<daterange>_<timestamp>.png"}, where
+#' \code{<plot.name>} is this job's own \code{job.label} (i.e. its
+#' \code{$plot.name}, falling back to \code{"row N"} when blank - unchanged
+#' from how \code{job.label} was already computed) and \code{<daterange>}
+#' is this job's resolved \code{$date.start}/\code{$date.end} formatted as
+#' \code{YYYYMMDDtoYYYYMMDD} (e.g. \code{20260408to20260427}). This directly
+#' addresses Josh's report: two \code{fig.list} rows that share the same
+#' \code{$plot.name} but cover different date windows previously could
+#' still land on the identical timestamp-only-differentiated file name when
+#' rendered back to back quickly enough (\code{format(Sys.time(), ...)} has
+#' 1-second resolution) - the added \code{<daterange>} token means those two
+#' rows now always produce distinct file names even when their save
+#' timestamps happen to collide, exactly the same fix made in
+#' \code{\link{batz.plotsm4_heatmap}} and
+#' \code{\link{batz.plotdetections_first.last}}.
+#' \strong{Scope decision, flagged explicitly for Josh}: the old
+#' \code{aru.token} (the selected \code{$plot.set} value(s), joined with
+#' \code{"+"}, with a \code{"-pooled"} suffix) is DROPPED entirely from the
+#' file name, per Josh's literal naming spec for this function
+#' (\code{"<project.name>_<plot.name>_<daterange>_<timestamp>.png"} - no
+#' ARU/pooled token in that pattern). This means a saved file name for this
+#' function no longer indicates which \code{$plot.set} value(s)/pooling
+#' choice produced it, only its \code{$plot.name}/date window - two
+#' \code{fig.list} rows sharing both \code{$plot.name} and date window but
+#' differing only in \code{$plot.set}/\code{$pool} would now produce the
+#' same file-name prefix (still disambiguated by the trailing timestamp
+#' whenever they don't render in the exact same second, and either way each
+#' call's own console \code{"Saved:"} line and returned \code{$plots}/
+#' \code{$ggplots} entries remain correct regardless of the file name).
+#' \strong{If the \code{$plot.set}/pooled distinction should still be
+#' recoverable from the file name, say so and the old \code{aru.token} can
+#' be added back in alongside the new tokens rather than replacing them.}
+#'
+#' \strong{Timestamp format (round twenty-two), 2026-09-24, per Josh's
+#' package-wide request ("Update all functions that save files or charts:
+#' ... <timestamp> format match this format: YYYYMMDDHHHMMSS"):} the
+#' \code{<timestamp>} token in every saved file name across this package -
+#' this function included - is now built as \code{format(Sys.time(),
+#' "\%Y\%m\%d\%H\%M\%S")}: 14 digits, no separator between the date and time
+#' halves. This replaces the \code{"\%Y\%m\%d_\%H\%M\%S"} format (date and
+#' time halves separated by an underscore) used everywhere in this package
+#' since round nineteen. \strong{Read as a typo, flagged rather than
+#' silently guessed at}: Josh's literal spec text, \code{"YYYYMMDDHHHMMSS"},
+#' has 15 characters (three \code{H}s) where a clock time only ever needs
+#' two digits each for hour/minute/second (14 digits total) - taken as a
+#' dictation slip for \code{"YYYYMMDDHHMMSS"} (14 digits), which also
+#' matches the no-underscore timestamp format
+#' \code{\link{batz.generate_suntimes.arulist}} already used for its own
+#' \code{sav<timestamp>} token before this round. \strong{Please confirm
+#' this reading is right.} This is a pure formatting change to the
+#' \code{<timestamp>} token only - its value (the exact second the file was
+#' saved) and its position at the end of the file name are unchanged; only
+#' the separator between the date and time portions is removed. Applied
+#' package-wide in this same round: every other \code{batz} function that
+#' saves a chart or a data file (CSV/xlsx) - see each function's own
+#' \code{@details} for its own round-twenty-two entry - picks up the same
+#' 14-digit, no-underscore \code{<timestamp>} format, whatever its own
+#' file-naming pattern is otherwise.
 #'
 #' Naming convention (per project preferences):
 #' \code{package.family_action.subject()}. This function is
@@ -686,6 +760,39 @@
 #' output before and after). This is a real hardening fix, independent of
 #' whichever explanation above turns out to be Josh's actual cause.
 #'
+#' \strong{Follow-up, 2026-09-25, per Josh's package-wide audit request
+#' following the \code{suntimes} header rename in
+#' \code{\link{batz.generate_suntimes.arulist}} (round twenty-six):
+#' \code{SUNTIMES.REQUIRED} is updated to match, and a separate,
+#' pre-existing, unrelated stale entry is fixed in the same pass.} Since
+#' this function's own \code{@details} above ("\code{suntimes} is accepted
+#' and header-checked but not otherwise used in this iteration") already
+#' established that no code here actually reads any \code{suntimes} column
+#' beyond the header check itself, the rename below is a pure header-check
+#' update with no other code change: \code{$suns} -> \code{$sunset},
+#' \code{$suns.unix} -> \code{$sunset.unix}, \code{$sunr} -> \code{$sunrise},
+#' \code{$sunr.unix} -> \code{$sunrise.unix}, \code{$sunr.mon} ->
+#' \code{$sunrise.monitoringnight}, \code{$sunr.mon.unix} ->
+#' \code{$sunrise.monitoringnight.unix} - see
+#' \code{\link{batz.plotdetections_first.last}}'s own \code{@details} for
+#' the full rationale (this is NOT backward-compatible, since
+#' \code{canonicalize.headers()} cannot bridge a genuinely different word,
+#' unlike the earlier \code{$aru}->\code{$aru.name} casing-only rename).
+#' \strong{A second, separate, pre-existing bug caught in this same audit
+#' pass (unrelated to today's suns/sunr rename): \code{SUNTIMES.REQUIRED}
+#' still said \code{"date.mon"}}, a column \code{aru.suntimes} no longer
+#' has at all since round twenty-five (2026-09-25, earlier the same day),
+#' when \code{\link{batz.generate_suntimes.arulist}} renamed its own
+#' \code{$date.mon} output column to \code{$date.monitoringnight} - this
+#' function's own required-header constant was never updated to match at
+#' the time, exactly the same category of stale-constant bug found and
+#' fixed in \code{\link{batz.plotdetections_first.last}} during this same
+#' audit pass. Since \code{suntimes} is never read beyond the header check
+#' here either, this was purely a silent header-check-only conflict (any
+#' real \code{aru.suntimes} produced since round twenty-five would have
+#' failed this function's required-header check on \code{"date.mon"}
+#' alone). \code{SUNTIMES.REQUIRED} now says \code{"date.monitoringnight"}.
+#'
 #' @examples
 #' \dontrun{
 #' # default dir.save = getwd(), default project.name = "new.project"
@@ -728,11 +835,16 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
   ## arriving in a different casing/separator style than these constants
   ## still matches correctly - see @details "Follow-up, 2026-09-21" above.
   DATA.REQUIRED <- c("spp.id", "date", "obs")
-  # Renamed 2026-09-22 (per Josh, see @details "Follow-up, 2026-09-22"):
-  # matches batz.generate_suntimes.arulist()'s own renamed output column.
-  SUNTIMES.REQUIRED <- c("aru.name", "date", "date.mon", "sunregion", "time.zone",
-                          "sunregion.type", "schedual1", "schedual2", "suns",
-                          "suns.unix", "sunr", "sunr.unix", "sunr.mon", "sunr.mon.unix")
+  # Renamed 2026-09-25 (round twenty-six, per Josh's package-wide suntimes
+  # header rename - see @details, "Follow-up, 2026-09-25...round
+  # twenty-six"): matches batz.generate_suntimes.arulist()'s own renamed
+  # output columns. $date.mon -> $date.monitoringnight is a separate,
+  # pre-existing bug fixed in this same audit pass (round twenty-five,
+  # never caught up here at the time) - see the same @details entry.
+  SUNTIMES.REQUIRED <- c("aru.name", "date", "date.monitoringnight", "sunregion", "time.zone",
+                          "sunregion.type", "schedual1", "schedual2", "sunset",
+                          "sunset.unix", "sunrise", "sunrise.unix", "sunrise.monitoringnight",
+                          "sunrise.monitoringnight.unix")
   # "plot.group" removed from this required list 2026-09-23 (per Josh, see
   # @details "Follow-up, 2026-09-23") - it's now optional, resolved per-row
   # below. "plot.sets" renamed to "plot.set" the same round.
@@ -753,9 +865,10 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
 
   ## "output.filename.pattern" deliberately removed from this required list
   ## per Josh's nineteenth follow-up (2026-09-16) - the saved file name is
-  ## now always "<project.name>_<ARU>_<timestamp>.png"; no longer read at
-  ## all. An $output.filename.pattern row left in an existing aes.default
-  ## sheet is harmless (simply ignored).
+  ## now built as described in @details, "File naming (round twenty-one)";
+  ## $output.filename.pattern is no longer read at all. An
+  ## $output.filename.pattern row left in an existing aes.default sheet is
+  ## harmless (simply ignored).
   AES.DEFAULT.REQUIRED.PARAMETERS <- c(
     "facpan.numcol", "plot.title.size", "plot.title.hjust", "axis.title.size",
     "axis.text.size", "legend.text.size", "legend.title.size", "panel.spacing.x",
@@ -1261,16 +1374,18 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
 
       ggplots[[job.key]] <- g
 
-      ## Round nineteen, per Josh (2026-09-16): every saved file name is now
-      ## always "<project.name>_<ARU>_<timestamp>.png" -
-      ## $output.filename.pattern is DEPRECATED and no longer read.
-      # <ARU> token: the selected $plot.set value(s), joined with "+" (was
-      # the single $plot.set value pre-2026-08-28); "-pooled" suffix added
-      # when $pool = TRUE, since that collapses them into one bar/value.
-      aru.token <- paste(p$plot.sets.vals, collapse = "+")
-      if (!nzchar(aru.token)) aru.token <- p$group.col
-      if (isTRUE(p$pool.flag)) aru.token <- paste0(aru.token, "-pooled")
-      fname <- sprintf("%s_%s_%s.png", project.name, aru.token, format(Sys.time(), "%Y%m%d_%H%M%S"))
+      ## File naming (round twenty-one), per Josh (2026-09-24): "the plots
+      ## come out too fast resulting in overwriting of plots" - see
+      ## @details, "File naming (round twenty-one)". <daterange> is this
+      ## job's own resolved $date.start/$date.end (Date objects, already
+      ## parsed above), formatted YYYYMMDDtoYYYYMMDD. This REPLACES the old
+      ## aru.token ($plot.set value(s) joined with "+", "-pooled" suffix)
+      ## as the filename's own plot-identifying token, per Josh's literal
+      ## naming spec - see @details for this scope decision, flagged for
+      ## Josh (the $plot.set/pooled distinction is no longer recoverable
+      ## from the file name alone).
+      daterange.token <- sprintf("%sto%s", format(p$date.start, "%Y%m%d"), format(p$date.end, "%Y%m%d"))
+      fname <- sprintf("%s_%s_%s_%s.png", project.name, job.label, daterange.token, format(Sys.time(), "%Y%m%d%H%M%S"))
       fname <- file.path(dir.save, fname)
 
       ggplot2::ggsave(fname, plot = g,

@@ -13,6 +13,19 @@
 ## run.R in this same folder) - this script instead uses small, hand-built
 ## synthetic fixtures so each test isolates one specific behavior and runs
 ## fast, independent of the real files' size/shape.
+##
+## Follow-up, 2026-09-26, per Josh's request ("use the current header[]
+## names"): data.synth's $date.mon, and suntimes.synth's $date.mon/$suns/
+## $suns.unix/$sunr/$sunr.unix/$sunr.mon/$sunr.mon.unix, were still using
+## the OLD, pre-round-26 (2026-09-25) header spellings - flagged as a known
+## follow-up in claude/round26_suntimes_audit.md. Renamed to match the
+## shipped batz.plotsm4_heatmap.R's own current DATA.REQUIRED/
+## SUNTIMES.REQUIRED constants: date.mon -> date.monitoringnight, suns ->
+## sunset, suns.unix -> sunset.unix, sunr -> sunrise, sunr.unix ->
+## sunrise.unix, sunr.mon -> sunrise.monitoringnight, sunr.mon.unix ->
+## sunrise.monitoringnight.unix. TEST 4's forced-duplicate rename target
+## updated to match ($date.mon -> $date.monitoringnight, since that's the
+## real required column name now). No other behavior changed.
 
 source("R/batz.util_standardize.headers.R")
 source("R/batz.plotsm4_heatmap.R")
@@ -28,11 +41,11 @@ cat("========== batz.plotsm4_heatmap() dev/test script ==========\n\n")
 ## own timestamp jitter) - specifically to exercise the bin.minutes
 ## per-night-gap bugfix (see @details/TEST 6 below).
 data.synth <- data.frame(
-  aru.name       = "WTG-GOM101",
-  date.mon       = rep(c("2026-08-19", "2026-08-20"), each = 4),
-  mins.oper      = c(15, 15, 15, 8,     1, 15, 15, 15),
-  mins2.noon.mon = c(0.02, 15.03, 30.01, 45.05,
-                     0.03, 15.01, 30.04, 45.02),
+  aru.name              = "WTG-GOM101",
+  date.monitoringnight  = rep(c("2026-08-19", "2026-08-20"), each = 4),
+  mins.oper             = c(15, 15, 15, 8,     1, 15, 15, 15),
+  mins2.noon.mon        = c(0.02, 15.03, 30.01, 45.05,
+                            0.03, 15.01, 30.04, 45.02),
   stringsAsFactors = FALSE
 )
 
@@ -46,20 +59,20 @@ data.synth.rawaru <- data.synth
 names(data.synth.rawaru)[names(data.synth.rawaru) == "aru.name"] <- "aru"
 
 suntimes.synth <- data.frame(
-  aru.name        = "WTG-GOM101",
-  date            = c("2026-08-19", "2026-08-20"),
-  date.mon        = c("2026-08-19", "2026-08-20"),
-  sunregion       = "test.region",
-  time.zone       = "UTC",
-  sunregion.type  = "test",
-  schedual1       = "",
-  schedual2       = "",
-  suns            = c("2026-08-19 19:30:00", "2026-08-20 19:29:00"),
-  suns.unix       = 0,
-  sunr            = c("2026-08-19 06:00:00", "2026-08-20 06:01:00"),
-  sunr.unix       = 0,
-  sunr.mon        = c("2026-08-20 06:01:00", "2026-08-21 06:02:00"),
-  sunr.mon.unix   = 0,
+  aru.name                     = "WTG-GOM101",
+  date                         = c("2026-08-19", "2026-08-20"),
+  date.monitoringnight         = c("2026-08-19", "2026-08-20"),
+  sunregion                    = "test.region",
+  time.zone                    = "UTC",
+  sunregion.type               = "test",
+  schedual1                    = "",
+  schedual2                    = "",
+  sunset                       = c("2026-08-19 19:30:00", "2026-08-20 19:29:00"),
+  sunset.unix                  = 0,
+  sunrise                      = c("2026-08-19 06:00:00", "2026-08-20 06:01:00"),
+  sunrise.unix                 = 0,
+  sunrise.monitoringnight      = c("2026-08-20 06:01:00", "2026-08-21 06:02:00"),
+  sunrise.monitoringnight.unix = 0,
   stringsAsFactors = FALSE
 )
 
@@ -119,7 +132,7 @@ cat("error message:\n  ", result3, "\n\n")
 ## ---------------------------------------------------------------------
 cat("########## TEST 4: duplicate column name in data ##########\n")
 data.dup <- data.synth
-names(data.dup)[names(data.dup) == "mins.oper"] <- "date.mon"  # forces a duplicate "date.mon"
+names(data.dup)[names(data.dup) == "mins.oper"] <- "date.monitoringnight"  # forces a duplicate "date.monitoringnight"
 result4 <- tryCatch({
   batz.plotsm4_heatmap(data.dup, fig.list.synth, suntimes.synth, aes.default.synth, dir.save = dir.save.test)
   "NO ERROR (unexpected)"

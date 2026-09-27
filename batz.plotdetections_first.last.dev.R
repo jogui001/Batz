@@ -40,6 +40,24 @@
 # down (those entries are left as-is, historical). Please re-run this
 # function against your own real files once you have a chance, and let me
 # know if anything looks different.
+#
+# Follow-up, 2026-09-26, per Josh's request ("use the current headers
+# names"): the synthetic `suntimes.synth` fixture below, `SUNTIMES.REQUIRED`,
+# and the two `sdb$...` references in the function body were still using
+# the OLD, pre-round-26 suntimes column spellings (`date.mon`, `suns`/
+# `suns.unix`/`sunr`/`sunr.unix`/`sunr.mon`/`sunr.mon.unix`) even though the
+# shipped `batz.plotdetections_first.last.R` was already fixed to require
+# the round twenty-five/twenty-six spellings (`date.monitoringnight`,
+# `sunset`/`sunset.unix`/`sunrise`/`sunrise.unix`/`sunrise.monitoringnight`/
+# `sunrise.monitoringnight.unix`) on 2026-09-25 - see that file's own
+# `@details`, "Follow-up, 2026-09-25 (round twenty-six)", and
+# `claude/round26_suntimes_audit.md`'s "Known follow-up...stale .dev.R
+# fixture data" note (this file was one of the three flagged there).
+# Running this script as-is against the currently shipped `.R` file would
+# have failed at the header-check step (TEST 1's expected-error test would
+# have masked this, since it deliberately drops a `data` column - but every
+# other test would have hit the NEW error instead of exercising real
+# behavior). Updated below to match; no other behavior changed.
 # =============================================================================
 
 source("batz.batusa_recode.names.R")
@@ -125,24 +143,30 @@ plot.data.synth <- do.call(rbind, lapply(test.dates, function(d) {
   )
 }))
 
+# Follow-up, 2026-09-26: $date.mon -> $date.monitoringnight (round twenty-
+# five) and $suns/$suns.unix/$sunr/$sunr.unix/$sunr.mon/$sunr.mon.unix ->
+# $sunset/$sunset.unix/$sunrise/$sunrise.unix/$sunrise.monitoringnight/
+# $sunrise.monitoringnight.unix (round twenty-six) - matches
+# batz.generate_suntimes.arulist()'s own current output schema and the
+# shipped batz.plotdetections_first.last.R's own SUNTIMES.REQUIRED.
 suntimes.synth <- do.call(rbind, lapply(seq_along(test.dates), function(i) {
   d <- test.dates[i]
   d.next <- test.dates[i] + 1
   data.frame(
-    aru.name        = "WTG-GOM102",
-    date            = format(d, "%m/%d/%Y"),
-    date.mon        = format(d.next, "%m/%d/%Y"),
-    sunregion       = "WTG",
-    time.zone       = "UTC",
-    sunregion.type  = "coordinates",
-    schedual1       = "civil",
-    schedual2       = "civil",
-    suns            = format(as.POSIXct(paste(d, "20:00:00"), tz = "UTC"), "%m/%d/%Y %H:%M"),
-    suns.unix       = 0,
-    sunr            = format(as.POSIXct(paste(d, "06:00:00"), tz = "UTC"), "%m/%d/%Y %H:%M"),
-    sunr.unix       = 0,
-    sunr.mon        = format(as.POSIXct(paste(d.next, "06:00:00"), tz = "UTC"), "%m/%d/%Y %H:%M"),
-    sunr.mon.unix   = 0,
+    aru.name                     = "WTG-GOM102",
+    date                         = format(d, "%m/%d/%Y"),
+    date.monitoringnight         = format(d.next, "%m/%d/%Y"),
+    sunregion                    = "WTG",
+    time.zone                    = "UTC",
+    sunregion.type               = "coordinates",
+    schedual1                    = "civil",
+    schedual2                    = "civil",
+    sunset                       = format(as.POSIXct(paste(d, "20:00:00"), tz = "UTC"), "%m/%d/%Y %H:%M"),
+    sunset.unix                  = 0,
+    sunrise                      = format(as.POSIXct(paste(d, "06:00:00"), tz = "UTC"), "%m/%d/%Y %H:%M"),
+    sunrise.unix                 = 0,
+    sunrise.monitoringnight      = format(as.POSIXct(paste(d.next, "06:00:00"), tz = "UTC"), "%m/%d/%Y %H:%M"),
+    sunrise.monitoringnight.unix = 0,
     stringsAsFactors = FALSE
   )
 }))
@@ -200,9 +224,13 @@ DATA.REQUIRED <- c("spp.id", "date", "aru.groupby", "obs",
 # aru as an header to \"aru.name\"", found via the project's own reference
 # workbook and cross-checked against this script's own R/ counterpart):
 # matches batz.generate_suntimes.arulist()'s own renamed output column.
-SUNTIMES.REQUIRED <- c("aru.name", "date", "date.mon", "sunregion", "time.zone",
-                           "sunregion.type", "schedual1", "schedual2", "suns",
-                           "suns.unix", "sunr", "sunr.unix", "sunr.mon", "sunr.mon.unix")
+# Renamed again 2026-09-26 (round twenty-five/twenty-six, see the header
+# comment above): date.mon -> date.monitoringnight, and the whole suns/
+# sunr-family -> sunset/sunrise-family.
+SUNTIMES.REQUIRED <- c("aru.name", "date", "date.monitoringnight", "sunregion", "time.zone",
+                           "sunregion.type", "schedual1", "schedual2", "sunset",
+                           "sunset.unix", "sunrise", "sunrise.unix", "sunrise.monitoringnight",
+                           "sunrise.monitoringnight.unix")
 FIG.LIST.REQUIRED <- c("plot.type", "plot.name", "facet", "facet.set", "MYSO",
                                "Alldect", "facet.panel", "40khzmyo", "facet.label",
                                "plot.set", "date.format", "date.start", "date.end",
@@ -429,8 +457,10 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
                    job.label, plot.set.val, date.start, date.end))
     }
 
-    dusk.real <- parse.flex.datetime(sdb$suns, tz)
-    dawn.real <- parse.flex.datetime(sdb$sunr.mon, tz)
+    # Round twenty-six (2026-09-25/26): $suns/$sunr.mon are now $sunset/
+    # $sunrise.monitoringnight - see the header comment above.
+    dusk.real <- parse.flex.datetime(sdb$sunset, tz)
+    dawn.real <- parse.flex.datetime(sdb$sunrise.monitoringnight, tz)
     local.noon <- as.POSIXct(paste(sdb$date.parsed, "12:00:00"), tz = tz)
     sdb$dusk.time     <- y.ref.noon + as.numeric(difftime(dusk.real, local.noon, units = "secs"))
     sdb$dawn.time     <- y.ref.noon + as.numeric(difftime(dawn.real, local.noon, units = "secs"))

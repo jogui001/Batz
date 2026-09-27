@@ -27,9 +27,12 @@
 #'   \code{batz.generate_suntimes.arulist()}. Must have \code{$aru.name},
 #'   \code{$date}, \code{$date.monitoringnight}, \code{$sunregion}, \code{$time.zone},
 #'   \code{$sunregion.type}, \code{$schedual1}, \code{$schedual2},
-#'   \code{$suns}, \code{$suns.unix}, \code{$sunr}, \code{$sunr.unix},
-#'   \code{$sunr.mon}, \code{$sunr.mon.unix} - identical contract to
-#'   \code{\link{batz.plotdetections_first.last}}.
+#'   \code{$sunset}, \code{$sunset.unix}, \code{$sunrise}, \code{$sunrise.unix},
+#'   \code{$sunrise.monitoringnight}, \code{$sunrise.monitoringnight.unix} -
+#'   identical contract to \code{\link{batz.plotdetections_first.last}}.
+#'   Renamed from \code{$suns}/\code{$suns.unix}/\code{$sunr}/
+#'   \code{$sunr.unix}/\code{$sunr.mon}/\code{$sunr.mon.unix} on 2026-09-25
+#'   (round twenty-six) - see Details.
 #' @param aes.default A data frame of default plot settings, one row per
 #'   parameter (e.g. \code{plotopts_sm4heatmap.csv}). Must have
 #'   \code{$category}, \code{$parameter}, \code{$default.value}; an
@@ -334,6 +337,35 @@
 #' \code{\link{batz.merge_vetted.acoustics}} this same round. Nothing else
 #' in this function's logic changes.
 #'
+#' \strong{\code{suntimes}'s \code{$suns}/\code{$sunr}-family columns
+#' renamed (round twenty-six), 2026-09-25, later the same day, per Josh's
+#' package-wide \code{suntimes} header rename request:} \code{SUNTIMES.REQUIRED}
+#' and this function's two internal references to it are updated to match
+#' \code{\link{batz.generate_suntimes.arulist}}'s newly-renamed output
+#' columns, exactly the same rename applied the same day to
+#' \code{\link{batz.plotdetections_first.last}} (see that function's own
+#' \code{@details} for the full rationale, repeated only briefly here):
+#' \code{$suns} -> \code{$sunset}, \code{$suns.unix} -> \code{$sunset.unix},
+#' \code{$sunr} -> \code{$sunrise}, \code{$sunr.unix} ->
+#' \code{$sunrise.unix}, \code{$sunr.mon} -> \code{$sunrise.monitoringnight},
+#' \code{$sunr.mon.unix} -> \code{$sunrise.monitoringnight.unix}. This is
+#' NOT backward-compatible (a genuinely different word in every case, which
+#' \code{canonicalize.headers()} cannot bridge, unlike the earlier
+#' \code{$aru}->\code{$aru.name} casing/separator-only rename) - a
+#' \code{suntimes} argument built from the OLD-format
+#' \code{batz.generate_suntimes.arulist()} output is no longer accepted.
+#' This function's two internal references to the actually-read columns
+#' are updated in lockstep: \code{sdb$suns} -> \code{sdb$sunset} (Dusk
+#' line) and \code{sdb$sunr.mon} -> \code{sdb$sunrise.monitoringnight}
+#' (Dawn line - still the FOLLOWING day's sunrise ending this monitoring
+#' night, per the comment already in this function's code; only the
+#' column's spelling changed, not which value is read). Unlike
+#' \code{\link{batz.plotdetections_first.last}}, this function's own
+#' \code{SUNTIMES.REQUIRED} already correctly said
+#' \code{"date.monitoringnight"} (not the stale \code{"date.mon"}) from
+#' the round-twenty-five entry directly above, so no separate date-field
+#' fix was needed here during this audit pass.
+#'
 #' @examples
 #' \dontrun{
 #' result <- batz.plotsm4_heatmap(
@@ -362,9 +394,15 @@ batz.plotsm4_heatmap <- function(data, fig.list, suntimes,
   PLOT.TYPE <- "sm4.heatmap"
 
   DATA.REQUIRED <- c("aru.name", "date.monitoringnight", "mins.oper", "mins2.noon.mon")
+  ## Round twenty-six, 2026-09-25 (per Josh's package-wide suntimes header
+  ## rename): $suns/$suns.unix/$sunr/$sunr.unix/$sunr.mon/$sunr.mon.unix are
+  ## now $sunset/$sunset.unix/$sunrise/$sunrise.unix/
+  ## $sunrise.monitoringnight/$sunrise.monitoringnight.unix - NOT
+  ## backward-compatible - see @details.
   SUNTIMES.REQUIRED <- c("aru.name", "date", "date.monitoringnight", "sunregion", "time.zone",
-                          "sunregion.type", "schedual1", "schedual2", "suns",
-                          "suns.unix", "sunr", "sunr.unix", "sunr.mon", "sunr.mon.unix")
+                          "sunregion.type", "schedual1", "schedual2", "sunset",
+                          "sunset.unix", "sunrise", "sunrise.unix", "sunrise.monitoringnight",
+                          "sunrise.monitoringnight.unix")
   ## Deliberately a smaller subset of fig.list.csv's full column set - see
   ## @details for why no species/facet-related columns are read here.
   FIG.LIST.REQUIRED <- c("plot.type", "plot.name", "plot.set", "date.format",
@@ -562,11 +600,15 @@ batz.plotsm4_heatmap <- function(data, fig.list, suntimes,
     }
     if (is.na(bin.minutes) || bin.minutes <= 0) bin.minutes <- 15
 
-    dusk.real <- parse.flex.datetime(sdb$suns, tz)
-    # Dawn ending THIS monitoring night is $sunr.mon (sunrise the FOLLOWING
-    # day), not $sunr (sunrise ON $date, ending the PREVIOUS night) - same
-    # reasoning as batz.plotdetections_first.last()'s own BUGFIX for this.
-    dawn.real <- parse.flex.datetime(sdb$sunr.mon, tz)
+    # Round twenty-six, 2026-09-25 (per Josh's package-wide suntimes header
+    # rename): $suns/$sunr.mon are now $sunset/$sunrise.monitoringnight -
+    # see @details, "suntimes's $suns/$sunr-family columns renamed".
+    dusk.real <- parse.flex.datetime(sdb$sunset, tz)
+    # Dawn ending THIS monitoring night is $sunrise.monitoringnight (sunrise
+    # the FOLLOWING day), not $sunrise (sunrise ON $date, ending the
+    # PREVIOUS night) - same reasoning as
+    # batz.plotdetections_first.last()'s own BUGFIX for this.
+    dawn.real <- parse.flex.datetime(sdb$sunrise.monitoringnight, tz)
     local.noon <- as.POSIXct(paste(sdb$date.parsed, "12:00:00"), tz = tz)
     sdb$dusk.time     <- y.ref.noon + as.numeric(difftime(dusk.real, local.noon, units = "secs"))
     sdb$dawn.time     <- y.ref.noon + as.numeric(difftime(dawn.real, local.noon, units = "secs"))

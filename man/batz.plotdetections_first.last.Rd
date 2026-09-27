@@ -33,11 +33,15 @@ catches). An optional \code{$midnight} column (\code{"none"}/
 plot row - see Details.}
 
 \item{suntimes}{A data frame of sunrise/sunset times, e.g. the output
-of \code{batz.generate_suntimes.arulist()}. Must have \code{$aru.name}, \code{$date},
-\code{$date.mon}, \code{$sunregion}, \code{$time.zone},
-\code{$sunregion.type}, \code{$schedual1}, \code{$schedual2},
-\code{$suns}, \code{$suns.unix}, \code{$sunr}, \code{$sunr.unix},
-\code{$sunr.mon}, \code{$sunr.mon.unix}.}
+of \code{batz.generate_suntimes.arulist()}. Must have \code{$aru.name},
+\code{$date}, \code{$date.monitoringnight}, \code{$sunregion},
+\code{$time.zone}, \code{$sunregion.type}, \code{$schedual1},
+\code{$schedual2}, \code{$sunset}, \code{$sunset.unix},
+\code{$sunrise}, \code{$sunrise.unix}, \code{$sunrise.monitoringnight},
+\code{$sunrise.monitoringnight.unix}. Renamed from
+\code{$suns}/\code{$suns.unix}/\code{$sunr}/\code{$sunr.unix}/
+\code{$sunr.mon}/\code{$sunr.mon.unix} on 2026-09-25 (round twenty-six) -
+see Details.}
 
 \item{aes.default}{A data frame of default plot settings, one
 row per parameter (e.g. \code{plotopts_first.last.csv}).
@@ -190,6 +194,12 @@ custom Noon/Midnight Y-axis break labels (\code{y.breaks}/
 \code{y.break.labels}, passed to \code{scale_y_datetime(breaks=,
 labels=)}) were previously deferred as untested; they are now computed
 and verified against the actual rendered axis.
+\strong{Note (2026-09-25): the column names \code{sdb$sunr}/
+\code{sdb$sunr.mon} referenced in this historical entry are the OLD
+spellings, since renamed to \code{sdb$sunrise}/\code{sdb$sunrise.monitoringnight}
+- see "Follow-up, 2026-09-25 (round twenty-six)" below. Left as
+originally written, per this project's never-rewrite-history
+convention.}
 
 \strong{Two more real bugs were found and fixed after Josh reviewed the
 first render against his own target image:} (1) \code{$date.format}
@@ -916,6 +926,64 @@ reference table's \code{$common} column was likewise updated to
 suite (no regressions) plus a new check that \code{batz.batusa_recode.names()}
 errors as expected if this function is reverted to passing the old,
 now-invalid \code{"common"} literal.
+
+\strong{Follow-up, 2026-09-25, later the same day (round twenty-six),
+per Josh's package-wide \code{suntimes} header rename request:
+\code{SUNTIMES.REQUIRED} and this function's two internal references to
+it are updated to match \code{\link{batz.generate_suntimes.arulist}}'s
+newly-renamed output columns.} Josh's own literal rename list (applied
+to that function's required INPUT headers and this function's own
+\code{suntimes} INPUT contract identically, since this function simply
+consumes that function's output): \code{$suns} -> \code{$sunset},
+\code{$suns.unix} -> \code{$sunset.unix}, \code{$sunr} ->
+\code{$sunrise}, \code{$sunr.unix} -> \code{$sunrise.unix},
+\code{$sunr.mon} -> \code{$sunrise.monitoringnight},
+\code{$sunr.mon.unix} -> \code{$sunrise.monitoringnight.unix}. Unlike
+the 2026-09-22 \code{$aru}->\code{$aru.name} rename (backward-compatible
+via \code{canonicalize.headers()}'s casing/separator folding, since both
+spellings share the same underlying word), this is a genuinely
+different WORD in every case - \code{canonicalize.headers()} can only
+reconcile casing/separator style (e.g. \code{"date.mon"} <->
+\code{"date_mon"}), never bridge two different words, so a
+\code{suntimes} argument built from the OLD-format
+\code{batz.generate_suntimes.arulist()} output (still spelled
+\code{$suns}/\code{$sunr}/etc.) is no longer accepted at all - this is
+NOT backward-compatible, matching Josh's own explicit framing of this
+rename ("change these in and out headers") as a hard replacement, not
+an added alias. This function's two internal references to the
+actually-read columns are updated in lockstep: \code{sdb$suns} ->
+\code{sdb$sunset} (Dusk line) and \code{sdb$sunr.mon} ->
+\code{sdb$sunrise.monitoringnight} (Dawn line, still the FOLLOWING
+day's sunrise ending this monitoring night, per the BUGFIX entry far
+above - only the column's spelling changed, not which value is read).
+\code{$suns.unix}/\code{$sunr.unix}/\code{$sunr.mon.unix} are required
+(for parity with \code{batz.generate_suntimes.arulist()}'s full output
+schema) but were never actually read by this function's own code before
+today and still aren't - only renamed to \code{$sunset.unix}/
+\code{$sunrise.unix}/\code{$sunrise.monitoringnight.unix} in the
+required-header list for consistency.
+
+\strong{Same audit pass, a second, separate, pre-existing bug found and
+fixed (unrelated to today's suns/sunr rename): \code{SUNTIMES.REQUIRED}
+still said \code{"date.mon"}, a column \code{aru.suntimes} no longer has
+at all since round twenty-five (2026-09-25 earlier the same day),
+when \code{\link{batz.generate_suntimes.arulist}} renamed its own
+\code{$date.mon} output column to \code{$date.monitoringnight}.} This
+function's own required-header constant was never updated to match at
+the time (unlike \code{\link{batz.plotsm4_heatmap}}, which was
+correctly updated the same round - see that function's own
+\code{@details}), even though no code in this function actually reads
+\code{sdb$date.mon}/\code{sdb$date.monitoringnight} directly (only
+\code{sdb$date} is parsed and used) - so this was a silent, header-
+check-only conflict: any real \code{aru.suntimes} produced since round
+twenty-five would have failed this function's required-header check on
+\code{"date.mon"} alone, before ever reaching the (unaffected)
+\code{suns}/\code{sunr} problem above. Found while auditing this
+function for today's rename, per Josh's explicit request to check the
+whole package for conflicts - fixed here in the same pass, since
+leaving it would have kept this function broken even after the
+suns/sunr fix above. \code{SUNTIMES.REQUIRED} now says
+\code{"date.monitoringnight"}.
 }
 \examples{
 \dontrun{

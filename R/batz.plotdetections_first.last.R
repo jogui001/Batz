@@ -22,11 +22,15 @@
 #'   \code{aes.default}'s \code{midnight} setting for this one
 #'   plot row - see Details.
 #' @param suntimes A data frame of sunrise/sunset times, e.g. the output
-#'   of \code{batz.generate_suntimes.arulist()}. Must have \code{$aru.name}, \code{$date},
-#'   \code{$date.mon}, \code{$sunregion}, \code{$time.zone},
-#'   \code{$sunregion.type}, \code{$schedual1}, \code{$schedual2},
-#'   \code{$suns}, \code{$suns.unix}, \code{$sunr}, \code{$sunr.unix},
-#'   \code{$sunr.mon}, \code{$sunr.mon.unix}.
+#'   of \code{batz.generate_suntimes.arulist()}. Must have \code{$aru.name},
+#'   \code{$date}, \code{$date.monitoringnight}, \code{$sunregion},
+#'   \code{$time.zone}, \code{$sunregion.type}, \code{$schedual1},
+#'   \code{$schedual2}, \code{$sunset}, \code{$sunset.unix},
+#'   \code{$sunrise}, \code{$sunrise.unix}, \code{$sunrise.monitoringnight},
+#'   \code{$sunrise.monitoringnight.unix}. Renamed from
+#'   \code{$suns}/\code{$suns.unix}/\code{$sunr}/\code{$sunr.unix}/
+#'   \code{$sunr.mon}/\code{$sunr.mon.unix} on 2026-09-25 (round twenty-six) -
+#'   see Details.
 #' @param aes.default A data frame of default plot settings, one
 #'   row per parameter (e.g. \code{plotopts_first.last.csv}).
 #'   Must have \code{$category}, \code{$parameter}, \code{$default.value};
@@ -167,6 +171,12 @@
 #' \code{y.break.labels}, passed to \code{scale_y_datetime(breaks=,
 #' labels=)}) were previously deferred as untested; they are now computed
 #' and verified against the actual rendered axis.
+#' \strong{Note (2026-09-25): the column names \code{sdb$sunr}/
+#' \code{sdb$sunr.mon} referenced in this historical entry are the OLD
+#' spellings, since renamed to \code{sdb$sunrise}/\code{sdb$sunrise.monitoringnight}
+#' - see "Follow-up, 2026-09-25 (round twenty-six)" below. Left as
+#' originally written, per this project's never-rewrite-history
+#' convention.}
 #'
 #' \strong{Two more real bugs were found and fixed after Josh reviewed the
 #' first render against his own target image:} (1) \code{$date.format}
@@ -894,6 +904,64 @@
 #' errors as expected if this function is reverted to passing the old,
 #' now-invalid \code{"common"} literal.
 #'
+#' \strong{Follow-up, 2026-09-25, later the same day (round twenty-six),
+#' per Josh's package-wide \code{suntimes} header rename request:
+#' \code{SUNTIMES.REQUIRED} and this function's two internal references to
+#' it are updated to match \code{\link{batz.generate_suntimes.arulist}}'s
+#' newly-renamed output columns.} Josh's own literal rename list (applied
+#' to that function's required INPUT headers and this function's own
+#' \code{suntimes} INPUT contract identically, since this function simply
+#' consumes that function's output): \code{$suns} -> \code{$sunset},
+#' \code{$suns.unix} -> \code{$sunset.unix}, \code{$sunr} ->
+#' \code{$sunrise}, \code{$sunr.unix} -> \code{$sunrise.unix},
+#' \code{$sunr.mon} -> \code{$sunrise.monitoringnight},
+#' \code{$sunr.mon.unix} -> \code{$sunrise.monitoringnight.unix}. Unlike
+#' the 2026-09-22 \code{$aru}->\code{$aru.name} rename (backward-compatible
+#' via \code{canonicalize.headers()}'s casing/separator folding, since both
+#' spellings share the same underlying word), this is a genuinely
+#' different WORD in every case - \code{canonicalize.headers()} can only
+#' reconcile casing/separator style (e.g. \code{"date.mon"} <->
+#' \code{"date_mon"}), never bridge two different words, so a
+#' \code{suntimes} argument built from the OLD-format
+#' \code{batz.generate_suntimes.arulist()} output (still spelled
+#' \code{$suns}/\code{$sunr}/etc.) is no longer accepted at all - this is
+#' NOT backward-compatible, matching Josh's own explicit framing of this
+#' rename ("change these in and out headers") as a hard replacement, not
+#' an added alias. This function's two internal references to the
+#' actually-read columns are updated in lockstep: \code{sdb$suns} ->
+#' \code{sdb$sunset} (Dusk line) and \code{sdb$sunr.mon} ->
+#' \code{sdb$sunrise.monitoringnight} (Dawn line, still the FOLLOWING
+#' day's sunrise ending this monitoring night, per the BUGFIX entry far
+#' above - only the column's spelling changed, not which value is read).
+#' \code{$suns.unix}/\code{$sunr.unix}/\code{$sunr.mon.unix} are required
+#' (for parity with \code{batz.generate_suntimes.arulist()}'s full output
+#' schema) but were never actually read by this function's own code before
+#' today and still aren't - only renamed to \code{$sunset.unix}/
+#' \code{$sunrise.unix}/\code{$sunrise.monitoringnight.unix} in the
+#' required-header list for consistency.
+#'
+#' \strong{Same audit pass, a second, separate, pre-existing bug found and
+#' fixed (unrelated to today's suns/sunr rename): \code{SUNTIMES.REQUIRED}
+#' still said \code{"date.mon"}, a column \code{aru.suntimes} no longer has
+#' at all since round twenty-five (2026-09-25 earlier the same day),
+#' when \code{\link{batz.generate_suntimes.arulist}} renamed its own
+#' \code{$date.mon} output column to \code{$date.monitoringnight}.} This
+#' function's own required-header constant was never updated to match at
+#' the time (unlike \code{\link{batz.plotsm4_heatmap}}, which was
+#' correctly updated the same round - see that function's own
+#' \code{@details}), even though no code in this function actually reads
+#' \code{sdb$date.mon}/\code{sdb$date.monitoringnight} directly (only
+#' \code{sdb$date} is parsed and used) - so this was a silent, header-
+#' check-only conflict: any real \code{aru.suntimes} produced since round
+#' twenty-five would have failed this function's required-header check on
+#' \code{"date.mon"} alone, before ever reaching the (unaffected)
+#' \code{suns}/\code{sunr} problem above. Found while auditing this
+#' function for today's rename, per Josh's explicit request to check the
+#' whole package for conflicts - fixed here in the same pass, since
+#' leaving it would have kept this function broken even after the
+#' suns/sunr fix above. \code{SUNTIMES.REQUIRED} now says
+#' \code{"date.monitoringnight"}.
+#'
 #' @examples
 #' \dontrun{
 #' # default dir.save = getwd() - saves into the current working directory,
@@ -949,11 +1017,23 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
   ## "plot.set" (singular), so no change was needed in this constant or
   ## the one place below that reads job$plot.set. See @details, "Follow-up,
   ## 2026-09-23...".
+  ##
+  ## Follow-up (2026-09-25, round twenty-six, per Josh's package-wide
+  ## suntimes header rename): $suns/$suns.unix/$sunr/$sunr.unix/$sunr.mon/
+  ## $sunr.mon.unix are now $sunset/$sunset.unix/$sunrise/$sunrise.unix/
+  ## $sunrise.monitoringnight/$sunrise.monitoringnight.unix - NOT
+  ## backward-compatible (a different word in every case, which
+  ## canonicalize.headers() cannot bridge) - see @details, "Follow-up,
+  ## 2026-09-25...round twenty-six". $date.mon (a separate, pre-existing,
+  ## unrelated bug also caught in this same audit pass) is now
+  ## $date.monitoringnight, matching round twenty-five - see @details,
+  ## "Same audit pass, a second, separate...bug".
   DATA.REQUIRED <- c("spp.id", "date", "group", "obs",
                            "mins2.noon.min", "mins2.noon.max", "vetting.type")
-  SUNTIMES.REQUIRED <- c("aru.name", "date", "date.mon", "sunregion", "time.zone",
-                             "sunregion.type", "schedual1", "schedual2", "suns",
-                             "suns.unix", "sunr", "sunr.unix", "sunr.mon", "sunr.mon.unix")
+  SUNTIMES.REQUIRED <- c("aru.name", "date", "date.monitoringnight", "sunregion", "time.zone",
+                             "sunregion.type", "schedual1", "schedual2", "sunset",
+                             "sunset.unix", "sunrise", "sunrise.unix", "sunrise.monitoringnight",
+                             "sunrise.monitoringnight.unix")
   FIG.LIST.REQUIRED <- c("plot.type", "plot.name", "facet", "facet.set", "MYSO",
                                  "Alldect", "facet.panel", "40khzmyo", "facet.label",
                                  "plot.set", "date.format", "date.start", "date.end",
@@ -1084,6 +1164,9 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
   # date/datetime fields - mirroring the multi-format parse.simple.date()
   # approach already used in batz.suntimes_generate - costs nothing and
   # avoids the same landmine wherever a date field's actual source changes.
+  # (Round twenty-six, 2026-09-25: $suns/$sunr.mon referenced in this
+  # historical comment are now $sunset/$sunrise.monitoringnight - see
+  # @details, "Follow-up, 2026-09-25...round twenty-six".)
   parse.flex.date <- function(x) {
     out <- as.Date(rep(NA_character_, length(x)))
     for (fmt in c("%m/%d/%Y", "%Y-%m-%d", "%m/%d/%y")) {
@@ -1280,14 +1363,18 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
                    job.label, plot.set.val, date.start, date.end))
     }
 
-    dusk.real <- parse.flex.datetime(sdb$suns, tz)
-    # Dawn ending THIS monitoring night (which starts at $suns/dusk of
-    # $date) is $sunr.mon - sunrise on the FOLLOWING day - not $sunr, which
-    # is sunrise ON $date itself (i.e. the dawn ending the PREVIOUS night).
-    # Using $sunr here was a real bug caught during rendering: it placed
-    # Dawn ~5 hours before Noon on the reference date, outside the plotted
-    # Noon-to-Noon window, silently dropping the Dawn line from every panel.
-    dawn.real <- parse.flex.datetime(sdb$sunr.mon, tz)
+    dusk.real <- parse.flex.datetime(sdb$sunset, tz)
+    # Dawn ending THIS monitoring night (which starts at $sunset/dusk of
+    # $date) is $sunrise.monitoringnight - sunrise on the FOLLOWING day - not
+    # $sunrise, which is sunrise ON $date itself (i.e. the dawn ending the
+    # PREVIOUS night). Using $sunrise here was a real bug caught during
+    # rendering (back when these columns were named $sunr/$sunr.mon): it
+    # placed Dawn ~5 hours before Noon on the reference date, outside the
+    # plotted Noon-to-Noon window, silently dropping the Dawn line from
+    # every panel. (Round twenty-six, 2026-09-25: $suns/$sunr.mon renamed
+    # to $sunset/$sunrise.monitoringnight - see @details, "Follow-up,
+    # 2026-09-25...round twenty-six".)
+    dawn.real <- parse.flex.datetime(sdb$sunrise.monitoringnight, tz)
     local.noon <- as.POSIXct(paste(sdb$date.parsed, "12:00:00"), tz = tz)
     sdb$dusk.time     <- y.ref.noon + as.numeric(difftime(dusk.real, local.noon, units = "secs"))
     sdb$dawn.time     <- y.ref.noon + as.numeric(difftime(dawn.real, local.noon, units = "secs"))

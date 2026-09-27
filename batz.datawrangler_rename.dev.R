@@ -80,6 +80,31 @@
 #      standardized headers AND a custom rename are both needed, call
 #      standardize.headers() first and build recode.table's first column
 #      against the standardized spellings.
+#
+#  10. **Round twenty-five, 2026-09-25, per Josh: "do not be case sensitive
+#      when comparing input to reference dataframes" - applied here.** Every
+#      comparison against recode.table's first column (the main recode
+#      lookup in both value mode and headers.rename mode, the missing-
+#      element diagnostics, and the duplicate-key diagnostics) now folds
+#      case before comparing - e.g. "Test1" in the data now matches a
+#      "test1" entry in recode.table. This is case-folding ONLY (a plain
+#      tolower()) - it deliberately does NOT also fold whitespace/punctuation
+#      the way standardize.headers() does, so it doesn't reopen the problem
+#      flagged in assumption 9 above; a caller-supplied recode.table still
+#      means what it says beyond letter case. The replacement value
+#      substituted is always recode.table's second-column entry exactly as
+#      supplied (original casing, never lowercased) - same pattern as
+#      batz.batusa_recode.names()/batz.batusa_list.species()/
+#      batz.treeusa_recode.names()'s own normalize()/normalize.tree()
+#      helpers. Consequence: two reference-table keys differing only by case
+#      (e.g. "Test1"/"test1") now count as a duplicate key for
+#      match.first/duplicates.count/duplicates.list purposes - see the new
+#      "case-insensitivity" test section at the end of this script (using
+#      synthetic data, since the device bridge with the original
+#      recode.xlsx/recode.csv real test files wasn't available for this
+#      round; the pre-existing tests above are unaffected and still pass
+#      with these real files, since none of them contain case-colliding
+#      keys).
 # =============================================================================
 
 suppressMessages(library(readxl))
@@ -91,9 +116,18 @@ cat("=== recode.table ===\n"); print(recode.table)
 cat("\n=== test.data ===\n"); print(test.data)
 
 # -----------------------------------------------------------------------------
+# Case-insensitive-only normalization for comparison purposes (per Josh,
+# 2026-09-25) - deliberately does NOT fold whitespace/punctuation the way
+# standardize.headers() does; see assumption 10 above for why.
+# -----------------------------------------------------------------------------
+normalize <- function(x) tolower(as.character(x))
+
+# -----------------------------------------------------------------------------
 # core: recode a single vector against a 2-column recode table (by position).
 # When the reference table's first column has a duplicate key, match.first
 # picks whether the FIRST or LAST matching row's replacement value is used.
+# Matching is now case-insensitive (2026-09-25); the value substituted is
+# always the reference table's original-cased replacement text.
 # -----------------------------------------------------------------------------
 recode.vec <- function(x, recode.table, match.first = TRUE) {
   find.vals    <- as.character(recode.table[[1]])
@@ -101,11 +135,14 @@ recode.vec <- function(x, recode.table, match.first = TRUE) {
 
   x.chr <- as.character(x)
 
+  find.norm <- normalize(find.vals)
+  x.norm    <- normalize(x.chr)
+
   if (match.first) {
-    match.idx <- match(x.chr, find.vals)
+    match.idx <- match(x.norm, find.norm)
   } else {
-    n <- length(find.vals)
-    rev.idx <- match(x.chr, rev(find.vals))
+    n <- length(find.norm)
+    rev.idx <- match(x.norm, rev(find.norm))
     match.idx <- ifelse(is.na(rev.idx), NA, n - rev.idx + 1)
   }
   found <- !is.na(match.idx)
@@ -134,17 +171,20 @@ batz.datawrangler_rename <- function(data, recode.table,
   }
 
   ref.find <- as.character(recode.table[[1]])
+  ref.norm <- normalize(ref.find)
 
   # ---- missing-element diagnostics ----
   # In headers.rename mode, "elements" means the column headers being looked
   # up (not the data frame's contents); otherwise it's every data value.
+  # Comparison against recode.table's first column is case-insensitive
+  # (per Josh, 2026-09-25).
   if (missing.count || missing.list) {
     flat.chr <- if (headers.rename) {
       names(data)
     } else {
       as.character(if (is.data.frame(data)) unlist(data, use.names = FALSE) else data)
     }
-    missing.vals <- flat.chr[!(flat.chr %in% ref.find)]
+    missing.vals <- flat.chr[!(normalize(flat.chr) %in% ref.norm)]
 
     if (missing.count) {
       if (length(missing.vals) == 0) {
@@ -166,10 +206,18 @@ batz.datawrangler_rename <- function(data, recode.table,
   }
 
   # ---- duplicate-key diagnostics (reference table's first column) ----
+  # Keys differing only by case are treated as the same key (per Josh,
+  # 2026-09-25) - grouped by their case-folded form, displayed using the
+  # first original-cased spelling encountered for that group.
   if (duplicates.count || duplicates.list) {
-    ref.tbl <- as.data.frame(table(ref.find), stringsAsFactors = FALSE)
-    names(ref.tbl) <- c("value", "count")
-    dup.tbl <- ref.tbl[ref.tbl$count > 1, ]
+    norm.tbl <- as.data.frame(table(ref.norm), stringsAsFactors = FALSE)
+    names(norm.tbl) <- c("value.normalized", "count")
+    dup.tbl <- norm.tbl[norm.tbl$count > 1, , drop = FALSE]
+
+    if (nrow(dup.tbl) > 0) {
+      dup.tbl$value <- ref.find[match(dup.tbl$value.normalized, ref.norm)]
+      dup.tbl <- dup.tbl[, c("value", "count")]
+    }
 
     if (duplicates.count) {
       if (nrow(dup.tbl) == 0) {
@@ -284,3 +332,69 @@ tryCatch(
   batz.datawrangler_rename(c("A", "B"), header.table, headers.rename = TRUE),
   error = function(e) cat("Got expected error:", conditionMessage(e), "\n")
 )
+
+# =============================================================================
+# NEW (round twenty-five, 2026-09-25): case-insensitivity tests, per Josh's
+# "do not be case sensitive when comparing input to reference dataframes".
+# Uses hand-built synthetic data (not the real recode.xlsx/csv files above),
+# since these files weren't available in this session's environment - each
+# test below is self-contained and asserts its own expected result with
+# stopifnot(), independent of the real-file tests above.
+# =============================================================================
+cat("\n\n========================================\n")
+cat("CASE-INSENSITIVITY TESTS (2026-09-25)\n")
+cat("========================================\n\n")
+
+ci.recode.table <- data.frame(in_ = c("test1", "test2"), out = c("out1", "banana"),
+                               stringsAsFactors = FALSE)
+
+cat("--- TEST CI-1: value recode matches regardless of input casing ---\n")
+r.ci1 <- batz.datawrangler_rename(c("Test1", "TEST2", "test6"), ci.recode.table)
+print(r.ci1)
+stopifnot(identical(r.ci1, c("out1", "banana", "test6")))
+cat("PASS\n\n")
+
+cat("--- TEST CI-2: exact-case input is still unaffected (no regression) ---\n")
+r.ci2 <- batz.datawrangler_rename(c("test1", "test2"), ci.recode.table)
+stopifnot(identical(r.ci2, c("out1", "banana")))
+cat("PASS:", r.ci2, "\n\n")
+
+cat("--- TEST CI-3: reference-table keys differing only by case are now a\n",
+    "    duplicate key, and match.first / match.first = FALSE still\n",
+    "    pick first-vs-last correctly among them ---\n", sep = "")
+ci.dup.table <- data.frame(in_ = c("Test1", "test1"), out = c("out1", "coconut"),
+                            stringsAsFactors = FALSE)
+r.ci3a <- batz.datawrangler_rename("test1", ci.dup.table)
+r.ci3b <- batz.datawrangler_rename("TEST1", ci.dup.table, match.first = FALSE)
+stopifnot(identical(r.ci3a, "out1"))
+stopifnot(identical(r.ci3b, "coconut"))
+cat("PASS: match.first = TRUE ->", r.ci3a, " | match.first = FALSE ->", r.ci3b, "\n\n")
+
+cat("--- TEST CI-4: headers.rename = TRUE is also case-insensitive ---\n")
+ci.df <- data.frame(A = 1, b = 2)
+ci.header.table <- data.frame(old = c("a", "B"), new = c("Alpha", "Beta"),
+                                stringsAsFactors = FALSE)
+ci.df2 <- batz.datawrangler_rename(ci.df, ci.header.table, headers.rename = TRUE)
+stopifnot(identical(names(ci.df2), c("Alpha", "Beta")))
+cat("PASS:", names(ci.df2), "\n\n")
+
+cat("--- TEST CI-5: missing.count folds case (only truly-unmatched values count) ---\n")
+invisible(batz.datawrangler_rename(c("Test1", "nope"), ci.recode.table, missing.count = TRUE))
+cat("(expect 1 - only 'nope' is unmatched; 'Test1' now matches 'test1')\n\n")
+
+cat("--- TEST CI-6: duplicates.count now flags case-differing keys as duplicates ---\n")
+invisible(batz.datawrangler_rename("x", ci.dup.table, duplicates.count = TRUE))
+cat("(expect 2 - 'Test1'/'test1' now count as one repeated key)\n\n")
+
+cat("--- TEST CI-7: duplicates.list groups case-differing keys together ---\n")
+invisible(batz.datawrangler_rename("x", ci.dup.table, duplicates.list = TRUE))
+cat("\n")
+
+cat("--- TEST CI-8: no false-positive duplicate flag when no keys collide, even\n",
+    "    case-insensitively ---\n", sep = "")
+ci.clean.table <- data.frame(in_ = c("alpha", "beta"), out = c("A", "B"),
+                              stringsAsFactors = FALSE)
+invisible(batz.datawrangler_rename("x", ci.clean.table, duplicates.count = TRUE))
+cat("(expect 'all reference elements are unique')\n\n")
+
+cat("ALL CASE-INSENSITIVITY TESTS PASSED\n")
