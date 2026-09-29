@@ -57,11 +57,13 @@
 #  Previously, sm4logs.merged_log.file only had a row for a SKIPPED file
 #  ($filepath/$reason only, "mismatched headers (missing: ...)"/"no
 #  records"/"could not read file"). Josh's new spec: build a row for EVERY
-#  file examined (success or failure), with columns $aru.name, $file.name,
+#  file examined (success or failure), with columns $aru.name, $filename,
 #  $date.start, $date.end, $date.unique, $date.range, $records,
-#  $load.status ("Success"/"Failure"), $reason, $filepath.
+#  $load.status ("Success"/"Failure"), $reason, $filepath. (Renamed from
+#  $file.name to $filename on 2026-09-27 - see the RENAMED note below; this
+#  header comment already uses the current name.)
 #
-#  - $aru.name/$file.name/$filepath: always set, regardless of success.
+#  - $aru.name/$filename/$filepath: always set, regardless of success.
 #  - Success (all 11 headers present AND >=1 data row): $date is converted
 #    to YYYY-MM-DD (same convert.date() step sm4logs.merged itself uses),
 #    then $date.start/$date.end (earliest/latest date IN THAT ONE FILE,
@@ -100,6 +102,18 @@
 #    unchanged from the 2026-09-14 build, which WAS verified against real
 #    data at the time (see git history / earlier revisions of this file).
 # =============================================================================
+# RENAMED, 2026-09-27, per Josh's reference-workbook "Change.to" column:
+# =============================================================================
+#  In sm4logs.merged_log.file (log.file = TRUE): $file.name -> $filename.
+#  In sm4logs.merged (the merged master data frame): the standardized input
+#  column $lon -> $longitude. The expected.headers list used to VALIDATE a
+#  raw file's headers is unchanged ("lon" is still what the SM4 device's own
+#  real "LON" export text standardizes to via standardize.headers(), and
+#  that real device text is not changing) - a separate output.headers
+#  vector renames just the "lon" -> "longitude" spelling once a file has
+#  already been matched/subset, so only the OUTPUT-facing column name
+#  changes, not the input-matching logic.
+# =============================================================================
 
 ## ---- helper: standardize.headers (per Josh, 2026-09-14 project
 ## preference) - inlined here since this is a standalone dev script, not
@@ -117,9 +131,16 @@ standardize.headers <- function(x) {
 
 pattern.regex <- function(p) paste(vapply(p, utils::glob2rx, character(1)), collapse = "|")
 
-## header standardization (per Josh, 2026-09-14 project preference).
+## header standardization (per Josh, 2026-09-14 project preference). Used
+## ONLY for matching against real files' own standardized spelling - see the
+## RENAMED note above for why "lon" (not "longitude") stays here.
 expected.headers <- standardize.headers(c("DATE", "TIME", "LAT", "NS", "LON", "EW",
                                            "POWER(V)", "TEMP(C)", "#FILES", "#SCRUBBED", "MIC0 TYPE"))
+
+## Column identifiers renamed, 2026-09-27 (see RENAMED note above): the
+## standardized "lon" column is renamed to "longitude" in the merged output.
+output.headers <- expected.headers
+output.headers[output.headers == "lon"] <- "longitude"
 
 month.lookup <- c(jan = "01", feb = "02", mar = "03", apr = "04", may = "05", jun = "06",
                    jul = "07", aug = "08", sep = "09", oct = "10", nov = "11", dec = "12")
@@ -147,13 +168,14 @@ convert.date <- function(x) {
 
 # -----------------------------------------------------------------------------
 # helper: build one sm4logs.merged_log.file row (per Josh, 2026-09-22
-# log.file redesign - see FOLLOW-UP note above).
+# log.file redesign - see FOLLOW-UP note above; $filename param renamed from
+# $file.name on 2026-09-27, see RENAMED note above).
 # -----------------------------------------------------------------------------
-make.log.row <- function(aru.name, file.name, filepath, load.status, reason,
+make.log.row <- function(aru.name, filename, filepath, load.status, reason,
                           date.start = NA_character_, date.end = NA_character_,
                           date.unique = NA_integer_, date.range = NA_integer_,
                           records = NA_integer_) {
-  data.frame(aru.name = aru.name, file.name = file.name,
+  data.frame(aru.name = aru.name, filename = filename,
              date.start = date.start, date.end = date.end,
              date.unique = date.unique, date.range = date.range,
              records = records, load.status = load.status, reason = reason,
@@ -197,6 +219,10 @@ process.one.file <- function(f) {
   }
 
   tmp <- raw[expected.headers]
+  ## Column identifiers renamed, 2026-09-27 (see RENAMED note above): rename
+  ## the standardized "lon" column to "longitude" now that the file has been
+  ## matched/subset by the device-literal expected.headers spelling.
+  names(tmp) <- output.headers
   for (cn in names(tmp)) if (is.character(tmp[[cn]])) tmp[[cn]] <- trimws(tmp[[cn]])
 
   tmp$aru.name <- file.aru.name
@@ -205,9 +231,9 @@ process.one.file <- function(f) {
   ns <- tolower(trimws(tmp$ns))
   ew <- tolower(trimws(tmp$ew))
   tmp$Y <- ifelse(ns == "s", -as.numeric(tmp$lat), as.numeric(tmp$lat))
-  tmp$X <- ifelse(ew == "w", -as.numeric(tmp$lon), as.numeric(tmp$lon))
+  tmp$X <- ifelse(ew == "w", -as.numeric(tmp$longitude), as.numeric(tmp$longitude))
 
-  tmp <- tmp[c("aru.name", expected.headers, "X", "Y")]
+  tmp <- tmp[c("aru.name", output.headers, "X", "Y")]
 
   ## per-file date summary (per Josh, 2026-09-22 log.file redesign).
   date.vals <- tmp$date
@@ -268,7 +294,7 @@ batz.merge_sm4.logfile <- function(dir.load = getwd(),
   sm4logs.merged_log.file <- if (length(log.rows) > 0) {
     do.call(rbind, log.rows)
   } else {
-    data.frame(aru.name = character(0), file.name = character(0),
+    data.frame(aru.name = character(0), filename = character(0),
                date.start = character(0), date.end = character(0),
                date.unique = integer(0), date.range = integer(0),
                records = integer(0), load.status = character(0),
@@ -315,14 +341,14 @@ test.dir <- "/home/claude/refdb/sm4_test"
 cat("=== log.file = TRUE, dir.sub = TRUE (all 6 fixtures) ===\n")
 res1 <- batz.merge_sm4.logfile(test.dir, dir.sub = TRUE, log.file = TRUE)
 cat("\ndim sm4logs.merged:", paste(dim(sm4logs.merged), collapse = " x "), "\n")
-print(sm4logs.merged[, c("aru.name", "date", "time", "lat", "lon")])
+print(sm4logs.merged[, c("aru.name", "date", "time", "lat", "longitude")])
 cat("\nsm4logs.merged_log.file:\n")
 print(sm4logs.merged_log.file)
 
 stopifnot(nrow(sm4logs.merged_log.file) == 6)
 stopifnot(nrow(sm4logs.merged) == 5)
 
-get.row <- function(fname) sm4logs.merged_log.file[sm4logs.merged_log.file$file.name == fname, ]
+get.row <- function(fname) sm4logs.merged_log.file[sm4logs.merged_log.file$filename == fname, ]
 
 r <- get.row("AYERS_A_Summary.txt")
 stopifnot(r$load.status == "Success", r$records == 3, r$date.unique == 2,
@@ -351,9 +377,9 @@ stopifnot(r$load.status == "Success", r$aru.name == "SUBSITE")
 cat("[PASS] SUBSITE (dir.sub = TRUE) Success row\n")
 
 stopifnot(all(!is.na(sm4logs.merged_log.file$aru.name)),
-          all(!is.na(sm4logs.merged_log.file$file.name)),
+          all(!is.na(sm4logs.merged_log.file$filename)),
           all(!is.na(sm4logs.merged_log.file$filepath)))
-cat("[PASS] aru.name/file.name/filepath always populated, even on Failure\n")
+cat("[PASS] aru.name/filename/filepath always populated, even on Failure\n")
 
 cat("\n=== log.file = FALSE (sm4logs.merged_log.file should not be created) ===\n")
 if (exists("sm4logs.merged_log.file", envir = .GlobalEnv, inherits = FALSE)) {

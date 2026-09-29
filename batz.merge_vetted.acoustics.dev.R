@@ -33,6 +33,22 @@
 # batz.merge_vetted.acoustics.R's own @details "Header standardization"
 # paragraph for the full explanation.
 #
+# UPDATE (2026-09-27, per Josh's reference-workbook "Change.to" column) -
+# column identifiers renamed to match Josh's tracked header-name workbook:
+#   - $lon (output-only, split from $lat) -> $longitude
+#   - $serial (an input-matching identifier AND this function's own output
+#     column) -> $aru.serial
+#   - expected.headers' required raw-input identifier "monitoringnight" ->
+#     "date.monitoringnight"
+# Both OLD raw-header spellings ("monitoringnight" and "serial") are still
+# accepted as legacy input aliases immediately after standardize.headers()
+# runs, since a real vetted-file export's raw header ("MonitoringNight"/
+# "Serial") will never standardize to the new spelling on its own - see
+# batz.merge_vetted.acoustics.R's own @details "Column identifiers renamed,
+# 2026-09-27" paragraph for the full explanation. Test assertions below
+# that referenced the old $serial/$lon column names by string are updated
+# to $aru.serial/$longitude to match.
+#
 # ---------------------------------------------------------------------------
 # ASSUMPTIONS FLAGGED FOR JOSH (spec was open on these - see delivery note):
 #
@@ -160,7 +176,7 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
                                                trim.noise = TRUE,
                                                trim.noid = FALSE) {
 
-  expected.headers <- c("filename", "monitoringnight", "species_manual_id",
+  expected.headers <- c("filename", "date.monitoringnight", "species_manual_id",
                          "wa_kaleidoscope_auto_id", "sppaccp", "lat")
 
   regex.pattern <- paste(utils::glob2rx(load.pattern), collapse = "|")
@@ -182,17 +198,25 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
                      error = function(e) NULL)
     if (is.null(tmp)) { add.log(f, "could not read file", "none"); next }
     names(tmp) <- standardize.headers(names(tmp))
+    ## legacy raw-header alias (2026-09-27 rename) - see UPDATE note above
+    if ("monitoringnight" %in% names(tmp) && !("date.monitoringnight" %in% names(tmp))) {
+      names(tmp)[names(tmp) == "monitoringnight"] <- "date.monitoringnight"
+    }
     missing.headers <- setdiff(expected.headers, names(tmp))
     if (length(missing.headers) > 0) {
       add.log(f, "mismatched headers", paste(missing.headers, collapse = ", ")); next
     }
     if (nrow(tmp) == 0) { add.log(f, "no records", "none"); next }
-    ## $serial is OPTIONAL (2026-08-30 follow-up), not one of the required
+    ## $aru.serial is OPTIONAL (2026-08-30 follow-up), not one of the required
     ## expected.headers - a file is never skipped for lacking it (e.g. a
     ## Mobile-transect export, which has no fixed detector serial number at
     ## all). Captured BEFORE trimming to expected.headers below, exactly like
-    ## $sunregion, since that trim would otherwise silently drop it.
-    serial.vals <- if ("serial" %in% names(tmp)) as.character(tmp$serial) else
+    ## $sunregion, since that trim would otherwise silently drop it. The real
+    ## vetting-software header ("Serial") standardizes to the OLD spelling
+    ## "serial" - kept here as a legacy input alias (2026-09-27 rename, see
+    ## UPDATE note above) while this function's own internal/output column
+    ## is now $aru.serial.
+    aru.serial.vals <- if ("serial" %in% names(tmp)) as.character(tmp$serial) else
       rep(NA_character_, nrow(tmp))
     ## $sunregion is OPTIONAL, not one of the required expected.headers - a
     ## file is never skipped for lacking it. If a file's own (standardized)
@@ -204,7 +228,7 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
     sunregion.vals <- if ("sunregion" %in% names(tmp)) as.character(tmp$sunregion) else
       rep(NA_character_, nrow(tmp))
     tmp <- tmp[, expected.headers, drop = FALSE]
-    tmp$serial <- serial.vals
+    tmp$aru.serial <- aru.serial.vals
     tmp$sunregion <- sunregion.vals
     vetted.merged <- rbind(vetted.merged, tmp)
   }
@@ -230,16 +254,16 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
     ## manid.kp/manid.sb fill-in, trim.noise/trim.noid -------------------
 
     ## positional rename - see assumption #1 above ($sunregion, appended
-    ## right after $serial back in the per-file loop above, keeps its own
-    ## name here - no rename needed - see assumption #7)
+    ## right after $aru.serial back in the per-file loop above, keeps its
+    ## own name here - no rename needed - see assumption #7)
     names(vetted.merged) <- c("filename", "date.mon", "manid", "autoid.kp",
-                               "autoid.sb", "lat", "serial", "sunregion", "lon",
+                               "autoid.sb", "lat", "aru.serial", "sunregion", "longitude",
                                "aru.name", "date", "time")
 
     ## reorder ($sunregion placed with the other detector-level columns,
-    ## next to $serial/$aru.name - see assumption #7)
+    ## next to $aru.serial/$aru.name - see assumption #7)
     vetted.merged <- vetted.merged[, c("filename", "date.mon", "aru.name",
-                                        "serial", "sunregion", "lat", "lon",
+                                        "aru.serial", "sunregion", "lat", "longitude",
                                         "manid", "autoid.kp", "autoid.sb",
                                         "date", "time")]
 
@@ -443,14 +467,14 @@ cat("\n=== TEST 11: $sunregion pass-through - present in one file, absent in ano
 res11 <- batz.merge_vetted.acoustics(dir.load = "testdata/sunregion",
                                             load.pattern = "*vetted.csv",
                                             duplicates.remove = FALSE)
-print(res11$vetted.merged[, c("aru.name", "serial", "sunregion")])
+print(res11$vetted.merged[, c("aru.name", "aru.serial", "sunregion")])
 cat("has $sunregion column at all?", "sunregion" %in% names(res11$vetted.merged), "\n")
 cat("SYN-B rows (had a real $sunregion column) got 'penobscotbay'?",
     all(res11$vetted.merged$sunregion[res11$vetted.merged$aru.name == "SYN-B"] == "penobscotbay"), "\n")
 cat("SYN-C row (no $sunregion column in its source file) got NA?",
     is.na(res11$vetted.merged$sunregion[res11$vetted.merged$aru.name == "SYN-C"]), "\n")
-cat("column position - sunregion lands right after $serial?",
-    which(names(res11$vetted.merged) == "sunregion") == which(names(res11$vetted.merged) == "serial") + 1, "\n\n")
+cat("column position - sunregion lands right after $aru.serial?",
+    which(names(res11$vetted.merged) == "sunregion") == which(names(res11$vetted.merged) == "aru.serial") + 1, "\n\n")
 
 cat("=== TEST 12: real FinalVetted.csv (no $sunregion column in the raw file) still merges fine, $sunregion all NA ===\n")
 res12 <- batz.merge_vetted.acoustics(dir.load = dir.load,
@@ -496,17 +520,17 @@ synth.mobile <- data.frame(
 )
 write.csv(synth.mobile, "testdata/mobile/mobile_vetted.csv", row.names = FALSE)
 
-cat("=== TEST 13: $serial optional - Mobile file (no Serial column) merges instead of being skipped ===\n")
+cat("=== TEST 13: $aru.serial optional - Mobile file (no Serial column) merges instead of being skipped ===\n")
 res13 <- batz.merge_vetted.acoustics(dir.load = "testdata/mobile",
                                             load.pattern = "*vetted.csv",
                                             duplicates.remove = FALSE, log.file = TRUE)
 cat("rows merged (should be 2 - both files kept, neither skipped for 'serial'):",
     nrow(res13$vetted.merged), "\n")
-print(res13$vetted.merged[, c("aru.name", "serial")])
-cat("stationary file kept its real $serial?",
-    res13$vetted.merged$serial[res13$vetted.merged$aru.name == "SYN-D"] == "S4U00004", "\n")
-cat("mobile file (no Serial column) got NA for $serial instead of being skipped?",
-    is.na(res13$vetted.merged$serial[res13$vetted.merged$aru.name == "105059-MOB"]), "\n")
+print(res13$vetted.merged[, c("aru.name", "aru.serial")])
+cat("stationary file kept its real $aru.serial?",
+    res13$vetted.merged$aru.serial[res13$vetted.merged$aru.name == "SYN-D"] == "S4U00004", "\n")
+cat("mobile file (no Serial column) got NA for $aru.serial instead of being skipped?",
+    is.na(res13$vetted.merged$aru.serial[res13$vetted.merged$aru.name == "105059-MOB"]), "\n")
 cat("log shows zero files skipped for 'mismatched headers' due to serial:\n")
 print(res13$vetted.merged_log.file)
 cat("\n")

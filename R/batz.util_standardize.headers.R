@@ -84,6 +84,13 @@ standardize.headers <- function(x) {
 #' column of \code{df} that isn't named in \code{required} is left exactly
 #' as it was, untouched.
 #'
+#' \strong{Follow-up, 2026-09-28, per Josh: this is also now the shared
+#' mechanism used package-wide whenever a required-header check needs to
+#' treat \code{"."} and \code{"_"} as equivalent} - see
+#' \code{\link{batz.generate_suntimes.arulist}}'s own \code{@details},
+#' "Follow-up, 2026-09-28", for the first function switched over to it for
+#' this specific purpose.
+#'
 #' @param df A data frame to canonicalize.
 #' @param required Character vector of header names, in the calling
 #'   function's own canonical style (e.g. dot-separated), that \code{df}

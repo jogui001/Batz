@@ -10,6 +10,7 @@ batz.merge_temp.logger(
   dir.sub = FALSE,
   dir.save = getwd(),
   write.output = TRUE,
+  project.name = "",
   snake_case = FALSE
 )
 }
@@ -43,7 +44,25 @@ defaults to \code{getwd()} for consistency across the package.)}
 \item{write.output}{If \code{TRUE} (default), also write
 \code{templog.merged.csv} and \code{templog.notes.csv} into
 \code{dir.save} (with \code{$rh} rounded to 3 decimal places in the
-written CSV only).}
+written CSV only). \strong{As of round twenty-two (2026-09-24) these
+two file names are no longer literally \code{"templog.merged.csv"}/
+\code{"templog.notes.csv"} - see \code{@param project.name} below and
+@details, "File naming (round twenty-two)".}}
+
+\item{project.name}{Character, default \code{""}. \strong{New in round
+twenty-two (2026-09-24), per Josh's package-wide file-naming request -
+see @details, "File naming (round twenty-two)"; this parameter did not
+exist before this round.} Base project-name token used to build both
+output CSV names when \code{write.output = TRUE}:
+\verb{<project.name>_templog.notes_<daterange>_<timestamp>.csv} and
+\verb{<project.name>_templog.merged_<daterange>_<timestamp>.csv}, where
+\code{<daterange>} is computed from the earliest/latest
+\code{$date.time} in \code{templog.merged} (\code{<DATE1>to<DATE2>},
+\code{\%Y\%m\%d} each, or the literal \code{"nodata"} if none is
+available) and \code{<timestamp>} is \code{format(Sys.time(),
+"\%Y\%m\%d\%H\%M\%S")}. \code{""} (default) falls back to the literal
+base token \code{"templog"} - a judgment call, please confirm this is
+the right default.}
 
 \item{snake_case}{Logical, default \code{FALSE}. Added 2026-09-22, per
 Josh's request to audit and extend the snake_case output option
@@ -65,10 +84,10 @@ Invisibly, a list with two data frames:
 \describe{
 \item{templog.merged}{\code{$obs}, \code{$date.time},
 \code{$temp.dry.c}, \code{$temp.wet.c}, \code{$rh},
-\code{$serial.num}, plus every other column from the matched
+\code{$logger.serial}, plus every other column from the matched
 \code{templog.meta.csv} row (standardized names - see "Header
 standardization" above).}
-\item{templog.notes}{\code{$serial.num}, \code{$date.start},
+\item{templog.notes}{\code{$logger.serial}, \code{$date.start},
 \code{$date.end}, \code{$temp.type}, \code{$rows.in},
 \code{$rows.out}, \code{$rows.trimmed}, \code{$notes}.}
 }
@@ -133,26 +152,26 @@ all): treated the same as \code{"T"} (both \code{NA}).
 }
 }
 
-The meta join uses ONLY \code{$serial} (the file's real 8-digit serial,
-matched against a standardized \code{serial#} header) plus the file's own
-observed \code{[$date.start, $date.end]} to pick the right meta row -
-\code{$serial_short} and \code{$logger_type} are never used to find or
-disambiguate the match (only as a fallback for older meta files with no
-\code{serial#} column at all). Once a single confident meta row is found,
-every OTHER column from that row (\code{serial_short},
-\code{date_deployment}, \code{date_recovery}, \code{room_number},
-\code{room_name}, \code{station_code}, \code{logger_type}) is appended to
-every record from that file in \code{$templog.merged}, not just used
-internally.
+The meta join uses ONLY \code{$logger.serial} (the file's real 8-digit
+serial, matched against a standardized \code{serial#} header) plus the
+file's own observed \code{[$date.start, $date.end]} to pick the right
+meta row - \code{$logger.serial_short} and \code{$logger_type} are never
+used to find or disambiguate the match (only as a fallback for older
+meta files with no \code{serial#} column at all). Once a single
+confident meta row is found, every OTHER column from that row
+(\code{logger.serial_short}, \code{date.deployment}, \code{date.recovery},
+\code{room.code}, \code{room.name}, \code{station.code},
+\code{logger_type}) is appended to every record from that file in
+\code{$templog.merged}, not just used internally.
 
 Once a meta row is matched, any record whose \code{$date.time} falls
-before \code{$date_deployment}+\code{$time_deployment} or after
-\code{$date_recovery}+\code{$time_recovery} is dropped from
+before \code{$date.deployment}+\code{$time.deployment} or after
+\code{$date.recovery}+\code{$time.recovery} is dropped from
 \code{$templog.merged} (e.g. readings taken during setup before actual
 deployment, or after physical recovery but before the logger stopped
 recording). This only runs when the matched meta row has BOTH date and
 time columns for deployment and recovery - meta files with date-only
-columns (no \code{$time_deployment}/\code{$time_recovery}), or files with
+columns (no \code{$time.deployment}/\code{$time.recovery}), or files with
 no confident meta match at all, are left untrimmed. The count of trimmed
 records per file is in \code{$templog.notes$rows.trimmed}, and (when > 0)
 also called out in \code{$templog.notes$notes}.
@@ -188,6 +207,73 @@ above (which already always runs, regardless of this parameter, on the
 loaded meta file's own real headers before they're matched/joined) -
 \code{snake_case} only affects the final output column names of this
 function's own two returned/written data frames.
+
+\strong{File naming (round twenty-two), 2026-09-24, per Josh's
+package-wide request ("Update all functions that save files or charts:
+... for files follow <project.name>\emph{<filetype.name>}\if{html}{\out{<daterange>}}_
+\if{html}{\out{<timestamp>}}"):} this is the ONE function in this round that needed a
+brand-new parameter rather than just a naming tweak - flagged as the
+single biggest change in this round, please review closely.
+\strong{\code{project.name} did not exist on this function at all
+before this round}; it is added here (default \code{""}, following the
+same blank-default-falls-back-to-a-base-token convention already used by
+\code{\link{batz.generate_suntimes.arulist}}'s own \code{project.name} -
+\code{""} falls back to the literal base token \code{"templog"}, chosen
+as a judgment call since Josh did not specify one; \strong{please
+confirm \code{"templog"} is the right fallback base name}). This
+function also had NO date-range concept anywhere in its output before
+this round - a NEW \code{<daterange>} token is now computed from
+\code{templog.merged$date.time} (the earliest/latest non-\code{NA}
+value, each formatted \code{\%Y\%m\%d}, joined as
+\code{<DATE1>to<DATE2>}), also flagged as a new, previously-nonexistent
+computed field added purely to satisfy the naming convention. If every
+\code{$date.time} value is \code{NA} (or there are zero rows), the
+literal token \code{"nodata"} is used in place of a real date range
+rather than crashing on an empty \code{min()}/\code{max()} - this
+fallback was not specified either and is likewise a judgment call.
+\strong{Both output file names change from the previous hardcoded,
+non-timestamped \code{"templog.notes.csv"}/\code{"templog.merged.csv"}
+to} \verb{<project.name>_templog.notes_<daterange>_<timestamp>.csv} and
+\verb{<project.name>_templog.merged_<daterange>_<timestamp>.csv}
+respectively - using \code{"templog.notes"}/\code{"templog.merged"} as
+each file's \code{<filetype.name>} token (the same names as the two
+returned list elements, for consistency). \strong{This is a real
+behavior change beyond naming}: previously, repeat calls with the same
+\code{dir.save} silently overwrote the same two file names every time;
+now, like every other \code{batz} function that saves output, every
+call produces two freshly timestamped files and nothing is ever
+silently overwritten. \code{<timestamp>} uses the same 14-digit,
+no-separator \code{format(Sys.time(), "\%Y\%m\%d\%H\%M\%S")} shape as
+every other \code{batz} function in this round - see each function's
+own "Timestamp format (round twenty-two)" \code{@details} entry.
+
+\strong{Column identifiers renamed, 2026-09-27, per Josh's
+reference-workbook "Change.to" column.} The following raw/legacy header
+spellings were renamed to their new canonical form throughout this
+function's code and documentation: \code{date_deployment} ->
+\code{date.deployment}, \code{date_recovery} -> \code{date.recovery},
+\code{room_name} -> \code{room.name}, \code{room_number} ->
+\code{room.code}, \code{serial_short} -> \code{logger.serial_short},
+\code{station_code} -> \code{station.code}, \code{time_deployment} ->
+\code{time.deployment}, \code{time_recovery} -> \code{time.recovery}.
+\strong{Two further renames converge on one name:} the meta file's raw
+logger-serial-number input column (standardized from \code{serial#} to
+\code{serial}) is renamed \code{serial} -> \code{logger.serial}, and
+this function's own invented output column (parsed from each raw
+file's leading 8-digit serial) is renamed \code{serial.num} ->
+\code{logger.serial} - the same concept, input alias and output name
+now unified under one identifier. Because \code{standardize.headers()}
+collapses any punctuation in a raw header to an underscore, an
+incoming \code{templog.meta.csv} will still standardize to the legacy
+spellings \code{serial}/\code{serial_num} (from \code{serial#}/
+\code{serial.num}) and \code{serial_short} (from \code{serial.short});
+the header-matching/detection logic below still checks for those
+legacy standardized spellings as input aliases (real incoming files
+will still be named that way), and once a column is matched it is
+renamed internally to its new canonical identifier
+(\code{logger.serial}/\code{logger.serial_short}) for every downstream
+use, including \code{templog.merged}/\code{templog.notes}'s own output
+columns.
 }
 \examples{
 \dontrun{
@@ -197,6 +283,9 @@ result$templog.notes
 
 # snake_case output headers instead of this function's usual dot-style
 result <- batz.merge_temp.logger(dir.load = "path/to/data", snake_case = TRUE)
+
+# custom project.name token in the saved file names (round twenty-two)
+result <- batz.merge_temp.logger(dir.load = "path/to/data", project.name = "siteA")
 }
 
 }

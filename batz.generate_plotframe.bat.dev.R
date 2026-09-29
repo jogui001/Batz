@@ -280,6 +280,26 @@
 #     10/TEST 13/TEST 14/TEST 15 below already build their own synthetic
 #     arulist CSVs with a raw "aru" column and already used "$aru.name" on
 #     the `data`/test-data side - unaffected by this change.
+#
+# 18. **Column identifiers renamed, 2026-09-27, per Josh's reference-
+#     workbook "Change.to" column.** `lon` -> `longitude` in
+#     `required.headers` (SECTION 1) - `data`'s own already-established
+#     schema, not a raw loaded-file header, so safe to rename directly.
+#     Flagged as a cross-function consequence, not fixed here:
+#     batz.vettedacoustics_merge.format()/batz.merge_vetted.acoustics()
+#     still outputs this column as $lon, so test.data built in SECTION 2
+#     below (and any real caller's data) will need that upstream function
+#     renamed to match before this dev script's own tests would pass again
+#     - out of scope for today's change. Two other renames from the same
+#     workbook batch (`aru` -> `aru.name`, `aru_name` -> `aru.name`) were
+#     reviewed and found to need NO change here: every bare `aru`/
+#     `aru_name` occurrence in this file is part of the raw *arulist.csv
+#     loader's own required-column check (`c("aru", "sunregion")`) or the
+#     synthetic test fixtures built to exercise it (TEST 9-15's own
+#     `data.frame(aru = ...)` calls) - all deliberately left as bare `aru`
+#     since that's what a raw arulist file/fixture must literally provide;
+#     `data`'s own required column and this function's internal lookup
+#     table were already `$aru.name` before today.
 # ---------------------------------------------------------------------------
 
 ## ===========================================================================
@@ -333,7 +353,7 @@ batz.generate_plotframe.bat <- function(data,
   ## batz.merge_vetted.acoustics()), not raw loaded headers, so they are
   ## NOT run through standardize.headers() - see assumption #16 above.
   required.headers <- c("filename", "date.mon", "manid", "autoid.kp",
-                         "autoid.sb", "lat", "serial", "lon", "aru.name",
+                         "autoid.sb", "lat", "serial", "longitude", "aru.name",
                          "date", "time", "call.datetime")
   missing.headers <- setdiff(required.headers, names(data))
   if (length(missing.headers) > 0) {

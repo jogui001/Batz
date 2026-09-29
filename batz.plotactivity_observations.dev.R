@@ -82,6 +82,21 @@
 # sunrise/sunrise.unix/sunrise.monitoringnight/sunrise.monitoringnight.unix).
 # Per this function's own @details, suntimes is accepted and header-checked
 # but never otherwise read in the function body, so no other code changed.
+#
+# Follow-up, 2026-09-27, per Josh's reference-workbook "Change.to" column
+# (mirrored from the shipped .R file's own @details, "Column identifiers
+# renamed, 2026-09-27"): fig.list's $Alldect column is renamed to
+# $all.dectections (Josh's own spelling, kept exactly as given - not a typo
+# to fix). aru.metadata.db.synth below (and every synthetic fig.list row
+# derived from it - aru.metadata.db.nogroupcol.synth/blankgroup.synth/
+# messyheaders.synth/cleannamed.synth) is updated to use $all.dectections;
+# FIG.LIST.REQUIRED and the alldect.flag <- job$Alldect call site are
+# updated to match. The specific $aru literal-column rename (-> $aru.name)
+# was already applied to this dev script's SUNTIMES.REQUIRED/suntimes.synth
+# back in the 2026-09-22 follow-up above - nothing further changed for that
+# one. Other bare "aru" uses in this file (aru.groupby, aru.name, aru.token,
+# WTG-GOM102 comments) are unrelated identifiers/prose and were left
+# untouched.
 # =============================================================================
 
 source("batz.batusa_recode.names.R")
@@ -175,7 +190,7 @@ aru.metadata.db.synth <- data.frame(
   facet          = "sppid",
   facet.set      = "NE",
   MYSO           = FALSE,
-  Alldect        = TRUE,
+  all.dectections = TRUE,
   facet.panel    = "",
   "40khzmyo"     = TRUE,
   facet.label    = "common",
@@ -256,9 +271,11 @@ SUNTIMES.REQUIRED <- c("aru.name", "date", "date.monitoringnight", "sunregion", 
                         "sunrise.monitoringnight.unix")
 # "plot.group" removed 2026-09-23 (per Josh, see the header comment above) -
 # it's now optional, resolved per-row below with a "group" default.
-# "plot.sets" renamed to "plot.set" the same round.
+# "plot.sets" renamed to "plot.set" the same round. $Alldect -> $all.dectections
+# renamed 2026-09-27 (per Josh's reference-workbook "Change.to" column - see
+# the header comment above).
 FIG.LIST.REQUIRED <- c("plot.type", "plot.name", "facet", "facet.set", "MYSO",
-                        "Alldect", "facet.panel", "40khzmyo", "facet.label",
+                        "all.dectections", "facet.panel", "40khzmyo", "facet.label",
                         "plot.set", "pool", "date.format",
                         "date.start", "date.end", "xaxe.interval")
 # Follow-up, 2026-09-23 (per Josh's bug report - see the header comment
@@ -435,7 +452,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     spp.plot <- facpan
     myso.flag <- isTRUE(as.logical(job$MYSO))
     if (myso.flag) spp.plot <- c(spp.plot, "Indiana Bat")
-    alldect.flag <- isTRUE(as.logical(job$Alldect))
+    alldect.flag <- isTRUE(as.logical(job$all.dectections))
     if (alldect.flag) { spp.plot <- c(spp.plot, "All detections"); facpan <- c(facpan, "All detections") }
     khz.flag <- isTRUE(as.logical(job[["40khzmyo"]]))
     if (khz.flag) { spp.plot <- c(spp.plot, "40khzmyo"); if (!alldect.flag) facpan <- c(facpan, "40khzmyo") }

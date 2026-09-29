@@ -46,30 +46,31 @@
 #     copy Josh actually has. **Flagging for Josh: please confirm which
 #     single name should be canonical going forward.**
 #   - Real reference file structure (verified directly, 121 species/shrub
-#     rows x 11 columns): $species, $common_one, $common_two, $genus,
-#     $family, $native_status, $growth_habit, $wood_type, $grouping_one,
-#     $grouping_two, $grouping_three. $common_two is blank for 43 of the 121
+#     rows x 11 columns): $scientific_name, $common_one, $common_two, $genus,
+#     $family, $native.status, $growth.habit, $wood.type, $grouping.one,
+#     $grouping.two, $grouping.three. $common_two is blank for 43 of the 121
 #     rows (not every species has a second common name) - blanks never
 #     match anything (by design - see normalize.tree() below) and are only
 #     ever a problem if $common_two is itself the requested head.out for a
 #     row with no second name, in which case that head.out column is just
 #     "" for that row (same "value straight from the reference table" idea
-#     as everywhere else in this project - not a bug).
-#   - Real duplicate-key check across species/common_one/common_two (case/
+#     as everywhere else in this project - not a bug). SUPERSEDED 2026-09-29
+#     for $common_one/$common_two - see ROUND THIRTY below.
+#   - Real duplicate-key check across scientific_name/common_one/common_two (case/
 #     punctuation-insensitive): 3 genuine collisions exist in the real data
 #     - "Juneberry" ($common_two) is shared by three different species
 #     (Amelanchier arborea/canadensis/laevis), and "Filbert" ($common_two)
 #     by two (the two Corylus species). No parameter was requested to
 #     control tie-breaking for this function (unlike
 #     batz.datawrangler_rename's match.first) - defaulted to FIRST match in
-#     species/common_one/common_two column order, then file row order (same
+#     scientific_name/common_one/common_two column order, then file row order (same
 #     "first match wins" convention already used elsewhere in this project
 #     when no tie-break rule is specified). Flagging this for Josh since an
 #     input of "Juneberry" alone is genuinely ambiguous in the source data.
 #
 # STEPS / ASSUMPTIONS (spec was silent or ambiguous on some of these -
 # flagging per project convention):
-#   1. Matching columns are exactly the three named in the spec: $species,
+#   1. Matching columns are exactly the three named in the spec: $scientific_name,
 #      $common_one, $common_two - hardcoded (not parameterized), same as
 #      batz.batusa_recode.names' fixed match.cols. All columns are
 #      whitespace-trimmed on load.
@@ -95,9 +96,10 @@
 #      (same shape as the bat version); length(head.out) > 1 returns a data
 #      frame with one column per requested head.out entry, same row order/
 #      length as `data`. An unrecognized head.out entry is an error (same
-#      convention as the bat version). Default head.out = "common_one".
+#      convention as the bat version). Default head.out = "common_one"
+#      (SUPERSEDED 2026-09-29, now "common.name" - see ROUND THIRTY below).
 #      Matching a data element to a reference row still only ever uses
-#      species/common_one/common_two, regardless of what's requested in
+#      scientific_name/common_one/common_two, regardless of what's requested in
 #      head.out.
 #   5. An input element with no match anywhere in the reference table is
 #      passed through UNCHANGED in every requested head.out column (same
@@ -105,7 +107,7 @@
 #      batz.datawrangler_rename) - never NA, never an error.
 #   6. `treesmismatch.log` (per spec's literal column names/name, kept as
 #      given): built only when at least one input didn't match, with
-#      columns $input (each unique unmatched value), $missmatch_count (how
+#      columns $input (each unique unmatched value), $missmatch.count (how
 #      many times that exact value occurs in THIS call's `data`, i.e.
 #      per-call instance count, same "instances" convention used elsewhere
 #      in this project), and $closest.match (the single nearest reference
@@ -118,9 +120,9 @@
 #   7. $closest.match: computed with base R's `utils::adist()` (Levenshtein
 #      edit distance) between the unmatched input's normalized form (same
 #      normalize.tree() as matching) and every reference row's normalized
-#      species/common_one/common_two values pooled together; the reference
+#      scientific_name/common_one/common_two values pooled together; the reference
 #      entry with the smallest distance wins (first one, in
-#      species/common_one/common_two column order, on an exact tie) and its
+#      scientific_name/common_one/common_two column order, on an exact tie) and its
 #      ORIGINAL (trimmed, not de-punctuated) text is what's stored in
 #      $closest.match. Not explicitly specified in the spec (which only
 #      says "closest match in the reference database") - a standard
@@ -153,26 +155,26 @@
 #      the feature on. Only when reference.data != "default": dir.load (and
 #      subdirectories, if dir.sub) is searched for `pattern`; each matched
 #      file's headers are standardized then matched to reference.plants'
-#      10 non-wood_type columns by (1) exact standardized name, (2) a
+#      10 non-wood.type columns by (1) exact standardized name, (2) a
 #      keyword match on the header text, (3) a content-signature fallback
-#      (binomial-looking text -> species; small controlled vocabularies ->
-#      native_status/growth_habit) - flagged as a best-effort heuristic,
+#      (binomial-looking text -> scientific_name; small controlled vocabularies ->
+#      native.status/growth.habit) - flagged as a best-effort heuristic,
 #      not a guarantee, since "match using header names AND content" has no
-#      single obvious algorithm. A file missing species, every common name
+#      single obvious algorithm. A file missing scientific_name, every common name
 #      column, or every grouping column entirely is skipped (message
 #      printed, not added). A file that's missing only one of
-#      common_one/common_two, or one or two of grouping_one/two/three, has
+#      common_one/common_two, or one or two of grouping.one/two/three, has
 #      the missing slot(s) filled by RECYCLING the other/first-present
 #      value (flagged: recycling from "the first present grouping column"
 #      specifically is an arbitrary tie-break, since the spec doesn't say
 #      which level to prefer). Missing $genus is derived from the first
-#      word of $species. Missing $family/$native_status/$growth_habit are
+#      word of $scientific_name. Missing $family/$native.status/$growth.habit are
 #      padded with NA. If nothing had to be recycled/derived/padded, a
 #      "complete success very nice!" message prints instead of the "loaded
 #      but padded..." one (per Josh's literal wording). All matched files'
 #      reconciled rows are folded into one reference.plants.temp, and then:
 #      reference.plants.all <- reference.plants (copy); "append" adds
-#      reference.plants.temp's rows onto it (column union, so wood_type is
+#      reference.plants.temp's rows onto it (column union, so wood.type is
 #      NA for the new rows); "overwrite" replaces it entirely with
 #      reference.plants.temp (falling back to the unmodified
 #      reference.plants if nothing was actually loaded - flagged, since an
@@ -182,27 +184,116 @@
 #  11. **dir.sub default changed 2026-09-14, per Josh:** dir.sub now
 #      defaults to TRUE (was FALSE) - both the base reference file and any
 #      supplemental files are searched recursively by default now.
+#  12. **Column identifiers renamed 2026-09-27, per Josh's reference-workbook
+#      "Change.to" column:** grouping_one -> grouping.one, grouping_two ->
+#      grouping.two, grouping_three -> grouping.three, growth_habit ->
+#      growth.habit, native_status -> native.status, wood_type -> wood.type,
+#      missmatch_count -> missmatch.count (treesmismatch.log output column),
+#      and the reference table's own species-identifier column species ->
+#      scientific_name, applied identically to the shipped function
+#      (batz.treeusa_recode.names.R) and mirrored here since this dev script
+#      inlines its own copy of every helper. General prose uses of the word
+#      "species" (describing tree species, the Amelanchier/Corylus
+#      collisions, etc.) and unrelated file-name patterns like
+#      "tree_species_and_shrubs" were left unchanged. SUPERSEDED IN PART,
+#      2026-09-29: this round's own legacy-input-alias bridge for these six
+#      identifiers (grouping.one/two/three, growth.habit, native.status,
+#      wood.type) was never actually added to load.tree.reference() - see
+#      ROUND THIRTY BUGFIX below, which fixes that gap.
+#  13. **ROUND THIRTY (2026-09-29), per Josh's reference-workbook review and
+#      his follow-up "These are the same things" / "Make changes":
+#      common_one -> common.name, common_two -> common.name2.**
+#      common_one/"Bat Species" had been flagged as colliding with
+#      batz.batusa_list.species()'s own "Bat Species" -> common.name pending
+#      rename; Josh confirmed these are a single shared, reused identifier
+#      (the same pattern already used for date.start/date.end across
+#      sibling functions in this catalog), not a real collision - the
+#      reference workbook's two separate pending rows are merged into one
+#      Header.names row, common.name, listing both functions; common_two,
+#      held pending on that same resolution, is applied alongside it as
+#      common.name2. Unlike batz.batusa_list.species, this function's
+#      reference table is loaded fresh from disk on every call (not
+#      embedded), and its real file's own header text is still literally
+#      common_one/common_two - standardize.headers() can only ever produce
+#      snake_case, so it can never itself turn either raw header into a
+#      dot-spelled identifier. To bridge this, load.tree.reference() now
+#      renames common_one -> common.name and common_two -> common.name2
+#      immediately after standardize.headers() (a legacy-input-alias step,
+#      mirroring the pattern already used elsewhere in this package - e.g.
+#      batz.merge_vetted.acoustics()'s monitoringnight/serial aliases).
+#      match.cols, plant.schema.cols, keyword.map's keys, and
+#      build.plant.row.set()'s field checks are all updated to the new
+#      dot-spelled names to match. See the "ROUND THIRTY" tests near the
+#      bottom.
+#  14. **ROUND THIRTY BUGFIX (2026-09-29):** found while verifying #13 end
+#      to end that the 2026-09-27 rename (#12 above) had the identical gap
+#      for grouping_one/grouping_two/grouping_three/growth_habit/
+#      native_status/wood_type - plant.schema.cols/keyword.map/prose were
+#      updated to the dot-spelled names back then, but load.tree.reference()
+#      was never given the matching legacy-input-alias bridge, so all six
+#      identifiers have been completely unreachable via head.out (including
+#      this function's own documented @examples usage,
+#      head.out = c("scientific_name", "family", "growth.habit")) since
+#      that round shipped. Fixed the same way as common_one/common_two
+#      above. See the "ROUND THIRTY BUGFIX" test near the bottom.
+#
+# TEST FIXTURE NOTE (2026-09-29): this session's device link to Josh's real
+# "4 Current  test data" folder was not reachable while this round's work
+# was done, so the real 121-row reference file could not be re-loaded for
+# dev testing here. A smaller SYNTHETIC reference table (15 rows) is
+# substituted below, reproducing the same structure and the specific test
+# cases this script already exercised (the Sugar Maple/Red Oak/White Pine
+# lookups, the Ash-leaved Maple/Boxelder alternate-common-name pair, the
+# three-way Juneberry collision, the two-way Filbert collision, a blank
+# common.name2 case, and wood.type/grouping.one/two/three/native.status/
+# growth.habit passthrough) - this affects ONLY this dev script's own test
+# run, never the shipped function (batz.treeusa_recode.names.R has no
+# embedded table; it loads whatever real file is actually in dir.load).
 # =============================================================================
 
 # -----------------------------------------------------------------------------
-# real reference database, copied locally for this dev run (verified against
-# Josh's real "4 Current  test data" folder - see naming-mismatch note above)
+# synthetic reference database (see TEST FIXTURE NOTE above) - real file's
+# own header text is still snake_case (common_one/common_two/grouping_one/
+# etc.), exactly like the genuine reference file, so the legacy-input-alias
+# bridge in load.tree.reference() is exercised the same way it would be
+# against real data.
 # -----------------------------------------------------------------------------
-test.dir <- "treeusa_testdata"
+test.dir <- file.path(tempdir(), "treeusa_testdata_synth")
+dir.create(test.dir, showWarnings = FALSE, recursive = TRUE)
+
+writeLines(c(
+'scientific_name,common_one,common_two,genus,family,native_status,growth_habit,wood_type,grouping_one,grouping_two,grouping_three',
+'Acer saccharum,Sugar Maple,,Acer,Sapindaceae,Native,Tree,Hardwood,Deciduous,Maple,Hardwood',
+'Acer rubrum,Red Maple,Swamp Maple,Acer,Sapindaceae,Native,Tree,Hardwood,Deciduous,Maple,Hardwood',
+'Quercus rubra,Northern Red Oak,Red Oak,Quercus,Fagaceae,Native,Tree,Hardwood,Deciduous,Oak,Hardwood',
+'Betula papyrifera,Paper Birch,White Birch,Betula,Betulaceae,Native,Tree,Hardwood,Deciduous,Birch,Hardwood',
+'Pinus strobus,Eastern White Pine,White Pine,Pinus,Pinaceae,Native,Tree,Softwood,Coniferous,Pine,Softwood',
+'Acer negundo,Ash-leaved Maple,Boxelder,Acer,Sapindaceae,Native,Tree,Hardwood,Deciduous,Maple,Hardwood',
+'Abies balsamea,Balsam Fir,,Abies,Pinaceae,Native,Tree,Softwood,Coniferous,Fir,Softwood',
+'Ostrya virginiana,Ironwood,Hophornbeam,Ostrya,Betulaceae,Native,Tree,Hardwood,Deciduous,Birch,Hardwood',
+'Populus tremuloides,Trembling Aspen,Quaking Aspen,Populus,Salicaceae,Native,Tree,Hardwood,Deciduous,Poplar,Hardwood',
+'Amelanchier arborea,Downy Serviceberry,Juneberry,Amelanchier,Rosaceae,Native,Tree,Hardwood,Deciduous,Serviceberry,Hardwood',
+'Amelanchier canadensis,Canadian Serviceberry,Juneberry,Amelanchier,Rosaceae,Native,Shrub,Hardwood,Deciduous,Serviceberry,Hardwood',
+'Amelanchier laevis,Smooth Serviceberry,Juneberry,Amelanchier,Rosaceae,Native,Tree,Hardwood,Deciduous,Serviceberry,Hardwood',
+'Sorbus americana,American Mountain-ash,,Sorbus,Rosaceae,Native,Tree,Hardwood,Deciduous,Mountain-ash,Hardwood',
+'Corylus americana,American Hazelnut,Filbert,Corylus,Betulaceae,Native,Shrub,Hardwood,Deciduous,Hazelnut,Hardwood',
+'Corylus cornuta,Beaked Hazelnut,Filbert,Corylus,Betulaceae,Native,Shrub,Hardwood,Deciduous,Hazelnut,Hardwood'
+), file.path(test.dir, "maine_tree_species_and_shrubs.csv"))
+
 cat("=== files in test.dir ===\n"); print(list.files(test.dir))
 
 reference.preview <- read.csv(file.path(test.dir, "maine_tree_species_and_shrubs.csv"),
                                stringsAsFactors = FALSE, check.names = FALSE)
-cat("=== real reference database ===\n")
+cat("=== synthetic reference database (see TEST FIXTURE NOTE above) ===\n")
 cat("dim:", dim(reference.preview), "\n")
 cat("columns:", paste(names(reference.preview), collapse = ", "), "\n")
 print(head(reference.preview, 6))
 
 # -----------------------------------------------------------------------------
-# real-data test input vector - exact species/common_one/common_two values,
+# test input vector - exact scientific_name/common_one/common_two values,
 # case/punctuation/whitespace variants, the Juneberry/Filbert ambiguity, a
-# blank-common_two species requested via head.out = "common_two", and values
-# with no match at all.
+# blank-common.name2 species requested via head.out = "common.name2", and
+# values with no match at all.
 # -----------------------------------------------------------------------------
 tree.test <- c(
   "Sugar Maple", "acer rubrum", "NORTHERN RED OAK", "paper-birch",
@@ -212,7 +303,7 @@ tree.test <- c(
   "Juneberry", "American Mountain-ash", "americanmountainash",
   "not.a.real.tree.either"
 )
-cat("\n=== tree.test (real-data input vector) ===\n"); print(tree.test)
+cat("\n=== tree.test (input vector) ===\n"); print(tree.test)
 
 # -----------------------------------------------------------------------------
 # helper: matching-only normalization - fold case, strip ALL whitespace and
@@ -286,13 +377,44 @@ load.tree.reference <- function(dir.load, load.pattern, dir.sub) {
   ## snake_case shape), but guards against future whitespace/case/
   ## punctuation drift in the file. See assumption 9 above.
   names(ref) <- standardize.headers(names(ref))
+
+  ## ROUND THIRTY (2026-09-29) legacy-input-alias rename - see assumption
+  ## 13 above: standardize.headers() can never itself produce a dot, so the
+  ## real file's own common_one/common_two headers are bridged to this
+  ## function's now-dot-spelled match.cols/plant.schema.cols entries here.
+  if ("common_one" %in% names(ref) && !("common.name" %in% names(ref))) {
+    names(ref)[names(ref) == "common_one"] <- "common.name"
+  }
+  if ("common_two" %in% names(ref) && !("common.name2" %in% names(ref))) {
+    names(ref)[names(ref) == "common_two"] <- "common.name2"
+  }
+
+  ## ROUND THIRTY BUGFIX (2026-09-29) - see assumption 14 above: the
+  ## 2026-09-27 rename never added this same bridge for these six
+  ## identifiers, leaving them unreachable via head.out since that round
+  ## shipped. Fixed the same way as common_one/common_two above.
+  legacy.aliases <- c(
+    grouping_one   = "grouping.one",
+    grouping_two   = "grouping.two",
+    grouping_three = "grouping.three",
+    growth_habit   = "growth.habit",
+    native_status  = "native.status",
+    wood_type      = "wood.type"
+  )
+  for (old.name in names(legacy.aliases)) {
+    new.name <- legacy.aliases[[old.name]]
+    if (old.name %in% names(ref) && !(new.name %in% names(ref))) {
+      names(ref)[names(ref) == old.name] <- new.name
+    }
+  }
+
   ref
 }
 
-match.cols <- c("species", "common_one", "common_two")
-plant.schema.cols <- c("species", "common_one", "common_two", "genus", "family",
-                        "native_status", "growth_habit",
-                        "grouping_one", "grouping_two", "grouping_three")
+match.cols <- c("scientific_name", "common.name", "common.name2")
+plant.schema.cols <- c("scientific_name", "common.name", "common.name2", "genus", "family",
+                        "native.status", "growth.habit",
+                        "grouping.one", "grouping.two", "grouping.three")
 
 ## ---- content-signature helpers for supplemental-file column matching
 ## (assumption 10 above) ------------------------------------------------
@@ -323,16 +445,16 @@ match.file.headers <- function(df, canonical.cols) {
   already.used <- unique(mapped[exact])
 
   keyword.map <- list(
-    species        = c("species", "latin", "scientific", "sciname"),
+    scientific_name = c("species", "latin", "scientific", "sciname"),
     genus          = c("genus"),
     family         = c("family"),
-    native_status  = c("native", "status"),
-    growth_habit   = c("growth", "habit"),
-    common_one     = c("common"),
-    common_two     = c("common"),
-    grouping_one   = c("group", "grouping"),
-    grouping_two   = c("group", "grouping"),
-    grouping_three = c("group", "grouping")
+    native.status  = c("native", "status"),
+    growth.habit   = c("growth", "habit"),
+    common.name    = c("common"),
+    common.name2   = c("common"),
+    grouping.one   = c("group", "grouping"),
+    grouping.two   = c("group", "grouping"),
+    grouping.three = c("group", "grouping")
   )
   for (i in which(!exact)) {
     h <- std[i]
@@ -353,12 +475,12 @@ match.file.headers <- function(df, canonical.cols) {
 
   for (i in which(is.na(mapped))) {
     col.vals <- df[[i]]
-    if (!("species" %in% already.used) && looks.like.binomial(col.vals)) {
-      mapped[i] <- "species"; already.used <- c(already.used, "species")
-    } else if (!("native_status" %in% already.used) && looks.like.vocab(col.vals, native.status.vocab)) {
-      mapped[i] <- "native_status"; already.used <- c(already.used, "native_status")
-    } else if (!("growth_habit" %in% already.used) && looks.like.vocab(col.vals, growth.habit.vocab)) {
-      mapped[i] <- "growth_habit"; already.used <- c(already.used, "growth_habit")
+    if (!("scientific_name" %in% already.used) && looks.like.binomial(col.vals)) {
+      mapped[i] <- "scientific_name"; already.used <- c(already.used, "scientific_name")
+    } else if (!("native.status" %in% already.used) && looks.like.vocab(col.vals, native.status.vocab)) {
+      mapped[i] <- "native.status"; already.used <- c(already.used, "native.status")
+    } else if (!("growth.habit" %in% already.used) && looks.like.vocab(col.vals, growth.habit.vocab)) {
+      mapped[i] <- "growth.habit"; already.used <- c(already.used, "growth.habit")
     }
   }
 
@@ -370,12 +492,12 @@ match.file.headers <- function(df, canonical.cols) {
 build.plant.row.set <- function(df, canonical.cols) {
   padded <- character(0)
 
-  has.c1 <- "common_one" %in% names(df)
-  has.c2 <- "common_two" %in% names(df)
-  if (has.c1 && !has.c2) { df$common_two <- df$common_one; padded <- c(padded, "common_two") }
-  if (has.c2 && !has.c1) { df$common_one <- df$common_two; padded <- c(padded, "common_one") }
+  has.c1 <- "common.name" %in% names(df)
+  has.c2 <- "common.name2" %in% names(df)
+  if (has.c1 && !has.c2) { df$common.name2 <- df$common.name; padded <- c(padded, "common.name2") }
+  if (has.c2 && !has.c1) { df$common.name <- df$common.name2; padded <- c(padded, "common.name") }
 
-  grp.cols     <- c("grouping_one", "grouping_two", "grouping_three")
+  grp.cols     <- c("grouping.one", "grouping.two", "grouping.three")
   present.grp  <- grp.cols[grp.cols %in% names(df)]
   if (length(present.grp) > 0 && length(present.grp) < 3) {
     source.col  <- present.grp[1]
@@ -385,13 +507,13 @@ build.plant.row.set <- function(df, canonical.cols) {
   }
 
   if (!"genus" %in% names(df)) {
-    df$genus <- vapply(strsplit(df$species, "\\s+"),
+    df$genus <- vapply(strsplit(df$scientific_name, "\\s+"),
                         function(w) if (length(w) >= 1) w[1] else NA_character_,
                         character(1))
     padded <- c(padded, "genus")
   }
 
-  for (cc in c("family", "native_status", "growth_habit")) {
+  for (cc in c("family", "native.status", "growth.habit")) {
     if (!cc %in% names(df)) {
       df[[cc]] <- NA_character_
       padded <- c(padded, cc)
@@ -441,7 +563,7 @@ closest.match.for <- function(x.norm.one, ref.pool.norm, ref.pool.raw) {
 #                            pattern, reference.data)
 # -----------------------------------------------------------------------------
 batz.treeusa_recode.names <- function(data,
-                                       head.out       = "common_one",
+                                       head.out       = "common.name",
                                        dir.load       = getwd(),
                                        load.pattern   = c("*USA.treeshrub_recode.names*",
                                                            "*tree_species_and_shrubs*"),
@@ -483,13 +605,13 @@ batz.treeusa_recode.names <- function(data,
 
       df <- match.file.headers(df, plant.schema.cols)
 
-      has.species <- "species" %in% names(df)
-      has.common  <- any(c("common_one", "common_two") %in% names(df))
-      has.group   <- any(c("grouping_one", "grouping_two", "grouping_three") %in% names(df))
+      has.species <- "scientific_name" %in% names(df)
+      has.common  <- any(c("common.name", "common.name2") %in% names(df))
+      has.group   <- any(c("grouping.one", "grouping.two", "grouping.three") %in% names(df))
 
       if (!(has.species && has.common && has.group)) {
         missing.req <- c(
-          if (!has.species) "species (latin name)",
+          if (!has.species) "scientific_name (latin name)",
           if (!has.common)  "a common name column",
           if (!has.group)   "a grouping column"
         )
@@ -560,7 +682,7 @@ batz.treeusa_recode.names <- function(data,
 
     ref.pool.raw  <- unlist(lapply(match.cols, function(cn) reference[[cn]]), use.names = FALSE)
     ref.pool.norm <- normalize.tree(ref.pool.raw)
-    keep.pool     <- ref.pool.norm != ""   # blank $common_two cells contribute nothing to match
+    keep.pool     <- ref.pool.norm != ""   # blank $common.name2 cells contribute nothing to match
     ref.pool.raw  <- ref.pool.raw[keep.pool]
     ref.pool.norm <- ref.pool.norm[keep.pool]
 
@@ -571,7 +693,7 @@ batz.treeusa_recode.names <- function(data,
 
     treesmismatch.log <- data.frame(
       input           = unmatched.unique,
-      missmatch_count = as.integer(vapply(unmatched.unique, function(v) sum(unmatched.instances == v), integer(1))),
+      missmatch.count = as.integer(vapply(unmatched.unique, function(v) sum(unmatched.instances == v), integer(1))),
       closest.match   = closest,
       stringsAsFactors = FALSE
     )
@@ -586,29 +708,31 @@ batz.treeusa_recode.names <- function(data,
 }
 
 # -----------------------------------------------------------------------------
-# tests (against the REAL reference database)
+# tests (against the synthetic reference database - see TEST FIXTURE NOTE)
 # -----------------------------------------------------------------------------
-cat("\n=== default head.out = 'common_one' ===\n")
+cat("\n=== default head.out = 'common.name' (ROUND THIRTY rename) ===\n")
 print(batz.treeusa_recode.names(tree.test, dir.load = test.dir))
 cat("\n=== treesmismatch.log ===\n"); print(treesmismatch.log)
 
-cat("\n=== head.out = 'species' ===\n")
-print(batz.treeusa_recode.names(tree.test, head.out = "species", dir.load = test.dir))
+cat("\n=== head.out = 'scientific_name' ===\n")
+print(batz.treeusa_recode.names(tree.test, head.out = "scientific_name", dir.load = test.dir))
 
-cat("\n=== head.out = 'common_two' (note: blanks pass through as '' for species\n",
+cat("\n=== head.out = 'common.name2' (note: blanks pass through as '' for species\n",
     "with no second common name) ===\n", sep = "")
 print(batz.treeusa_recode.names(c("Sugar Maple", "Balsam Fir", "Quaking Aspen"),
-                                 head.out = "common_two", dir.load = test.dir))
+                                 head.out = "common.name2", dir.load = test.dir))
 
-cat("\n=== multi-column head.out -> data frame ===\n")
-print(batz.treeusa_recode.names(tree.test, head.out = c("species", "common_one", "family", "growth_habit"),
-                                 dir.load = test.dir))
+cat("\n=== multi-column head.out -> data frame (includes wood.type/growth.habit,\n",
+    "the ROUND THIRTY BUGFIX identifiers) ===\n", sep = "")
+print(batz.treeusa_recode.names(tree.test,
+      head.out = c("scientific_name", "common.name", "family", "growth.habit", "wood.type"),
+      dir.load = test.dir))
 
 cat("\n=== Juneberry ambiguity - first match in file row order wins ===\n")
-print(batz.treeusa_recode.names("Juneberry", head.out = "species", dir.load = test.dir))
+print(batz.treeusa_recode.names("Juneberry", head.out = "scientific_name", dir.load = test.dir))
 cat("(reference rows sharing 'Juneberry' as common_two, in file order:)\n")
 print(reference.preview[normalize.tree(reference.preview$common_two) == "juneberry",
-                         c("species", "common_one", "common_two")])
+                         c("scientific_name", "common_one", "common_two")])
 
 cat("\n=== fully-matched input (no treesmismatch.log expected) ===\n")
 if (exists("treesmismatch.log")) rm(treesmismatch.log)
@@ -639,10 +763,63 @@ cat("\n=== literal spec pattern 'maine_tree_species_and_shrubs' also still works
 print(batz.treeusa_recode.names("Sugar Maple", dir.load = test.dir,
                                  load.pattern = "*maine_tree_species_and_shrubs*"))
 
-cat("\n=== duplicate unmatched inputs - missmatch_count should reflect instance count ===\n")
+cat("\n=== duplicate unmatched inputs - missmatch.count should reflect instance count ===\n")
 dup.test <- c("not.a.real.tree", "Sugar Maple", "not.a.real.tree", "not.a.real.tree", "also.fake")
 print(batz.treeusa_recode.names(dup.test, dir.load = test.dir))
 print(treesmismatch.log)
+
+# =============================================================================
+# ROUND THIRTY TESTS (2026-09-29), per Josh's "These are the same things" /
+# "Make changes": common_one -> common.name, common_two -> common.name2
+# rename. Confirms the new default head.out works, the old "common_one"/
+# "common_two" head.out names are no longer recognized, and the value
+# itself is unaffected.
+# =============================================================================
+cat("\n=== ROUND THIRTY TEST 1: default head.out is now 'common.name' ===\n")
+r30.default <- batz.treeusa_recode.names("Sugar Maple", dir.load = test.dir)
+stopifnot(r30.default == "Sugar Maple")
+cat("PASSED\n")
+
+cat("\n=== ROUND THIRTY TEST 2: head.out = 'common.name2' resolves; old\n",
+    "'common_two' spelling is no longer a recognized head.out ===\n", sep = "")
+r30.c2 <- batz.treeusa_recode.names("Ash-leaved Maple", head.out = "common.name2", dir.load = test.dir)
+stopifnot(r30.c2 == "Boxelder")
+tryCatch({
+  batz.treeusa_recode.names("Sugar Maple", head.out = "common_two", dir.load = test.dir)
+  stop("expected an error for old head.out spelling 'common_two' but none was raised")
+}, error = function(e) cat("Got expected error:", conditionMessage(e), "\n"))
+cat("PASSED\n")
+
+# =============================================================================
+# ROUND THIRTY BUGFIX TEST (2026-09-29): grouping.one/two/three, growth.habit,
+# native.status, wood.type were renamed in plant.schema.cols/keyword.map back
+# in the 2026-09-27 round, but load.tree.reference() was never given the
+# matching legacy-input-alias bridge - so every one of these six identifiers
+# was completely unreachable via head.out (confirmed by reproducing the bug
+# against the pre-fix version of load.tree.reference(), which raised exactly
+# this error). Confirms all six now resolve correctly, including this
+# function's own documented @examples usage.
+# =============================================================================
+cat("\n=== ROUND THIRTY BUGFIX TEST: grouping.one/two/three, growth.habit,\n",
+    "native.status, wood.type all resolve via head.out ===\n", sep = "")
+r30bug <- batz.treeusa_recode.names("Sugar Maple",
+  head.out = c("grouping.one", "grouping.two", "grouping.three",
+               "growth.habit", "native.status", "wood.type"),
+  dir.load = test.dir)
+stopifnot(r30bug[["grouping.one"]] == "Deciduous")
+stopifnot(r30bug[["grouping.two"]] == "Maple")
+stopifnot(r30bug[["grouping.three"]] == "Hardwood")
+stopifnot(r30bug[["growth.habit"]] == "Tree")
+stopifnot(r30bug[["native.status"]] == "Native")
+stopifnot(r30bug[["wood.type"]] == "Hardwood")
+cat("PASSED\n")
+
+cat("\n=== ROUND THIRTY BUGFIX TEST (documented @examples usage) ===\n")
+r30bug.ex <- batz.treeusa_recode.names(c("Sugar Maple", "Northern Red Oak"),
+                                        head.out = c("scientific_name", "family", "growth.habit"),
+                                        dir.load = test.dir)
+stopifnot(all(c("scientific_name", "family", "growth.habit") %in% names(r30bug.ex)))
+cat("PASSED\n")
 
 # =============================================================================
 # NEW 2026-09-14 tests: reference.data / pattern (supplemental reference data)
@@ -655,7 +832,7 @@ supp.dir <- file.path(tempdir(), "treeusa_supp_test")
 supp.sub <- file.path(supp.dir, "sub")
 dir.create(supp.sub, recursive = TRUE, showWarnings = FALSE)
 
-## copy the real base reference file into the scratch folder so load.pattern
+## copy the base reference file into the scratch folder so load.pattern
 ## still finds a base table there
 file.copy(file.path(test.dir, "maine_tree_species_and_shrubs.csv"),
           file.path(supp.dir, "maine_tree_species_and_shrubs.csv"), overwrite = TRUE)
@@ -663,20 +840,20 @@ file.copy(file.path(test.dir, "maine_tree_species_and_shrubs.csv"),
 ## file 1 (top level): all 10 canonical headers present natively -> expect
 ## the "complete success very nice!" message
 writeLines(c(
-  "species,common_one,common_two,genus,family,native_status,growth_habit,grouping_one,grouping_two,grouping_three",
-  "Betula papyrifera,Paper Birch,White Birch,Betula,Betulaceae,Native,Tree,Birch,Softwood Hardwood,Common"
+  "scientific_name,common_one,common_two,genus,family,native.status,growth.habit,grouping.one,grouping.two,grouping.three",
+  "Betula alleghaniensis,Yellow Birch,Golden Birch,Betula,Betulaceae,Native,Tree,Birch,Softwood Hardwood,Common"
 ), file.path(supp.dir, "plant.names.csv"))
 
 ## file 2 (in a subdirectory - exercises dir.sub): only Scientific Name/
-## Common Name/Group One - missing common_two, grouping_two, grouping_three,
-## genus, family, native_status, growth_habit -> expect recycling + genus
+## Common Name/Group One - missing common_two, grouping.two, grouping.three,
+## genus, family, native.status, growth.habit -> expect recycling + genus
 ## derivation + NA-padding, and the "loaded but padded..." message
 writeLines(c(
   "Scientific Name,Common Name,Group One",
   "Cornus sericea,Red-osier Dogwood,Dogwood"
 ), file.path(supp.sub, "shrub_extra.csv"))
 
-## file 3 (top level): missing species/common/grouping entirely -> expect
+## file 3 (top level): missing scientific_name/common/grouping entirely -> expect
 ## the "skipped as missing required headers" message
 writeLines(c(
   "Genus,Family",
@@ -684,16 +861,16 @@ writeLines(c(
 ), file.path(supp.dir, "missing_required.csv"))
 
 cat("\n=== reference.data = 'default' (new params present but inert) ===\n")
-print(batz.treeusa_recode.names(c("sugar maple", "paper birch"), dir.load = supp.dir, dir.sub = TRUE))
-cat("(\"paper birch\" should NOT match here - it only exists in the supplemental file)\n")
+print(batz.treeusa_recode.names(c("sugar maple", "yellow birch"), dir.load = supp.dir, dir.sub = TRUE))
+cat("(\"yellow birch\" should NOT match here - it only exists in the supplemental file)\n")
 
 cat("\n=== reference.data = 'append', pattern matches all 3 synthetic files ===\n")
 out.append <- batz.treeusa_recode.names(
-  c("sugar maple", "paper birch", "red-osier dogwood"),
+  c("sugar maple", "yellow birch", "red-osier dogwood"),
   dir.load = supp.dir, dir.sub = TRUE,
   pattern = c("plant.names.csv", "shrub_extra.csv", "missing_required.csv"),
   reference.data = "append",
-  head.out = c("common_one", "genus", "family", "native_status", "growth_habit", "grouping_one")
+  head.out = c("common.name", "genus", "family", "native.status", "growth.habit", "grouping.one")
 )
 print(out.append)
 cat("(expect: missing_required.csv skipped; plant.names.csv 'complete success';\n",
@@ -701,14 +878,14 @@ cat("(expect: missing_required.csv skipped; plant.names.csv 'complete success';\
 
 cat("\n=== reference.data = 'overwrite' - only supplemental rows used ===\n")
 out.overwrite <- batz.treeusa_recode.names(
-  c("paper birch", "sugar maple"),
+  c("yellow birch", "sugar maple"),
   dir.load = supp.dir, dir.sub = TRUE,
   pattern = c("plant.names.csv", "shrub_extra.csv"),
   reference.data = "overwrite",
-  head.out = "common_one"
+  head.out = "common.name"
 )
 print(out.overwrite)
-cat("(expect: 'paper birch' matches; 'sugar maple' does NOT - base table was discarded)\n")
+cat("(expect: 'yellow birch' matches; 'sugar maple' does NOT - base table was discarded)\n")
 print(treesmismatch.log)
 
 cat("\n=== reference.data = 'overwrite' with no matching supplemental files - falls back\n",
@@ -729,3 +906,5 @@ out.default.dirsub <- batz.treeusa_recode.names(
   pattern = "shrub_extra.csv", reference.data = "append"
 )
 print(out.default.dirsub)
+
+cat("\nALL TESTS COMPLETED\n")

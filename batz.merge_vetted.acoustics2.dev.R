@@ -73,6 +73,26 @@
 # and no longer does). See batz.merge_vetted.acoustics2.R's own @details
 # "Header standardization" paragraph for the full explanation.
 #
+# REVISION (2026-09-27, per Josh's reference-workbook "Change.to" column) -
+# column identifiers renamed to match Josh's tracked header-name workbook:
+#   - $auto.kp -> $autoid.kp, $auto.sb -> $autoid.sb (both input-matching
+#     identifiers - via results.headers/canonical.headers - AND this
+#     function's own output columns)
+#   - $lon -> $longitude (both input-matching and output; a raw "lon"/
+#     "long" column is still accepted as a legacy alias for $longitude via
+#     apply.location(), so real files with a literal "Lat"/"Lon" header, or
+#     routed through the header.rename.path table's x -> long row, keep
+#     working)
+#   - log.file's own $missing headers (literal space in the old name) ->
+#     $missing.headers
+# Every test assertion below that referenced auto.kp/auto.sb/lon/
+# `missing headers` by column name is updated to match. See
+# batz.merge_vetted.acoustics2.R's own @details "Column identifiers
+# renamed, 2026-09-27" paragraph for the full explanation, including the
+# flagged caveat that arumerge.headerrename.csv's own target column still
+# says auto.kp/auto.sb (not renamed here - external file, can't be edited
+# from this dev script either).
+#
 # ---------------------------------------------------------------------------
 # ASSUMPTIONS FLAGGED FOR JOSH:
 #
@@ -249,35 +269,35 @@ res1 <- batz.merge_vetted.acoustics2(dir.load = "testdata2",
                                       dir.sub = FALSE,
                                       save.xlsx = FALSE)
 cat("rows in data:", nrow(res1$data), "\n")
-print(res1$data[, c("filename", "aru.name", "aru.serial", "sunregion", "lat", "lon", "manid")])
+print(res1$data[, c("filename", "aru.name", "aru.serial", "sunregion", "lat", "longitude", "manid")])
 cat("\ncolumn names in data:\n")
 print(names(res1$data))
 cat("\nlog.file:\n")
 print(res1$log.file)
 stopifnot(all(c("failure", "success all headers", "success missing") %in% res1$log.file$status))
-stopifnot(res1$log.file$`missing headers`[res1$log.file$filename == file.path("testdata2", "file_complete_vetted.csv")] == "")
+stopifnot(res1$log.file$missing.headers[res1$log.file$filename == file.path("testdata2", "file_complete_vetted.csv")] == "")
 stopifnot(!("auto.bc" %in% names(res1$data)))
 stopifnot(!("auto.ec" %in% names(res1$data)))
 cat("PASS: all three status categories appear; auto.bc/auto.ec no longer exist as columns\n\n")
 
-cat("=== TEST 2: file_full_vetted.csv alone - has auto.kp/auto.sb but is missing the optional sunregion header -> 'success missing' (sunregion) ===\n")
+cat("=== TEST 2: file_full_vetted.csv alone - has autoid.kp/autoid.sb but is missing the optional sunregion header -> 'success missing' (sunregion) ===\n")
 res2 <- batz.merge_vetted.acoustics2(dir.load = "testdata2",
                                       load.pattern = "file_full_vetted.csv",
                                       save.xlsx = FALSE)
 print(res2$log.file)
-print(res2$data[, c("manid", "auto.kp", "auto.sb")])
+print(res2$data[, c("manid", "autoid.kp", "autoid.sb")])
 stopifnot(res2$log.file$status == "success missing")
-stopifnot(grepl("sunregion", res2$log.file$`missing headers`))
-stopifnot(res2$data$lat == 44.5 && res2$data$lon == -68.5)
+stopifnot(grepl("sunregion", res2$log.file$missing.headers))
+stopifnot(res2$data$lat == 44.5 && res2$data$longitude == -68.5)
 cat("PASS\n\n")
 
 cat("=== TEST 3: combined lat/lon string split correctly, one results header only ===\n")
 res3 <- batz.merge_vetted.acoustics2(dir.load = "testdata2",
                                       load.pattern = "file_oneresult_vetted.csv",
                                       save.xlsx = FALSE)
-print(res3$data[, c("lat", "lon", "manid", "auto.sb")])
+print(res3$data[, c("lat", "longitude", "manid", "autoid.sb")])
 print(res3$log.file)
-stopifnot(res3$data$lat == 44.2 && res3$data$lon == -68.9)
+stopifnot(res3$data$lat == 44.2 && res3$data$longitude == -68.9)
 stopifnot(res3$log.file$status == "success missing")
 cat("PASS\n\n")
 
@@ -286,9 +306,9 @@ res4 <- batz.merge_vetted.acoustics2(dir.load = "testdata2",
                                       load.pattern = "file_noloc_vetted.csv",
                                       save.xlsx = FALSE)
 print(res4$log.file)
-print(res4$data[, c("lat", "lon", "auto.kp", "aru.serial")])
+print(res4$data[, c("lat", "longitude", "autoid.kp", "aru.serial")])
 stopifnot(res4$log.file$status != "failure")
-stopifnot(is.na(res4$data$lat) && is.na(res4$data$lon))
+stopifnot(is.na(res4$data$lat) && is.na(res4$data$longitude))
 stopifnot(res4$data$aru.serial == "S4U00002")
 cat("PASS: missing lat/lon does not block loading\n\n")
 
@@ -309,7 +329,7 @@ res6 <- batz.merge_vetted.acoustics2(dir.load = "testdata2",
                                       load.pattern = "file_trim_vetted.csv",
                                       duplicates.remove = FALSE,
                                       save.xlsx = FALSE)
-print(res6$data[, c("manid", "auto.kp", "auto.sb", "manid.kp", "manid.sb")])
+print(res6$data[, c("manid", "autoid.kp", "autoid.sb", "manid.kp", "manid.sb")])
 cat("rows remaining (started at 4, drop only 'noise' -> 3 left):", nrow(res6$data), "\n")
 stopifnot(nrow(res6$data) == 3)
 stopifnot(!any(tolower(trimws(res6$data$manid)) == "noise"))
@@ -345,7 +365,7 @@ res9 <- batz.merge_vetted.acoustics2(dir.load = "testdata2/rename",
                                       header.rename.path = "/home/claude/merge_vetted2/arumerge.headerrename.csv",
                                       save.xlsx = FALSE)
 print(res9$log.file)
-print(res9$data[, c("filename", "aru.name", "aru.serial", "sunregion", "manid", "auto.kp")])
+print(res9$data[, c("filename", "aru.name", "aru.serial", "sunregion", "manid", "autoid.kp")])
 stopifnot(nrow(res9$data) == 1)
 stopifnot(res9$data$aru.serial == "S4U00004")
 stopifnot(res9$data$sunregion == "penobscotbay")
@@ -360,7 +380,7 @@ cat("rows (should be 1):", nrow(res10$data), "\n")
 stopifnot(nrow(res10$data) == 1)
 cat("PASS\n\n")
 
-cat("=== TEST 10b: alternate location spellings - $long (full spelling) and $X/$Y both resolve to lat/lon via the rename table (added 2026-09-06, per Josh) ===\n")
+cat("=== TEST 10b: alternate location spellings - $long (full spelling) and $X/$Y both resolve to lat/longitude via the rename table (added 2026-09-06, per Josh) ===\n")
 dir.create("testdata2/altloc", showWarnings = FALSE)
 write.row("testdata2/altloc/file_xy_vetted.csv",
           Filename = "XYTEST_20260601_010101_000.wav",
@@ -377,14 +397,14 @@ write.row("testdata2/altloc/file_long_vetted.csv",
 res10b <- batz.merge_vetted.acoustics2(dir.load = "testdata2/altloc",
                                         load.pattern = "*vetted.csv",
                                         save.xlsx = FALSE)
-print(res10b$data[, c("aru.name", "lat", "lon")])
+print(res10b$data[, c("aru.name", "lat", "longitude")])
 stopifnot(res10b$data$lat[res10b$data$aru.name == "XYTEST"] == 44.5)
-stopifnot(res10b$data$lon[res10b$data$aru.name == "XYTEST"] == -68.5)
+stopifnot(res10b$data$longitude[res10b$data$aru.name == "XYTEST"] == -68.5)
 stopifnot(res10b$data$lat[res10b$data$aru.name == "LONGTEST"] == 45.1)
-stopifnot(res10b$data$lon[res10b$data$aru.name == "LONGTEST"] == -69.1)
-cat("PASS: X/Y -> lat/lon (via x->long then the long-is-an-alias-for-lon step) and Long -> lon both work\n\n")
+stopifnot(res10b$data$longitude[res10b$data$aru.name == "LONGTEST"] == -69.1)
+cat("PASS: X/Y -> lat/longitude (via x->long then the long-is-an-alias-for-longitude step) and Long -> longitude both work\n\n")
 
-cat("=== TEST 11 (changed 2026-09-08 - previously covered the now-removed auto.bc/auto.ec drop): dropped all-NA auto-id column - a fixture set where NOTHING supplies auto.sb should not have that column (or its manid.sb fill) at all ===\n")
+cat("=== TEST 11 (changed 2026-09-08 - previously covered the now-removed auto.bc/auto.ec drop): dropped all-NA auto-id column - a fixture set where NOTHING supplies autoid.sb should not have that column (or its manid.sb fill) at all ===\n")
 dir.create("testdata2/noautosb", showWarnings = FALSE)
 write.row("testdata2/noautosb/file_a_vetted.csv",
           Filename = "NASB-A_20260610_010101_000.wav",
@@ -396,11 +416,11 @@ res11 <- batz.merge_vetted.acoustics2(dir.load = "testdata2/noautosb",
                                        load.pattern = "*vetted.csv",
                                        save.xlsx = FALSE)
 print(names(res11$data))
-stopifnot(!("auto.sb" %in% names(res11$data)))
+stopifnot(!("autoid.sb" %in% names(res11$data)))
 stopifnot(!("manid.sb" %in% names(res11$data)))
 stopifnot(!("auto.bc" %in% names(res11$data)))
 stopifnot(!("auto.ec" %in% names(res11$data)))
-cat("PASS: auto.sb (and its manid.sb fill) is absent when no file ever supplies it; auto.bc/auto.ec don't exist at all\n\n")
+cat("PASS: autoid.sb (and its manid.sb fill) is absent when no file ever supplies it; auto.bc/auto.ec don't exist at all\n\n")
 
 cat("=== TEST 12: save.xlsx = TRUE writes one workbook with data/log.file sheets ===\n")
 if (requireNamespace("openxlsx", quietly = TRUE)) {

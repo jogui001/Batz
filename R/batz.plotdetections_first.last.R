@@ -12,7 +12,7 @@
 #'   \code{$mins2.noon.max}, \code{$vetting.type}.
 #' @param fig.list A data frame listing the plot(s) to generate - one
 #'   row per plot. Must have \code{$plot.type}, \code{$plot.name},
-#'   \code{$facet}, \code{$facet.set}, \code{$MYSO}, \code{$Alldect},
+#'   \code{$facet}, \code{$facet.set}, \code{$MYSO}, \code{$all.dectections},
 #'   \code{$facet.panel}, \code{$40khzmyo}, \code{$facet.label},
 #'   \code{$plot.set}, \code{$date.format}, \code{$date.start},
 #'   \code{$date.end}, \code{$xaxe.interval}, \code{$xaxe.title}. Column
@@ -135,7 +135,7 @@
 #' (including a duplicate-column-name check), settings resolution
 #' (\code{aru.metadata.db} row > \code{project.name} column >
 #' \code{$default.value}), the \code{$spp.plot}/\code{$facpan}
-#' New-England-special-case + \code{$MYSO}/\code{$Alldect}/\code{$40khzmyo}
+#' New-England-special-case + \code{$MYSO}/\code{$all.dectections}/\code{$40khzmyo}
 #' panel-building logic, facet labeling via
 #' \code{batz.batusa_recode.names()}, and the crossbar/reference-line plot
 #' itself. NOT yet implemented (deferred to a later iteration): any
@@ -381,7 +381,7 @@
 #' survived into that plot's filtered data (an actual detection that
 #' period) - MY OWN interpretive judgment call from earlier this session,
 #' not Josh's own original wording ("40kHzMyo if on species list should
-#' be [on the legend] and colored black"). Fixed to key off `$40khzmyo`
+#' be \[on the legend\] and colored black"). Fixed to key off `$40khzmyo`
 #' itself (now carried through per-plot as `$khz.flag`) rather than data
 #' presence - exactly Josh's real \code{plot.meta.csv} (`$40khzmyo = TRUE`)
 #' plus \code{vetted.processed.csv} (zero actual 40kHzMyo detections)
@@ -962,6 +962,53 @@
 #' suns/sunr fix above. \code{SUNTIMES.REQUIRED} now says
 #' \code{"date.monitoringnight"}.
 #'
+#'
+#' \strong{Bugfix, 2026-09-27, per Josh's \code{devtools::document()} warning
+#' report (broken \code{\link{}} topic "on the legend" at this file's line
+#' 70) - same roxygen2 markdown-mode issue diagnosed the same day in
+#' \code{\link{batz.plotcover_bullseye}}'s own @details entry, see that
+#' entry for the full mechanism.} The bracket in Josh's own quoted spec text,
+#' quoted verbatim above ("40kHzMyo if on species list should be \[on the
+#' legend\] and colored black"), is a plain editorial insertion, not a link -
+#' this package's \code{DESCRIPTION} enables roxygen2 markdown mode, which
+#' auto-converts any bare \code{[phrase]} in ordinary prose into a
+#' \code{\link{phrase}} cross-reference, and no topic named "on the legend"
+#' exists, hence the warning. \strong{Fixed} by escaping the brackets, which
+#' renders identically but is no longer treated as link syntax - no wording
+#' changed. Every other bracket pair in this file's roxygen text (e.g.
+#' \code{plots[[job.label]]}, \code{x[["k"]]}) is already inside
+#' \code{\code{}}, which roxygen2's markdown parser leaves untouched.
+#'
+#' \strong{Follow-up, 2026-09-27, later same day} - the paragraph above
+#' quoted Josh's spec text a second time and left that second copy's own
+#' \code{[on the legend]} unescaped, spanning a line break that an
+#' automated single-line verification scan didn't check - so the identical
+#' warning kept firing on this file's re-quoted brackets even after the
+#' original instance (earlier in this @details block) was fixed. This
+#' paragraph's brackets are now escaped too, and the earlier "Verified: this
+#' was the only unescaped bracket pair" claim in this same entry was wrong;
+#' it's struck through here rather than deleted, per this file's append-only
+#' documentation convention.
+#'
+#' \strong{Column identifiers renamed, 2026-09-27, per Josh's reference-workbook
+#' "Change.to" column.} Two of this function's own input column identifiers
+#' were renamed, applied wherever each is used as a literal data-column
+#' identifier (variable access, a required-header entry, or documentation
+#' describing that specific column) - general prose about the concept of an
+#' ARU device, and unrelated identifiers that merely contain "aru" as a
+#' substring (e.g. \code{aru.suntimes}, \code{aru.name} itself), were left
+#' untouched. \code{fig.list}'s \code{$Alldect} column (the flag controlling
+#' whether an "All detections" panel/facpan entry is included) is now
+#' \code{$all.dectections} - Josh's own spelling, kept exactly as given,
+#' including its "dectections" spelling (not "detections"). \code{suntimes}'s
+#' \code{$aru} column (this function's own internal reference \code{sdb$aru},
+#' filtering \code{suntimes} down to a single \code{$plot.set}) is now
+#' \code{$aru.name} - this specific rename was already applied on 2026-09-22
+#' (see that follow-up above); it is listed here again only because it
+#' appears on Josh's same reference-workbook list, no further code change was
+#' needed for it. \code{FIG.LIST.REQUIRED}'s \code{"Alldect"} entry and the
+#' \code{job$Alldect}/\code{alldect.flag} reference in the code below were
+#' updated to \code{"all.dectections"}/\code{job$all.dectections} to match.
 #' @examples
 #' \dontrun{
 #' # default dir.save = getwd() - saves into the current working directory,
@@ -1028,6 +1075,11 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
   ## unrelated bug also caught in this same audit pass) is now
   ## $date.monitoringnight, matching round twenty-five - see @details,
   ## "Same audit pass, a second, separate...bug".
+  ##
+  ## Follow-up (2026-09-27, per Josh's reference-workbook "Change.to"
+  ## column): FIG.LIST.REQUIRED's "Alldect" entry is now "all.dectections"
+  ## (Josh's own spelling, kept exactly as given) - see @details, "Column
+  ## identifiers renamed, 2026-09-27...".
   DATA.REQUIRED <- c("spp.id", "date", "group", "obs",
                            "mins2.noon.min", "mins2.noon.max", "vetting.type")
   SUNTIMES.REQUIRED <- c("aru.name", "date", "date.monitoringnight", "sunregion", "time.zone",
@@ -1035,7 +1087,7 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
                              "sunset.unix", "sunrise", "sunrise.unix", "sunrise.monitoringnight",
                              "sunrise.monitoringnight.unix")
   FIG.LIST.REQUIRED <- c("plot.type", "plot.name", "facet", "facet.set", "MYSO",
-                                 "Alldect", "facet.panel", "40khzmyo", "facet.label",
+                                 "all.dectections", "facet.panel", "40khzmyo", "facet.label",
                                  "plot.set", "date.format", "date.start", "date.end",
                                  "xaxe.interval", "xaxe.title")
   AES.DEFAULT.REQUIRED <- c("category", "parameter", "default.value")
@@ -1288,7 +1340,7 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
     myso.flag <- isTRUE(as.logical(job$MYSO))
     if (myso.flag) spp.plot <- c(spp.plot, "Indiana Bat")
 
-    alldect.flag <- isTRUE(as.logical(job$Alldect))
+    alldect.flag <- isTRUE(as.logical(job$all.dectections))
     if (alldect.flag) {
       spp.plot <- c(spp.plot, "All detections")
       facpan   <- c(facpan, "All detections")
@@ -1466,7 +1518,7 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
       # the hood) does not treat as an escape sequence, so it was rendering
       # as the literal two characters "/n" in the axis label instead of a
       # line break. Real bug caught by Josh after the first render - fixed
-      # here by converting any literal "/n" in the format string to an
+      # here by converting any literal "/n" in $date.format to an
       # actual newline before it's used, rather than relying on the source
       # CSV always spelling it correctly.
       xaxe.date.labels.fmt <- gsub("/n", "\n", get.setting(p$job, "date.format"), fixed = TRUE)
@@ -1623,8 +1675,8 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
       # detections" key (it's the obvious default, not worth a legend
       # entry per Josh) and should show a "40kHzMyo" key whenever
       # $40khzmyo is on this plot's species list, colored black - Josh's
-      # own original wording: "40kHzMyo if on species list should be [on
-      # the legend] and colored black."
+      # own original wording: "40kHzMyo if on species list should be \[on
+      # the legend\] and colored black."
       #
       # 2026-08-27, per Josh ("40k Myo is missing from the legend"): this
       # was previously driven by whether a 40kHzMyo row actually survived

@@ -33,8 +33,8 @@ duplicate rows from the final combined event log.}
 return (and auto-assign) \code{aru.eventlog.filelog} (one row per input
 file: \code{$filename}, \code{$file.type}, \code{$status}, \code{$notes})
 and \code{aru.eventlog.sitelog} (one row per site: \code{$client},
-\code{$project}, \code{$project.code}, \code{$site}, \code{$deployment},
-\code{$service}, \code{$recovery}, \code{$duplicates.removed}).}
+\code{$project}, \code{$project.code}, \code{$site.name}, \code{$deployment},
+\code{$service.count}, \code{$recovery}, \code{$duplicates.removed}).}
 
 \item{max.missing}{Integer, default \code{5}. The largest number of
 canonical headers a file is allowed to be missing (after exact,
@@ -123,10 +123,10 @@ first (per spec), then \code{recovery, service} (not given an explicit
 position in the spec's ordering list).
 
 \strong{Grouping key: site, not ARU serial.} Same-timestamp ordering and
-the per-site summary/checks group by \code{Site.unified}, not
-\code{ARU.serial} (per Josh: site and ARU are treated as the same thing
+the per-site summary/checks group by \code{site.unified}, not
+\code{aru.serial} (per Josh: site and ARU are treated as the same thing
 for now, since headers aren't yet standardized across the different
-source forms). \code{ARU.serial} is still carried through as a column,
+source forms). \code{aru.serial} is still carried through as a column,
 just not used as a grouping/ordering key.
 
 \strong{Note - which file is "deployment":} the deployment header list
@@ -135,6 +135,42 @@ matches \code{HabitatAssessments_20m.csv}, not
 deployment headers and is not read by this function at all). See the
 dev script's header comment for the full reasoning - please confirm this
 is the intended source file.
+
+\strong{Column identifiers renamed, 2026-09-27, per Josh's
+reference-workbook "Change.to" column.} The following raw/legacy header
+spellings were renamed to their new canonical form throughout this
+function's code and documentation: \code{ARU.serial} (output) ->
+\code{aru.serial}; \code{aru_serial_number} (input) -> \code{aru.serial};
+\code{date_of_deployment} -> \code{date.deployment};
+\code{date_of_habitat_assessment} -> \code{date.habitat.assessment};
+\code{detector_make} -> \code{aru.make}; \code{detector_model} ->
+\code{aru.model}; \code{hobo_sensor_serial_number} -> \code{hobo.serial};
+\code{mic_serial_number} -> \code{microphone.serial}; \code{microphone_make}
+-> \code{microphone.make}; \code{microphone_model} ->
+\code{microphone.model}; \code{new_aru_serial_number} ->
+\code{aru.serial_new}; \code{new_mic_serial_number} ->
+\code{microphone.serial_new}; \code{project_code} -> \code{project.code};
+\code{reason_for_site_visit} -> \code{reason.sitevisit};
+\code{serial_number_of_detector} (input) -> \code{aru.serial};
+\code{serial_number_of_microphone} (input) -> \code{microphone.serial};
+\code{site} -> \code{site.name}; \code{Site.unified} -> \code{site.unified}
+(case only); \code{service} (the site-log service-event count, output) ->
+\code{service.count}; \code{x} (raw longitude header alias) ->
+\code{longitude}; \code{y} (raw latitude header alias) -> \code{latitude}.
+\code{aru_serial_number}, \code{serial_number_of_detector}, and the old
+\code{ARU.serial} output all converge on the same \code{aru.serial} name
+(likewise \code{mic_serial_number}/\code{serial_number_of_microphone} on
+\code{microphone.serial}) since they were different raw spellings this
+function already accepted/produced for the same concept - that
+convergence is intentional, not a duplicate-name bug. The file-
+classification check against the raw, standardize.headers()-derived
+\code{"date_of_deployment"} spelling is deliberately NOT renamed, since
+real incoming CSV headers always standardize to that legacy spelling
+regardless of this function's own canonical naming; likewise, other
+unrenamed appearances of \code{"service"}/\code{"site"} in this file are
+the general English words (a service visit, a site's rows) or unrelated
+\code{event.type}/\code{file.type} category labels, not this function's
+\code{service.count}/\code{site.name} columns.
 }
 \examples{
 \dontrun{

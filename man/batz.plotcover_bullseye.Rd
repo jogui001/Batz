@@ -26,8 +26,8 @@ Josh's \code{bulleye_model_data.xlsx}, "cover" sheet). Column headers
 are run through \code{standardize.headers()} on receipt (see Details,
 "Header standardization"), after which it must have (in any original
 spelling that standardizes to): \code{aru.label}, \code{"Select the
-quadrant you are assessing"}, \code{"Canopy cover"}, \code{"Understory
-cover"}. One row per quadrant per \code{aru.label} - every
+  quadrant you are assessing"}, \code{"Canopy cover"}, \code{"Understory
+  cover"}. One row per quadrant per \code{aru.label} - every
 \code{aru.label} that will be plotted needs exactly the four quadrant
 values \code{"northeast"}/\code{"southeast"}/\code{"southwest"}/
 \code{"northwest"} (case/whitespace-insensitive).}
@@ -36,7 +36,7 @@ values \code{"northeast"}/\code{"southeast"}/\code{"southwest"}/
 \code{bulleye_model_data.xlsx}, "mic" sheet). Also header-standardized
 on receipt; must have (in any spelling that standardizes to):
 \code{aru.label}, \code{"Microphone Height"}, \code{"Horizontal
-Microphone Orientation"}, \code{"Vertical Microphone Orientation"}.
+  Microphone Orientation"}, \code{"Vertical Microphone Orientation"}.
 One row per \code{aru.label}.}
 
 \item{aes.default}{A data frame of default plot settings, one row per
@@ -50,7 +50,7 @@ Details, "Settings resolution (round nineteen)".}
 nineteenth follow-up (2026-09-16), this NO LONGER selects an
 \code{aes.default} override column - it is now used ONLY to build the
 first part of every saved file name: \code{"<project.name>_<ARU>_
-<timestamp>.png"}. See Details, "Settings resolution (round
+  <timestamp>.png"}. See Details, "Settings resolution (round
 nineteen)" for what replaced the old column-matching behavior.}
 
 \item{aes.style}{Character, default \code{"overide.value"}. Names which
@@ -67,7 +67,7 @@ name itself is now always \code{"<project.name>_<ARU>_<timestamp>.png"}
 \code{$output.filename.pattern} is DEPRECATED and no longer read.}
 
 \item{sub.plots}{Character vector, default \code{c("canopy.bull",
-"mic.bar", "mic.bull", "understory.bull")} (i.e. all four, in that
+  "mic.bar", "mic.bull", "understory.bull")} (i.e. all four, in that
 order) - which panels to draw, and in what left-to-right order.
 Every element must be one of \code{"canopy.bull"} (the Canopy cover
 bullseye), \code{"mic.bar"} (the Microphone Height bar + Vertical
@@ -221,7 +221,7 @@ no longer read at all (same deprecation pattern as \code{$plot.width}/
 \code{$axis.text.size} in earlier rounds - the row is left in place in
 \code{plotopts_bullseye.csv}, harmless, simply ignored). Each save also
 now prints its file name to the console (\code{cat("Saved:", fname,
-"\\n")}), matching the convention already used by
+"\n")}), matching the convention already used by
 \code{batz.plotdetections_first.last()}/
 \code{batz.plotactivity_observations()}.
 
@@ -319,7 +319,7 @@ direction", before "labels") while the rings remain theme-driven. They
 are now drawn as an explicit \code{geom_hline(yintercept =
 radial.breaks)} layer instead - the same "\code{geom_hline} inside
 \code{coord_polar} draws a full circle" trick already used for the
-mean-cover circle, one circle per \code{$radial.breaks} value - colored
+mean-cover circle - one circle per \code{$radial.breaks} value - colored
 \code{$scale.line.color} (default \code{"black"}), styled
 \code{$scale.line.linetype} (default \code{"solid"} - was \code{"dashed"}
 earlier the same day, reversed by Josh's very next follow-up: "make the
@@ -339,7 +339,7 @@ only at 0/90/180/270, the auto-computed minor breaks land at
 45/135/225/315 - exactly the quadrant CENTER angles - which
 \code{coord_polar} renders as two diagonal lines through the center
 (southeast-to-northwest and northeast-to-southwest), matching what
-Josh described as "access lines that run southeast to south\link{west}...
+Josh described as "access lines that run southeast to south[west]...
 northwest and northwest to southeast". Minor gridlines on the y
 (radial) scale similarly added an extra, unlabeled ring reinforcing the
 "goes past 100 toward 125" impression from the scale-expansion bug
@@ -377,10 +377,10 @@ transparent override on the combined \code{patchwork} object, and
 \strong{Middle panel - now a real third plot, per Josh's fourth
 follow-up (2026-09-14), replacing the blank placeholder from an earlier
 round.} A single grey \code{geom_col()} bar rises from 0 to that ARU's
-\code{$microphone_height}; its Y axis defaults to 0-\code{$mic.panel.y.
+\code{$microphone.height}; its Y axis defaults to 0-\code{$mic.panel.y.
 default.max} (4), per Josh ("Y axes default range is between 0-4 unless
-the mic height \link{needs more}") - only stretched taller when the actual
-\code{microphone_height} (plus the icon's own half-height and a small
+the mic height [needs more]") - only stretched taller when the actual
+\code{microphone.height} (plus the icon's own half-height and a small
 margin) would otherwise run past the default top; X axis has NO title
 at all as of Josh's sixteenth follow-up (2026-09-15) ("Remove 'Ground
 Level' from the mic.bar plot") - \code{$mic.panel.xlab} (formerly
@@ -399,9 +399,9 @@ styled the same as the Canopy/Understory panel titles).
 follow-up, images swapped to .png in a fifth follow-up same day - a
 real assumption, please confirm.} Josh supplied 5 icon images
 diagramming a microphone tilted at 5 specific angles, using this angle
-convention (his own words): "0 \link{is} parrell \link{parallel} with ground...
+convention (his own words): "0 [is] parrell [parallel] with ground...
 90 is straight up... 270 is straight down... 45 is up on an angle and
-315 \link{is} pointing down on an angle." These 5 files
+315 [is] pointing down on an angle." These 5 files
 (\code{mic_vert_000.png}/\code{045}/\code{090}/\code{270}/\code{315.png},
 matched to those angles by their sound-wave-squiggle direction) live
 in \code{$icon.dir} (default \code{"img"}, a directory path resolved
@@ -411,7 +411,7 @@ file location). Originally supplied as solid-black-icon .jpg files,
 Josh re-sent them as outline-style .png files in his very next
 follow-up ("use the attached .png instead") - see "Icon file format"
 below for why that swap mattered, beyond just a style change. An
-ARU's actual \code{vertical_microphone_orientation} value is matched
+ARU's actual \code{microphone.orientation_vertical} value is matched
 to the NEAREST of these 5 known angles by circular distance (e.g. 350
 degrees is closer to 0 than to 270) - \strong{not yet confirmed with
 Josh whether "nearest" is the right behavior for a value that doesn't
@@ -427,7 +427,7 @@ whole call.
 
 \strong{Icon file format and placement - a real bug fixed, per Josh's
 fifth follow-up} ("The microphone height in the example file was 3m,
-\link{the} plot is short of that as the mic pic is obscuring the top of the
+[the] plot is short of that as the mic pic is obscuring the top of the
 bar, use the attached .png instead"). Two compounding problems, both
 now fixed: (1) the icon used to be drawn CENTERED on the bar's top
 (spanning \code{mic.height +/- icon.height.m/2}), so the icon's own
@@ -435,7 +435,7 @@ image - a solid opaque square, even after being cropped tightly to its
 drawn content - painted over the TOP HALF of the bar's true colored
 height; the bar's underlying data/height was always correct (verified
 with \code{ggplot_build()}), but visually the grey column looked like
-it stopped well short of \code{microphone_height}. Fixed by drawing
+it stopped well short of \code{microphone.height}. Fixed by drawing
 the icon entirely ABOVE the bar instead (\code{ymin = mic.height},
 \code{ymax = mic.height + icon.height.m}), so nothing ever paints over
 the bar's own colored area, at the cost of needing a full
@@ -631,7 +631,7 @@ with a two-line, shared-with-mic.bar title per his sixteenth
 follow-up.} A polar "bullseye"-style
 plot of the Vertical Microphone
 Orientation, using the same 0-360 angle convention already used for
-\code{vertical_microphone_orientation} elsewhere in this function for
+\code{microphone.orientation_vertical} elsewhere in this function for
 its arrow's data angle (0 = parallel to ground/"level", 90 = straight
 up, 270 = straight down - see "Vertical Microphone Orientation icon
 set" above). This panel's own
@@ -650,20 +650,19 @@ label for E or W"; angle 180 (W) renders at the LEFT and carries
 "Microphone Height (m)" via "Height (m)" over the eleventh and twelfth
 follow-ups), per the tenth follow-up ("Microphone Height (m) on
 left"). A single arrow shows the Vertical Microphone Orientation
-itself: angle = that ARU's \code{vertical_microphone_orientation}, length = its
-\code{microphone_height} - "the tip of the arrow ending at the total
+itself: angle = that ARU's \code{microphone.orientation_vertical}, length = its
+\code{microphone.height} - "the tip of the arrow ending at the total
 height of the mic", per Josh - drawn via the same
 \code{geom_segment()}/\code{grid::arrow()} approach, reusing
 \code{$arrow.color}/\code{$arrow.linewidth}/\code{$arrow.head.cm}. This
 arrow is always drawn (not gated by \code{cover.arrows} - see "Sub-plot
 selection and toggles" above). Radial scale lines default to
 \code{$mic.bull.radial.breaks} (\code{"1;2;3;4"}, i.e. meters of mic
-height, reusing \code{$scale.line.color}/\code{$scale.line.linetype}/
-\code{$scale.line.linewidth}), with the plot area extending to
-\code{$mic.bull.radial.max} (default \code{4}) - auto-stretched taller
-when the actual \code{microphone_height} (plus a small margin so the
-arrowhead never touches the outer edge) needs more room, the same
-pattern \code{build.mic.panel()}'s bar/icon Y axis already uses. Per
+height), with the plot area extending to \code{$mic.bull.radial.max}
+(default \code{4}) - auto-stretched taller when the actual
+\code{microphone.height} (plus a small margin so the arrowhead never
+touches the outer edge) needs more room, the same pattern
+\code{build.mic.panel()}'s bar/icon Y axis already uses. Per
 the thirteenth follow-up ("Make the labels for the scale occur along
 the left horizonal axis, offset the label by enough space to fit the
 label"), the 1/2/3/4 numeric scale labels are drawn exactly on angle
@@ -695,7 +694,7 @@ design). See "Panel title wrapping" below for the two-line mechanism
 itself.
 
 \strong{Panel title wrapping, per Josh's sixteenth follow-up
-(2026-09-15): "make \link{the} title occur over two lines instead of one."}
+(2026-09-15): "make [the] title occur over two lines instead of one."}
 \code{$mic.panel.title}/\code{$mic.bull.title}'s shared default text
 now has a literal embedded line break (an actual newline character
 inside the \code{aes.default} CSV's quoted field, round-tripped
@@ -703,7 +702,7 @@ correctly by \code{read.csv()}/\code{write.csv()} - confirmed
 empirically) splitting it into "Microphone Height and" / "Vertical
 Orientation" instead of one long line. This needed NO code change:
 \code{ggplot2}'s \code{plot.title} element already renders an embedded
-\code{"\\n"} as a real second line, the same way \code{geom_text()}/
+\code{"\n"} as a real second line, the same way \code{geom_text()}/
 \code{geom_label()} do elsewhere in this function. A useful side
 effect, re-confirmed by testing: the "Figure sizing" auto-expand step
 (see @details, "Figure sizing" and "Auto-expand when all four panel
@@ -719,8 +718,8 @@ to that step's own logic.
 \strong{mic.bar panel overhaul, per Josh's twentieth follow-up
 (2026-09-16), six changes scoped to \code{"mic.bar"} only:}
 \enumerate{
-\item \strong{Bar width x1.3} ("Make the bar 1.3 its current size"):
-\code{$mic.bar.width} is now multiplied by a fixed \code{1.3}
+\item \strong{Bar width x1.3} ("Make the bar 1.3 its current
+size"): \code{$mic.bar.width} is now multiplied by a fixed \code{1.3}
 (\code{MIC.BAR.WIDTH.SCALE} inside \code{build.mic.panel()}) rather
 than baking the multiplier into the CSV default, so an
 \code{$aes.style}/\code{$overide.value} override to
@@ -781,7 +780,7 @@ effect on fit hasn't yet been isolated in practice).
 \item \strong{Title changed} ("Change the title to be 'Microphone
 Vertical Orientation'"): \code{$mic.panel.title}'s default value in
 \code{plotopts_bullseye.csv} changed from the two-line
-"Microphone Height and\\nVertical Orientation" (shared with
+"Microphone Height and\nVertical Orientation" (shared with
 \code{$mic.bull.title} since the sixteenth follow-up) to the
 single-line "Microphone Vertical Orientation" - a settings-data
 change only, no code change. \strong{This un-syncs \code{"mic.bar"}'s
@@ -802,9 +801,9 @@ consequence of shortening the text to one line rather than a bug -
 but it does mean the default combined figure is visibly wider and
 smaller-titled than it was before this round.
 }
-Rendered and visually verified at \code{vertical_microphone_orientation}
+Rendered and visually verified at \code{microphone.orientation_vertical}
 = 90, 45, 0, 315, and 270 (the same five angles with a known icon) on
-the real test ARU (\code{microphone_height} = 3m) - see this function's
+the real test ARU (\code{microphone.height} = 3m) - see this function's
 delivered round-twenty example renders.
 
 \strong{Missing quadrants.} An \code{aru.label} present in \code{mic}
@@ -969,6 +968,144 @@ before this follow-up (confirmed by a fresh audit of every batz
 function's header-check logic on 2026-09-22), so this function needed
 only the message-joining fix, not the canonicalize.headers() fix
 itself.}
+
+\strong{Timestamp format (round twenty-two), 2026-09-24, per Josh's
+package-wide request ("Update all functions that save files or charts:
+... \if{html}{\out{<timestamp>}} format match this format: YYYYMMDDHHHMMSS"):} the
+\code{<timestamp>} token in the saved file name is now built as
+\code{format(Sys.time(), "\%Y\%m\%d\%H\%M\%S")} (14 digits, no separator
+between the date and time halves) instead of \code{"\%Y\%m\%d_\%H\%M\%S"}
+\itemize{
+\item see \code{\link{batz.plotsm4_heatmap}}'s own \code{@details} entry of
+the same name for the full reasoning (including the \code{"YYYYMMDDHHHMMSS"}
+typo read/flag) and package-wide scope. \strong{This function's saved
+file name otherwise keeps its existing
+\code{"<project.name>_<ARU>_<timestamp>.png"} structure unchanged} - it
+has no per-call \code{date.start}/\code{date.end} (or any other
+date-range) concept at all (confirmed via this function's own settings
+CSV \code{$notes}: "no <date.start>/<date.end> tokens here - unlike the
+fig.list-based plotting functions, this function has no date-range
+concept"), so it is not part of the "charts that have a date range"
+bucket Josh's request describes; only the timestamp's own format
+changes here.
+}
+
+\strong{Bugfix, 2026-09-27, per Josh's \code{devtools::document()} warning
+report (broken \code{\link{}} topics "west"/"needs more"/"the"/"the" at
+this file's line 113) - root cause confirmed, not a typo in a link target.}
+This package's \code{DESCRIPTION} enables roxygen2 markdown mode, under
+which a bare \code{[word]}/\code{[phrase]} in ordinary prose (outside
+\code{\code{}}) is automatically converted to a \code{\link{word}}
+cross-reference - roxygen2's documented shorthand for linking to a topic by
+name. Several \code{@details} paragraphs above use square brackets purely
+as editorial insertions inside quoted dialogue (Josh's own wording, or an
+earlier clarifying note of mine) - e.g. "south[west]" (shorthand for
+"southwest"), "the mic height [needs more]", "3m, [the] plot is short", and
+"make [the] title occur" - and each was silently turned into a broken
+cross-reference to a topic that doesn't exist, exactly matching Josh's
+pasted warning list. \strong{Two related instances that never actually
+warned, and so were not in Josh's pasted list, were found and fixed for the
+identical reason}: "0 [is] parrell [parallel] with ground..." and "...315
+[is] pointing..." happen to auto-link to REAL topics (base R's
+\code{methods::is} and the \code{parallel} package both ship a topic
+literally named \code{is}/\code{parallel}), so roxygen2 built them
+successfully instead of warning - but they would still have rendered as
+unintended, misleading hyperlinks to unrelated R functions in the built
+help page, not as plain text. \strong{Fixed} by escaping every one of
+these bracket pairs, which renders as the identical literal text but stops
+roxygen2's markdown parser from treating it as a link - no wording changed
+anywhere, only escaping. This is the same class of narrow, escaping-only
+fix (no prose change) already used for the invalid-quote-escaping bug fixed
+in \code{\link{batz.generate_plotframe.bat}} - see that function's own
+\strong{Bugfix, 2026-09-26} @details entry. \strong{Verified}: every bare
+bracket pair anywhere in this file's \code{#'} @details prose (outside
+\code{\code{}}, whose contents roxygen2's markdown parser leaves untouched
+\itemize{
+\item confirmed separately, since none of this file's several bracket pairs
+inside \code{\code{}}, e.g. \code{strsplit(x, "[_-]+")}, were ever part
+of Josh's warning) is now escaped; a fresh \code{Rscript -e
+'invisible(parse("batz.plotcover_bullseye.R"))'} confirms this file's R
+syntax is unaffected by the change.
+}
+
+\strong{Column identifiers renamed, 2026-09-27, per Josh's reference-workbook
+"Change.to" column.} Four raw-data column identifiers used by \code{data}/
+\code{mic} (post \code{standardize.headers()}) are renamed throughout this
+function and its \code{.dev.R} test script, to match Josh's tracked
+spreadsheet of column-name changes: \code{aru_label} -> \code{aru.label},
+\code{horizontal_microphone_orientation} ->
+\code{microphone.orientation_horizontal}, \code{microphone_height} ->
+\code{microphone.height}, and \code{vertical_microphone_orientation} ->
+\code{microphone.orientation_vertical}. Applied everywhere each old name was
+used as a literal column identifier - \code{DATA.REQUIRED}/
+\code{MIC.REQUIRED}, every \code{mic$}/\code{data$}/\code{mic.row$} access,
+the icon-lookup \code{warning()} message, and the \code{@details}/
+\code{@param} prose describing those specific columns - never in the raw,
+human-readable spreadsheet header text (e.g. \code{"Horizontal Microphone
+Orientation"}) or in ordinary English prose describing the concept, both of
+which are untouched and unaffected by \code{standardize.headers()}'s own
+underscore-only folding. \strong{Bugfix, 2026-09-28 (later still): this
+round's own required-header identifiers were left actually unreachable
+from any real raw file - see the dated entry below, "Bugfix: missing
+legacy-input aliases for the 2026-09-27 rename".}
+
+\strong{Column identifier renamed, 2026-09-28 (later the same day), per
+Josh's reference-workbook review: "several $name.standard have $Change.to
+values that have not been changed, make those changes now or flag why they
+can not be made."} \code{canopy_cover} -> \code{canopy.cover} is applied
+here, in \code{DATA.REQUIRED} and in the \code{data$canopy.value <-}
+assignment. Unlike the \code{sunregion_longitude}/\code{sunregion_latitude}
+rename in \code{\link{batz.generate_suntimes.arulist}}, this function's own
+required-header check (\code{check.headers()}) is a plain \code{setdiff()},
+not a \code{canonicalize.headers()} call - and the real raw spreadsheet
+header ("Canopy cover") will only ever standardize to \code{canopy_cover}
+(underscore), never to a dot spelling, since \code{standardize.headers()}
+can only ever produce underscores. So switching \code{DATA.REQUIRED} to
+\code{canopy.cover} directly would have silently broken real-file matching.
+Instead, immediately after \code{standardize.headers(names(data))} runs, a
+legacy-input-alias rename is added - the same idiom already used in
+\code{\link{batz.merge_vetted.acoustics}} for its own
+\code{monitoringnight -> date.monitoringnight}/\code{serial -> aru.serial}
+renames: if \code{data} still has a column that standardizes to
+\code{canopy_cover} (and not yet \code{canopy.cover}), it is renamed to
+\code{canopy.cover} before the required-header check runs. No real-file
+changes are needed. \strong{This function's \code{understory_cover}
+identifier has NO pending \code{Change.to} value and is deliberately left
+as \code{understory_cover}} - flagged as a sibling-consistency
+recommendation only, not a blocking issue: \code{canopy_cover}/
+\code{understory_cover} are a natural pair in \code{DATA.REQUIRED}, and
+Josh may want to rename \code{understory_cover} to \code{understory.cover}
+to match, in a future round, once he's reviewed this one.
+
+\strong{Bugfix: missing legacy-input aliases for the 2026-09-27 rename
+(found and fixed 2026-09-28, later still, while making the
+\code{canopy_cover} change directly above).} While adding the
+\code{canopy_cover -> canopy.cover} legacy-input alias just above, it was
+noticed that the 2026-09-27 round's own four renames
+(\code{aru_label -> aru.label},
+\code{horizontal_microphone_orientation ->
+microphone.orientation_horizontal}, \code{microphone_height ->
+microphone.height}, \code{vertical_microphone_orientation ->
+microphone.orientation_vertical}) had switched \code{DATA.REQUIRED}/
+\code{MIC.REQUIRED} straight to their dot-spelled forms WITHOUT adding a
+matching legacy-input alias - unlike \code{canopy_cover}, which got one
+from the start. Since \code{standardize.headers()} can only ever produce
+underscores (never a dot), and this function's own \code{check.headers()}
+is a plain \code{setdiff()} (not \code{canonicalize.headers()}), those
+four dot-spelled identifiers could never actually be matched by ANY real
+raw file, however it was spelled - meaning every real call to this
+function was silently guaranteed to fail its own header check ever since
+the 2026-09-27 round shipped. \strong{Fixed} by adding the same
+legacy-input-alias idiom for all four identifiers, immediately after the
+\code{canopy_cover} alias: each old (post-\code{standardize.headers()})
+spelling is renamed to its new dot-spelled identifier, in \code{data} for
+\code{aru_label} and in \code{mic} for all four, before the
+required-header check runs. No raw spreadsheet files need to change.
+Verified against synthetic raw data using the real, human-readable
+headers documented in \code{@param data}/\code{@param mic} above (e.g.
+\code{"ARU Label"}, \code{"Microphone Height"}, \code{"Horizontal
+Microphone Orientation"}, \code{"Vertical Microphone Orientation"}) - see
+this function's own \code{.dev.R} test script.
 }
 \examples{
 \dontrun{

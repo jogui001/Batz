@@ -38,12 +38,12 @@
 #' @param bat.names.out Character, default \code{"code4"}. Passed as
 #'   \code{batname.format.out} to \code{\link{batz.batusa_recode.names}} when
 #'   recoding \code{$manid} and any surviving auto-ID column(s) (\code{
-#'   $auto.kp}/\code{$auto.sb}).
+#'   $autoid.kp}/\code{$autoid.sb}).
 #' @param manid.kp Logical, default \code{TRUE}. Create \code{$manid.kp} (a
-#'   copy of \code{$manid} with blanks/NA filled from \code{$auto.kp}) - only
-#'   if \code{$auto.kp} survived the all-NA column drop (see Details).
+#'   copy of \code{$manid} with blanks/NA filled from \code{$autoid.kp}) - only
+#'   if \code{$autoid.kp} survived the all-NA column drop (see Details).
 #' @param manid.sb Logical, default \code{TRUE}. Same idea, filled from
-#'   \code{$auto.sb}.
+#'   \code{$autoid.sb}.
 #' @param trim.noise Logical, default \code{TRUE}. Remove rows where
 #'   \code{$manid} is \code{"noise"} (case-insensitive).
 #' @param trim.noid Logical, default \code{FALSE}. Remove rows where
@@ -70,7 +70,7 @@
 #'   returned/auto-assigned - it has no effect on how an incoming file's
 #'   headers are matched/validated. \code{FALSE} (default) keeps this
 #'   function's normal dot-separated output column names (\code{
-#'   $date.monitoringnight}, \code{$auto.kp}, \code{$aru.serial}, ...) exactly as
+#'   $date.monitoringnight}, \code{$autoid.kp}, \code{$aru.serial}, ...) exactly as
 #'   always. \code{TRUE} runs every output column name through
 #'   \code{standardize.headers()} instead (e.g. \code{$mon_ngh}, \code{
 #'   $aru_serial}) - for a caller who specifically wants a snake_case
@@ -82,7 +82,7 @@
 #'   function ATTEMPTED to load - success or failure, always, since the
 #'   2026-09-06 revision removed the old \code{log.file} INPUT parameter that
 #'   used to gate this - with \code{$filename}, \code{$status}, \code{
-#'   $reason}, \code{$missing headers}). As a side effect, \code{data} and
+#'   $reason}, \code{$missing.headers}). As a side effect, \code{data} and
 #'   \code{log.file} are also assigned directly into the calling
 #'   environment (same auto-assign convention as
 #'   \code{batz.merge_vetted.acoustics}), so a bare call with no assignment
@@ -424,6 +424,55 @@
 #' this package's own files don't include that CSV's actual current
 #' contents.
 #'
+#' \strong{Column identifiers renamed, 2026-09-27, per Josh's
+#' reference-workbook "Change.to" column.} Three of this function's own
+#' canonical column identifiers are renamed to match Josh's tracked
+#' header-name workbook: \code{$auto.kp} is now \code{$autoid.kp};
+#' \code{$auto.sb} is now \code{$autoid.sb}; and \code{$lon} is now
+#' \code{$longitude} - all three are updated everywhere they appear in this
+#' function's own schema: \code{results.headers}, \code{canonical.headers},
+#' \code{apply.location()}, the all-NA auto-id-column drop, the recode
+#' step, the \code{manid.kp}/\code{manid.sb} fill-in map's \code{src}
+#' values, and the final column reorder. Separately, \code{log.file}'s own
+#' \code{$missing headers} output column (note the literal OLD name has a
+#' SPACE, not a dot or underscore) is renamed to \code{$missing.headers} (a
+#' normal, backtick-free name) - this column is entirely computed
+#' internally by this function itself, never read from a raw input file, so
+#' no aliasing concern applies to it.
+#'
+#' \strong{Backward-compatible input aliasing for \code{$longitude}:}
+#' because a real raw file may still literally have a \code{"Lon"} (or
+#' \code{"Long"}) header - standardizing directly to \code{"lon"}/
+#' \code{"long"}, never to \code{"longitude"} on its own - \code{
+#' apply.location()} now treats BOTH old spellings as accepted raw-input
+#' aliases for the renamed \code{$longitude} field (extending the existing
+#' \code{long}-is-an-alias-for-\code{lon} step to also recognize a bare
+#' \code{lon} column as an alias for \code{longitude}) - unaffected by
+#' \code{rename}/\code{header.rename.path} either way, exactly as the
+#' pre-existing bare \code{$lat}/\code{$lon} recognition always was. This
+#' also means the \code{header.rename.path} table's existing
+#' \code{x -> long} row keeps working unchanged: it still resolves the rest
+#' of the way to \code{$longitude} through this same alias step.
+#'
+#' \strong{Flagged, important: \code{$autoid.kp}/\code{$autoid.sb} have NO
+#' such built-in alias, unlike \code{$longitude} above, and this rename
+#' does NOT touch \code{arumerge.headerrename.csv} either} (see the
+#' \code{mon.ngh} entry above for why that file can't be edited from here).
+#' Unlike \code{$lat}/\code{$lon}, there is no real-world raw header that
+#' already spells out \code{auto.kp}/\code{auto.sb} directly - every real
+#' file reaches these fields only via a \code{header.rename.path} row (e.g.
+#' Kaleidoscope's \code{wa_kaleidoscope_auto_id} or SonoBat's
+#' \code{sppaccp}), and \code{arumerge.headerrename.csv}'s own target
+#' column, as of this round, still says \code{auto.kp}/\code{auto.sb} - not
+#' \code{autoid.kp}/\code{autoid.sb}. The 2026-09-22
+#' \code{canonicalize.headers()} tolerant fallback will NOT rescue this
+#' either (\code{"auto.kp"} and \code{"autoid.kp"} are different words, not
+#' just a case/separator variant of one another). \strong{Josh needs to
+#' update \code{arumerge.headerrename.csv}'s target column (\code{auto.kp}
+#' -> \code{autoid.kp}, \code{auto.sb} -> \code{autoid.sb}) himself before
+#' this function will recognize real Kaleidoscope/SonoBat auto-ID columns
+#' again.}
+#'
 #' @examples
 #' \dontrun{
 #' # bare call - creates `data` and `log.file` directly in the calling
@@ -452,10 +501,10 @@ batz.merge_vetted.acoustics2 <- function(dir.load = getwd(),
 
   ## ---- three header categories - location is under "optional" ----
   required.headers <- c("filename", "date.monitoringnight", "manid")
-  results.headers  <- c("auto.kp", "auto.sb")
+  results.headers  <- c("autoid.kp", "autoid.sb")
   optional.headers <- c("aru.serial", "sunregion")
-  canonical.headers <- c("filename", "date.monitoringnight", "manid", "auto.kp", "auto.sb",
-                          "lat", "lon", "aru.serial", "sunregion")
+  canonical.headers <- c("filename", "date.monitoringnight", "manid", "autoid.kp", "autoid.sb",
+                          "lat", "longitude", "aru.serial", "sunregion")
 
   ## header standardization (per Josh, 2026-09-14 project preference): uses
   ## the shared package helper standardize.headers() - trims whitespace,
@@ -479,7 +528,7 @@ batz.merge_vetted.acoustics2 <- function(dir.load = getwd(),
       ## only the RAW/source column is standardized, to match a file's own
       ## standardized headers - the STANDARD/target column is the literal
       ## final column name (kept exactly as given, dots and all - e.g.
-      ## "date.monitoringnight", "auto.kp" - standardizing it too would turn those dots
+      ## "date.monitoringnight", "autoid.kp" - standardizing it too would turn those dots
       ## into underscores)
       raw      = standardize.headers(as.character(user.headers[[1]])),
       standard = trimws(as.character(user.headers[[2]])),
@@ -490,28 +539,38 @@ batz.merge_vetted.acoustics2 <- function(dir.load = getwd(),
     header.rename.table <- rbind(header.rename.table, new.rows)
   }
 
-  ## ---- location: $lat/$lon are OPTIONAL (never block loading). If a file
-  ## has both, use them directly; if it has only $lat, that raw value holds
-  ## "<lat> <lon>" as one string, split into numeric $lat/$lon; if neither
-  ## is present, both are carried as NA. ($long, if present instead of
-  ## $lon, is treated as an alias - kept for resilience, not specified.) ----
+  ## ---- location: $lat/$longitude are OPTIONAL (never block loading). If a
+  ## file has both, use them directly; if it has only $lat, that raw value
+  ## holds "<lat> <lon>" as one string, split into numeric $lat/$longitude;
+  ## if neither is present, both are carried as NA. A raw "lon" or "long"
+  ## column (case: a real file literally has "Lat"/"Lon", or the
+  ## header.rename.path table's x -> long row) is treated as a legacy input
+  ## alias for the renamed $longitude field - see @details, "Column
+  ## identifiers renamed, 2026-09-27" / "Backward-compatible input aliasing
+  ## for $longitude" above. ----
   apply.location <- function(tmp) {
     nms <- names(tmp)
-    if ("long" %in% nms && !("lon" %in% nms)) names(tmp)[names(tmp) == "long"] <- "lon"
+    if (!("longitude" %in% nms)) {
+      if ("lon" %in% nms) {
+        names(tmp)[names(tmp) == "lon"] <- "longitude"
+      } else if ("long" %in% nms) {
+        names(tmp)[names(tmp) == "long"] <- "longitude"
+      }
+    }
     nms <- names(tmp)
     has.lat <- "lat" %in% nms
-    has.lon <- "lon" %in% nms
+    has.lon <- "longitude" %in% nms
 
     if (has.lat && has.lon) {
       tmp$lat <- as.numeric(tmp$lat)
-      tmp$lon <- as.numeric(tmp$lon)
+      tmp$longitude <- as.numeric(tmp$longitude)
     } else if (has.lat && !has.lon) {
       latlon <- strsplit(trimws(as.character(tmp$lat)), "\\s+")
       tmp$lat <- vapply(latlon, function(x) as.numeric(x[1]), numeric(1))
-      tmp$lon <- vapply(latlon, function(x) if (length(x) >= 2) as.numeric(x[2]) else NA_real_, numeric(1))
+      tmp$longitude <- vapply(latlon, function(x) if (length(x) >= 2) as.numeric(x[2]) else NA_real_, numeric(1))
     } else {
       tmp$lat <- rep(NA_real_, nrow(tmp))
-      tmp$lon <- rep(NA_real_, nrow(tmp))
+      tmp$longitude <- rep(NA_real_, nrow(tmp))
     }
     tmp
   }
@@ -526,7 +585,7 @@ batz.merge_vetted.acoustics2 <- function(dir.load = getwd(),
   add.log <- function(filepath, status, reason, headers.missing) {
     log.rows[[length(log.rows) + 1]] <<- data.frame(
       filename = filepath, status = status, reason = reason,
-      `missing headers` = headers.missing, stringsAsFactors = FALSE,
+      missing.headers = headers.missing, stringsAsFactors = FALSE,
       check.names = FALSE
     )
   }
@@ -605,7 +664,7 @@ batz.merge_vetted.acoustics2 <- function(dir.load = getwd(),
 
   if (nrow(data.merged) > 0) {
     data.merged$lat <- as.numeric(data.merged$lat)
-    data.merged$lon <- as.numeric(data.merged$lon)
+    data.merged$longitude <- as.numeric(data.merged$longitude)
 
     ## $filename = "<ARU>_<YYYYMMDD>_<HHMMSS>_<junk>" -> $aru.name/$date/$time
     m <- regmatches(data.merged$filename,
@@ -617,9 +676,9 @@ batz.merge_vetted.acoustics2 <- function(dir.load = getwd(),
     ## reorder (only the auto-id columns actually present at this point are
     ## included here - none have been dropped yet, so both that were ever
     ## present in canonical.headers still are)
-    auto.cols.present <- intersect(c("auto.kp", "auto.sb"), names(data.merged))
+    auto.cols.present <- intersect(c("autoid.kp", "autoid.sb"), names(data.merged))
     data.merged <- data.merged[, c("filename", "date.monitoringnight", "aru.name", "aru.serial",
-                                    "sunregion", "lat", "lon", "manid",
+                                    "sunregion", "lat", "longitude", "manid",
                                     auto.cols.present, "date", "time")]
 
     ## $call.datetime
@@ -628,7 +687,7 @@ batz.merge_vetted.acoustics2 <- function(dir.load = getwd(),
 
     ## remove unused auto id programs - if a whole auto-id column is NA for
     ## every record in the merge, drop the column entirely
-    for (ac in c("auto.kp", "auto.sb")) {
+    for (ac in c("autoid.kp", "autoid.sb")) {
       if (ac %in% names(data.merged) && all(is.na(data.merged[[ac]]))) {
         data.merged[[ac]] <- NULL
       }
@@ -644,7 +703,7 @@ batz.merge_vetted.acoustics2 <- function(dir.load = getwd(),
     }
 
     data.merged$manid <- recode.safe(data.merged$manid, bat.names.out)
-    for (ac in intersect(c("auto.kp", "auto.sb"), names(data.merged))) {
+    for (ac in intersect(c("autoid.kp", "autoid.sb"), names(data.merged))) {
       data.merged[[ac]] <- recode.safe(data.merged[[ac]], bat.names.out)
     }
 
@@ -653,8 +712,8 @@ batz.merge_vetted.acoustics2 <- function(dir.load = getwd(),
     ## fill blanks - $manid.kp/$manid.sb, one per surviving auto-id column,
     ## only created if that column is present (wasn't dropped above) and
     ## its corresponding flag is TRUE
-    fill.map <- list(manid.kp = list(flag = manid.kp, src = "auto.kp"),
-                      manid.sb = list(flag = manid.sb, src = "auto.sb"))
+    fill.map <- list(manid.kp = list(flag = manid.kp, src = "autoid.kp"),
+                      manid.sb = list(flag = manid.sb, src = "autoid.sb"))
     for (out.nm in names(fill.map)) {
       spec <- fill.map[[out.nm]]
       if (isTRUE(spec$flag) && spec$src %in% names(data.merged)) {
@@ -677,7 +736,7 @@ batz.merge_vetted.acoustics2 <- function(dir.load = getwd(),
 
   log.file.df <- if (length(log.rows) > 0) do.call(rbind, log.rows) else
     data.frame(filename = character(0), status = character(0), reason = character(0),
-               `missing headers` = character(0), stringsAsFactors = FALSE, check.names = FALSE)
+               missing.headers = character(0), stringsAsFactors = FALSE, check.names = FALSE)
   rownames(log.file.df) <- NULL
 
   ## ---- daterange token (round twenty-two, 2026-09-24, per Josh) - see

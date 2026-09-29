@@ -17,9 +17,9 @@
 #' @param log.file Logical, default \code{FALSE}. If \code{TRUE}, an
 #'   additional data frame named \code{arumeta.mergelog} is added to the
 #'   returned list, with one row per deletion/merge action taken while
-#'   cleaning up duplicate rows or columns. Columns: \code{$inputfile} (the
+#'   cleaning up duplicate rows or columns. Columns: \code{$filename} (the
 #'   source file - or \code{"filename [sheet: sheetname]"} for an xlsx sheet -
-#'   the action happened to), \code{$event} (\code{"duplicated row"} or
+#'   the action happened to), \code{$event.type} (\code{"duplicated row"} or
 #'   \code{"duplicated column"}), \code{$action} (\code{"deletion"} for
 #'   identical duplicates that were just dropped, \code{"merging"} for
 #'   differing duplicates combined into one), \code{$count} (how many extra
@@ -129,6 +129,12 @@
 #'     implemented.
 #' }
 #'
+#' @details
+#' \strong{Column identifiers renamed, 2026-09-27, per Josh's
+#' reference-workbook "Change.to" column.} In \code{arumeta.mergelog} (the
+#' log data frame returned when \code{log.file = TRUE}): \code{event} ->
+#' \code{event.type}, and \code{inputfile} -> \code{filename}.
+#'
 #' @examples
 #' \dontrun{
 #' result <- batz.merge_aru.meta("path/to/raw/data", dir.sub = TRUE)
@@ -151,10 +157,10 @@ batz.merge_aru.meta <- function(dir.load = getwd(),
   pattern.regex <- function(p) paste(vapply(p, utils::glob2rx, character(1)), collapse = "|")
 
   log.rows <- list()
-  add.log <- function(inputfile, event, action, count) {
+  add.log <- function(filename, event.type, action, count) {
     if (!log.file || count <= 0) return(invisible(NULL))
     log.rows[[length(log.rows) + 1]] <<- data.frame(
-      inputfile = inputfile, event = event, action = action, count = as.integer(count),
+      filename = filename, event.type = event.type, action = action, count = as.integer(count),
       stringsAsFactors = FALSE)
   }
 
@@ -304,7 +310,7 @@ batz.merge_aru.meta <- function(dir.load = getwd(),
     result$arumeta.mergelog <- if (length(log.rows) > 0) {
       do.call(rbind, log.rows)
     } else {
-      data.frame(inputfile = character(0), event = character(0),
+      data.frame(filename = character(0), event.type = character(0),
                  action = character(0), count = integer(0), stringsAsFactors = FALSE)
     }
   }

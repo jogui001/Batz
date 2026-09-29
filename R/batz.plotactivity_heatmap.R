@@ -54,9 +54,9 @@
 #' @return Invisibly, a list with \code{data} (the complete night x bin
 #'   grid actually plotted: a column named after \code{date.col} (default
 #'   \code{$date.monitoringnight}), \code{$bin.index},
-#'   \code{$n} - one row per night per bin, zero-filled where a night had no
-#'   detections in that bin) and \code{ggplot} (the ggplot object, only
-#'   populated when \code{ggplot2} is available).
+#'   \code{$observations.count} - one row per night per bin, zero-filled
+#'   where a night had no detections in that bin) and \code{ggplot} (the
+#'   ggplot object, only populated when \code{ggplot2} is available).
 #'
 #' @details
 #' \strong{Converted from \code{activity_heatmap.R}, an ad hoc procedural
@@ -110,13 +110,14 @@
 #' to cap the color scale at a fixed maximum with a \code{"100+"} open-ended
 #' top label. Since a fill scale (unlike a Y-axis position scale) only ever
 #' needs the color, not the exact value, capping is done by simply clamping
-#' the plotted value with \code{pmin(n, fill.max)} before mapping it to
-#' \code{fill} - visually identical to \code{oob = scales::squish} for this
-#' purpose, and avoids adding a package dependency this project doesn't
-#' otherwise need. \code{aes.default}'s \code{$fill.max} (default \code{100})
-#' and \code{$fill.colors} (a semicolon-separated hex list, default the same
-#' 7-color sequential blue ramp the original script used, credited there as
-#' the \code{dataviz} skill's default palette) control this.
+#' the plotted value with \code{pmin(observations.count, fill.max)} before
+#' mapping it to \code{fill} - visually identical to \code{oob =
+#' scales::squish} for this purpose, and avoids adding a package dependency
+#' this project doesn't otherwise need. \code{aes.default}'s
+#' \code{$fill.max} (default \code{100}) and \code{$fill.colors} (a
+#' semicolon-separated hex list, default the same 7-color sequential blue
+#' ramp the original script used, credited there as the \code{dataviz}
+#' skill's default palette) control this.
 #'
 #' \strong{Filename collision, found and fixed while testing.} This function
 #' and \code{\link{batz.plotactivity_daily.count}} share the same
@@ -262,6 +263,14 @@
 #'
 #' @seealso \code{\link{batz.plotactivity_daily.count}}, whose own
 #'   \code{$data} return value is the natural \code{data} input here.
+#'
+#' @details
+#' \strong{Column identifiers renamed, 2026-09-27, per Josh's
+#' reference-workbook "Change.to" column.} In the returned \code{$data}
+#' grid: \code{n} -> \code{observations.count} (the per-night, per-bin
+#' detection count). \code{$n.capped} - the internal, already-clamped fill
+#' value used only for the plotted color scale - keeps its own name; it is
+#' a distinct column, not the renamed one.
 #'
 #' @examples
 #' \dontrun{
@@ -423,14 +432,17 @@ batz.plotactivity_heatmap <- function(data,
   ## twenty-four fix - see @details, "Internal hardcoded ... literals
   ## fixed"), rather than the literal "monnight.date" hardcoded here
   ## before this round - a caller-supplied date.col now actually works.
-  raw.counts <- stats::aggregate(list(n = rep(1, nrow(data))),
+  ## Column identifiers renamed, 2026-09-27 (see @details, "Column
+  ## identifiers renamed"): the count column built here is now named
+  ## observations.count instead of n.
+  raw.counts <- stats::aggregate(list(observations.count = rep(1, nrow(data))),
                                   by = stats::setNames(list(data[[date.col]], bin.index), c(date.col, "bin.index")),
                                   FUN = sum)
   # --- complete grid: every night x every bin, missing = 0 - see @details,
   # "Complete night x bin grid". ---
   full.grid <- stats::setNames(expand.grid(all.nights, all.bins), c(date.col, "bin.index"))
   counts <- merge(full.grid, raw.counts, by = c(date.col, "bin.index"), all.x = TRUE)
-  counts$n[is.na(counts$n)] <- 0
+  counts$observations.count[is.na(counts$observations.count)] <- 0
 
   cat(sprintf("Binned %d observation row(s) into %d monitoring night(s) x %d bin(s) of %g minute(s) each.\n",
                nrow(data), length(all.nights), n.bins, bin.minutes))
@@ -453,7 +465,7 @@ batz.plotactivity_heatmap <- function(data,
 
     fill.max <- suppressWarnings(as.numeric(get.default("fill.max")))
     if (is.na(fill.max) || fill.max <= 0) fill.max <- 100
-    counts$n.capped <- pmin(counts$n, fill.max)
+    counts$n.capped <- pmin(counts$observations.count, fill.max)
 
     fill.colors <- strsplit(get.default("fill.colors"), ";", fixed = TRUE)[[1]]
     fill.colors <- trimws(fill.colors[nzchar(trimws(fill.colors))])

@@ -19,13 +19,49 @@
 #     different from the first guess - see below. **This version replaces
 #     the first guess entirely; nothing from the first attempt's table
 #     layout survives.**
+#   - ROUND TWENTY-EIGHT (2026-09-28), per Josh: the output column literally
+#     named "Federal" in both table.type layouts (see the ORIGINAL
+#     discovery notes below, left as historical record and unchanged) is
+#     renamed to "listing.status_federal", matching the identical column
+#     name already used by batz.batusa_recode.names()/
+#     batz.batusa_recode.names_reference.csv. This was a previously-pending
+#     rename from the 2026-09-27 package-wide renaming round, blocked on an
+#     apparent typo in the reference workbook's Change.to target ("listing
+#     status_federal", a space instead of a dot) - Josh confirmed the dot
+#     spelling is correct, so it's applied now. See the two "ROUND
+#     TWENTY-EIGHT" test additions near the bottom. The pre-existing
+#     duplicate "State" header (columns 1 and 5 of the "state" table.type
+#     layout, described below) is UNCHANGED - Josh's request named only the
+#     Federal column.
+#   - ROUND THIRTY (2026-09-29), per Josh's reference-workbook review and his
+#     follow-up "These are the same things" / "Make changes": the output
+#     column literally named "Bat Species" (both table.type layouts) is
+#     renamed to "common.name". This had been flagged as a pending rename
+#     colliding with batz.treeusa_recode.names()'s own common_one ->
+#     common.name pending rename - Josh confirmed this is a single shared,
+#     reused identifier (the same pattern already used for date.start/
+#     date.end across sibling functions in this catalog), not a real
+#     collision, so the two reference-workbook rows are merged into one.
+#     See the "ROUND THIRTY" test additions near the bottom.
+#   - ROUND THIRTY BUGFIX (2026-09-29): while re-verifying this function
+#     end to end for the rename above, found `nabat`'s `state.soc` column
+#     was ALSO one element short (53 instead of 54) - missing its blank
+#     entry at the same row (Leptonycteris yerbabuenae / "leye", row 27)
+#     already identified and fixed for `fedstatus`/`states.end` in the
+#     2026-09-27 bugfix (see below) - that fix did not catch every affected
+#     column. Fixed the same way: restored the missing blank entry at
+#     leye's row. See the "ROUND THIRTY BUGFIX" test near the bottom.
 #
 # NAME NORMALIZATION (unchanged from the first build - see project
 # preferences.md): "batz.batusa_species.list()" -> "batz.batusa_list.species()"
 # (action.subject order); "gramma.dash"/"grammar-dash" -> "grammar.dash".
 #
 # WHAT THE REAL MODEL FILES SHOWED (this is the important correction over
-# the first build):
+# the first build - ORIGINAL 2026-08-25 discovery notes, left as historical
+# record; the "Federal" column name mentioned throughout is superseded by
+# "listing.status_federal" as of round twenty-eight above, and the "Bat
+# Species" column name mentioned throughout is superseded by "common.name"
+# as of round thirty above):
 #   - Confirmed: "USAstate.names.database" IS the same file as this
 #     project's own "NAstates.names.csv" - Josh's own
 #     "reference database files/USAstates.names.csv" and
@@ -40,9 +76,13 @@
 #     model1.csv has no Indiana bat / MYSO row for ME, because MYSO isn't
 #     present there). Columns, in this exact order:
 #       "State"        - the state (statename.format.out)
-#       "Bat Species"  - see batname.format.out below
+#       "common.name"  - see batname.format.out below (literally "Bat
+#                        Species" in Josh's own model file - superseded,
+#                        renamed "common.name" as of round thirty, see above)
 #       "Species Code" - see bat.code below
-#       "Federal"      - federal listing status, ABBREVIATED (see below)
+#       "listing.status_federal" - federal listing status, ABBREVIATED (see
+#                        below) - superseded, was "Federal" prior to round
+#                        twenty-eight (see above)
 #       "State"        - state-specific listing status, abbreviated (see
 #                        below) - Josh's own model file reuses "State" as
 #                        the header for BOTH the row's state (column 1) and
@@ -56,11 +96,12 @@
 #                        into the species-name token was wrong).
 #   - `table.type = "matrix"` (batlist model2.csv) IS one row per species,
 #     one column per state - this part of the first build's guess was
-#     right. Columns, in this exact order: "Bat Species", "Species Code",
-#     "Phonic Group", "Federal", then one column per state (named per
-#     statename.format.out, in the order states were matched/given).
+#     right. Columns, in this exact order: "common.name" (see above),
+#     "Species Code", "Phonic Group", "listing.status_federal" (see above),
+#     then one column per state (named per statename.format.out, in the
+#     order states were matched/given).
 #   - `batname.format.out = "full"` (default) is NOT just the common name (the
-#     first build's guess) - the real "Bat Species" field is
+#     first build's guess) - the real "common.name" field is
 #     "<common name> (<latin name>)<hibernation.strat>", all concatenated
 #     into ONE string with NO separator before hibernation.strat (confirmed
 #     by exact comma-field-counting in the raw CSV - this is a real,
@@ -75,18 +116,19 @@
 #   - `bat.code`: "Species Code" is its OWN column (code4/code6), not
 #     appended in parentheses onto the species label as the first build
 #     did. `bat.code = "none"` omits the column entirely.
-#   - "Federal" is always included (not gated by any optional input) -
-#     abbreviated from `$fedstatus`: "Not Listed" -> "" (blank), "Under
-#     Review" -> "UR", "Endangered" -> "E", "Proposed Endangered" -> "PE".
-#     This mapping was reverse-engineered from the model's own values for
-#     species whose real fedstatus is known (e.g. Myotis sodalis/
-#     septentrionalis = "E" for real Endangered species, Myotis lucifugus =
-#     "UR" for the real Under Review status, Perimyotis subflavus = "PE"
-#     for Proposed Endangered in the MA block - the ME block shows "P" for
-#     the same species/status, and "R" instead of "UR" for M. lucifugus -
-#     both read as typos in Josh's hand-built mockup, not a different
-#     intended scheme, since MA and PA agree with each other and only the
-#     ME block (added third/last, most abbreviated overall) disagrees).
+#   - "Federal" (now "listing.status_federal") is always included (not
+#     gated by any optional input) - abbreviated from `$fedstatus`: "Not
+#     Listed" -> "" (blank), "Under Review" -> "UR", "Endangered" -> "E",
+#     "Proposed Endangered" -> "PE". This mapping was reverse-engineered
+#     from the model's own values for species whose real fedstatus is known
+#     (e.g. Myotis sodalis/septentrionalis = "E" for real Endangered
+#     species, Myotis lucifugus = "UR" for the real Under Review status,
+#     Perimyotis subflavus = "PE" for Proposed Endangered in the MA block -
+#     the ME block shows "P" for the same species/status, and "R" instead
+#     of "UR" for M. lucifugus - both read as typos in Josh's hand-built
+#     mockup, not a different intended scheme, since MA and PA agree with
+#     each other and only the ME block (added third/last, most abbreviated
+#     overall) disagrees).
 #   - "State" (listing-status column, table.type = "state") / each state's
 #     column value (table.type = "matrix"): the model clearly wants a
 #     THREE-WAY per-(species,state) value - present-not-listed, absent, or
@@ -111,10 +153,10 @@
 #         implied by the row existing)
 #       - absent                                      -> symbol_presence.absence[2]
 #         ("-" default) for matrix; no row at all for "state" table.type
-#     **Flagging prominently: if Josh has (or wants to build) real
-#     per-state Endangered/Threatened/Special-Concern data, the "L"
-#     placeholder above should be replaced with it - this is the single
-#     biggest remaining gap versus the real model files.**
+#     **Flagging prominently: if Josh has, or builds, real per-state
+#     Endangered/Threatened/Special-Concern data, the "L" placeholder above
+#     should be replaced with it - this is the single biggest remaining gap
+#     versus the real model files.**
 #   - `phonic.group = TRUE` (default) is a plain standalone column in BOTH
 #     table.type layouts (the first build's guess of folding it into the
 #     species-name token for "state" type was unnecessary once the "state"
@@ -126,7 +168,10 @@
 #     `$collum.name` dot-convention, since the whole point of table.type is
 #     to match his external template's exact layout - flagged as an
 #     intentional, spec-driven exception to the project's naming
-#     convention, not an oversight.
+#     convention, not an oversight. As of round twenty-eight, "Federal" no
+#     longer follows this literal-template-match exception (see above), and
+#     as of round thirty, neither does "Bat Species" (now "common.name",
+#     see above) - the duplicate "State" header still does.
 #
 # STILL-OPEN ITEMS (unchanged from the first build, or newly surfaced):
 #   - The per-state listing-SEVERITY data gap above (the main one).
@@ -140,6 +185,9 @@
 #     this function - not used here, but worth re-verifying
 #     `batz.batusa_recode.names` against it in a future session since a
 #     real test file for THAT function is now available too.
+#   - The duplicate "State" header (table.type = "state") remains an open
+#     design note - not touched by the round-twenty-eight Federal rename or
+#     the round-thirty common.name rename.
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -303,10 +351,10 @@ batz.batusa_list.species <- function(data,
 
   if (table.type == "matrix") {
 
-    out <- data.frame("Bat Species" = species.labels, check.names = FALSE, stringsAsFactors = FALSE)
+    out <- data.frame("common.name" = species.labels, check.names = FALSE, stringsAsFactors = FALSE)
     if (!is.null(code.col)) out[["Species Code"]] <- nabat[species.idx, code.col]
     if (phonic.group) out[["Phonic Group"]] <- nabat[species.idx, "phonic.group"]
-    out[["Federal"]] <- federal.codes
+    out[["listing.status_federal"]] <- federal.codes
 
     for (k in seq_along(state.idx)) {
       j <- state.idx[k]
@@ -355,9 +403,9 @@ batz.batusa_list.species <- function(data,
     }
 
     out <- do.call(rbind.data.frame, c(rows, stringsAsFactors = FALSE))
-    col.names <- c("State", "Bat Species")
+    col.names <- c("State", "common.name")
     if (!is.null(code.col)) col.names <- c(col.names, "Species Code")
-    col.names <- c(col.names, "Federal", "State")
+    col.names <- c(col.names, "listing.status_federal", "State")
     if (phonic.group) col.names <- c(col.names, "Phonic Group")
     names(out) <- col.names   # set directly (not via data.frame()) so the duplicate "State" header survives literally
     out
@@ -404,7 +452,7 @@ cat("\n=== species-driven query, table.type = 'state' - which states have\n",
 print(head(batz.batusa_list.species("epfu"), 15))
 
 cat("\n=== state-driven query, table.type = 'matrix' - all 54 species x OH ===\n")
-print(head(batz.batusa_list.species("OH", table.type = "matrix")[, c("Bat Species", "OH")], 15))
+print(head(batz.batusa_list.species("OH", table.type = "matrix")[, c("common.name", "OH")], 15))
 
 cat("\n=== custom symbol_presence.absence symbols ===\n")
 print(batz.batusa_list.species(c("epfu", "myse"), table.type = "matrix", symbol_presence.absence = c("Y", "N")))
@@ -427,3 +475,92 @@ tryCatch(batz.batusa_list.species("epfu", table.type = "bogus"), error = functio
 
 cat("\n=== Corynorhinus subspecies disambiguation still holds ===\n")
 print(batz.batusa_list.species(c("coto", "coti", "cotv"), table.type = "matrix", statename.format.out = "short.name"))
+
+# -----------------------------------------------------------------------------
+# ROUND TWENTY-EIGHT TESTS (2026-09-28), per Josh: "Federal" -> "listing.
+# status_federal" rename, both table.type layouts. Confirms the new column
+# name is present, the old literal "Federal" name is gone, and the
+# pre-existing duplicate "State" header (untouched by this rename) still
+# survives intact.
+# -----------------------------------------------------------------------------
+cat("\n=== ROUND TWENTY-EIGHT TEST 1: 'listing.status_federal' replaces 'Federal',\n",
+    "table.type = 'state' ===\n", sep = "")
+r28.state <- batz.batusa_list.species(c("epfu", "mylu"), table.type = "state")
+stopifnot("listing.status_federal" %in% names(r28.state))
+stopifnot(!("Federal" %in% names(r28.state)))
+stopifnot(sum(names(r28.state) == "State") == 2)  # duplicate "State" header still intact
+cat("PASSED\n")
+
+cat("\n=== ROUND TWENTY-EIGHT TEST 2: same rename, table.type = 'matrix' ===\n")
+r28.matrix <- batz.batusa_list.species(c("epfu", "mylu"), table.type = "matrix")
+stopifnot("listing.status_federal" %in% names(r28.matrix))
+stopifnot(!("Federal" %in% names(r28.matrix)))
+cat("PASSED\n")
+
+cat("\n=== ROUND TWENTY-EIGHT TEST 3: values under the new column name are\n",
+    "unchanged (Myotis sodalis = real Endangered -> \"E\"; Leptonycteris\n",
+    "yerbabuenae, the row historically affected by the length-mismatch\n",
+    "bugfix, = Not Listed -> \"\") ===\n", sep = "")
+r28.myso <- batz.batusa_list.species("myso", table.type = "matrix")
+stopifnot(r28.myso[["listing.status_federal"]] == "E")
+r28.leye <- batz.batusa_list.species("leye", table.type = "matrix")
+stopifnot(r28.leye[["listing.status_federal"]] == "")
+cat("PASSED\n")
+
+cat("\n=== ROUND TWENTY-EIGHT TEST 4: embedded reference tables still pass the\n",
+    "standing stopifnot(all(sapply(<table>, length) == nrow(<table>))) safeguard\n",
+    "(2026-09-27 BUGFIX) after this round's edit ===\n", sep = "")
+stopifnot(all(sapply(nabat.reference, length) == nrow(nabat.reference)))
+stopifnot(all(sapply(states.reference, length) == nrow(states.reference)))
+cat("PASSED\n")
+
+# -----------------------------------------------------------------------------
+# ROUND THIRTY TESTS (2026-09-29), per Josh's "These are the same things" /
+# "Make changes": "Bat Species" -> "common.name" rename, both table.type
+# layouts. Confirms the new column name is present, the old literal "Bat
+# Species" name is gone, the value itself is unaffected, and the
+# pre-existing duplicate "State" header (untouched by this rename too)
+# still survives intact.
+# -----------------------------------------------------------------------------
+cat("\n=== ROUND THIRTY TEST 1: 'common.name' replaces 'Bat Species',\n",
+    "table.type = 'state' ===\n", sep = "")
+r30.state <- batz.batusa_list.species(c("epfu", "mylu"), table.type = "state")
+stopifnot("common.name" %in% names(r30.state))
+stopifnot(!("Bat Species" %in% names(r30.state)))
+stopifnot(sum(names(r30.state) == "State") == 2)  # duplicate "State" header still intact
+cat("PASSED\n")
+
+cat("\n=== ROUND THIRTY TEST 2: same rename, table.type = 'matrix' ===\n")
+r30.matrix <- batz.batusa_list.species(c("epfu", "mylu"), table.type = "matrix")
+stopifnot("common.name" %in% names(r30.matrix))
+stopifnot(!("Bat Species" %in% names(r30.matrix)))
+cat("PASSED\n")
+
+cat("\n=== ROUND THIRTY TEST 3: value under the new column name is unchanged\n",
+    "(Big brown bat, batname.format.out = 'full' default) ===\n", sep = "")
+r30.epfu <- batz.batusa_list.species("epfu", table.type = "matrix")
+stopifnot(r30.epfu[["common.name"]] == "Big brown bat (Eptesicus fuscus)hibernating")
+cat("PASSED\n")
+
+# -----------------------------------------------------------------------------
+# ROUND THIRTY BUGFIX TEST (2026-09-29): nabat's state.soc column was one
+# element short (53 instead of 54), missing its blank entry at leye's row
+# (row 27) - the same row already restored for fedstatus/states.end in the
+# 2026-09-27 bugfix, but this column was missed then. Confirms the fixed
+# column is full length and that the values downstream of the gap (which
+# shift by one row when the gap is present) now land on the correct,
+# biologically-sensible species.
+# -----------------------------------------------------------------------------
+cat("\n=== ROUND THIRTY BUGFIX TEST: nabat$state.soc is full length (54), and\n",
+    "Myotis keenii (Keen's myotis, a Pacific NW/Alaska species) now correctly\n",
+    "shows AK/WA as species-of-concern states, not Myotis grisescens (Gray\n",
+    "bat, a southeastern species with no AK/WA range) ===\n", sep = "")
+stopifnot(length(nabat.reference$state.soc) == 54)
+myke.row <- batz.batusa_list.species("myke", table.type = "matrix")
+stopifnot(myke.row[["AK"]] == "SC")
+stopifnot(myke.row[["WA"]] == "SC")
+mygr.row <- batz.batusa_list.species("mygr", table.type = "matrix")
+stopifnot(!(mygr.row[["AK"]] %in% c("SC")))
+cat("PASSED\n")
+
+cat("\nALL TESTS COMPLETED\n")

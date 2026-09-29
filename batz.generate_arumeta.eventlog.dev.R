@@ -221,6 +221,19 @@
 #   (HabitatAssessments_quad.csv also present in that folder but NOT read by
 #   this function at all - see point 1 above.)
 # =============================================================================
+#
+# COLUMN-IDENTIFIER RENAMES (added 2026-09-27, per Josh's reference-workbook
+# "Change.to" column): a batch of the snake_case, standardize.headers()-
+# derived column identifiers used throughout this script (and the shipped
+# .R function it mirrors) were renamed to a batz shorthand - see the dated
+# @details entry in batz.generate_arumeta.eventlog.R for the full old -> new
+# list and the reasoning (raw-file-matching spellings vs. final/canonical
+# column names). Applied the same renames here wherever this script
+# references those columns as literal strings/$access, including in the
+# tests section at the bottom. The numbered notes above are historical and
+# were left as-written (they describe what was true when each decision was
+# made, using the column spellings in effect at the time).
+# =============================================================================
 
 # -----------------------------------------------------------------------------
 # Header standardization (added 2026-09-14, per project preference - see
@@ -248,17 +261,57 @@ pattern.regex <- function(p) paste(vapply(p, utils::glob2rx, character(1)), coll
 # they and every incoming raw file's headers get standardize.headers()'d
 # the same way before matching. Real, visible column-name change from
 # before this preference existed (e.g. $Client -> $client).
-deployment.headers <- standardize.headers(c(
+#
+# Column-identifier renames (added 2026-09-27, per Josh's reference workbook
+# "Change.to" column): a handful of these standardize.headers()-derived
+# names are further remapped to a batz shorthand (e.g. detector_make ->
+# aru.make) via column.rename.map/apply.column.renames() below. Matching
+# against real incoming files still happens against the RAW
+# standardize.headers() spelling (deployment.headers.raw/
+# service.headers.raw), since that's what real file headers literally
+# standardize to regardless of this script's own naming - only the FINAL
+# column names (deployment.headers/service.headers, used to name `out` and
+# everything downstream) are remapped.
+deployment.headers.raw <- standardize.headers(c(
   "Client", "Project", "Project Code", "Date of Deployment",
   "Detector Model", "Detector Make", "Microphone Model", "Microphone Make",
   "Site", "Survey Type", "X", "Y", "Serial Number of Detector",
   "Serial Number of Microphone", "Personnel", "Date of Habitat Assessment"))
 
-service.headers <- standardize.headers(c(
+service.headers.raw <- standardize.headers(c(
   "Client", "Project", "Project Code", "Date", "Site Name",
   "Reason for site visit", "Personnel", "Notes", "ARU Serial Number",
   "Mic Serial Number", "Power Kit/Solar Serial Number", "HOBO Sensor Serial Number",
   "Select all actions performed", "New mic serial number", "New ARU serial number"))
+
+column.rename.map <- c(
+  aru_serial_number           = "aru.serial",
+  date_of_deployment          = "date.deployment",
+  date_of_habitat_assessment  = "date.habitat.assessment",
+  detector_make               = "aru.make",
+  detector_model               = "aru.model",
+  hobo_sensor_serial_number    = "hobo.serial",
+  mic_serial_number            = "microphone.serial",
+  microphone_make               = "microphone.make",
+  microphone_model              = "microphone.model",
+  new_aru_serial_number         = "aru.serial_new",
+  new_mic_serial_number         = "microphone.serial_new",
+  project_code                  = "project.code",
+  reason_for_site_visit         = "reason.sitevisit",
+  serial_number_of_detector     = "aru.serial",
+  serial_number_of_microphone   = "microphone.serial",
+  site                          = "site.name",
+  x                             = "longitude",
+  y                             = "latitude"
+)
+apply.column.renames <- function(nm) {
+  hit <- nm %in% names(column.rename.map)
+  nm[hit] <- column.rename.map[nm[hit]]
+  nm
+}
+
+deployment.headers <- apply.column.renames(deployment.headers.raw)
+service.headers    <- apply.column.renames(service.headers.raw)
 
 # canonical same-timestamp ordering (per spec); anything else sorts after these
 event.priority <- c(deployment = 1, status_check = 2, download = 3, aru_swap = 4, mic_swap = 5,
@@ -348,11 +401,18 @@ process.one.file <- function(f, max.missing) {
   tmp <- dc$df
   dup.cols <- dc$dup.cols
 
+  # NOTE: this classification check intentionally still matches the raw,
+  # standardize.headers()-derived spelling ("date_of_deployment"), not the
+  # renamed "date.deployment" - real incoming CSV headers, once run through
+  # standardize.headers(), will always literally produce this spelling
+  # regardless of this script's own canonical column naming (see the
+  # column-identifier-renames note above).
   is.deployment <- any(names(tmp) == "date_of_deployment")
-  master <- if (is.deployment) deployment.headers else service.headers
-  file.type <- if (is.deployment) "deployment" else "service"
+  master.raw <- if (is.deployment) deployment.headers.raw else service.headers.raw
+  master     <- if (is.deployment) deployment.headers     else service.headers
+  file.type  <- if (is.deployment) "deployment" else "service"
 
-  matched <- match.headers(names(tmp), master)
+  matched <- match.headers(names(tmp), master.raw)
   present <- !is.na(matched)
   missing.headers <- master[!present]
   n.missing <- length(missing.headers)
@@ -461,15 +521,15 @@ batz.generate_arumeta.eventlog <- function(dir.load = getwd(),
   # ---- derive unified ARU / site / date-time columns + event.type ----
   if (!is.null(deployment) && nrow(deployment) > 0) {
     deployment$event.type   <- "deployment"
-    deployment$ARU.serial   <- deployment[["serial_number_of_detector"]]
-    deployment$Site.unified <- deployment[["site"]]
-    deployment$date.time    <- as.character(deployment[["date_of_deployment"]])
+    deployment$aru.serial   <- deployment[["aru.serial"]]
+    deployment$site.unified <- deployment[["site.name"]]
+    deployment$date.time    <- as.character(deployment[["date.deployment"]])
   }
 
   service.events <- explode.service.events(service)
   if (!is.null(service.events) && nrow(service.events) > 0) {
-    service.events$ARU.serial   <- service.events[["aru_serial_number"]]
-    service.events$Site.unified <- service.events[["site_name"]]
+    service.events$aru.serial   <- service.events[["aru.serial"]]
+    service.events$site.unified <- service.events[["site_name"]]
     service.events$date.time    <- paste(service.events[["date"]], service.events[["time"]])
   }
 
@@ -483,15 +543,15 @@ batz.generate_arumeta.eventlog <- function(dir.load = getwd(),
     rank <- ifelse(aru.eventlog$event.type %in% names(event.priority),
                     event.priority[aru.eventlog$event.type], 99)
     # CORRECTION (2026-08-23, per Josh): "Site and ARU are the same thing...
-    # for now use the site" - group/order by Site.unified, not ARU.serial
+    # for now use the site" - group/order by site.unified, not aru.serial
     # (headers aren't standardized across forms yet, so ARU serial numbers
     # can't be trusted to line up 1:1 with a site the way Site names can).
-    aru.eventlog <- aru.eventlog[order(aru.eventlog$Site.unified, aru.eventlog$date.time, rank), ]
+    aru.eventlog <- aru.eventlog[order(aru.eventlog$site.unified, aru.eventlog$date.time, rank), ]
 
     # duplicates.remove - drop exact duplicate rows in the final combined table
     dup.mask <- duplicated(aru.eventlog)
     n.dup <- sum(dup.mask)
-    dup.sites <- if (n.dup > 0) aru.eventlog$Site.unified[dup.mask] else character(0)
+    dup.sites <- if (n.dup > 0) aru.eventlog$site.unified[dup.mask] else character(0)
     if (duplicates.remove && n.dup > 0) {
       cat("\n", n.dup, " exact duplicate row(s) removed from aru.eventlog.\n", sep = "")
       aru.eventlog <- aru.eventlog[!dup.mask, ]
@@ -521,9 +581,9 @@ batz.generate_arumeta.eventlog <- function(dir.load = getwd(),
   report.category(svc.log, "service")
 
   if (nrow(aru.eventlog) > 0) {
-    all.sites <- unique(aru.eventlog$Site.unified[!is.na(aru.eventlog$Site.unified)])
-    sites.with.deployment <- unique(aru.eventlog$Site.unified[aru.eventlog$event.type == "deployment"])
-    sites.with.recovery   <- unique(aru.eventlog$Site.unified[aru.eventlog$event.type == "recovery"])
+    all.sites <- unique(aru.eventlog$site.unified[!is.na(aru.eventlog$site.unified)])
+    sites.with.deployment <- unique(aru.eventlog$site.unified[aru.eventlog$event.type == "deployment"])
+    sites.with.recovery   <- unique(aru.eventlog$site.unified[aru.eventlog$event.type == "recovery"])
 
     missing.dep.sites <- setdiff(all.sites, sites.with.deployment)
     missing.rec.sites <- setdiff(all.sites, sites.with.recovery)
@@ -543,17 +603,17 @@ batz.generate_arumeta.eventlog <- function(dir.load = getwd(),
   }
 
   if (nrow(aru.eventlog) > 0) {
-    sites <- unique(aru.eventlog$Site.unified[!is.na(aru.eventlog$Site.unified)])
+    sites <- unique(aru.eventlog$site.unified[!is.na(aru.eventlog$site.unified)])
     site.rows <- lapply(sites, function(s) {
-      sub <- aru.eventlog[aru.eventlog$Site.unified == s, ]
+      sub <- aru.eventlog[aru.eventlog$site.unified == s, ]
       data.frame(
-        client       = first.nonblank(sub$client),
-        project      = first.nonblank(sub$project),
-        project.code = first.nonblank(sub[["project_code"]]),
-        site         = s,
-        deployment   = sum(sub$event.type == "deployment"),
-        service      = sum(sub$event.type %in% c("status_check", "download", "aru_swap", "mic_swap", "service")),
-        recovery     = sum(sub$event.type == "recovery"),
+        client         = first.nonblank(sub$client),
+        project        = first.nonblank(sub$project),
+        project.code   = first.nonblank(sub[["project.code"]]),
+        site.name      = s,
+        deployment     = sum(sub$event.type == "deployment"),
+        service.count  = sum(sub$event.type %in% c("status_check", "download", "aru_swap", "mic_swap", "service")),
+        recovery       = sum(sub$event.type == "recovery"),
         duplicates.removed = sum(dup.sites == s),
         stringsAsFactors = FALSE
       )
@@ -561,8 +621,8 @@ batz.generate_arumeta.eventlog <- function(dir.load = getwd(),
     aru.eventlog.sitelog <- do.call(rbind, site.rows)
   } else {
     aru.eventlog.sitelog <- data.frame(client = character(0), project = character(0),
-                                        project.code = character(0), site = character(0),
-                                        deployment = integer(0), service = integer(0),
+                                        project.code = character(0), site.name = character(0),
+                                        deployment = integer(0), service.count = integer(0),
                                         recovery = integer(0), duplicates.removed = integer(0),
                                         stringsAsFactors = FALSE)
   }
@@ -587,7 +647,7 @@ res <- batz.generate_arumeta.eventlog("/home/claude/arumeta_work2", log.file = T
 
 cat("\n=== aru.eventlog dim ===\n"); print(dim(aru.eventlog))
 cat("\n=== aru.eventlog (key columns) ===\n")
-print(aru.eventlog[, c("ARU.serial", "Site.unified", "date.time", "event.type")])
+print(aru.eventlog[, c("aru.serial", "site.unified", "date.time", "event.type")])
 
 cat("\n=== aru.eventlog.filelog ===\n"); print(aru.eventlog.filelog)
 cat("\n=== aru.eventlog.sitelog ===\n"); print(aru.eventlog.sitelog)

@@ -26,9 +26,9 @@ every subdirectory of \code{dir.load}.}
 \item{log.file}{Logical, default \code{FALSE}. If \code{TRUE}, an
 additional data frame named \code{arumeta.mergelog} is added to the
 returned list, with one row per deletion/merge action taken while
-cleaning up duplicate rows or columns. Columns: \code{$inputfile} (the
+cleaning up duplicate rows or columns. Columns: \code{$filename} (the
 source file - or \code{"filename [sheet: sheetname]"} for an xlsx sheet -
-the action happened to), \code{$event} (\code{"duplicated row"} or
+the action happened to), \code{$event.type} (\code{"duplicated row"} or
 \code{"duplicated column"}), \code{$action} (\code{"deletion"} for
 identical duplicates that were just dropped, \code{"merging"} for
 differing duplicates combined into one), \code{$count} (how many extra
@@ -143,6 +143,11 @@ removed from it is always printed to the console. Internally every row is
 tagged with which source file it came from before this check, so - when
 \code{log.file = TRUE} - removed duplicate rows can be attributed back to
 the specific file(s) they came from.
+
+\strong{Column identifiers renamed, 2026-09-27, per Josh's
+reference-workbook "Change.to" column.} In \code{arumeta.mergelog} (the
+log data frame returned when \code{log.file = TRUE}): \code{event} ->
+\code{event.type}, and \code{inputfile} -> \code{filename}.
 }
 \section{Known open items (not yet resolved - see project notes)}{
 

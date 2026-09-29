@@ -59,6 +59,13 @@ ordinary copy-on-modify semantics for a function argument), and nothing
 in this helper writes anything back to the caller's environment. A
 column of \code{df} that isn't named in \code{required} is left exactly
 as it was, untouched.
+
+\strong{Follow-up, 2026-09-28, per Josh: this is also now the shared
+mechanism used package-wide whenever a required-header check needs to
+treat \code{"."} and \code{"_"} as equivalent} - see
+\code{\link{batz.generate_suntimes.arulist}}'s own \code{@details},
+"Follow-up, 2026-09-28", for the first function switched over to it for
+this specific purpose.
 }
 \examples{
 \dontrun{

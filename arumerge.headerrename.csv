@@ -2,8 +2,8 @@ raw,standard
 file.name,filename
 monitoringnight,mon.ngh
 Species Manual ID,manid
-WA|Kaleidoscope|Auto ID,auto.kp
-sppaccp,auto.sb
+WA|Kaleidoscope|Auto ID,autoid.kp
+sppaccp,autoid.sb
 serial,aru.serial
 sunregions,sunregion
 Sun Region,sunregion

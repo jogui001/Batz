@@ -13,7 +13,7 @@
 #'
 #' \strong{Required input columns.} `data` must have every one of:
 #' \code{filename}, \code{date.monitoringnight}, \code{manid}, \code{autoid.kp},
-#' \code{autoid.sb}, \code{lat}, \code{serial}, \code{lon},
+#' \code{autoid.sb}, \code{lat}, \code{serial}, \code{longitude},
 #' \code{aru.name}, \code{date}, \code{time}, \code{call.datetime}. All
 #' twelve come straight out of \code{\link{batz.merge_vetted.acoustics}}
 #' - no renaming needed (an earlier version of this function required
@@ -284,7 +284,7 @@
 #' \code{FALSE}. No other behavior changed.
 #'
 #' \strong{Follow-up, 2026-09-22, per Josh's request ("change all functions
-#' that have aru as an header to \code{"aru.name"}", found via the project's own
+#' that have aru as an header to \code{"aru.name"}", found via the project's
 #' reference workbook and cross-checked against this function's live
 #' source): the \code{*arulist.csv} lookup table this function builds
 #' internally now uses \code{$aru.name} instead of bare \code{$aru}.} This
@@ -450,6 +450,34 @@
 #' every prior \code{@details} paragraph is preserved verbatim, per this
 #' project's standing append-don't-rewrite-history convention.
 #'
+#' \strong{Column identifiers renamed, 2026-09-27, per Josh's
+#' reference-workbook "Change.to" column.} \code{lon} -> \code{longitude}
+#' in \code{data}'s own required-input-columns list (\code{required.headers}
+#' above). This is \code{data}'s own already-established \code{batz} output
+#' schema (see \strong{Header standardization} near the top of Details), not
+#' a raw loaded-file header, so the rename is safe to make directly here -
+#' unlike the arulist-file checks below, nothing here needs to keep
+#' accepting an old raw spelling. \strong{Flagged as a cross-function
+#' consequence, not fixed here}: \code{\link{batz.merge_vetted.acoustics}}
+#' - the function that actually produces every one of these twelve required
+#' columns - still outputs this column as \code{$lon}, not
+#' \code{$longitude}, so a \code{data} frame built the normal way (straight
+#' out of that function) will fail this function's required-header check
+#' until \code{batz.merge_vetted.acoustics()} is renamed to match; that
+#' function was out of scope for today's change. Two other renames from the
+#' same workbook batch were reviewed and found to need NO code change in
+#' this file: \code{aru} -> \code{aru.name} and \code{aru_name} ->
+#' \code{aru.name}. Every bare \code{aru}/\code{aru_name} occurrence already
+#' in this file is either historical narrative describing a past rename, or
+#' part of the documented raw \code{*arulist.csv} dual-acceptance loader
+#' (see \strong{Follow-up, 2026-09-25 (round twenty-six, second-order
+#' fix)} above), which must keep accepting both raw spellings and was
+#' deliberately left untouched - \code{data}'s own required column is
+#' already \code{$aru.name} (not bare \code{aru}/\code{aru_name}), and the
+#' internal arulist lookup table already renames to \code{$aru.name} too,
+#' so both of those items were already done as of round twenty-two/round
+#' twenty-six above, with nothing left to change.
+#'
 #' @param data A data frame with every column listed above already
 #'   present (see Details for how to assemble one). Column headers may
 #'   arrive in this function's own dot-separated style OR already
@@ -584,7 +612,7 @@ batz.generate_plotframe.bat <- function(data,
   ## this check keeps referencing $date.monitoringnight/$aru.name/etc. exactly as
   ## before. See @details, "Header standardization"/"BUGFIX/NEW".
   required.headers <- c("filename", "date.monitoringnight", "manid", "autoid.kp",
-                         "autoid.sb", "lat", "serial", "lon", "aru.name",
+                         "autoid.sb", "lat", "serial", "longitude", "aru.name",
                          "date", "time", "call.datetime")
   data.canon <- canonicalize.headers(data, required.headers)
   if (length(data.canon$missing) > 0) {

@@ -16,7 +16,7 @@
 #'   column) when \code{fig.list} doesn't specify one.
 #' @param fig.list A data frame listing the plot(s) to generate - one row
 #'   per plot. Must have \code{$plot.type}, \code{$plot.name}, \code{$facet},
-#'   \code{$facet.set}, \code{$MYSO}, \code{$Alldect}, \code{$facet.panel},
+#'   \code{$facet.set}, \code{$MYSO}, \code{$all.dectections}, \code{$facet.panel},
 #'   \code{$40khzmyo}, \code{$facet.label}, \code{$plot.set}, \code{$pool},
 #'   \code{$date.format}, \code{$date.start}, \code{$date.end},
 #'   \code{$xaxe.interval}. Column names must be unique. \code{$plot.group}
@@ -150,7 +150,7 @@
 #' over UNCHANGED from that function: header/duplicate-column validation,
 #' settings resolution (\code{fig.list} row > \code{project.name} column >
 #' \code{$default.value}), the New-England-special-case \code{$facpan} list,
-#' \code{$MYSO}/\code{$Alldect}/\code{$40khzmyo} panel-building logic,
+#' \code{$MYSO}/\code{$all.dectections}/\code{$40khzmyo} panel-building logic,
 #' facet labeling and canonicalization via
 #' \code{batz.batusa_recode.names()}, \code{$plot.order} panel ordering, the
 #' \code{job.key}/\code{job.label} list-keying fix (rows sharing
@@ -199,9 +199,9 @@
 #' this plot (e.g. gray out or omit un-monitored nights), say so and it can
 #' be wired in.
 #'
-#' \strong{Follow-up, 2026-09-22, per Josh's request ("change all functions
+#' \strong{Follow-up, 2026-09-22, per Josh: "change all functions
 #' that have aru as an header to \"aru.name\"", "update \"Batz reference
-#' db_*.xlxs\""):} \code{SUNTIMES.REQUIRED}'s first element is renamed from
+#' db_*.xlxs\"":} \code{SUNTIMES.REQUIRED}'s first element is renamed from
 #' \code{"aru"} to \code{"aru.name"}, matching \code{\link{batz.generate_suntimes.arulist}}'s
 #' own renamed output column (see that function's own \code{@details}) and
 #' the identical rename already applied to \code{\link{batz.generate_plotframe.bat}}
@@ -793,6 +793,26 @@
 #' failed this function's required-header check on \code{"date.mon"}
 #' alone). \code{SUNTIMES.REQUIRED} now says \code{"date.monitoringnight"}.
 #'
+#' \strong{Column identifiers renamed, 2026-09-27, per Josh's reference-workbook
+#' "Change.to" column.} Per Josh's batch rename covering this function's
+#' shipped code and its \code{.dev.R} test script: \code{$Alldect} (a
+#' \code{fig.list} column name, part of \code{FIG.LIST.REQUIRED}) ->
+#' \code{$all.dectections} (Josh's own spelling, kept exactly as given);
+#' and the specific literal \code{$aru} data-column identifier (as used in
+#' \code{SUNTIMES.REQUIRED}'s required-header list, matching
+#' \code{\link{batz.generate_suntimes.arulist}}'s own now-\code{$aru.name}
+#' output column) -> \code{$aru.name}. \code{SUNTIMES.REQUIRED} already read
+#' \code{"aru.name"} as of the 2026-09-22 follow-up above, so this entry is
+#' purely a documentation/naming-convention confirmation for that column;
+#' the only functional code change in this pass is
+#' \code{$Alldect} -> \code{$all.dectections} throughout (the required-header
+#' constant, the \code{@param fig.list} prose, this \code{@details} history,
+#' and every code reference to \code{job$Alldect}/\code{alldect.flag}'s
+#' source column). Other bare uses of "aru" in this file's prose (e.g.
+#' \code{aru.suntimes}, "ARU identifier", the general concept of an
+#' acoustic recording unit) are unrelated identifiers/prose and were left
+#' untouched.
+#'
 #' @examples
 #' \dontrun{
 #' # default dir.save = getwd(), default project.name = "new.project"
@@ -847,9 +867,12 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
                           "sunrise.monitoringnight.unix")
   # "plot.group" removed from this required list 2026-09-23 (per Josh, see
   # @details "Follow-up, 2026-09-23") - it's now optional, resolved per-row
-  # below. "plot.sets" renamed to "plot.set" the same round.
+  # below. "plot.sets" renamed to "plot.set" the same round. $Alldect ->
+  # $all.dectections renamed 2026-09-27 (per Josh's reference-workbook
+  # "Change.to" column) - see @details, "Column identifiers renamed,
+  # 2026-09-27".
   FIG.LIST.REQUIRED <- c("plot.type", "plot.name", "facet", "facet.set", "MYSO",
-                          "Alldect", "facet.panel", "40khzmyo", "facet.label",
+                          "all.dectections", "facet.panel", "40khzmyo", "facet.label",
                           "plot.set", "pool", "date.format",
                           "date.start", "date.end", "xaxe.interval")
   # Follow-up, 2026-09-23, per Josh (bug report: an explicit $Yaxe.trans =
@@ -1067,7 +1090,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     spp.plot <- facpan
     myso.flag <- isTRUE(as.logical(job$MYSO))
     if (myso.flag) spp.plot <- c(spp.plot, "Indiana Bat")
-    alldect.flag <- isTRUE(as.logical(job$Alldect))
+    alldect.flag <- isTRUE(as.logical(job$all.dectections))
     if (alldect.flag) {
       spp.plot <- c(spp.plot, "All detections")
       facpan <- c(facpan, "All detections")

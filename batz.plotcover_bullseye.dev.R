@@ -38,6 +38,20 @@
 # unqualified; it's redefined locally below ONLY so this dev script can run
 # standalone without loading the whole package - the final .R does NOT
 # redefine it.
+#
+# 2026-09-28 (later the same day): reference-workbook Change.to pass, per
+# Josh: "Several of the $name.standard have $Change.to values that have not
+# been changed, make those changes now or flag why they can not be made."
+# $canopy_cover -> $canopy.cover applied via a legacy-input-alias rename
+# (this function's own check.headers() is a plain setdiff(), NOT
+# canonicalize.headers(), so a dot-spelled catalog identifier would not
+# automatically match the underscore-only real raw header) - see the final
+# .R's roxygen @details, "Column identifier renamed, 2026-09-28", for the
+# full rationale (same precedent already used in
+# batz.merge_vetted.acoustics() for its own monitoringnight/serial
+# aliases). $understory_cover has NO pending Change.to and is deliberately
+# left as-is - a non-blocking sibling-consistency note only, not applied
+# here.
 # =============================================================================
 
 # REAL BUG found while building this: combining the 3 panels with the "+"
@@ -82,11 +96,55 @@ batz.plotcover_bullseye <- function(data, mic, aes.default, project.name = "new.
   names(data) <- standardize.headers(names(data))
   names(mic) <- standardize.headers(names(mic))
 
-  DATA.REQUIRED <- c("aru_label", "select_the_quadrant_you_are_assessing",
-                      "canopy_cover", "understory_cover")
-  MIC.REQUIRED <- c("aru_label", "microphone_height",
-                     "horizontal_microphone_orientation",
-                     "vertical_microphone_orientation")
+  ## Legacy input alias (2026-09-28, later the same day, see the header
+  ## comment above and the final .R's roxygen @details, "Column identifier
+  ## renamed, 2026-09-28"): the real raw spreadsheet header ("Canopy
+  ## cover") always standardizes to "canopy_cover" (underscore) -
+  ## standardize.headers() can never produce a dot - but this function's
+  ## own catalog identifier is now "canopy.cover" per Josh's
+  ## reference-workbook Change.to. Renamed here, in this function's own
+  ## working copy, before the required-header check below runs - same
+  ## idiom already used in batz.merge_vetted.acoustics() for its own
+  ## monitoringnight -> date.monitoringnight / serial -> aru.serial
+  ## aliases.
+  if ("canopy_cover" %in% names(data) && !("canopy.cover" %in% names(data))) {
+    names(data)[names(data) == "canopy_cover"] <- "canopy.cover"
+  }
+
+  ## Bugfix (2026-09-28, later still - see the final .R's roxygen
+  ## @details, "Bugfix: missing legacy-input aliases for the 2026-09-27
+  ## rename"): the 2026-09-27 round renamed DATA.REQUIRED's/
+  ## MIC.REQUIRED's aru_label -> aru.label and MIC.REQUIRED's
+  ## horizontal_microphone_orientation/microphone_height/
+  ## vertical_microphone_orientation to their dot-spelled forms, but never
+  ## added the accompanying legacy-input-alias rename that
+  ## canopy_cover -> canopy.cover (just above) DOES have - so those four
+  ## identifiers could never actually be satisfied by any real raw header,
+  ## since standardize.headers() can only ever produce underscores. Added
+  ## now, same idiom as the canopy_cover alias above.
+  if ("aru_label" %in% names(data) && !("aru.label" %in% names(data))) {
+    names(data)[names(data) == "aru_label"] <- "aru.label"
+  }
+  if ("aru_label" %in% names(mic) && !("aru.label" %in% names(mic))) {
+    names(mic)[names(mic) == "aru_label"] <- "aru.label"
+  }
+  if ("microphone_height" %in% names(mic) && !("microphone.height" %in% names(mic))) {
+    names(mic)[names(mic) == "microphone_height"] <- "microphone.height"
+  }
+  if ("horizontal_microphone_orientation" %in% names(mic) &&
+      !("microphone.orientation_horizontal" %in% names(mic))) {
+    names(mic)[names(mic) == "horizontal_microphone_orientation"] <- "microphone.orientation_horizontal"
+  }
+  if ("vertical_microphone_orientation" %in% names(mic) &&
+      !("microphone.orientation_vertical" %in% names(mic))) {
+    names(mic)[names(mic) == "vertical_microphone_orientation"] <- "microphone.orientation_vertical"
+  }
+
+  DATA.REQUIRED <- c("aru.label", "select_the_quadrant_you_are_assessing",
+                      "canopy.cover", "understory_cover")
+  MIC.REQUIRED <- c("aru.label", "microphone.height",
+                     "microphone.orientation_horizontal",
+                     "microphone.orientation_vertical")
   AES.DEFAULT.REQUIRED <- c("category", "parameter", "default.value")
   AES.DEFAULT.REQUIRED.PARAMETERS <- c(
     "radial.max", "radial.breaks", "quadrant.fill", "quadrant.color",
@@ -221,7 +279,7 @@ batz.plotcover_bullseye <- function(data, mic, aes.default, project.name = "new.
   ## 270 = straight down, 45 = up at an angle, 315 = down at an angle. Only
   ## these five angles have a matching icon image right now (mic_vert_000/
   ## 045/090/270/315.png in $icon.dir) - an ARU's actual
-  ## vertical_microphone_orientation value is matched to the NEAREST of
+  ## microphone.orientation_vertical value is matched to the NEAREST of
   ## these five (circular distance) rather than requiring an exact match -
   ## **assumption, please confirm with Josh**.
   ICON.ANGLES <- c(0, 45, 90, 270, 315)
@@ -231,7 +289,7 @@ batz.plotcover_bullseye <- function(data, mic, aes.default, project.name = "new.
   }
 
   data$quadrant.std <- tolower(trimws(data$select_the_quadrant_you_are_assessing))
-  data$canopy.value <- vapply(data$canopy_cover, parse.cover.value, numeric(1))
+  data$canopy.value <- vapply(data$canopy.cover, parse.cover.value, numeric(1))
   data$understory.value <- vapply(data$understory_cover, parse.cover.value, numeric(1))
 
   build.panel <- function(quad.values, panel.title, horiz.orient, title.size.override = NULL, axis.text.size.override = NULL) {
@@ -533,19 +591,19 @@ batz.plotcover_bullseye <- function(data, mic, aes.default, project.name = "new.
         xmin = bar.x - icon.width.x / 2, xmax = bar.x + icon.width.x / 2,
         ymin = mic.height - icon.height.m / 2, ymax = mic.height + icon.height.m / 2)
     } else {
-      warning(sprintf("No icon file found for vertical_microphone_orientation %s (nearest known angle %s) at '%s' - mic panel drawn without an icon",
+      warning(sprintf("No icon file found for microphone.orientation_vertical %s (nearest known angle %s) at '%s' - mic panel drawn without an icon",
                        vert.orient, icon.angle, icon.file))
     }
     p
   }
 
-  aru.labels <- unique(mic$aru_label)
+  aru.labels <- unique(mic$aru.label)
   result.plots <- list()
   result.ggplots <- list()
 
   for (aru in aru.labels) {
-    mic.row <- mic[mic$aru_label == aru, , drop = FALSE][1, ]
-    quad.rows <- data[data$aru_label == aru, , drop = FALSE]
+    mic.row <- mic[mic$aru.label == aru, , drop = FALSE][1, ]
+    quad.rows <- data[data$aru.label == aru, , drop = FALSE]
 
     missing.quad <- setdiff(QUADRANT.ORDER, quad.rows$quadrant.std)
     if (length(missing.quad) > 0) {
@@ -556,9 +614,9 @@ batz.plotcover_bullseye <- function(data, mic, aes.default, project.name = "new.
 
     canopy.values <- setNames(quad.rows$canopy.value, quad.rows$quadrant.std)[QUADRANT.ORDER]
     understory.values <- setNames(quad.rows$understory.value, quad.rows$quadrant.std)[QUADRANT.ORDER]
-    horiz.orient <- as.numeric(mic.row$horizontal_microphone_orientation)
-    vert.orient <- as.numeric(mic.row$vertical_microphone_orientation)
-    mic.height <- as.numeric(mic.row$microphone_height)
+    horiz.orient <- as.numeric(mic.row$microphone.orientation_horizontal)
+    vert.orient <- as.numeric(mic.row$microphone.orientation_vertical)
+    mic.height <- as.numeric(mic.row$microphone.height)
 
     ## Figure sizing, per Josh's fourteenth follow-up (2026-09-15) - see the
     ## final .R's roxygen @details, "Figure sizing" for the full precedence.
@@ -769,6 +827,42 @@ pcv <- function(x) {
 stopifnot(pcv("51_75") == 63, pcv("1_25") == 13, pcv("100") == 100, pcv("0") == 0,
           pcv("25-50") == 37.5)
 cat("parse.cover.value: OK (51_75->63, 1_25->13, 100->100, 0->0, 25-50->37.5)\n")
+
+cat("\n=== TEST 2b (round twenty-nine): legacy alias - a raw 'Canopy cover' header (standardizes to canopy_cover) is renamed to canopy.cover before the header check ===\n")
+## Confirms the check.headers()/DATA.REQUIRED path (which is a plain
+## setdiff(), NOT canonicalize.headers()) still accepts real, unmodified
+## raw input whose header text is exactly what Josh's spreadsheet exports
+## ("Canopy cover" -> standardize.headers() -> "canopy_cover") even though
+## DATA.REQUIRED now spells this identifier "canopy.cover".
+cover.data.raw.alias <- cover.data
+names(cover.data.raw.alias)[names(cover.data.raw.alias) == "Canopy Cover"] <- "Canopy cover"
+result.2b <- tryCatch(
+  batz.plotcover_bullseye(cover.data.raw.alias, mic.data, aes.default, dir.save = tempdir()),
+  error = function(e) { cat("UNEXPECTED ERROR:", conditionMessage(e), "\n"); NULL }
+)
+cat("Raw 'Canopy cover' header (-> canopy_cover after standardize.headers()) still satisfies canopy.cover requirement (expect no error, plots produced):",
+    !is.null(result.2b) && length(result.2b$plots) > 0, "\n")
+
+cat("\n=== TEST 2c (bugfix, 2026-09-28 later still): legacy aliases for the 2026-09-27 rename - aru_label/microphone_height/horizontal_microphone_orientation/vertical_microphone_orientation now actually reachable from real raw headers ===\n")
+## Before this bugfix, DATA.REQUIRED/MIC.REQUIRED's dot-spelled
+## aru.label/microphone.height/microphone.orientation_horizontal/
+## microphone.orientation_vertical could never be satisfied by ANY real
+## raw file - standardize.headers() only ever produces underscores, and
+## this function's check.headers() is a plain setdiff(), not
+## canonicalize.headers(). Confirms the real, human-readable headers
+## documented in the final .R's @param data/@param mic ("ARU Label",
+## "Microphone Height", "Horizontal Microphone Orientation", "Vertical
+## Microphone Orientation") now work end-to-end via the newly added
+## aliases, using cover.data/mic.data exactly as read from disk (which,
+## per this dev script's own real-file headers, already exercise this
+## path - so this is also implicitly re-confirmed by every other TEST in
+## this file that calls batz.plotcover_bullseye() successfully).
+result.2c <- tryCatch(
+  batz.plotcover_bullseye(cover.data, mic.data, aes.default, dir.save = tempdir()),
+  error = function(e) { cat("UNEXPECTED ERROR:", conditionMessage(e), "\n"); NULL }
+)
+cat("Real mic.csv/cover.csv raw headers satisfy aru.label/microphone.height/microphone.orientation_horizontal/microphone.orientation_vertical via the new aliases (expect no error, plots produced):",
+    !is.null(result.2c) && length(result.2c$plots) > 0, "\n")
 
 cat("\n=== TEST 3: missing quadrant should warn and skip, not error ===\n")
 bad.cover <- cover.data[cover.data$`Select the quadrant you are assessing` != "northwest", ]
@@ -1253,7 +1347,7 @@ cat(sprintf("(c) axis.title.y size (%.1fpt) matches axis.text.y/axis.text.x size
 ## (d) The Vertical Microphone Orientation icon is centered ON the bar's
 ## top edge (mic.height +/- icon.height.m/2), reverting the fifth
 ## follow-up's "entirely above" placement, per Josh: "move the mic png to
-## be centered at the top of the bar." Test ARU has microphone_height = 3
+## be centered at the top of the bar." Test ARU has microphone.height = 3
 ## (confirmed in TEST 11) and icon.height.m defaults to 1.
 mic.height.test.aru <- 3
 icon.height.m.default <- as.numeric(aes.default$default.value[aes.default$parameter == "icon.height.m"])

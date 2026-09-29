@@ -268,6 +268,32 @@
 #' \code{batname.format.out} literal - but no such call site was found
 #' anywhere in this package.
 #'
+#' \strong{Column identifiers renamed, 2026-09-27, per Josh's
+#' reference-workbook "Change.to" column.} Three of this function's own
+#' column identifiers are renamed to match Josh's tracked header-name
+#' workbook: \code{$lon} (an output-only column, produced by splitting
+#' \code{$lat}'s combined \code{"<lat> <lon>"} string - see "Once every
+#' file is merged..." above) is now \code{$longitude}; \code{$serial} (both
+#' an input-matching identifier and this function's own output column - see
+#' the 2026-08-30 follow-up above) is now \code{$aru.serial}; and the
+#' required raw-input identifier previously named \code{"monitoringnight"}
+#' in \code{expected.headers} (the standardized form of the real vetting-
+#' software header \code{"MonitoringNight"}) is now
+#' \code{"date.monitoringnight"} in \code{expected.headers} itself.
+#' \strong{Backward-compatible input aliasing:} because a real vetted-file
+#' export still literally has a header that standardizes to
+#' \code{"monitoringnight"} (never to \code{"date.monitoringnight"}) and
+#' \code{"serial"} (never to \code{"aru.serial"}), both OLD spellings are
+#' still accepted as raw-input aliases immediately after
+#' \code{standardize.headers()} runs, and (for \code{monitoringnight})
+#' renamed in-place to the new identifier before header validation/
+#' matching proceeds - mirroring this project's existing
+#' \code{standardize.headers()}/canonicalization convention elsewhere
+#' (e.g. the \code{long}/\code{X}/\code{Y} location aliasing in
+#' \code{\link{batz.merge_vetted.acoustics2}}). \code{$lon}/\code{$longitude}
+#' has no such alias concern, since it is never read from a raw file header
+#' at all - it is entirely computed internally by splitting \code{$lat}.
+#'
 #' @param dir.load Character, default \code{getwd()}. Directory to scan.
 #' @param load.pattern Character vector, default \code{c("*vetted.csv")}. A
 #'   wildcard/glob pattern (or vector of patterns) identifying which files to
@@ -358,7 +384,7 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
   ## software's own real column text, so it is standardized right along
   ## with incoming raw headers via the shared standardize.headers()
   ## helper - see @details "Header standardization" above.
-  expected.headers <- c("filename", "monitoringnight", "species_manual_id",
+  expected.headers <- c("filename", "date.monitoringnight", "species_manual_id",
                          "wa_kaleidoscope_auto_id", "sppaccp", "lat")
 
   regex.pattern <- paste(utils::glob2rx(load.pattern), collapse = "|")
@@ -380,17 +406,30 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
                      error = function(e) NULL)
     if (is.null(tmp)) { add.log(f, "could not read file", "none"); next }
     names(tmp) <- standardize.headers(names(tmp))
+    ## Column identifiers renamed 2026-09-27 (see @details, "Column
+    ## identifiers renamed" above): this function's own required raw-column
+    ## identifier is now "date.monitoringnight", but the real vetting-
+    ## software header ("MonitoringNight") still standardizes to the OLD
+    ## spelling "monitoringnight" - accepted here as a legacy input alias so
+    ## real incoming files keep matching.
+    if ("monitoringnight" %in% names(tmp) && !("date.monitoringnight" %in% names(tmp))) {
+      names(tmp)[names(tmp) == "monitoringnight"] <- "date.monitoringnight"
+    }
     missing.headers <- setdiff(expected.headers, names(tmp))
     if (length(missing.headers) > 0) {
       add.log(f, "mismatched headers", paste(missing.headers, collapse = ", ")); next
     }
     if (nrow(tmp) == 0) { add.log(f, "no records", "none"); next }
-    ## $serial is OPTIONAL (2026-08-30 follow-up), not one of the required
+    ## $aru.serial is OPTIONAL (2026-08-30 follow-up), not one of the required
     ## expected.headers - a file is never skipped for lacking it (e.g. a
     ## Mobile-transect export, which has no fixed instrument serial number at
     ## all). Captured BEFORE trimming to expected.headers below, exactly like
-    ## $sunregion, since that trim would otherwise silently drop it.
-    serial.vals <- if ("serial" %in% names(tmp)) as.character(tmp$serial) else
+    ## $sunregion, since that trim would otherwise silently drop it. The real
+    ## vetting-software header ("Serial") standardizes to the OLD spelling
+    ## "serial" - kept here as a legacy input alias (renamed 2026-09-27, see
+    ## @details, "Column identifiers renamed" above) while this function's
+    ## own internal/output column is now $aru.serial.
+    aru.serial.vals <- if ("serial" %in% names(tmp)) as.character(tmp$serial) else
       rep(NA_character_, nrow(tmp))
     ## $sunregion is OPTIONAL, not one of the required expected.headers - a
     ## file is never skipped for lacking it. If a file's own (standardized)
@@ -402,7 +441,7 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
     sunregion.vals <- if ("sunregion" %in% names(tmp)) as.character(tmp$sunregion) else
       rep(NA_character_, nrow(tmp))
     tmp <- tmp[, expected.headers, drop = FALSE]
-    tmp$serial <- serial.vals
+    tmp$aru.serial <- aru.serial.vals
     tmp$sunregion <- sunregion.vals
     vetted.merged <- rbind(vetted.merged, tmp)
   }
@@ -427,16 +466,17 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
     ## --- rename, reorder, call.datetime, recode.names, manid.kp/sb
     ## fill-in, trim.noise/trim.noid - see @details above -----------------
 
-    ## positional rename ($sunregion, appended right after $serial back in
-    ## the per-file loop above, keeps its own name here - no rename needed)
+    ## positional rename ($sunregion, appended right after $aru.serial back
+    ## in the per-file loop above, keeps its own name here - no rename
+    ## needed)
     names(vetted.merged) <- c("filename", "date.monitoringnight", "manid", "autoid.kp",
-                               "autoid.sb", "lat", "serial", "sunregion", "lon",
+                               "autoid.sb", "lat", "aru.serial", "sunregion", "longitude",
                                "aru.name", "date", "time")
 
     ## reorder ($sunregion placed with the other detector-level columns,
-    ## next to $serial/$aru.name)
+    ## next to $aru.serial/$aru.name)
     vetted.merged <- vetted.merged[, c("filename", "date.monitoringnight", "aru.name",
-                                        "serial", "sunregion", "lat", "lon",
+                                        "aru.serial", "sunregion", "lat", "longitude",
                                         "manid", "autoid.kp", "autoid.sb",
                                         "date", "time")]
 

@@ -29,9 +29,17 @@
 #' @param groupby.date Character, default \code{"monnight"}. Name of the
 #'   column in \code{data} holding the monitoring-night date - matches this
 #'   parameter's name in \code{\link{batz.generate_plotframe.bat}}.
-#' @param trim.noid Logical, default \code{TRUE}. Drop rows where the
-#'   \code{spp.id} column reads \code{"NoID"} (case-insensitive) before
-#'   counting/plotting.
+#' @param trim.noid Logical, default \code{FALSE}. Same \code{$spp.id}-blank-
+#'   handling/removal behavior as \code{\link{batz.generate_plotframe.bat}}
+#'   (see Details, "trim.noid matched to batz.generate_plotframe.bat"): a
+#'   blank \code{spp.id} value is normally filled in as the literal
+#'   \code{"NOID"}; when \code{spp.id} is still this function's own default
+#'   (\code{"kpauto"}) and \code{trim.noid = TRUE}, those blank-valued rows
+#'   are removed from \code{data} entirely instead. Separately, whenever
+#'   \code{trim.noid = TRUE}, any row whose \code{spp.id} column reads
+#'   \code{"NoID"} (case-insensitive) - whether already literally
+#'   \code{"NoID"} in the raw data, or just filled in above - is dropped
+#'   before counting/plotting.
 #' @param date.start,date.end A Date, or a character string in
 #'   \code{"YYYY-MM-DD"}/\code{"MM/DD/YYYY"} form, or \code{NULL} (the
 #'   default for both). When either is \code{NULL}, both default to July 1
@@ -332,6 +340,37 @@
 #' twenty-three/twenty-four/twenty-five) has been trying to resolve - the
 #' entire point of Josh's collaborator-consistency request.
 #'
+#' \strong{trim.noid matched to batz.generate_plotframe.bat, 2026-09-28, per
+#' Josh: "trim.noid should operate the same way as
+#' batz.generate_plotframe.bat".} Previously, \code{trim.noid} defaulted to
+#' \code{TRUE} and only did one thing: drop any row whose \code{spp.id}
+#' column already read \code{"NoID"} (case-insensitive) - it never looked
+#' at blank/missing \code{spp.id} values at all. \code{\link{batz.generate_plotframe.bat}}
+#' handles blanks explicitly: a blank \code{spp.id} value is normally
+#' filled in as the literal \code{"NOID"} (kept, not dropped), UNLESS
+#' \code{spp.id} is still that function's own default (\code{"manid.sb"})
+#' AND \code{trim.noid = TRUE}, in which case those blank-valued rows are
+#' removed entirely instead of being filled in. That same blank-handling
+#' block is now ported here, adapted to this function's own default
+#' \code{spp.id} value (\code{"kpauto"}, not \code{"manid.sb"} -
+#' \strong{a judgment call, flagged}: the ported condition tests whether
+#' \code{spp.id} is still at THIS function's own default, i.e.
+#' \code{identical(spp.id, "kpauto")}, preserving the "still at default"
+#' semantic \code{batz.generate_plotframe.bat} itself established, rather
+#' than literally testing against the string \code{"manid.sb"}, which has
+#' no meaning for this function and would never fire), and runs BEFORE the
+#' existing literal-\code{"NoID"}-removal step (which is unchanged, and
+#' still fires whenever \code{trim.noid = TRUE}, catching both pre-existing
+#' literal \code{"NoID"} values and any blanks the fallback branch just
+#' filled in as \code{"NOID"}). \strong{\code{trim.noid}'s own default was
+#' also changed from \code{TRUE} to \code{FALSE}}, to match
+#' \code{batz.generate_plotframe.bat}'s own default (see that function's
+#' own \code{@details} entry, "Standardized 2026-08-29, per Josh: two
+#' parameter defaults changed for consistency") - this is a real behavior
+#' change for any existing caller relying on the old \code{TRUE} default to
+#' silently drop \code{NoID}/blank rows; such callers now need to pass
+#' \code{trim.noid = TRUE} explicitly.
+#'
 #' @seealso \code{\link{batz.plotactivity_heatmap}}, which takes this
 #'   function's own \code{$data} return value (or any data frame shaped the
 #'   same way) as its own \code{data} input.
@@ -364,7 +403,7 @@ batz.plotactivity_daily.count <- function(data,
                                            spp.id = "kpauto",
                                            filename.col = "filename",
                                            groupby.date = "monnight",
-                                           trim.noid = TRUE,
+                                           trim.noid = FALSE,
                                            date.start = NULL,
                                            date.end = NULL,
                                            aes.default,
@@ -444,11 +483,29 @@ batz.plotactivity_daily.count <- function(data,
     val
   }
 
-  # --- trim.noid: drops rows whose spp.id column reads "noid" (case-
-  # insensitive). Same parameter name/meaning as
-  # batz.generate_plotframe.bat()/batz.merge_vetted.acoustics2()'s own
-  # $trim.noid, per this project's cross-function parameter-naming
-  # convention. ---
+  # --- trim.noid: same $spp.id-blank-handling/removal behavior as
+  # batz.generate_plotframe.bat() - see @details, "trim.noid matched to
+  # batz.generate_plotframe.bat" (2026-09-28, per Josh). A blank $spp.id
+  # value is normally filled in with the literal "NOID", UNLESS $spp.id is
+  # still this function's own default ("kpauto") AND trim.noid = TRUE, in
+  # which case those blank-valued rows are removed from `data` entirely
+  # instead of being filled in. ---
+  spp.id.vals <- as.character(data[[spp.id]])
+  is.blank.spp.id <- is.na(spp.id.vals) | !nzchar(trimws(spp.id.vals))
+  if (identical(spp.id, "kpauto") && isTRUE(trim.noid)) {
+    data <- data[!is.blank.spp.id, , drop = FALSE]
+    spp.id.vals <- spp.id.vals[!is.blank.spp.id]
+  } else {
+    spp.id.vals[is.blank.spp.id] <- "NOID"
+  }
+  data[[spp.id]] <- spp.id.vals
+
+  # --- Then, whenever trim.noid = TRUE, drop any row whose $spp.id reads
+  # "noid" (case-insensitive) - catches both pre-existing literal "NoID"
+  # values and any blanks the fallback branch above just filled in. Same
+  # parameter name/meaning as batz.generate_plotframe.bat()/
+  # batz.merge_vetted.acoustics2()'s own $trim.noid, per this project's
+  # cross-function parameter-naming convention. ---
   if (isTRUE(trim.noid)) {
     n.before <- nrow(data)
     data <- data[!tolower(trimws(as.character(data[[spp.id]]))) %in% "noid", , drop = FALSE]

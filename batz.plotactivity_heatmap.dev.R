@@ -6,6 +6,11 @@
 # session). Exercises both a standalone synthetic $monnight.date/$time data
 # frame AND the real chained use case: feeding
 # batz.plotactivity_daily.count()'s own $data straight in.
+#
+# RENAMED, 2026-09-27, per Josh's reference-workbook "Change.to" column: the
+# returned $data grid's detection-count column, $n, is renamed to
+# $observations.count throughout this script's checks below. $n.capped (a
+# separate, internal clamped-fill-value column) is untouched.
 # =============================================================================
 
 source("batz.util_standardize.headers.R")
@@ -43,28 +48,28 @@ cat("\n\n########## TEST 3: basic run, default bin.minutes = 30 (48 bins) ######
 result3 <- batz.plotactivity_heatmap(data.synth, aes.default = aes.default.heatmap, dir.save = tempdir())
 cat("Distinct nights x bins in $data (expected", length(unique(data.synth$monnight.date)) * 48, "):", nrow(result3$data), "\n")
 cat("Every bin present per night (expected TRUE):", all(table(result3$data$monnight.date) == 48), "\n")
-cat("Total counted observations preserved (expected", n.rows, "):", sum(result3$data$n), "\n")
+cat("Total counted observations preserved (expected", n.rows, "):", sum(result3$data$observations.count), "\n")
 
 cat("\n\n########## TEST 4: monitoring-night re-anchoring - noon=0, midnight=n.bins/2 ##########\n")
 noon.test <- data.frame(monnight.date = as.Date("2026-04-01"), time = "12:00:00", stringsAsFactors = FALSE)
 midnight.test <- data.frame(monnight.date = as.Date("2026-04-01"), time = "00:00:00", stringsAsFactors = FALSE)
 r.noon <- batz.plotactivity_heatmap(noon.test, aes.default = aes.default.heatmap, dir.save = tempdir())
 r.midnight <- batz.plotactivity_heatmap(midnight.test, aes.default = aes.default.heatmap, dir.save = tempdir())
-cat("Noon (12:00:00) lands in bin 0 (expected TRUE):", r.noon$data$bin.index[r.noon$data$n == 1] == 0, "\n")
-cat("Midnight (00:00:00) lands in bin 24 = n.bins/2 (expected TRUE):", r.midnight$data$bin.index[r.midnight$data$n == 1] == 24, "\n")
+cat("Noon (12:00:00) lands in bin 0 (expected TRUE):", r.noon$data$bin.index[r.noon$data$observations.count == 1] == 0, "\n")
+cat("Midnight (00:00:00) lands in bin 24 = n.bins/2 (expected TRUE):", r.midnight$data$bin.index[r.midnight$data$observations.count == 1] == 24, "\n")
 
 cat("\n\n########## TEST 5: bin.minutes = 60 gives 24 bins, midnight = bin 12 ##########\n")
 r.60 <- batz.plotactivity_heatmap(midnight.test, bin.minutes = 60, aes.default = aes.default.heatmap, dir.save = tempdir())
 cat("24 bins total (expected TRUE):", length(unique(r.60$data$bin.index)) == 24, "\n")
-cat("Midnight lands in bin 12 (expected TRUE):", r.60$data$bin.index[r.60$data$n == 1] == 12, "\n")
+cat("Midnight lands in bin 12 (expected TRUE):", r.60$data$bin.index[r.60$data$observations.count == 1] == 12, "\n")
 
 cat("\n\n########## TEST 6: fill is clamped at $fill.max, not literally squished by scales:: ##########\n")
 hot.night <- data.frame(monnight.date = rep(as.Date("2026-04-05"), 500), time = "20:00:00", stringsAsFactors = FALSE)
 r6 <- batz.plotactivity_heatmap(hot.night, aes.default = aes.default.heatmap, dir.save = tempdir())
-cat("Raw $n for the hot bin (expected 500):", max(r6$data$n), "\n")
+cat("Raw $observations.count for the hot bin (expected 500):", max(r6$data$observations.count), "\n")
 built6 <- ggplot2::ggplot_build(r6$ggplot)
 cat("Rendered fill value is capped (max mapped fill <= fill.max=100, expected TRUE):",
-    max(built6$data[[1]]$fill_val_check <- pmin(r6$data$n, 100)) <= 100, "\n")
+    max(built6$data[[1]]$fill_val_check <- pmin(r6$data$observations.count, 100)) <= 100, "\n")
 
 cat("\n\n########## TEST 7: aes.style override (round-nineteen mechanism) ##########\n")
 aes.default.override <- aes.default.heatmap
@@ -104,7 +109,7 @@ daily.result <- batz.plotactivity_daily.count(raw.rows, date.start = "2026-03-01
 chained.result <- batz.plotactivity_heatmap(daily.result$data, aes.default = aes.default.heatmap, dir.save = tempdir())
 cat("Chained heatmap built successfully, $data rows:", nrow(chained.result$data), "\n")
 cat("Total counted observations match daily.count's own filtered row count (expected TRUE):",
-    sum(chained.result$data$n) == nrow(daily.result$data), "\n")
+    sum(chained.result$data$observations.count) == nrow(daily.result$data), "\n")
 
 cat("\n\n########## TEST 11: filename collision bugfix - same project.name/site.label, same second ##########\n")
 dir.save.collision <- file.path(tempdir(), paste0("collision_test_", format(Sys.time(), "%Y%m%d%H%M%OS3")))

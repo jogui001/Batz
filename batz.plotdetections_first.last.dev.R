@@ -58,6 +58,16 @@
 # have masked this, since it deliberately drops a `data` column - but every
 # other test would have hit the NEW error instead of exercising real
 # behavior). Updated below to match; no other behavior changed.
+#
+# Follow-up, 2026-09-27, per Josh's reference-workbook "Change.to" column
+# (same rename applied to the shipped `.R` file's own @details/code - see
+# that file's "Column identifiers renamed, 2026-09-27..." entry): this
+# script's synthetic `fig.list` fixture's `$Alldect` column, its own
+# `FIG.LIST.REQUIRED` entry, and its own copy of the function's
+# `job$Alldect`/`alldect.flag` reference are all now `all.dectections`
+# (Josh's own spelling, kept exactly as given). `$aru`->`$aru.name` needed
+# no further change here - this script's `suntimes.synth`/`SUNTIMES.REQUIRED`
+# already used `aru.name` (see the 2026-09-26 follow-up above).
 # =============================================================================
 
 source("batz.batusa_recode.names.R")
@@ -172,21 +182,21 @@ suntimes.synth <- do.call(rbind, lapply(seq_along(test.dates), function(i) {
 }))
 
 aru.metadata.db.synth <- data.frame(
-  plot.type      = "bat.detection",
-  plot.name      = "Test Site",
-  facet          = "sppid",
-  facet.set      = "NE",
-  MYSO           = FALSE,
-  Alldect        = TRUE,
-  facet.panel    = "",
-  "40khzmyo"     = TRUE,
-  facet.label    = "common",
-  plot.set       = "WTG-GOM102",
-  date.format    = "%b-%d/n%Y",
-  date.start     = format(date.start.synth, "%m/%d/%Y"),
-  date.end       = format(date.end.synth, "%m/%d/%Y"),
-  xaxe.interval  = 4,
-  xaxe.title     = "Date",
+  plot.type       = "bat.detection",
+  plot.name       = "Test Site",
+  facet           = "sppid",
+  facet.set       = "NE",
+  MYSO            = FALSE,
+  all.dectections = TRUE,
+  facet.panel     = "",
+  "40khzmyo"      = TRUE,
+  facet.label     = "common",
+  plot.set        = "WTG-GOM102",
+  date.format     = "%b-%d/n%Y",
+  date.start      = format(date.start.synth, "%m/%d/%Y"),
+  date.end        = format(date.end.synth, "%m/%d/%Y"),
+  xaxe.interval   = 4,
+  xaxe.title      = "Date",
   check.names = FALSE,
   stringsAsFactors = FALSE
 )
@@ -232,7 +242,7 @@ SUNTIMES.REQUIRED <- c("aru.name", "date", "date.monitoringnight", "sunregion", 
                            "sunset.unix", "sunrise", "sunrise.unix", "sunrise.monitoringnight",
                            "sunrise.monitoringnight.unix")
 FIG.LIST.REQUIRED <- c("plot.type", "plot.name", "facet", "facet.set", "MYSO",
-                               "Alldect", "facet.panel", "40khzmyo", "facet.label",
+                               "all.dectections", "facet.panel", "40khzmyo", "facet.label",
                                "plot.set", "date.format", "date.start", "date.end",
                                "xaxe.interval", "xaxe.title")
 AES.DEFAULT.REQUIRED <- c("category", "parameter", "default.value")
@@ -393,7 +403,7 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
     myso.flag <- isTRUE(as.logical(job$MYSO))
     if (myso.flag) spp.plot <- c(spp.plot, "Indiana Bat")
 
-    alldect.flag <- isTRUE(as.logical(job$Alldect))
+    alldect.flag <- isTRUE(as.logical(job$all.dectections))
     if (alldect.flag) {
       spp.plot <- c(spp.plot, "All detections")
       facpan   <- c(facpan, "All detections")
@@ -677,7 +687,7 @@ if (length(result3$plots) > 0) {
 cat("\n\n########## TEST 4: MYSO/40khzmyo-without-Alldect flag handling ##########\n")
 aru.metadata.db.test4 <- aru.metadata.db.synth
 aru.metadata.db.test4$MYSO <- TRUE
-aru.metadata.db.test4$Alldect <- FALSE
+aru.metadata.db.test4$all.dectections <- FALSE
 result4 <- batz.plotdetections_first.last(
   data = plot.data.synth,
   fig.list = aru.metadata.db.test4,

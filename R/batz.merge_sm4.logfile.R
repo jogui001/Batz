@@ -5,8 +5,9 @@
 #' (\code{"*_A_Summary.txt"}/\code{"*_B_Summary.txt"}), validates each
 #' file's headers, and merges them into one standardized master data frame:
 #' the ARU name is extracted from the file name, \code{$date} is normalized
-#' to \code{YYYY-MM-DD}, and \code{$lat}/\code{$ns} and \code{$lon}/\code{$ew}
-#' are converted to signed decimal degrees (\code{$Y}/\code{$X}).
+#' to \code{YYYY-MM-DD}, and \code{$lat}/\code{$ns} and
+#' \code{$longitude}/\code{$ew} are converted to signed decimal degrees
+#' (\code{$Y}/\code{$X}).
 #'
 #' @param dir.load Character. Directory to search for files matching
 #'   \code{load.pattern}. Default \code{getwd()}.
@@ -23,7 +24,7 @@
 #'   return (and auto-assign) \code{sm4logs.merged_log.file}: one row per
 #'   file examined (whether it was successfully merged in or not; per
 #'   Josh's 2026-09-22 redesign of this parameter - see \code{@details}),
-#'   with columns \code{$aru.name}, \code{$file.name}, \code{$date.start},
+#'   with columns \code{$aru.name}, \code{$filename}, \code{$date.start},
 #'   \code{$date.end}, \code{$date.unique}, \code{$date.range},
 #'   \code{$records}, \code{$load.status} (\code{"Success"}/\code{"Failure"}),
 #'   \code{$reason}, and \code{$filepath}.
@@ -52,16 +53,17 @@
 #' \code{ew}, \code{POWER(V)} -> \code{power_v}, \code{TEMP(C)} ->
 #' \code{temp_c}, \code{#FILES} -> \code{files}, \code{#SCRUBBED} ->
 #' \code{scrubbed}, \code{MIC0 TYPE} -> \code{mic0_type}. Since these are the
-#' exact columns kept (and renamed to nothing else) in \code{sm4logs.merged},
-#' this is a real, visible change in that returned data frame's own column
-#' names - anyone with existing code reading \code{sm4logs.merged$DATE},
-#' \code{$NS}, \code{$EW}, etc. by the old upper-case/punctuated names will
-#' need to switch to the new standardized ones. \strong{This does NOT
-#' affect \code{$aru.name}, \code{$X}, or \code{$Y}} - none of the three is
-#' a header loaded from any file: \code{aru.name} is parsed from the file's
-#' own NAME, and \code{X}/\code{Y} are this function's own derived/computed
-#' columns, so all three keep their existing names per this project's
-#' ordinary output convention.
+#' exact columns kept (and renamed to nothing else, aside from the further
+#' \code{lon} -> \code{longitude} output rename documented below) in
+#' \code{sm4logs.merged}, this is a real, visible change in that returned
+#' data frame's own column names - anyone with existing code reading
+#' \code{sm4logs.merged$DATE}, \code{$NS}, \code{$EW}, etc. by the old
+#' upper-case/punctuated names will need to switch to the new standardized
+#' ones. \strong{This does NOT affect \code{$aru.name}, \code{$X}, or
+#' \code{$Y}} - none of the three is a header loaded from any file:
+#' \code{aru.name} is parsed from the file's own NAME, and \code{X}/\code{Y}
+#' are this function's own derived/computed columns, so all three keep
+#' their existing names per this project's ordinary output convention.
 #'
 #' \strong{Header validation:} a file must have all 11 expected columns
 #' (now matched by their standardized spellings, case-insensitively and
@@ -82,13 +84,13 @@
 #' month-name lookup rather than \code{strptime}'s locale-dependent
 #' \code{\%b}.
 #'
-#' \strong{Coordinate conversion:} \code{$lat}/\code{$lon} in the real data
-#' are already plain decimal degrees, so \code{$Y}/\code{$X} are produced by
-#' applying the correct sign from the hemisphere letter only (\code{"s"} ->
-#' negative \code{$Y}, \code{"w"} -> negative \code{$X}) - not a
-#' degrees-minutes-seconds parse. The original \code{$lat}/\code{$ns}/
-#' \code{$lon}/\code{$ew} columns are kept alongside the new \code{$Y}/
-#' \code{$X} columns, not replaced.
+#' \strong{Coordinate conversion:} \code{$lat}/\code{$longitude} in the real
+#' data are already plain decimal degrees, so \code{$Y}/\code{$X} are
+#' produced by applying the correct sign from the hemisphere letter only
+#' (\code{"s"} -> negative \code{$Y}, \code{"w"} -> negative \code{$X}) -
+#' not a degrees-minutes-seconds parse. The original
+#' \code{$lat}/\code{$ns}/\code{$longitude}/\code{$ew} columns are kept
+#' alongside the new \code{$Y}/\code{$X} columns, not replaced.
 #'
 #' \strong{Follow-up, 2026-09-22, per Josh - \code{log.file} completely
 #' redesigned.} Previously, \code{sm4logs.merged_log.file} only had a row
@@ -98,7 +100,7 @@
 #' \code{log.file = TRUE}) now has exactly one row per file matched by
 #' \code{load.pattern}, with columns \code{$aru.name} (always set, parsed
 #' from the file name the same way as \code{sm4logs.merged}'s own
-#' \code{$aru.name}), \code{$file.name} (the file's base name, always set),
+#' \code{$aru.name}), \code{$filename} (the file's base name, always set),
 #' \code{$filepath} (always set), \code{$load.status} (\code{"Success"} if
 #' the file had all 11 expected headers AND at least one data row,
 #' \code{"Failure"} otherwise), \code{$reason} (Josh's literal text: for a
@@ -133,6 +135,16 @@
 #' only schema (skipped-files only) needs to be updated for the new
 #' 10-column, one-row-per-file schema.
 #'
+#' @details
+#' \strong{Column identifiers renamed, 2026-09-27, per Josh's
+#' reference-workbook "Change.to" column.} In \code{sm4logs.merged_log.file}
+#' (returned when \code{log.file = TRUE}): \code{file.name} ->
+#' \code{filename}. In \code{sm4logs.merged}: the standardized input column
+#' \code{lon} -> \code{longitude} - header-presence validation against the
+#' SM4 device's own real \code{LON} export text is unchanged (that raw
+#' export text still standardizes to \code{lon} internally for matching
+#' purposes), only the merged output's column spelling changes.
+#'
 #' @examples
 #' \dontrun{
 #' batz.merge_sm4.logfile()
@@ -155,9 +167,20 @@ batz.merge_sm4.logfile <- function(dir.load = getwd(),
   ## expected-header list is a literal, uninvented copy of the SM4 device's
   ## own real export column text, so it's rewritten here to the standardized
   ## spellings that raw file headers will also be run through below - see
-  ## @details "Header standardization" above.
+  ## @details "Header standardization" above. This list is used ONLY for
+  ## matching against real files' own (standardize.headers()-only) spelling
+  ## - "lon" is what the device's real "LON" header standardizes to, and
+  ## that never changes; the output-facing rename to "longitude" (see
+  ## @details "Column identifiers renamed" above) is applied separately via
+  ## output.headers below, after a file has already been matched.
   expected.headers <- standardize.headers(c("DATE", "TIME", "LAT", "NS", "LON", "EW",
                                              "POWER(V)", "TEMP(C)", "#FILES", "#SCRUBBED", "MIC0 TYPE"))
+
+  ## Column identifiers renamed, 2026-09-27, per Josh's reference-workbook
+  ## "Change.to" column: the standardized "lon" column is renamed to
+  ## "longitude" in the merged output. See @details above.
+  output.headers <- expected.headers
+  output.headers[output.headers == "lon"] <- "longitude"
 
   month.lookup <- c(jan = "01", feb = "02", mar = "03", apr = "04", may = "05", jun = "06",
                      jul = "07", aug = "08", sep = "09", oct = "10", nov = "11", dec = "12")
@@ -181,11 +204,11 @@ batz.merge_sm4.logfile <- function(dir.load = getwd(),
 
   ## per-file log row builder (per Josh, 2026-09-22 log.file redesign) - see
   ## @details "Follow-up, 2026-09-22" above for the full column semantics.
-  make.log.row <- function(aru.name, file.name, filepath, load.status, reason,
+  make.log.row <- function(aru.name, filename, filepath, load.status, reason,
                             date.start = NA_character_, date.end = NA_character_,
                             date.unique = NA_integer_, date.range = NA_integer_,
                             records = NA_integer_) {
-    data.frame(aru.name = aru.name, file.name = file.name,
+    data.frame(aru.name = aru.name, filename = filename,
                date.start = date.start, date.end = date.end,
                date.unique = date.unique, date.range = date.range,
                records = records, load.status = load.status, reason = reason,
@@ -228,6 +251,11 @@ batz.merge_sm4.logfile <- function(dir.load = getwd(),
     }
 
     tmp <- raw[expected.headers]
+    ## Column identifiers renamed, 2026-09-27 - see @details "Column
+    ## identifiers renamed" above: rename the standardized "lon" column to
+    ## "longitude" now that the file has been matched/subset by the
+    ## device-literal expected.headers spelling.
+    names(tmp) <- output.headers
     for (cn in names(tmp)) if (is.character(tmp[[cn]])) tmp[[cn]] <- trimws(tmp[[cn]])
 
     tmp$aru.name <- file.aru.name
@@ -237,9 +265,9 @@ batz.merge_sm4.logfile <- function(dir.load = getwd(),
     ns <- tolower(trimws(tmp$ns))
     ew <- tolower(trimws(tmp$ew))
     tmp$Y <- ifelse(ns == "s", -as.numeric(tmp$lat), as.numeric(tmp$lat))
-    tmp$X <- ifelse(ew == "w", -as.numeric(tmp$lon), as.numeric(tmp$lon))
+    tmp$X <- ifelse(ew == "w", -as.numeric(tmp$longitude), as.numeric(tmp$longitude))
 
-    tmp <- tmp[c("aru.name", expected.headers, "X", "Y")]
+    tmp <- tmp[c("aru.name", output.headers, "X", "Y")]
 
     ## per-file date summary (per Josh, 2026-09-22 log.file redesign) - see
     ## @details "Follow-up, 2026-09-22" above.
@@ -291,7 +319,7 @@ batz.merge_sm4.logfile <- function(dir.load = getwd(),
   sm4logs.merged_log.file <- if (length(log.rows) > 0) {
     do.call(rbind, log.rows)
   } else {
-    data.frame(aru.name = character(0), file.name = character(0),
+    data.frame(aru.name = character(0), filename = character(0),
                date.start = character(0), date.end = character(0),
                date.unique = integer(0), date.range = integer(0),
                records = integer(0), load.status = character(0),

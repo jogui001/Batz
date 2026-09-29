@@ -69,8 +69,9 @@
 #
 # NEW FEATURE (2026-08-18, per Josh): optional log.file = FALSE. When TRUE,
 # an additional data frame called arumeta.mergelog is added to the returned
-# list, with one row per deletion/merge action taken (columns: $inputfile,
-# $event, $action, $count). See assumption 12.
+# list, with one row per deletion/merge action taken (columns: $filename,
+# $event.type, $action, $count - renamed 2026-09-27, see the STANDARDIZED-
+# style rename note near the end of this header comment). See assumption 12.
 #
 # NEW FEATURE (2026-08-18, per Josh): after assigning the function's result
 # to a variable, aru.visit/aru.quad/aru.20m/arumeta.mergelog only existed
@@ -102,6 +103,14 @@
 # assumption 14 below, and the real column-name checks in the "aru.visit
 # real data check" test section further down, which were updated to the new
 # standardized names (e.g. "Site Name" -> "site_name").
+#
+# RENAMED (2026-09-27, per Josh's reference-workbook "Change.to" column):
+# in the arumeta.mergelog log data frame (log.file = TRUE), $event ->
+# $event.type, and $inputfile -> $filename. This is purely a rename of the
+# log data frame's own two column identifiers (and the add.log() helper's
+# matching parameter names) - it does not touch any of the general prose
+# uses of the word "event"/"events" elsewhere in this comment header or in
+# the function's own console messages, none of which refer to this column.
 #
 # ASSUMPTIONS / OPEN QUESTIONS (flagging per project convention - see the
 # message accompanying this script for the specific ones I'm asking Josh to
@@ -181,7 +190,7 @@
 #      sheet would never line up as the same column across sources. This
 #      BOM-stripping step runs first, before header standardization. Not
 #      explicitly requested, but an obviously-correct fix once noticed.
-#  12. log.file / arumeta.mergelog: interpreted "$inputfile = name of file the
+#  12. log.file / arumeta.mergelog: interpreted "$filename = name of file the
 #      event happened to" literally, which required tracking row-level
 #      provenance. Every source's rows get a hidden `.source.file` column when
 #      first read (stripped back out before any data frame is returned); when
@@ -189,9 +198,9 @@
 #      are tallied by which source file they came from, so
 #      e.g. "HabitatAssessments_quad.csv" and "2HabitatAssessments_quad.csv"
 #      get logged separately rather than lumping the event under the category
-#      name. For duplicate COLUMN events, $inputfile is the source label
+#      name. For duplicate COLUMN events, $filename is the source label
 #      already used in the console messages (filename, or
-#      "filename [sheet: sheetname]" for an xlsx sheet). $event is either
+#      "filename [sheet: sheetname]" for an xlsx sheet). $event.type is either
 #      "duplicated row" or "duplicated column" (Josh's literal wording).
 #      $action is "deletion" (identical copies, extras just dropped) or
 #      "merging" (content differed, combined into one). $count is the number
@@ -203,6 +212,8 @@
 #      log, rather than a row saying "0". `arumeta.mergelog` is only added to
 #      the returned list when log.file = TRUE (so existing callers that use
 #      log.file = FALSE, the default, see no change to the return shape).
+#      ($filename/$event.type renamed 2026-09-27 from $inputfile/$event - see
+#      the RENAMED note above.)
 #  13. Auto-assign into caller's environment (per Josh, 2026-08-18): after
 #      building `result`, the function now loops over its (non-NULL) elements
 #      and calls assign(name, value, envir = parent.frame()) for each one, so
@@ -253,10 +264,10 @@ batz.merge_aru.meta <- function(dir.load = getwd(),
   pattern.regex <- function(p) paste(vapply(p, utils::glob2rx, character(1)), collapse = "|")
 
   log.rows <- list()
-  add.log <- function(inputfile, event, action, count) {
+  add.log <- function(filename, event.type, action, count) {
     if (!log.file || count <= 0) return(invisible(NULL))
     log.rows[[length(log.rows) + 1]] <<- data.frame(
-      inputfile = inputfile, event = event, action = action, count = as.integer(count),
+      filename = filename, event.type = event.type, action = action, count = as.integer(count),
       stringsAsFactors = FALSE)
   }
 
@@ -407,7 +418,7 @@ batz.merge_aru.meta <- function(dir.load = getwd(),
     result$arumeta.mergelog <- if (length(log.rows) > 0) {
       do.call(rbind, log.rows)
     } else {
-      data.frame(inputfile = character(0), event = character(0),
+      data.frame(filename = character(0), event.type = character(0),
                  action = character(0), count = integer(0), stringsAsFactors = FALSE)
     }
   }
