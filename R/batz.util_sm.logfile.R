@@ -1,6 +1,6 @@
 #' Internal engine shared by the SM log-file merge functions
 #'
-#' Shared by \code{batz.merge_sm4.logfile()}, \code{batz.merge_sm5.logfile()}
+#' Shared by \code{batz.merge_sm4.logfiles()}, \code{batz.merge_sm5.logfiles()}
 #' and \code{batz.merge_sm.logfiles()} (added 2026-09-29, per Josh), so all
 #' three read, identify, convert and log files the same way.
 #'
@@ -102,8 +102,8 @@ sm.logfile.merge <- function(dir.load, dir.sub, load.pattern, duplicates.remove,
   }
 
   other.fn <- function(v) {
-    if (v == "SM4") "batz.merge_sm4.logfile() or batz.merge_sm.logfiles()"
-    else "batz.merge_sm5.logfile() or batz.merge_sm.logfiles()"
+    if (v == "SM4") "batz.merge_sm4.logfiles() or batz.merge_sm.logfiles()"
+    else "batz.merge_sm5.logfiles() or batz.merge_sm.logfiles()"
   }
 
   process.one.file <- function(f) {

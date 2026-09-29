@@ -5,8 +5,8 @@
 #' or an SM5 (firmware 1.5 or earlier, or 1.6 or later) wrote it, and
 #' merges each version into its own data frame: \code{SM4},
 #' \code{SM5_1.5}, \code{SM5_1.6}. Same inputs, conversions and log
-#' schema as \code{batz.merge_sm4.logfile()} and
-#' \code{batz.merge_sm5.logfile()}.
+#' schema as \code{batz.merge_sm4.logfiles()} and
+#' \code{batz.merge_sm5.logfiles()}.
 #'
 #' @param dir.load Character. Directory to search for files matching
 #'   \code{load.pattern}. Default \code{getwd()}.
@@ -36,12 +36,12 @@
 #'   \code{$longitude}, \code{$ew}, \code{$power_v}, \code{$temp_c},
 #'   \code{$files}, \code{$scrubbed}, \code{$mic0_type}, \code{$X},
 #'   \code{$Y}. \code{SM5_1.5}/\code{SM5_1.6} are as documented in
-#'   \code{\link{batz.merge_sm5.logfile}}.
+#'   \code{\link{batz.merge_sm5.logfiles}}.
 #'
 #' @details
 #' \strong{Version detection:} see \code{batz.util_sm.logfile.R} (shared
 #' internal engine) and the \code{@details} of
-#' \code{\link{batz.merge_sm5.logfile}}. A file whose headers match none of
+#' \code{\link{batz.merge_sm5.logfiles}}. A file whose headers match none of
 #' the three known layouts is logged as \code{$version = "unknown"},
 #' \code{"Failure"}, reason \code{"could not identify SM version from
 #' headers"}; nothing is guessed or merged for it.
@@ -50,12 +50,12 @@
 #' \code{SM5_1.5}, \code{SM5_1.6}, \code{log.file_sm}. The log was first
 #' named \code{log.file}; renamed to \code{log.file_sm} the same day, per
 #' Josh. Each SM function now has its own log name - \code{log.file_sm4}
-#' (\code{batz.merge_sm4.logfile()}), \code{log.file_sm5}
-#' (\code{batz.merge_sm5.logfile()}) and \code{log.file_sm} (this
+#' (\code{batz.merge_sm4.logfiles()}), \code{log.file_sm5}
+#' (\code{batz.merge_sm5.logfiles()}) and \code{log.file_sm} (this
 #' function) - so none overwrites another.
 #'
-#' @seealso \code{\link{batz.merge_sm4.logfile}},
-#'   \code{\link{batz.merge_sm5.logfile}}
+#' @seealso \code{\link{batz.merge_sm4.logfiles}},
+#'   \code{\link{batz.merge_sm5.logfiles}}
 #'
 #' @examples
 #' \dontrun{

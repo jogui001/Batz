@@ -1,9 +1,9 @@
 # =============================================================================
-# batz.merge_sm4.logfile.dev.R
+# batz.merge_sm4.logfiles.dev.R
 # -----------------------------------------------------------------------------
-# Dev script for batz.merge_sm4.logfile() - tested against real test
+# Dev script for batz.merge_sm4.logfiles() - tested against real test
 # data before being wrapped into the final function
-# (batz.merge_sm4.logfile.R).
+# (batz.merge_sm4.logfiles.R).
 #
 # Purpose (per spec): merge all SM4 ARU activity-log summary files
 # ("*_A_Summary*.txt"/"*_B_Summary*.txt") in a directory (and, optionally,
@@ -12,7 +12,7 @@
 # decimal degrees).
 #
 # NAME: Josh's given name was "batz.sm4logfile_merge&format" - normalized to
-# "batz.merge_sm4.logfile" ("&" isn't one of the two separator
+# "batz.merge_sm4.logfiles" ("&" isn't one of the two separator
 # characters Josh's own convention defines - "_" between family/action, "."
 # within the action - same normalization already applied to
 # "batz.arumeta.merge&format" -> "batz.arumeta_merge.format" earlier in this
@@ -133,7 +133,7 @@
 # =============================================================================
 #  Headers are now checked to tell SM4 from SM5 (firmware 1.5 or 1.6) files.
 #  Only SM4 files merge into sm4logs.merged; SM5 files are logged as
-#  "Failure" with a reason pointing to batz.merge_sm5.logfile() /
+#  "Failure" with a reason pointing to batz.merge_sm5.logfiles() /
 #  batz.merge_sm.logfiles(). log.file_sm4 gains $version
 #  ("SM4"/"SM5.1.5"/"SM5.1.6"/"unknown") after $filename. Reading,
 #  checking and converting now live in the shared engine
@@ -142,6 +142,9 @@
 #  now log.file_sm4 (SM5: log.file_sm5; all-units: log.file_sm), so no
 #  batz log overwrites another. Earlier notes in this header use the new
 #  name.
+#  RENAMED, same day, per Josh: function batz.merge_sm4.logfile() ->
+#  batz.merge_sm4.logfiles() (this file was batz.merge_sm4.logfile.dev.R).
+#  Earlier notes use the new name.
 # =============================================================================
 
 ## ---- helper: standardize.headers (per Josh, 2026-09-14) - inlined, since
@@ -224,8 +227,8 @@ sm.logfile.merge <- function(dir.load, dir.sub, load.pattern, duplicates.remove,
   }
 
   other.fn <- function(v) {
-    if (v == "SM4") "batz.merge_sm4.logfile() or batz.merge_sm.logfiles()"
-    else "batz.merge_sm5.logfile() or batz.merge_sm.logfiles()"
+    if (v == "SM4") "batz.merge_sm4.logfiles() or batz.merge_sm.logfiles()"
+    else "batz.merge_sm5.logfiles() or batz.merge_sm.logfiles()"
   }
 
   process.one.file <- function(f) {
@@ -363,7 +366,7 @@ sm.logfile.merge <- function(dir.load, dir.sub, load.pattern, duplicates.remove,
   list(data = merged, log = log.df)
 }
 
-batz.merge_sm4.logfile <- function(dir.load          = getwd(),
+batz.merge_sm4.logfiles <- function(dir.load          = getwd(),
                                    dir.sub           = FALSE,
                                    load.pattern      = c("*_A_Summary*.txt", "*_B_Summary*.txt"),
                                    duplicates.remove = TRUE,
@@ -372,7 +375,7 @@ batz.merge_sm4.logfile <- function(dir.load          = getwd(),
   ## 2026-09-29: shared engine (batz.util_sm.logfile.R) - detects each
   ## file's SM version from its headers and only merges SM4 files here.
   out <- sm.logfile.merge(dir.load, dir.sub, load.pattern, duplicates.remove,
-                          versions.keep = "SM4", caller.name = "batz.merge_sm4.logfile()")
+                          versions.keep = "SM4", caller.name = "batz.merge_sm4.logfiles()")
 
   sm4logs.merged <- out$data[["SM4"]]
   if (nrow(sm4logs.merged) == 0) {
@@ -432,39 +435,39 @@ if (exists("batz.merge_sm.logfiles")) {
   ok(o$version == "unknown" && o$reason == "could not identify SM version from headers", "unrecognised headers -> unknown")
 }
 
-if (exists("batz.merge_sm5.logfile")) {
-  cat("\n=== batz.merge_sm5.logfile() ===\n")
+if (exists("batz.merge_sm5.logfiles")) {
+  cat("\n=== batz.merge_sm5.logfiles() ===\n")
   rm(list = intersect(c("SM4","SM5_1.5","SM5_1.6","log.file_sm5"), ls(globalenv())), envir = globalenv())
-  r <- batz.merge_sm5.logfile(test.dir, dir.sub = TRUE, log.file = TRUE)
+  r <- batz.merge_sm5.logfiles(test.dir, dir.sub = TRUE, log.file = TRUE)
   ok(setequal(names(r), c("SM5_1.5","SM5_1.6","log.file_sm5")) && !exists("SM4", envir = globalenv()), "returns SM5_1.5, SM5_1.6, log.file_sm5 only")
   a <- lg(log.file_sm5,"AYERS_A_Summary.txt")
-  ok(a$version == "SM4" && a$load.status == "Failure" && grepl("not loaded by batz.merge_sm5.logfile", a$reason), "SM4 file skipped with version SM4")
+  ok(a$version == "SM4" && a$load.status == "Failure" && grepl("not loaded by batz.merge_sm5.logfiles", a$reason), "SM4 file skipped with version SM4")
   ok(nrow(SM5_1.6) == 2 && nrow(SM5_1.5) > 78000, "both SM5 frames filled")
-  r2 <- batz.merge_sm5.logfile(test.dir, dir.sub = TRUE)
+  r2 <- batz.merge_sm5.logfiles(test.dir, dir.sub = TRUE)
   ok(is.null(r2$log.file_sm5), "log.file = FALSE omits the log")
   if (exists("batz.merge_sm.logfiles"))
     ok(exists("log.file_sm") && nrow(log.file_sm) == 8, "log.file_sm (all-units log) not overwritten by the SM5 run")
 }
 
-if (exists("batz.merge_sm4.logfile")) {
-  cat("\n=== batz.merge_sm4.logfile() ===\n")
-  r <- batz.merge_sm4.logfile(test.dir, dir.sub = TRUE, log.file = TRUE)
+if (exists("batz.merge_sm4.logfiles")) {
+  cat("\n=== batz.merge_sm4.logfiles() ===\n")
+  r <- batz.merge_sm4.logfiles(test.dir, dir.sub = TRUE, log.file = TRUE)
   L <- log.file_sm4
   ok(identical(names(L), c("aru.name","filename","version","date.start","date.end","date.unique","date.range","records","load.status","reason","filepath")), "log has new $version column after $filename")
   ok(nrow(sm4logs.merged) == 2 && all(sm4logs.merged$aru.name == "AYERS"), "only the SM4 file merged")
   n1 <- lg(L,"NWS01_A_Summary_1.txt")
-  ok(n1$version == "SM5.1.5" && n1$load.status == "Failure" && grepl("use batz.merge_sm5.logfile", n1$reason), "SM5 file skipped, version SM5.1.5, reason points to sm5 function")
+  ok(n1$version == "SM5.1.5" && n1$load.status == "Failure" && grepl("use batz.merge_sm5.logfiles", n1$reason), "SM5 file skipped, version SM5.1.5, reason points to sm5 function")
   ## original SM4 failure-reason behaviour still intact
   d <- file.path(tempdir(), "sm4bad"); dir.create(d, showWarnings = FALSE)
   writeLines(c("DATE,TIME,LAT,NS,LON,EW,POWER(V),#FILES,#SCRUBBED,MIC0 TYPE","2026-Jun-05,20:00:00,44.5,N,70.6,W,12.1,10,0,U2"), file.path(d,"BADHEADER_A_Summary.txt"))
   writeLines("DATE,TIME,LAT,NS,LON,EW,POWER(V),TEMP(C),#FILES,#SCRUBBED,MIC0 TYPE", file.path(d,"EMPTY_A_Summary.txt"))
-  batz.merge_sm4.logfile(d, log.file = TRUE)
+  batz.merge_sm4.logfiles(d, log.file = TRUE)
   ok(lg(log.file_sm4,"BADHEADER_A_Summary.txt")$reason == "These headers are missing: temp_c", "SM4 missing-header reason unchanged")
   ok(lg(log.file_sm4,"EMPTY_A_Summary.txt")$reason == "no data" && nrow(sm4logs.merged) == 0, "SM4 no-data reason unchanged; empty result ok")
-  e <- tempfile(); dir.create(e); batz.merge_sm4.logfile(e, log.file = TRUE)
+  e <- tempfile(); dir.create(e); batz.merge_sm4.logfiles(e, log.file = TRUE)
   ok(nrow(log.file_sm4) == 0 && "version" %in% names(log.file_sm4), "empty folder: 0-row log keeps all columns")
 }
-if (exists("batz.merge_sm.logfiles") && exists("batz.merge_sm5.logfile") && exists("batz.merge_sm4.logfile"))
+if (exists("batz.merge_sm.logfiles") && exists("batz.merge_sm5.logfiles") && exists("batz.merge_sm4.logfiles"))
   ok(all(c("log.file_sm","log.file_sm5","log.file_sm4") %in% ls(globalenv())) &&
        nrow(log.file_sm) == 8 && nrow(log.file_sm5) == 8, "log.file_sm, log.file_sm5, log.file_sm4 all coexist")
 cat("\nALL TESTS PASSED\n")
@@ -484,7 +487,7 @@ cat("\nALL TESTS PASSED\n")
 test.dir <- "/home/claude/refdb/sm4_test"
 
 cat("=== log.file = TRUE, dir.sub = TRUE (all 6 fixtures) ===\n")
-res1 <- batz.merge_sm4.logfile(test.dir, dir.sub = TRUE, log.file = TRUE)
+res1 <- batz.merge_sm4.logfiles(test.dir, dir.sub = TRUE, log.file = TRUE)
 cat("\ndim sm4logs.merged:", paste(dim(sm4logs.merged), collapse = " x "), "\n")
 print(sm4logs.merged[, c("aru.name", "date", "time", "lat", "longitude")])
 cat("\nlog.file_sm4:\n")
@@ -530,14 +533,14 @@ cat("\n=== log.file = FALSE (log.file_sm4 should not be created) ===\n")
 if (exists("log.file_sm4", envir = .GlobalEnv, inherits = FALSE)) {
   rm(log.file_sm4, envir = .GlobalEnv)
 }
-res2 <- batz.merge_sm4.logfile(test.dir, dir.sub = TRUE, log.file = FALSE)
+res2 <- batz.merge_sm4.logfiles(test.dir, dir.sub = TRUE, log.file = FALSE)
 stopifnot(is.null(res2$log.file_sm4))
 stopifnot(!exists("log.file_sm4", envir = .GlobalEnv, inherits = FALSE))
 cat("[PASS] log.file = FALSE correctly omits log.file_sm4\n")
 
 cat("\n=== empty directory ===\n")
 empty.dir <- tempfile(); dir.create(empty.dir)
-res3 <- batz.merge_sm4.logfile(empty.dir, log.file = TRUE)
+res3 <- batz.merge_sm4.logfiles(empty.dir, log.file = TRUE)
 stopifnot(nrow(sm4logs.merged) == 0, nrow(log.file_sm4) == 0)
 cat("[PASS] empty directory: 0 rows, 0 log rows, no error\n")
 
@@ -559,7 +562,7 @@ lp.write("NOPE_A_Summary.csv",              "2026-Jun-09")                    # 
 lp.write("NOPE_C_Summary.txt",              "2026-Jun-09")                    # not A/B
 lp.write("NOPE_A_Summary.txt.bak",          "2026-Jun-09")                    # not ending .txt
 
-batz.merge_sm4.logfile(lp.dir, dir.sub = TRUE, log.file = TRUE)
+batz.merge_sm4.logfiles(lp.dir, dir.sub = TRUE, log.file = TRUE)
 stopifnot(nrow(log.file_sm4) == 4,
           !any(grepl("NOPE", log.file_sm4$filename)),
           "WTG-GOM102_A_Summary - Copy.txt" %in% log.file_sm4$filename,
@@ -569,7 +572,7 @@ stopifnot(nrow(sm4logs.merged) == 4,
           sum(sm4logs.merged$aru.name == "WTG-GOM102") == 2)
 cat("[PASS] ' - Copy' duplicate rows removed by duplicates.remove; aru.name = WTG-GOM102\n")
 
-batz.merge_sm4.logfile(lp.dir, dir.sub = TRUE, log.file = TRUE,
+batz.merge_sm4.logfiles(lp.dir, dir.sub = TRUE, log.file = TRUE,
                        load.pattern = c("*_A_Summary.txt", "*_B_Summary.txt"))
 stopifnot(nrow(log.file_sm4) == 2)
 cat("[PASS] old pattern still works when passed explicitly (2 files)\n")

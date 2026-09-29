@@ -1,6 +1,6 @@
 #' Merge and standardize SM5 ARU activity-log summary files
 #'
-#' SM5 sibling of \code{batz.merge_sm4.logfile()} (added 2026-09-29, per
+#' SM5 sibling of \code{batz.merge_sm4.logfiles()} (added 2026-09-29, per
 #' Josh). Searches a directory (and, optionally, its subdirectories) for
 #' SM5 activity-log summary files, works out from each file's headers
 #' which SM5 firmware wrote it, and merges each firmware version into its
@@ -18,7 +18,7 @@
 #'   internally to a regex via \code{utils::glob2rx()}, matched
 #'   case-insensitively), default
 #'   \code{c("*_A_Summary*.txt", "*_B_Summary*.txt")} - same as
-#'   \code{batz.merge_sm4.logfile()}; matches real SM5 names such as
+#'   \code{batz.merge_sm4.logfiles()}; matches real SM5 names such as
 #'   \code{"NWS01_A_Summary_1.txt"}.
 #' @param duplicates.remove Logical, default \code{TRUE}. Drop exact
 #'   duplicate rows from each merged data frame.
@@ -58,13 +58,13 @@
 #' that is only partly right is assigned the version it most resembles and
 #' fails with \code{"These headers are missing: ..."}. The version logic is
 #' in the shared internal engine (\code{batz.util_sm.logfile.R}), also
-#' used by \code{batz.merge_sm4.logfile()} and
+#' used by \code{batz.merge_sm4.logfiles()} and
 #' \code{batz.merge_sm.logfiles()}.
 #'
 #' \strong{SM4 files are not merged here.} An SM4 file matched by
 #' \code{load.pattern} is logged as a \code{"Failure"} with
 #' \code{$version = "SM4"} and a reason pointing to
-#' \code{batz.merge_sm4.logfile()} or \code{batz.merge_sm.logfiles()}.
+#' \code{batz.merge_sm4.logfiles()} or \code{batz.merge_sm.logfiles()}.
 #'
 #' \strong{SM5.1.6 not yet tested against a real file.} The 1.5 layout was
 #' built and tested from Josh's real NWS01-03 files; the 1.6 layout is
@@ -84,24 +84,31 @@
 #' \code{log.file}, then \code{log.file_sm5}, and finally
 #' \code{log.file_sm5} (all the same day, per Josh) so each SM function
 #' has its own log name: \code{log.file_sm4}
-#' (\code{batz.merge_sm4.logfile()}), \code{log.file_sm5} (this
+#' (\code{batz.merge_sm4.logfiles()}), \code{log.file_sm5} (this
 #' function) and \code{log.file_sm5} (\code{batz.merge_sm.logfiles()}).
 #' None of them overwrites another.
 #'
-#' @seealso \code{\link{batz.merge_sm4.logfile}},
+#' \strong{Follow-up, 2026-09-29, per Josh - function renamed.}
+#' \code{batz.merge_sm5.logfile()} is now \code{batz.merge_sm5.logfiles()}
+#' (file \code{R/batz.merge_sm5.logfiles.R}), matching
+#' \code{batz.merge_sm4.logfiles()} and \code{batz.merge_sm.logfiles()}.
+#' Same inputs and outputs; code calling the old name needs updating.
+#' Earlier paragraphs use the new name.
+#'
+#' @seealso \code{\link{batz.merge_sm4.logfiles}},
 #'   \code{\link{batz.merge_sm.logfiles}}
 #'
 #' @examples
 #' \dontrun{
-#' batz.merge_sm5.logfile()
+#' batz.merge_sm5.logfiles()
 #' # SM5_1.5 and SM5_1.6 are now in your workspace
 #'
-#' batz.merge_sm5.logfile(dir.sub = TRUE, log.file = TRUE)
+#' batz.merge_sm5.logfiles(dir.sub = TRUE, log.file = TRUE)
 #' # ...plus log.file_sm5, with a $version column
 #' }
 #'
 #' @export
-batz.merge_sm5.logfile <- function(dir.load          = getwd(),
+batz.merge_sm5.logfiles <- function(dir.load          = getwd(),
                                    dir.sub           = FALSE,
                                    load.pattern      = c("*_A_Summary*.txt", "*_B_Summary*.txt"),
                                    duplicates.remove = TRUE,
@@ -109,7 +116,7 @@ batz.merge_sm5.logfile <- function(dir.load          = getwd(),
 
   out <- sm.logfile.merge(dir.load, dir.sub, load.pattern, duplicates.remove,
                           versions.keep = c("SM5.1.5", "SM5.1.6"),
-                          caller.name = "batz.merge_sm5.logfile()")
+                          caller.name = "batz.merge_sm5.logfiles()")
 
   result <- list(SM5_1.5 = out$data[["SM5.1.5"]],
                  SM5_1.6 = out$data[["SM5.1.6"]])

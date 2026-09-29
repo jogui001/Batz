@@ -170,7 +170,7 @@
 #' later) before loading. Only SM4 files are merged into
 #' \code{sm4logs.merged}; an SM5 file matched by \code{load.pattern} is
 #' skipped with \code{$load.status = "Failure"} and a \code{$reason}
-#' pointing to \code{batz.merge_sm5.logfile()} or
+#' pointing to \code{batz.merge_sm5.logfiles()} or
 #' \code{batz.merge_sm.logfiles()}. \code{log.file_sm4} gains a
 #' new \code{$version} column (after \code{$filename}): \code{"SM4"},
 #' \code{"SM5.1.5"}, \code{"SM5.1.6"}, or \code{"unknown"} (the file
@@ -186,26 +186,32 @@
 #' object \code{sm4logs.merged_log.file} is now \code{log.file_sm4}, so it
 #' can't be overwritten by (or overwrite) the log from any other
 #' \code{batz} function. SM5 logs are \code{log.file_sm5}
-#' (\code{batz.merge_sm5.logfile()}) and \code{log.file_sm}
+#' (\code{batz.merge_sm5.logfiles()}) and \code{log.file_sm}
 #' (\code{batz.merge_sm.logfiles()}). Earlier paragraphs in this
 #' documentation use the new name. Code that reads
 #' \code{sm4logs.merged_log.file} needs updating to \code{log.file_sm4}.
 #' \code{sm4logs.merged} is unchanged.
 #'
-#' @seealso \code{\link{batz.merge_sm5.logfile}},
+#' \strong{Follow-up, 2026-09-29, per Josh - function renamed.}
+#' \code{batz.merge_sm4.logfile()} is now \code{batz.merge_sm4.logfiles()}
+#' (file \code{R/batz.merge_sm4.logfiles.R}), matching
+#' \code{batz.merge_sm.logfiles()}. Same inputs and outputs; code calling
+#' the old name needs updating. Earlier paragraphs use the new name.
+#'
+#' @seealso \code{\link{batz.merge_sm5.logfiles}},
 #'   \code{\link{batz.merge_sm.logfiles}}
 #'
 #' @examples
 #' \dontrun{
-#' batz.merge_sm4.logfile()
+#' batz.merge_sm4.logfiles()
 #' # sm4logs.merged is now in your workspace
 #'
-#' batz.merge_sm4.logfile(dir.sub = TRUE, log.file = TRUE)
+#' batz.merge_sm4.logfiles(dir.sub = TRUE, log.file = TRUE)
 #' # sm4logs.merged and log.file_sm4 both created
 #' }
 #'
 #' @export
-batz.merge_sm4.logfile <- function(dir.load          = getwd(),
+batz.merge_sm4.logfiles <- function(dir.load          = getwd(),
                                    dir.sub           = FALSE,
                                    load.pattern      = c("*_A_Summary*.txt", "*_B_Summary*.txt"),
                                    duplicates.remove = TRUE,
@@ -214,7 +220,7 @@ batz.merge_sm4.logfile <- function(dir.load          = getwd(),
   ## 2026-09-29: shared engine (batz.util_sm.logfile.R) - detects each
   ## file's SM version from its headers and only merges SM4 files here.
   out <- sm.logfile.merge(dir.load, dir.sub, load.pattern, duplicates.remove,
-                          versions.keep = "SM4", caller.name = "batz.merge_sm4.logfile()")
+                          versions.keep = "SM4", caller.name = "batz.merge_sm4.logfiles()")
 
   sm4logs.merged <- out$data[["SM4"]]
   if (nrow(sm4logs.merged) == 0) {
