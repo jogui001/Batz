@@ -37,16 +37,16 @@ with columns \code{$aru.name}, \code{$filename}, \code{$version}
 }
 \value{
 Invisibly, a named list: \code{SM4}, \code{SM5_1.5},
-  \code{SM5_1.6} (always; an empty \code{data.frame()} for a version
-  with no files), plus \code{log.file_sm} when \code{log.file = TRUE}. Every
-  element is also auto-assigned into the calling environment.
+\code{SM5_1.6} (always; an empty \code{data.frame()} for a version
+with no files), plus \code{log.file_sm} when \code{log.file = TRUE}. Every
+element is also auto-assigned into the calling environment.
 
-  \code{SM4} has the same columns as \code{sm4logs.merged}:
-  \code{$aru.name}, \code{$date}, \code{$time}, \code{$lat}, \code{$ns},
-  \code{$longitude}, \code{$ew}, \code{$power_v}, \code{$temp_c},
-  \code{$files}, \code{$scrubbed}, \code{$mic0_type}, \code{$X},
-  \code{$Y}. \code{SM5_1.5}/\code{SM5_1.6} are as documented in
-  \code{\link{batz.merge_sm5.logfile}}.
+\code{SM4} has the same columns as \code{sm4logs.merged}:
+\code{$aru.name}, \code{$date}, \code{$time}, \code{$lat}, \code{$ns},
+\code{$longitude}, \code{$ew}, \code{$power_v}, \code{$temp_c},
+\code{$files}, \code{$scrubbed}, \code{$mic0_type}, \code{$X},
+\code{$Y}. \code{SM5_1.5}/\code{SM5_1.6} are as documented in
+\code{\link{batz.merge_sm5.logfile}}.
 }
 \description{
 Added 2026-09-29, per Josh. Loads every summary file matching
@@ -83,5 +83,5 @@ table(log.file_sm$version, log.file_sm$load.status)
 }
 \seealso{
 \code{\link{batz.merge_sm4.logfile}},
-  \code{\link{batz.merge_sm5.logfile}}
+\code{\link{batz.merge_sm5.logfile}}
 }

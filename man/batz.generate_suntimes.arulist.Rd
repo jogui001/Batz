@@ -53,7 +53,7 @@ file was written (\code{YYYYMMDDHHMMSS}, e.g. \code{20260826114426}).
 \strong{Reordered and the \code{"sav"} prefix dropped (round
 twenty-two, 2026-09-24, per Josh) - see @details, "File naming (round
 twenty-two)"; the previous shape was \verb{<base>_<DATE1>to<DATE2>_
-  sav<timestamp>_suntimes.csv}.} \code{""} (default) uses \code{"aru"}
+sav<timestamp>_suntimes.csv}.} \code{""} (default) uses \code{"aru"}
 as \verb{<base>}. Any other value is used as \verb{<base>} instead -
 e.g. \code{project.name = "projectname"} produces something like
 \code{"projectname_suntimes_20250101to20250202_20260924113700.csv"}.

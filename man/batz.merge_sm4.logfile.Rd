@@ -45,13 +45,13 @@ with columns \code{$aru.name}, \code{$filename}, \code{$version},
 }
 \value{
 Invisibly, a named list: \code{sm4logs.merged} (always), plus
-  \code{log.file_sm4} when \code{log.file = TRUE}. Every
-  element is also auto-assigned into the calling environment (same
-  pattern already used in \code{batz.merge_aru.meta},
-  \code{batz.datawrangler_load.files}, and
-  \code{batz.arumeta_generate.eventlog}), so a bare call with no
-  assignment creates \code{sm4logs.merged} (and the log table, if
-  requested) directly in your workspace.
+\code{log.file_sm4} when \code{log.file = TRUE}. Every
+element is also auto-assigned into the calling environment (same
+pattern already used in \code{batz.merge_aru.meta},
+\code{batz.datawrangler_load.files}, and
+\code{batz.arumeta_generate.eventlog}), so a bare call with no
+assignment creates \code{sm4logs.merged} (and the log table, if
+requested) directly in your workspace.
 }
 \description{
 Searches a directory (and, optionally, its subdirectories) for SM4
@@ -65,7 +65,8 @@ to \code{YYYY-MM-DD}, and \code{$lat}/\code{$ns} and
 }
 \details{
 \strong{Header standardization (per Josh, 2026-09-14 project preference)
-- real, documented output-schema change.} The 11 expected SM4 summary
+\itemize{
+\item real, documented output-schema change.} The 11 expected SM4 summary
 columns are a literal, uninvented copy of the ARU device's own real
 export column text (not a \code{batz}-invented shorthand), so - like the
 raw headers read off every file - they are now run through the shared
@@ -89,6 +90,7 @@ ones. \strong{This does NOT affect \code{$aru.name}, \code{$X}, or
 \code{aru.name} is parsed from the file's own NAME, and \code{X}/\code{Y}
 are this function's own derived/computed columns, so all three keep
 their existing names per this project's ordinary output convention.
+}
 
 \strong{Header validation:} a file must have all 11 expected columns
 (now matched by their standardized spellings, case-insensitively and
@@ -222,5 +224,5 @@ batz.merge_sm4.logfile(dir.sub = TRUE, log.file = TRUE)
 }
 \seealso{
 \code{\link{batz.merge_sm5.logfile}},
-  \code{\link{batz.merge_sm.logfiles}}
+\code{\link{batz.merge_sm.logfiles}}
 }

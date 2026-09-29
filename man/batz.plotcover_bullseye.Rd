@@ -26,8 +26,8 @@ Josh's \code{bulleye_model_data.xlsx}, "cover" sheet). Column headers
 are run through \code{standardize.headers()} on receipt (see Details,
 "Header standardization"), after which it must have (in any original
 spelling that standardizes to): \code{aru.label}, \code{"Select the
-  quadrant you are assessing"}, \code{"Canopy cover"}, \code{"Understory
-  cover"}. One row per quadrant per \code{aru.label} - every
+quadrant you are assessing"}, \code{"Canopy cover"}, \code{"Understory
+cover"}. One row per quadrant per \code{aru.label} - every
 \code{aru.label} that will be plotted needs exactly the four quadrant
 values \code{"northeast"}/\code{"southeast"}/\code{"southwest"}/
 \code{"northwest"} (case/whitespace-insensitive).}
@@ -36,7 +36,7 @@ values \code{"northeast"}/\code{"southeast"}/\code{"southwest"}/
 \code{bulleye_model_data.xlsx}, "mic" sheet). Also header-standardized
 on receipt; must have (in any spelling that standardizes to):
 \code{aru.label}, \code{"Microphone Height"}, \code{"Horizontal
-  Microphone Orientation"}, \code{"Vertical Microphone Orientation"}.
+Microphone Orientation"}, \code{"Vertical Microphone Orientation"}.
 One row per \code{aru.label}.}
 
 \item{aes.default}{A data frame of default plot settings, one row per
@@ -50,7 +50,7 @@ Details, "Settings resolution (round nineteen)".}
 nineteenth follow-up (2026-09-16), this NO LONGER selects an
 \code{aes.default} override column - it is now used ONLY to build the
 first part of every saved file name: \code{"<project.name>_<ARU>_
-  <timestamp>.png"}. See Details, "Settings resolution (round
+<timestamp>.png"}. See Details, "Settings resolution (round
 nineteen)" for what replaced the old column-matching behavior.}
 
 \item{aes.style}{Character, default \code{"overide.value"}. Names which
@@ -67,7 +67,7 @@ name itself is now always \code{"<project.name>_<ARU>_<timestamp>.png"}
 \code{$output.filename.pattern} is DEPRECATED and no longer read.}
 
 \item{sub.plots}{Character vector, default \code{c("canopy.bull",
-  "mic.bar", "mic.bull", "understory.bull")} (i.e. all four, in that
+"mic.bar", "mic.bull", "understory.bull")} (i.e. all four, in that
 order) - which panels to draw, and in what left-to-right order.
 Every element must be one of \code{"canopy.bull"} (the Canopy cover
 bullseye), \code{"mic.bar"} (the Microphone Height bar + Vertical

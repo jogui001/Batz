@@ -106,7 +106,7 @@ generated PNG (and CSV, if \code{write.csv.data = TRUE}) is saved into.}
 Josh's request to audit and extend the snake_case output option
 package-wide (see \code{\link{batz.generate_plotframe.bat}}'s sibling
 parameter). Controls only the CSV written when \code{write.csv.data =
-  TRUE} - applied to a copy of \code{data} right before that write, never
+TRUE} - applied to a copy of \code{data} right before that write, never
 to the \code{$data} this function returns (see Value; that object still
 needs its usual dot-separated names, e.g. \code{$date.monitoringnight}, to
 chain straight into \code{\link{batz.plotactivity_heatmap}} per
