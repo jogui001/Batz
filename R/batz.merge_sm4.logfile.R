@@ -2,7 +2,7 @@
 #'
 #' Searches a directory (and, optionally, its subdirectories) for SM4
 #' Autonomous Recording Unit activity-log summary files
-#' (\code{"*_A_Summary.txt"}/\code{"*_B_Summary.txt"}), validates each
+#' (\code{"*_A_Summary*.txt"}/\code{"*_B_Summary*.txt"}), validates each
 #' file's headers, and merges them into one standardized master data frame:
 #' the ARU name is extracted from the file name, \code{$date} is normalized
 #' to \code{YYYY-MM-DD}, and \code{$lat}/\code{$ns} and
@@ -13,24 +13,30 @@
 #'   \code{load.pattern}. Default \code{getwd()}.
 #' @param dir.sub Logical, default \code{FALSE}. If \code{TRUE}, also search
 #'   subdirectories of \code{dir.load}.
-#' @param load.pattern Character vector of wildcard/glob suffix patterns
-#'   (converted internally to a regex via \code{utils::glob2rx()}), default
-#'   \code{c("*_A_Summary.txt", "*_B_Summary.txt")}.
+#' @param load.pattern Character vector of wildcard/glob patterns (converted
+#'   internally to a regex via \code{utils::glob2rx()}), default
+#'   \code{c("*_A_Summary*.txt", "*_B_Summary*.txt")}. The second \code{*}
+#'   (added 2026-09-29, per Josh) lets any text sit between
+#'   \code{"_Summary"} and \code{".txt"}, so renamed/suffixed copies such as
+#'   \code{"WTG-GOM102_A_Summary - Copy.txt"} or
+#'   \code{"AYERS_A_Summary_2026.txt"} are also picked up; the plain
+#'   \code{"*_A_Summary.txt"} form still matches.
 #' @param duplicates.remove Logical, default \code{TRUE}. Drop exact
 #'   duplicate rows from the final merged data frame. (Not listed in the
 #'   original spec's "Optional inputs", but used in its Steps section -
 #'   added as a real parameter; see the dev script's header comment.)
 #' @param log.file Logical, default \code{FALSE}. If \code{TRUE}, also
-#'   return (and auto-assign) \code{sm4logs.merged_log.file}: one row per
+#'   return (and auto-assign) \code{log.file_sm4}: one row per
 #'   file examined (whether it was successfully merged in or not; per
 #'   Josh's 2026-09-22 redesign of this parameter - see \code{@details}),
-#'   with columns \code{$aru.name}, \code{$filename}, \code{$date.start},
+#'   with columns \code{$aru.name}, \code{$filename}, \code{$version},
+#'   \code{$date.start},
 #'   \code{$date.end}, \code{$date.unique}, \code{$date.range},
 #'   \code{$records}, \code{$load.status} (\code{"Success"}/\code{"Failure"}),
 #'   \code{$reason}, and \code{$filepath}.
 #'
 #' @return Invisibly, a named list: \code{sm4logs.merged} (always), plus
-#'   \code{sm4logs.merged_log.file} when \code{log.file = TRUE}. Every
+#'   \code{log.file_sm4} when \code{log.file = TRUE}. Every
 #'   element is also auto-assigned into the calling environment (same
 #'   pattern already used in \code{batz.merge_aru.meta},
 #'   \code{batz.datawrangler_load.files}, and
@@ -93,10 +99,10 @@
 #' alongside the new \code{$Y}/\code{$X} columns, not replaced.
 #'
 #' \strong{Follow-up, 2026-09-22, per Josh - \code{log.file} completely
-#' redesigned.} Previously, \code{sm4logs.merged_log.file} only had a row
+#' redesigned.} Previously, \code{log.file_sm4} only had a row
 #' for a SKIPPED file (\code{$filepath}/\code{$reason} only). Josh asked for
 #' a richer log covering every file examined, success or failure, with a
-#' per-file date/record summary. \code{sm4logs.merged_log.file} (when
+#' per-file date/record summary. \code{log.file_sm4} (when
 #' \code{log.file = TRUE}) now has exactly one row per file matched by
 #' \code{load.pattern}, with columns \code{$aru.name} (always set, parsed
 #' from the file name the same way as \code{sm4logs.merged}'s own
@@ -137,7 +143,7 @@
 #'
 #' @details
 #' \strong{Column identifiers renamed, 2026-09-27, per Josh's
-#' reference-workbook "Change.to" column.} In \code{sm4logs.merged_log.file}
+#' reference-workbook "Change.to" column.} In \code{log.file_sm4}
 #' (returned when \code{log.file = TRUE}): \code{file.name} ->
 #' \code{filename}. In \code{sm4logs.merged}: the standardized input column
 #' \code{lon} -> \code{longitude} - header-presence validation against the
@@ -145,203 +151,78 @@
 #' export text still standardizes to \code{lon} internally for matching
 #' purposes), only the merged output's column spelling changes.
 #'
+#' \strong{Follow-up, 2026-09-29, per Josh - wider default
+#' \code{load.pattern}.} Default changed from
+#' \code{c("*_A_Summary.txt", "*_B_Summary.txt")} to
+#' \code{c("*_A_Summary*.txt", "*_B_Summary*.txt")}, so files with extra
+#' text between \code{"_Summary"} and \code{".txt"} (e.g. a Windows
+#' \code{" - Copy"} duplicate) are now found too. Matching is still
+#' case-insensitive, and the ARU name is still everything before the first
+#' \code{"_"}, so \code{"WTG-GOM102_A_Summary - Copy.txt"} -> \code{"WTG-GOM102"}.
+#' \strong{Heads-up:} a " - Copy" file that is an exact duplicate of its
+#' original adds identical rows; \code{duplicates.remove = TRUE} (the
+#' default) drops those from \code{sm4logs.merged}, but both files still
+#' get their own row in \code{log.file_sm4}.
+#'
+#' \strong{Follow-up, 2026-09-29, per Josh - SM4/SM5 detection and
+#' \code{$version}.} Each file's headers are now checked to see which SM
+#' unit wrote it (SM4, SM5 firmware 1.5 or earlier, or SM5 firmware 1.6 or
+#' later) before loading. Only SM4 files are merged into
+#' \code{sm4logs.merged}; an SM5 file matched by \code{load.pattern} is
+#' skipped with \code{$load.status = "Failure"} and a \code{$reason}
+#' pointing to \code{batz.merge_sm5.logfile()} or
+#' \code{batz.merge_sm.logfiles()}. \code{log.file_sm4} gains a
+#' new \code{$version} column (after \code{$filename}): \code{"SM4"},
+#' \code{"SM5.1.5"}, \code{"SM5.1.6"}, or \code{"unknown"} (the file
+#' can't be read, or its headers match none of the three - reason
+#' \code{"could not identify SM version from headers"}). The reading,
+#' header checking, date/coordinate conversion and logging now live in a
+#' shared internal engine (\code{sm.logfile.merge()}, in
+#' \code{batz.util_sm.logfile.R}) used by all three SM merge functions -
+#' \code{sm4logs.merged} itself is unchanged. See that file for how the
+#' version is detected.
+#'
+#' \strong{Follow-up, 2026-09-29, per Josh - log renamed.} The log
+#' object \code{sm4logs.merged_log.file} is now \code{log.file_sm4}, so it
+#' can't be overwritten by (or overwrite) the log from any other
+#' \code{batz} function. SM5 logs are \code{log.file_sm5}
+#' (\code{batz.merge_sm5.logfile()}) and \code{log.file_sm}
+#' (\code{batz.merge_sm.logfiles()}). Earlier paragraphs in this
+#' documentation use the new name. Code that reads
+#' \code{sm4logs.merged_log.file} needs updating to \code{log.file_sm4}.
+#' \code{sm4logs.merged} is unchanged.
+#'
+#' @seealso \code{\link{batz.merge_sm5.logfile}},
+#'   \code{\link{batz.merge_sm.logfiles}}
+#'
 #' @examples
 #' \dontrun{
 #' batz.merge_sm4.logfile()
 #' # sm4logs.merged is now in your workspace
 #'
 #' batz.merge_sm4.logfile(dir.sub = TRUE, log.file = TRUE)
-#' # sm4logs.merged and sm4logs.merged_log.file both created
+#' # sm4logs.merged and log.file_sm4 both created
 #' }
 #'
 #' @export
-batz.merge_sm4.logfile <- function(dir.load = getwd(),
-                                          dir.sub           = FALSE,
-                                          load.pattern      = c("*_A_Summary.txt", "*_B_Summary.txt"),
-                                          duplicates.remove = TRUE,
-                                          log.file          = FALSE) {
+batz.merge_sm4.logfile <- function(dir.load          = getwd(),
+                                   dir.sub           = FALSE,
+                                   load.pattern      = c("*_A_Summary*.txt", "*_B_Summary*.txt"),
+                                   duplicates.remove = TRUE,
+                                   log.file          = FALSE) {
 
-  pattern.regex <- function(p) paste(vapply(p, utils::glob2rx, character(1)), collapse = "|")
+  ## 2026-09-29: shared engine (batz.util_sm.logfile.R) - detects each
+  ## file's SM version from its headers and only merges SM4 files here.
+  out <- sm.logfile.merge(dir.load, dir.sub, load.pattern, duplicates.remove,
+                          versions.keep = "SM4", caller.name = "batz.merge_sm4.logfile()")
 
-  ## Header standardization (per Josh, 2026-09-14 project preference): the
-  ## expected-header list is a literal, uninvented copy of the SM4 device's
-  ## own real export column text, so it's rewritten here to the standardized
-  ## spellings that raw file headers will also be run through below - see
-  ## @details "Header standardization" above. This list is used ONLY for
-  ## matching against real files' own (standardize.headers()-only) spelling
-  ## - "lon" is what the device's real "LON" header standardizes to, and
-  ## that never changes; the output-facing rename to "longitude" (see
-  ## @details "Column identifiers renamed" above) is applied separately via
-  ## output.headers below, after a file has already been matched.
-  expected.headers <- standardize.headers(c("DATE", "TIME", "LAT", "NS", "LON", "EW",
-                                             "POWER(V)", "TEMP(C)", "#FILES", "#SCRUBBED", "MIC0 TYPE"))
-
-  ## Column identifiers renamed, 2026-09-27, per Josh's reference-workbook
-  ## "Change.to" column: the standardized "lon" column is renamed to
-  ## "longitude" in the merged output. See @details above.
-  output.headers <- expected.headers
-  output.headers[output.headers == "lon"] <- "longitude"
-
-  month.lookup <- c(jan = "01", feb = "02", mar = "03", apr = "04", may = "05", jun = "06",
-                     jul = "07", aug = "08", sep = "09", oct = "10", nov = "11", dec = "12")
-
-  convert.date <- function(x) {
-    m <- regmatches(x, regexpr("^([0-9]{4})-([A-Za-z]{3})-([0-9]{2})$", x))
-    out <- x
-    has.match <- nzchar(m)
-    if (any(has.match)) {
-      parts <- regmatches(x[has.match], regexec("^([0-9]{4})-([A-Za-z]{3})-([0-9]{2})$", x[has.match]))
-      converted <- vapply(parts, function(p) {
-        yr <- p[2]; mon <- tolower(p[3]); day <- p[4]
-        mm <- month.lookup[mon]
-        if (is.na(mm)) return(NA_character_)
-        paste(yr, mm, day, sep = "-")
-      }, character(1))
-      out[has.match] <- ifelse(is.na(converted), x[has.match], converted)
-    }
-    out
-  }
-
-  ## per-file log row builder (per Josh, 2026-09-22 log.file redesign) - see
-  ## @details "Follow-up, 2026-09-22" above for the full column semantics.
-  make.log.row <- function(aru.name, filename, filepath, load.status, reason,
-                            date.start = NA_character_, date.end = NA_character_,
-                            date.unique = NA_integer_, date.range = NA_integer_,
-                            records = NA_integer_) {
-    data.frame(aru.name = aru.name, filename = filename,
-               date.start = date.start, date.end = date.end,
-               date.unique = date.unique, date.range = date.range,
-               records = records, load.status = load.status, reason = reason,
-               filepath = filepath, stringsAsFactors = FALSE)
-  }
-
-  process.one.file <- function(f) {
-    base.name <- basename(f)
-    file.aru.name <- sub("_.*$", "", base.name)
-
-    raw <- tryCatch(
-      read.csv(f, stringsAsFactors = FALSE, check.names = FALSE, strip.white = TRUE),
-      error = function(e) NULL
-    )
-    if (is.null(raw)) {
-      return(list(data = NULL,
-                   log = make.log.row(file.aru.name, base.name, f, "Failure", "could not read file")))
-    }
-
-    ## header standardization (per Josh, 2026-09-14 project preference) -
-    ## replaces the previous bare trimws(names(raw)); see @details above.
-    names(raw) <- standardize.headers(names(raw))
-    present <- expected.headers %in% names(raw)
-    headers.missing <- !all(present)
-    no.data <- nrow(raw) == 0
-
-    if (headers.missing || no.data) {
-      ## per Josh's 2026-09-22 spec: reason text depends on which
-      ## condition(s) actually failed.
-      missing.list <- paste(expected.headers[!present], collapse = ", ")
-      reason <- if (headers.missing && no.data) {
-        paste0("no data and These headers are missing: ", missing.list)
-      } else if (headers.missing) {
-        paste0("These headers are missing: ", missing.list)
-      } else {
-        "no data"
-      }
-      return(list(data = NULL,
-                   log = make.log.row(file.aru.name, base.name, f, "Failure", reason)))
-    }
-
-    tmp <- raw[expected.headers]
-    ## Column identifiers renamed, 2026-09-27 - see @details "Column
-    ## identifiers renamed" above: rename the standardized "lon" column to
-    ## "longitude" now that the file has been matched/subset by the
-    ## device-literal expected.headers spelling.
-    names(tmp) <- output.headers
-    for (cn in names(tmp)) if (is.character(tmp[[cn]])) tmp[[cn]] <- trimws(tmp[[cn]])
-
-    tmp$aru.name <- file.aru.name
-
-    tmp$date <- convert.date(tmp$date)
-
-    ns <- tolower(trimws(tmp$ns))
-    ew <- tolower(trimws(tmp$ew))
-    tmp$Y <- ifelse(ns == "s", -as.numeric(tmp$lat), as.numeric(tmp$lat))
-    tmp$X <- ifelse(ew == "w", -as.numeric(tmp$longitude), as.numeric(tmp$longitude))
-
-    tmp <- tmp[c("aru.name", output.headers, "X", "Y")]
-
-    ## per-file date summary (per Josh, 2026-09-22 log.file redesign) - see
-    ## @details "Follow-up, 2026-09-22" above.
-    date.vals <- tmp$date
-    date.unique.n <- length(unique(date.vals))
-    iso.ok <- grepl("^[0-9]{4}-[0-9]{2}-[0-9]{2}$", date.vals) &
-      !is.na(suppressWarnings(as.Date(date.vals, format = "%Y-%m-%d")))
-    if (any(iso.ok)) {
-      date.start.val <- min(date.vals[iso.ok])
-      date.end.val   <- max(date.vals[iso.ok])
-      date.range.val <- as.integer(as.Date(date.end.val) - as.Date(date.start.val)) + 1L
-    } else {
-      date.start.val <- NA_character_
-      date.end.val   <- NA_character_
-      date.range.val <- NA_integer_
-    }
-
-    list(data = tmp,
-         log = make.log.row(file.aru.name, base.name, f, "Success",
-                             "All headers present and observation in file",
-                             date.start = date.start.val, date.end = date.end.val,
-                             date.unique = date.unique.n, date.range = date.range.val,
-                             records = nrow(tmp)))
-  }
-
-  all.files <- list.files(dir.load, pattern = pattern.regex(load.pattern),
-                           recursive = dir.sub, full.names = TRUE, ignore.case = TRUE)
-
-  cat("Scanning", dir.load, "(dir.sub =", dir.sub, ") ...\n")
-
-  sm4logs.merged <- NULL
-  log.rows <- list()
-
-  if (length(all.files) == 0) {
-    cat("No files matching load.pattern found.\n")
-  } else {
-    for (f in all.files) {
-      r <- process.one.file(f)
-      log.rows[[length(log.rows) + 1]] <- r$log
-      if (is.null(r$data)) {
-        cat("  [skipped] ", f, " - ", r$log$reason, "\n", sep = "")
-      } else {
-        cat("  loaded ", f, " (", nrow(r$data), " rows)\n", sep = "")
-        sm4logs.merged <- if (is.null(sm4logs.merged)) r$data else rbind(sm4logs.merged, r$data)
-      }
-    }
-  }
-
-  sm4logs.merged_log.file <- if (length(log.rows) > 0) {
-    do.call(rbind, log.rows)
-  } else {
-    data.frame(aru.name = character(0), filename = character(0),
-               date.start = character(0), date.end = character(0),
-               date.unique = integer(0), date.range = integer(0),
-               records = integer(0), load.status = character(0),
-               reason = character(0), filepath = character(0),
-               stringsAsFactors = FALSE)
-  }
-
-  if (is.null(sm4logs.merged)) {
-    sm4logs.merged <- data.frame()
+  sm4logs.merged <- out$data[["SM4"]]
+  if (nrow(sm4logs.merged) == 0) {
     cat("\nNo files were successfully loaded - sm4logs.merged is empty.\n")
-  } else if (duplicates.remove) {
-    dup.mask <- duplicated(sm4logs.merged)
-    n.dup <- sum(dup.mask)
-    if (n.dup > 0) {
-      cat("\n", n.dup, " duplicate row(s) removed from sm4logs.merged.\n", sep = "")
-      sm4logs.merged <- sm4logs.merged[!dup.mask, ]
-    }
-    rownames(sm4logs.merged) <- NULL
   }
 
   result <- list(sm4logs.merged = sm4logs.merged)
-  if (log.file) result$sm4logs.merged_log.file <- sm4logs.merged_log.file
+  if (log.file) result$log.file_sm4 <- out$log
 
   caller.env <- parent.frame()
   for (nm in names(result)) assign(nm, result[[nm]], envir = caller.env)

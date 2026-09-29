@@ -7,7 +7,7 @@
 batz.merge_sm4.logfile(
   dir.load = getwd(),
   dir.sub = FALSE,
-  load.pattern = c("*_A_Summary.txt", "*_B_Summary.txt"),
+  load.pattern = c("*_A_Summary*.txt", "*_B_Summary*.txt"),
   duplicates.remove = TRUE,
   log.file = FALSE
 )
@@ -19,9 +19,14 @@ batz.merge_sm4.logfile(
 \item{dir.sub}{Logical, default \code{FALSE}. If \code{TRUE}, also search
 subdirectories of \code{dir.load}.}
 
-\item{load.pattern}{Character vector of wildcard/glob suffix patterns
-(converted internally to a regex via \code{utils::glob2rx()}), default
-\code{c("*_A_Summary.txt", "*_B_Summary.txt")}.}
+\item{load.pattern}{Character vector of wildcard/glob patterns (converted
+internally to a regex via \code{utils::glob2rx()}), default
+\code{c("*_A_Summary*.txt", "*_B_Summary*.txt")}. The second \code{*}
+(added 2026-09-29, per Josh) lets any text sit between
+\code{"_Summary"} and \code{".txt"}, so renamed/suffixed copies such as
+\code{"WTG-GOM102_A_Summary - Copy.txt"} or
+\code{"AYERS_A_Summary_2026.txt"} are also picked up; the plain
+\code{"*_A_Summary.txt"} form still matches.}
 
 \item{duplicates.remove}{Logical, default \code{TRUE}. Drop exact
 duplicate rows from the final merged data frame. (Not listed in the
@@ -29,28 +34,29 @@ original spec's "Optional inputs", but used in its Steps section -
 added as a real parameter; see the dev script's header comment.)}
 
 \item{log.file}{Logical, default \code{FALSE}. If \code{TRUE}, also
-return (and auto-assign) \code{sm4logs.merged_log.file}: one row per
+return (and auto-assign) \code{log.file_sm4}: one row per
 file examined (whether it was successfully merged in or not; per
 Josh's 2026-09-22 redesign of this parameter - see \code{@details}),
-with columns \code{$aru.name}, \code{$filename}, \code{$date.start},
+with columns \code{$aru.name}, \code{$filename}, \code{$version},
+\code{$date.start},
 \code{$date.end}, \code{$date.unique}, \code{$date.range},
 \code{$records}, \code{$load.status} (\code{"Success"}/\code{"Failure"}),
 \code{$reason}, and \code{$filepath}.}
 }
 \value{
 Invisibly, a named list: \code{sm4logs.merged} (always), plus
-\code{sm4logs.merged_log.file} when \code{log.file = TRUE}. Every
-element is also auto-assigned into the calling environment (same
-pattern already used in \code{batz.merge_aru.meta},
-\code{batz.datawrangler_load.files}, and
-\code{batz.arumeta_generate.eventlog}), so a bare call with no
-assignment creates \code{sm4logs.merged} (and the log table, if
-requested) directly in your workspace.
+  \code{log.file_sm4} when \code{log.file = TRUE}. Every
+  element is also auto-assigned into the calling environment (same
+  pattern already used in \code{batz.merge_aru.meta},
+  \code{batz.datawrangler_load.files}, and
+  \code{batz.arumeta_generate.eventlog}), so a bare call with no
+  assignment creates \code{sm4logs.merged} (and the log table, if
+  requested) directly in your workspace.
 }
 \description{
 Searches a directory (and, optionally, its subdirectories) for SM4
 Autonomous Recording Unit activity-log summary files
-(\code{"*_A_Summary.txt"}/\code{"*_B_Summary.txt"}), validates each
+(\code{"*_A_Summary*.txt"}/\code{"*_B_Summary*.txt"}), validates each
 file's headers, and merges them into one standardized master data frame:
 the ARU name is extracted from the file name, \code{$date} is normalized
 to \code{YYYY-MM-DD}, and \code{$lat}/\code{$ns} and
@@ -59,8 +65,7 @@ to \code{YYYY-MM-DD}, and \code{$lat}/\code{$ns} and
 }
 \details{
 \strong{Header standardization (per Josh, 2026-09-14 project preference)
-\itemize{
-\item real, documented output-schema change.} The 11 expected SM4 summary
+- real, documented output-schema change.} The 11 expected SM4 summary
 columns are a literal, uninvented copy of the ARU device's own real
 export column text (not a \code{batz}-invented shorthand), so - like the
 raw headers read off every file - they are now run through the shared
@@ -84,7 +89,6 @@ ones. \strong{This does NOT affect \code{$aru.name}, \code{$X}, or
 \code{aru.name} is parsed from the file's own NAME, and \code{X}/\code{Y}
 are this function's own derived/computed columns, so all three keep
 their existing names per this project's ordinary output convention.
-}
 
 \strong{Header validation:} a file must have all 11 expected columns
 (now matched by their standardized spellings, case-insensitively and
@@ -114,10 +118,10 @@ not a degrees-minutes-seconds parse. The original
 alongside the new \code{$Y}/\code{$X} columns, not replaced.
 
 \strong{Follow-up, 2026-09-22, per Josh - \code{log.file} completely
-redesigned.} Previously, \code{sm4logs.merged_log.file} only had a row
+redesigned.} Previously, \code{log.file_sm4} only had a row
 for a SKIPPED file (\code{$filepath}/\code{$reason} only). Josh asked for
 a richer log covering every file examined, success or failure, with a
-per-file date/record summary. \code{sm4logs.merged_log.file} (when
+per-file date/record summary. \code{log.file_sm4} (when
 \code{log.file = TRUE}) now has exactly one row per file matched by
 \code{load.pattern}, with columns \code{$aru.name} (always set, parsed
 from the file name the same way as \code{sm4logs.merged}'s own
@@ -157,13 +161,54 @@ only schema (skipped-files only) needs to be updated for the new
 10-column, one-row-per-file schema.
 
 \strong{Column identifiers renamed, 2026-09-27, per Josh's
-reference-workbook "Change.to" column.} In \code{sm4logs.merged_log.file}
+reference-workbook "Change.to" column.} In \code{log.file_sm4}
 (returned when \code{log.file = TRUE}): \code{file.name} ->
 \code{filename}. In \code{sm4logs.merged}: the standardized input column
 \code{lon} -> \code{longitude} - header-presence validation against the
 SM4 device's own real \code{LON} export text is unchanged (that raw
 export text still standardizes to \code{lon} internally for matching
 purposes), only the merged output's column spelling changes.
+
+\strong{Follow-up, 2026-09-29, per Josh - wider default
+\code{load.pattern}.} Default changed from
+\code{c("*_A_Summary.txt", "*_B_Summary.txt")} to
+\code{c("*_A_Summary*.txt", "*_B_Summary*.txt")}, so files with extra
+text between \code{"_Summary"} and \code{".txt"} (e.g. a Windows
+\code{" - Copy"} duplicate) are now found too. Matching is still
+case-insensitive, and the ARU name is still everything before the first
+\code{"_"}, so \code{"WTG-GOM102_A_Summary - Copy.txt"} -> \code{"WTG-GOM102"}.
+\strong{Heads-up:} a " - Copy" file that is an exact duplicate of its
+original adds identical rows; \code{duplicates.remove = TRUE} (the
+default) drops those from \code{sm4logs.merged}, but both files still
+get their own row in \code{log.file_sm4}.
+
+\strong{Follow-up, 2026-09-29, per Josh - SM4/SM5 detection and
+\code{$version}.} Each file's headers are now checked to see which SM
+unit wrote it (SM4, SM5 firmware 1.5 or earlier, or SM5 firmware 1.6 or
+later) before loading. Only SM4 files are merged into
+\code{sm4logs.merged}; an SM5 file matched by \code{load.pattern} is
+skipped with \code{$load.status = "Failure"} and a \code{$reason}
+pointing to \code{batz.merge_sm5.logfile()} or
+\code{batz.merge_sm.logfiles()}. \code{log.file_sm4} gains a
+new \code{$version} column (after \code{$filename}): \code{"SM4"},
+\code{"SM5.1.5"}, \code{"SM5.1.6"}, or \code{"unknown"} (the file
+can't be read, or its headers match none of the three - reason
+\code{"could not identify SM version from headers"}). The reading,
+header checking, date/coordinate conversion and logging now live in a
+shared internal engine (\code{sm.logfile.merge()}, in
+\code{batz.util_sm.logfile.R}) used by all three SM merge functions -
+\code{sm4logs.merged} itself is unchanged. See that file for how the
+version is detected.
+
+\strong{Follow-up, 2026-09-29, per Josh - log renamed.} The log
+object \code{sm4logs.merged_log.file} is now \code{log.file_sm4}, so it
+can't be overwritten by (or overwrite) the log from any other
+\code{batz} function. SM5 logs are \code{log.file_sm5}
+(\code{batz.merge_sm5.logfile()}) and \code{log.file_sm}
+(\code{batz.merge_sm.logfiles()}). Earlier paragraphs in this
+documentation use the new name. Code that reads
+\code{sm4logs.merged_log.file} needs updating to \code{log.file_sm4}.
+\code{sm4logs.merged} is unchanged.
 }
 \examples{
 \dontrun{
@@ -171,7 +216,11 @@ batz.merge_sm4.logfile()
 # sm4logs.merged is now in your workspace
 
 batz.merge_sm4.logfile(dir.sub = TRUE, log.file = TRUE)
-# sm4logs.merged and sm4logs.merged_log.file both created
+# sm4logs.merged and log.file_sm4 both created
 }
 
+}
+\seealso{
+\code{\link{batz.merge_sm5.logfile}},
+  \code{\link{batz.merge_sm.logfiles}}
 }

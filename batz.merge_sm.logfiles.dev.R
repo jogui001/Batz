@@ -1,147 +1,12 @@
 # =============================================================================
-# batz.merge_sm4.logfile.dev.R
+# batz.merge_sm.logfiles.dev.R
 # -----------------------------------------------------------------------------
-# Dev script for batz.merge_sm4.logfile() - tested against real test
-# data before being wrapped into the final function
-# (batz.merge_sm4.logfile.R).
-#
-# Purpose (per spec): merge all SM4 ARU activity-log summary files
-# ("*_A_Summary*.txt"/"*_B_Summary*.txt") in a directory (and, optionally,
-# its subdirectories) into one master summary data frame in a standardized
-# format (ARU name extracted, date normalized, lat/long converted to signed
-# decimal degrees).
-#
-# NAME: Josh's given name was "batz.sm4logfile_merge&format" - normalized to
-# "batz.merge_sm4.logfile" ("&" isn't one of the two separator
-# characters Josh's own convention defines - "_" between family/action, "."
-# within the action - same normalization already applied to
-# "batz.arumeta.merge&format" -> "batz.arumeta_merge.format" earlier in this
-# project). Told Josh about the rename, per standing project convention.
-#
-# =============================================================================
-# FLAGGED SPEC ISSUES (original 2026-09-14 build):
-# =============================================================================
-#  1. `duplicates.remove` is used in the Steps section ("if duplicates.remove
-#     = TRUE then remove any duplicated rows") but is NOT listed in
-#     "Optional inputs" at all. Added it as a real parameter, default TRUE
-#     (matching every other batz function's dedup-flag default) - please
-#     confirm TRUE is the right default here too.
-#  2. Returned object names `sm4logs.merged`/`log.file_sm4` mix
-#     "_" into an otherwise dot-separated name - this one is NOT a naming
-#     leak from a different family this time (this IS the sm4logfile family
-#     function), so used them exactly as given rather than renaming.
-#  3. DATE format: every real file seen so far uses "YYYY-Mon-DD" (e.g.
-#     "2026-Jun-26"), not "Mon-DD-YYYY" or any other order. Implemented the
-#     "three-letter month" conversion narrowly for this exact real format.
-#  4. LAT/LON in the real data are already plain decimal degrees (not
-#     degrees-minutes-seconds), so "convert into decimal degrees" is
-#     implemented as just applying the correct sign from the NS/EW
-#     hemisphere letter - not a DMS parse.
-#  5. Header matching for the "missing headers" check is exact-string,
-#     case-insensitive, after trimming - extra/unexpected columns beyond the
-#     given 11 wouldn't fail a file (only a MISSING expected column does).
-#
-#  6. **Standardized (2026-09-14, per Josh - project-wide header
-#     standardization preference) - real, documented output-schema change.**
-#     The 11-column expected-header list is a literal, uninvented copy of
-#     the SM4 device's own real export column text (not a batz-invented
-#     shorthand), so both it and every raw file's own headers are now run
-#     through standardize.headers(). Old -> new: DATE -> date, TIME -> time,
-#     LAT -> lat, NS -> ns, LON -> lon, EW -> ew, POWER(V) -> power_v,
-#     TEMP(C) -> temp_c, #FILES -> files, #SCRUBBED -> scrubbed,
-#     MIC0 TYPE -> mic0_type. Does NOT affect aru.name, X, or Y.
-#
-# =============================================================================
-# FOLLOW-UP, 2026-09-22, per Josh - log.file COMPLETELY REDESIGNED:
-# =============================================================================
-#  Previously, log.file_sm4 only had a row for a SKIPPED file
-#  ($filepath/$reason only, "mismatched headers (missing: ...)"/"no
-#  records"/"could not read file"). Josh's new spec: build a row for EVERY
-#  file examined (success or failure), with columns $aru.name, $filename,
-#  $date.start, $date.end, $date.unique, $date.range, $records,
-#  $load.status ("Success"/"Failure"), $reason, $filepath. (Renamed from
-#  $file.name to $filename on 2026-09-27 - see the RENAMED note below; this
-#  header comment already uses the current name.)
-#
-#  - $aru.name/$filename/$filepath: always set, regardless of success.
-#  - Success (all 11 headers present AND >=1 data row): $date is converted
-#    to YYYY-MM-DD (same convert.date() step sm4logs.merged itself uses),
-#    then $date.start/$date.end (earliest/latest date IN THAT ONE FILE,
-#    not across all files), $date.unique (count of distinct $date values in
-#    that file), $date.range (calendar-day span from $date.start to
-#    $date.end inclusive - lets you compare against $date.unique to spot
-#    gap days with no records), and $records (row count of that one file)
-#    are all filled in; $load.status = "Success"; $reason = Josh's exact
-#    literal text, "All headers present and observation in file".
-#  - Failure (headers missing and/or no data rows): $load.status =
-#    "Failure"; $reason = "no data" (headers fine, zero rows), "These
-#    headers are missing: <list>" (has data, headers missing), or "no data
-#    and These headers are missing: <list>" (both) - Josh's exact literal
-#    text/format in all three cases. Per Josh's explicit "all other headers
-#    = NA": $date.start/$date.end/$date.unique/$date.range/$records are all
-#    NA on a Failure row.
-#  - "could not read file" (a file read.csv() itself errored on) is kept as
-#    a fourth Failure reason, outside Josh's given list - an edge case the
-#    OLD log.file scheme already handled and this redesign preserves for
-#    parity, since the new spec doesn't say what should happen to a file
-#    that can't be read at all.
-#  - FLAGGED, not in Josh's spec: a $date value convert.date() doesn't
-#    recognize (see flagged issue 3 above) is still counted in
-#    $date.unique but excluded from the $date.start/$date.end/$date.range
-#    calculation via an ISO-format ("^\d{4}-\d{2}-\d{2}$") validity check,
-#    so one malformed date can't corrupt the file's chronological summary.
-#    No real file has been seen to trigger this.
-#  - Test data note: this session's device bridge does not have the "3 All
-#    test data" folder connected (only "reference database files" and the
-#    GitHub\Batz repo are connected this round), so - rather than request a
-#    new folder grant just to re-verify the UNCHANGED base merge/convert
-#    logic - this round's tests use fresh SYNTHETIC fixtures exercising
-#    every log.file branch (Success x2 with different date-range/unique
-#    shapes, all three Failure reason texts, and a dir.sub=TRUE subfolder
-#    file). The base per-row merge/date/coordinate logic itself is
-#    unchanged from the 2026-09-14 build, which WAS verified against real
-#    data at the time (see git history / earlier revisions of this file).
-# =============================================================================
-# RENAMED, 2026-09-27, per Josh's reference-workbook "Change.to" column:
-# =============================================================================
-#  In log.file_sm4 (log.file = TRUE): $file.name -> $filename.
-#  In sm4logs.merged (the merged master data frame): the standardized input
-#  column $lon -> $longitude. The expected.headers list used to VALIDATE a
-#  raw file's headers is unchanged ("lon" is still what the SM4 device's own
-#  real "LON" export text standardizes to via standardize.headers(), and
-#  that real device text is not changing) - a separate output.headers
-#  vector renames just the "lon" -> "longitude" spelling once a file has
-#  already been matched/subset, so only the OUTPUT-facing column name
-#  changes, not the input-matching logic.
-# =============================================================================
-# FOLLOW-UP, 2026-09-29, per Josh - wider default load.pattern:
-# =============================================================================
-#  load.pattern default: c("*_A_Summary.txt", "*_B_Summary.txt") ->
-#  c("*_A_Summary*.txt", "*_B_Summary*.txt"). The extra "*" lets any text
-#  sit between "_Summary" and ".txt", so e.g. "WTG-GOM102_A_Summary -
-#  Copy.txt" (a real file in "4 Current  test data") and
-#  "AYERS_B_Summary_2026.txt" are now picked up. Still case-insensitive;
-#  ".csv", "_C_Summary" and ".txt.bak" files are still ignored. ARU name
-#  parsing is unchanged (everything before the first "_"). An exact
-#  " - Copy" duplicate adds identical rows - duplicates.remove = TRUE drops
-#  them from sm4logs.merged, but both files still get a log row. See TEST
-#  "load.pattern" at the bottom of this script.
-# =============================================================================
-
-# =============================================================================
-# FOLLOW-UP, 2026-09-29, per Josh - SM4/SM5 detection + $version:
-# =============================================================================
-#  Headers are now checked to tell SM4 from SM5 (firmware 1.5 or 1.6) files.
-#  Only SM4 files merge into sm4logs.merged; SM5 files are logged as
-#  "Failure" with a reason pointing to batz.merge_sm5.logfile() /
-#  batz.merge_sm.logfiles(). log.file_sm4 gains $version
-#  ("SM4"/"SM5.1.5"/"SM5.1.6"/"unknown") after $filename. Reading,
-#  checking and converting now live in the shared engine
-#  batz.util_sm.logfile.R (inlined below). sm4logs.merged is unchanged.
-#  RENAMED, same day, per Josh: the log object sm4logs.merged_log.file is
-#  now log.file_sm4 (SM5: log.file_sm5; all-units: log.file_sm), so no
-#  batz log overwrites another. Earlier notes in this header use the new
-#  name.
+# Dev script for batz.merge_sm.logfiles() - added 2026-09-29, per Josh.
+# Merges logs from any SM unit into SM4, SM5_1.5 and SM5_1.6, detected from
+# each file's headers.
+# Standalone: the shared engine (batz.util_sm.logfile.R) and
+# standardize.headers() are inlined below. Keep this file OUTSIDE the
+# package's R/ folder.
 # =============================================================================
 
 ## ---- helper: standardize.headers (per Josh, 2026-09-14) - inlined, since
@@ -363,24 +228,20 @@ sm.logfile.merge <- function(dir.load, dir.sub, load.pattern, duplicates.remove,
   list(data = merged, log = log.df)
 }
 
-batz.merge_sm4.logfile <- function(dir.load          = getwd(),
+batz.merge_sm.logfiles <- function(dir.load          = getwd(),
                                    dir.sub           = FALSE,
                                    load.pattern      = c("*_A_Summary*.txt", "*_B_Summary*.txt"),
                                    duplicates.remove = TRUE,
                                    log.file          = FALSE) {
 
-  ## 2026-09-29: shared engine (batz.util_sm.logfile.R) - detects each
-  ## file's SM version from its headers and only merges SM4 files here.
   out <- sm.logfile.merge(dir.load, dir.sub, load.pattern, duplicates.remove,
-                          versions.keep = "SM4", caller.name = "batz.merge_sm4.logfile()")
+                          versions.keep = c("SM4", "SM5.1.5", "SM5.1.6"),
+                          caller.name = "batz.merge_sm.logfiles()")
 
-  sm4logs.merged <- out$data[["SM4"]]
-  if (nrow(sm4logs.merged) == 0) {
-    cat("\nNo files were successfully loaded - sm4logs.merged is empty.\n")
-  }
-
-  result <- list(sm4logs.merged = sm4logs.merged)
-  if (log.file) result$log.file_sm4 <- out$log
+  result <- list(SM4     = out$data[["SM4"]],
+                 SM5_1.5 = out$data[["SM5.1.5"]],
+                 SM5_1.6 = out$data[["SM5.1.6"]])
+  if (log.file) result$log.file_sm <- out$log
 
   caller.env <- parent.frame()
   for (nm in names(result)) assign(nm, result[[nm]], envir = caller.env)
@@ -468,110 +329,3 @@ if (exists("batz.merge_sm.logfiles") && exists("batz.merge_sm5.logfile") && exis
   ok(all(c("log.file_sm","log.file_sm5","log.file_sm4") %in% ls(globalenv())) &&
        nrow(log.file_sm) == 8 && nrow(log.file_sm5) == 8, "log.file_sm, log.file_sm5, log.file_sm4 all coexist")
 cat("\nALL TESTS PASSED\n")
-
-# =============================================================================
-# tests
-# =============================================================================
-# Synthetic fixtures (see FOLLOW-UP note above for why synthetic this round):
-#   sm4_test/AYERS_A_Summary.txt      - 3 rows, 2 unique dates, Jun01+Jun03
-#                                        (date.range = 3, a 1-day gap)
-#   sm4_test/CEMETERY_A_Summary.txt   - 1 row, 1 date (date.range = 1)
-#   sm4_test/BADHEADER_A_Summary.txt  - missing TEMP(C), has 1 data row
-#   sm4_test/EMPTY_A_Summary.txt      - all headers present, 0 data rows
-#   sm4_test/BOTHBAD_A_Summary.txt    - missing TEMP(C) AND 0 data rows
-#   sm4_test/subdir/SUBSITE_A_Summary.txt - 1 row (dir.sub = TRUE test)
-
-test.dir <- "/home/claude/refdb/sm4_test"
-
-cat("=== log.file = TRUE, dir.sub = TRUE (all 6 fixtures) ===\n")
-res1 <- batz.merge_sm4.logfile(test.dir, dir.sub = TRUE, log.file = TRUE)
-cat("\ndim sm4logs.merged:", paste(dim(sm4logs.merged), collapse = " x "), "\n")
-print(sm4logs.merged[, c("aru.name", "date", "time", "lat", "longitude")])
-cat("\nlog.file_sm4:\n")
-print(log.file_sm4)
-
-stopifnot(nrow(log.file_sm4) == 6)
-stopifnot(nrow(sm4logs.merged) == 5)
-
-get.row <- function(fname) log.file_sm4[log.file_sm4$filename == fname, ]
-
-r <- get.row("AYERS_A_Summary.txt")
-stopifnot(r$load.status == "Success", r$records == 3, r$date.unique == 2,
-          r$date.start == "2026-06-01", r$date.end == "2026-06-03", r$date.range == 3)
-cat("[PASS] AYERS Success row: records=3, date.unique=2, date.range=3\n")
-
-r <- get.row("CEMETERY_A_Summary.txt")
-stopifnot(r$load.status == "Success", r$records == 1, r$date.unique == 1, r$date.range == 1)
-cat("[PASS] CEMETERY Success row: records=1, date.unique=1, date.range=1\n")
-
-r <- get.row("BADHEADER_A_Summary.txt")
-stopifnot(r$load.status == "Failure", r$reason == "These headers are missing: temp_c", is.na(r$records))
-cat("[PASS] BADHEADER Failure row:", r$reason, "\n")
-
-r <- get.row("EMPTY_A_Summary.txt")
-stopifnot(r$load.status == "Failure", r$reason == "no data", is.na(r$date.unique))
-cat("[PASS] EMPTY Failure row:", r$reason, "\n")
-
-r <- get.row("BOTHBAD_A_Summary.txt")
-stopifnot(r$load.status == "Failure",
-          r$reason == "no data and These headers are missing: temp_c")
-cat("[PASS] BOTHBAD Failure row:", r$reason, "\n")
-
-r <- get.row("SUBSITE_A_Summary.txt")
-stopifnot(r$load.status == "Success", r$aru.name == "SUBSITE")
-cat("[PASS] SUBSITE (dir.sub = TRUE) Success row\n")
-
-stopifnot(all(!is.na(log.file_sm4$aru.name)),
-          all(!is.na(log.file_sm4$filename)),
-          all(!is.na(log.file_sm4$filepath)))
-cat("[PASS] aru.name/filename/filepath always populated, even on Failure\n")
-
-cat("\n=== log.file = FALSE (log.file_sm4 should not be created) ===\n")
-if (exists("log.file_sm4", envir = .GlobalEnv, inherits = FALSE)) {
-  rm(log.file_sm4, envir = .GlobalEnv)
-}
-res2 <- batz.merge_sm4.logfile(test.dir, dir.sub = TRUE, log.file = FALSE)
-stopifnot(is.null(res2$log.file_sm4))
-stopifnot(!exists("log.file_sm4", envir = .GlobalEnv, inherits = FALSE))
-cat("[PASS] log.file = FALSE correctly omits log.file_sm4\n")
-
-cat("\n=== empty directory ===\n")
-empty.dir <- tempfile(); dir.create(empty.dir)
-res3 <- batz.merge_sm4.logfile(empty.dir, log.file = TRUE)
-stopifnot(nrow(sm4logs.merged) == 0, nrow(log.file_sm4) == 0)
-cat("[PASS] empty directory: 0 rows, 0 log rows, no error\n")
-
-# -----------------------------------------------------------------------------
-# TEST load.pattern (2026-09-29): wider default "*_A_Summary*.txt" /
-# "*_B_Summary*.txt". Builds its own fixtures in a temp folder.
-# -----------------------------------------------------------------------------
-cat("\n=== load.pattern: suffixed/copied file names ===\n")
-lp.dir <- file.path(tempdir(), "sm4_pattern_test")
-unlink(lp.dir, recursive = TRUE); dir.create(file.path(lp.dir, "subdir"), recursive = TRUE)
-lp.hdr <- "DATE,TIME,LAT,NS,LON,EW,POWER(V),TEMP(C),#FILES,#SCRUBBED,MIC0 TYPE"
-lp.row <- function(dt) sprintf("%s,20:00:00,44.5,N,70.6,W,12.1,18.5,10,0,U2", dt)
-lp.write <- function(f, dts) writeLines(c(lp.hdr, vapply(dts, lp.row, character(1))), file.path(lp.dir, f))
-lp.write("WTG-GOM102_A_Summary.txt",        c("2026-Jun-01", "2026-Jun-02"))
-lp.write("WTG-GOM102_A_Summary - Copy.txt", c("2026-Jun-01", "2026-Jun-02"))  # exact duplicate
-lp.write("AYERS_B_Summary_2026.txt",        "2026-Jun-05")
-lp.write("subdir/SUB_A_summary.TXT",        "2026-Jun-07")                    # case-insensitive
-lp.write("NOPE_A_Summary.csv",              "2026-Jun-09")                    # wrong extension
-lp.write("NOPE_C_Summary.txt",              "2026-Jun-09")                    # not A/B
-lp.write("NOPE_A_Summary.txt.bak",          "2026-Jun-09")                    # not ending .txt
-
-batz.merge_sm4.logfile(lp.dir, dir.sub = TRUE, log.file = TRUE)
-stopifnot(nrow(log.file_sm4) == 4,
-          !any(grepl("NOPE", log.file_sm4$filename)),
-          "WTG-GOM102_A_Summary - Copy.txt" %in% log.file_sm4$filename,
-          "AYERS_B_Summary_2026.txt" %in% log.file_sm4$filename)
-cat("[PASS] suffixed/' - Copy'/mixed-case files found; .csv/_C_/.bak ignored\n")
-stopifnot(nrow(sm4logs.merged) == 4,
-          sum(sm4logs.merged$aru.name == "WTG-GOM102") == 2)
-cat("[PASS] ' - Copy' duplicate rows removed by duplicates.remove; aru.name = WTG-GOM102\n")
-
-batz.merge_sm4.logfile(lp.dir, dir.sub = TRUE, log.file = TRUE,
-                       load.pattern = c("*_A_Summary.txt", "*_B_Summary.txt"))
-stopifnot(nrow(log.file_sm4) == 2)
-cat("[PASS] old pattern still works when passed explicitly (2 files)\n")
-
-cat("\nORIGINAL SM4 TESTS PASSED\n")
