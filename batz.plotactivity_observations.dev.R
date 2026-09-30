@@ -193,7 +193,7 @@ aru.metadata.db.synth <- data.frame(
   all.dectections = TRUE,
   facet.panel    = "",
   "40khzmyo"     = TRUE,
-  facet.label    = "common",
+  facet.label    = "common_name",
   plot.group     = "aru.groupby",
   plot.set       = "WTG-GOM102",
   pool           = FALSE,
@@ -457,12 +457,12 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     khz.flag <- isTRUE(as.logical(job[["40khzmyo"]]))
     if (khz.flag) { spp.plot <- c(spp.plot, "40khzmyo"); if (!alldect.flag) facpan <- c(facpan, "40khzmyo") }
     spp.plot <- unique(trimws(spp.plot)); facpan <- unique(trimws(facpan))
-    spp.plot <- batz.batusa_recode.names(spp.plot, batname.format.out = "common")
-    facpan <- batz.batusa_recode.names(facpan, batname.format.out = "common")
+    spp.plot <- batz.batusa_recode.names(spp.plot, batname.format.out = "common_name")
+    facpan <- batz.batusa_recode.names(facpan, batname.format.out = "common_name")
 
     pd <- data
     is.khz.raw <- norm.simple(pd$spp.id) %in% KHZ.ALIASES
-    pd$spp.common <- batz.batusa_recode.names(pd$spp.id, batname.format.out = "common")
+    pd$spp.common <- batz.batusa_recode.names(pd$spp.id, batname.format.out = "common_name")
     pd$spp.common[is.khz.raw] <- "40khzmyo"
 
     # --- $plot.group: which column of `data` to filter/group by. Follow-up,
@@ -509,7 +509,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     legend.flag <- isTRUE(as.logical(get.setting(job, "legend")))
 
     facet.label.fmt <- unquote(get.setting(job, "facet.label"))
-    if (is.na(facet.label.fmt) || !nzchar(facet.label.fmt)) facet.label.fmt <- "common"
+    if (is.na(facet.label.fmt) || !nzchar(facet.label.fmt)) facet.label.fmt <- "common_name"
     panel.levels.raw <- facpan
     panel.labels <- batz.batusa_recode.names(panel.levels.raw, batname.format.out = facet.label.fmt)
     names(panel.labels) <- panel.levels.raw
