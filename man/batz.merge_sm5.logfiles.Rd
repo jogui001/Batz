@@ -39,21 +39,21 @@ with columns \code{$aru.name}, \code{$filename}, \code{$version},
 }
 \value{
 Invisibly, a named list: \code{SM5_1.5} and \code{SM5_1.6}
-  (always; an empty \code{data.frame()} if no file of that version was
-  loaded), plus \code{log.file_sm5} when \code{log.file = TRUE}. Every
-  element is also auto-assigned into the calling environment, so a bare
-  call creates them directly in your workspace.
+(always; an empty \code{data.frame()} if no file of that version was
+loaded), plus \code{log.file_sm5} when \code{log.file = TRUE}. Every
+element is also auto-assigned into the calling environment, so a bare
+call creates them directly in your workspace.
 
-  \code{SM5_1.5} columns: \code{$aru.name}, \code{$date}, \code{$time},
-  \code{$lat}, \code{$ns}, \code{$longitude}, \code{$ew}, \code{$power_v},
-  \code{$temp_c}, \code{$acfiles}, \code{$fs1files}, \code{$fs2files},
-  \code{$zc1files}, \code{$zc2files}, \code{$scrub1}, \code{$scrub2},
-  \code{$X}, \code{$Y}.
+\code{SM5_1.5} columns: \code{$aru.name}, \code{$date}, \code{$time},
+\code{$lat}, \code{$ns}, \code{$longitude}, \code{$ew}, \code{$power_v},
+\code{$temp_c}, \code{$acfiles}, \code{$fs1files}, \code{$fs2files},
+\code{$zc1files}, \code{$zc2files}, \code{$scrub1}, \code{$scrub2},
+\code{$X}, \code{$Y}.
 
-  \code{SM5_1.6} columns: \code{$aru.name}, \code{$date}, \code{$time},
-  \code{$lat}, \code{$ns}, \code{$longitude}, \code{$ew}, \code{$power_v},
-  \code{$temp_c}, \code{$acfiles}, \code{$acl}, \code{$acr}, \code{$X},
-  \code{$Y}.
+\code{SM5_1.6} columns: \code{$aru.name}, \code{$date}, \code{$time},
+\code{$lat}, \code{$ns}, \code{$longitude}, \code{$ew}, \code{$power_v},
+\code{$temp_c}, \code{$acfiles}, \code{$acl}, \code{$acr}, \code{$X},
+\code{$Y}.
 }
 \description{
 SM5 sibling of \code{batz.merge_sm4.logfiles()} (added 2026-09-29, per
@@ -126,5 +126,5 @@ batz.merge_sm5.logfiles(dir.sub = TRUE, log.file = TRUE)
 }
 \seealso{
 \code{\link{batz.merge_sm4.logfiles}},
-  \code{\link{batz.merge_sm.logfiles}}
+\code{\link{batz.merge_sm.logfiles}}
 }
