@@ -14,7 +14,7 @@ batz.summarize_aruloc.coordinates(
 \arguments{
 \item{data}{Data frame of ARU log records - e.g. the output of
 \code{\link{batz.merge_sm.logfiles}}. Must have \code{$aru.name},
-\code{$date} (\code{YYYY-MM-DD}), \code{$time} (\code{HH:MM:SS}),
+\code{$date}, \code{$time} (see "Dates and times" below),
 \code{$longitude} and \code{$latitude} (signed decimal degrees). Header
 spelling is matched loosely (\code{"."}/\code{"_"}/case ignored). Other
 columns are ignored.}
@@ -81,6 +81,17 @@ out of that set's median. A set with no matched names gets \code{NA}.
 function with \code{"data is missing these headers: ..."}. A record whose
 \code{date}/\code{time} can't be read, or with a missing coordinate, is
 dropped with a console NOTE.
+
+\strong{Dates and times} (follow-up 2026-09-30, per Josh's real run,
+where every record failed to read): \code{$date} can be a \code{Date}
+column or text as \code{YYYY-MM-DD}, \code{YYYY/MM/DD}, \code{M/D/YYYY}
+(US order, as Excel saves it), \code{M-D-YYYY} or \code{YYYY-Mon-DD};
+\code{$time} can be text \code{HH:MM:SS} or \code{HH:MM}, an Excel time
+read by \code{readxl} (\code{POSIXct} on 1899-12-31), an
+\code{hms}/\code{difftime} column, or an Excel fraction of a day.
+Day-first dates (\code{D/M/YYYY}) aren't supported, since they can't be
+told apart from US dates. The NOTE for unreadable records now shows an
+example value.
 }
 \examples{
 \dontrun{

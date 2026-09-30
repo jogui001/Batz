@@ -8,7 +8,7 @@
 #'
 #' @param data Data frame of ARU log records - e.g. the output of
 #'   \code{\link{batz.merge_sm.logfiles}}. Must have \code{$aru.name},
-#'   \code{$date} (\code{YYYY-MM-DD}), \code{$time} (\code{HH:MM:SS}),
+#'   \code{$date}, \code{$time} (see "Dates and times" below),
 #'   \code{$longitude} and \code{$latitude} (signed decimal degrees). Header
 #'   spelling is matched loosely (\code{"."}/\code{"_"}/case ignored). Other
 #'   columns are ignored.
@@ -65,6 +65,17 @@
 #' \code{date}/\code{time} can't be read, or with a missing coordinate, is
 #' dropped with a console NOTE.
 #'
+#' \strong{Dates and times} (follow-up 2026-09-30, per Josh's real run,
+#' where every record failed to read): \code{$date} can be a \code{Date}
+#' column or text as \code{YYYY-MM-DD}, \code{YYYY/MM/DD}, \code{M/D/YYYY}
+#' (US order, as Excel saves it), \code{M-D-YYYY} or \code{YYYY-Mon-DD};
+#' \code{$time} can be text \code{HH:MM:SS} or \code{HH:MM}, an Excel time
+#' read by \code{readxl} (\code{POSIXct} on 1899-12-31), an
+#' \code{hms}/\code{difftime} column, or an Excel fraction of a day.
+#' Day-first dates (\code{D/M/YYYY}) aren't supported, since they can't be
+#' told apart from US dates. The NOTE for unreadable records now shows an
+#' example value.
+#'
 #' @seealso \code{\link{batz.merge_sm.logfiles}}
 #'
 #' @examples
@@ -108,11 +119,12 @@ batz.summarize_aruloc.coordinates <- function(data,
       d <- d[!zero, , drop = FALSE]
     }
   }
-  d$datetime <- as.POSIXct(paste(trimws(d$date), trimws(d$time)),
-                           tz = "UTC", format = "%Y-%m-%d %H:%M:%S")
+  d$datetime <- aruloc.parse.datetime(d$date, d$time)
   bad.dt <- is.na(d$datetime)
   if (any(bad.dt)) {
-    cat("NOTE:", sum(bad.dt), "record(s) with an unreadable date/time dropped.\n")
+    i <- which(bad.dt)[1]
+    cat("NOTE:", sum(bad.dt), "record(s) with an unreadable date/time dropped",
+        paste0("(e.g. date = '", format(d$date[i]), "', time = '", format(d$time[i]), "').\n"))
     d <- d[!bad.dt, , drop = FALSE]
   }
   if (nrow(d) == 0) stop("no usable records left in data")
@@ -176,4 +188,70 @@ batz.summarize_aruloc.coordinates <- function(data,
   caller.env <- parent.frame()
   for (nm in names(result)) assign(nm, result[[nm]], envir = caller.env)
   invisible(result)
+}
+
+#' Parse date + time columns into POSIXct (internal helper)
+#'
+#' Added 2026-09-30 for \code{batz.summarize_aruloc.coordinates()}, after a
+#' real file failed because its dates/times weren't in the
+#' \code{YYYY-MM-DD}/\code{HH:MM:SS} layout. Accepts:
+#' \itemize{
+#'   \item date: a \code{Date}/\code{POSIXct} column, or text as
+#'     \code{YYYY-MM-DD}, \code{YYYY/MM/DD}, \code{M/D/YYYY} (US order,
+#'     as Excel writes it on a US machine), \code{M-D-YYYY} or
+#'     \code{YYYY-Mon-DD} (raw SM log layout).
+#'   \item time: text as \code{HH:MM:SS} or \code{HH:MM}; a
+#'     \code{POSIXct} column (how \code{readxl} reads Excel times, dated
+#'     1899-12-31); an \code{hms}/\code{difftime} column; or an Excel time
+#'     fraction of a day (e.g. \code{0.8229}).
+#' }
+#' The first date layout that reads every non-blank value is used. Day-first
+#' dates (\code{D/M/YYYY}) are not tried, since they can't be told apart
+#' from US month-first dates.
+#'
+#' @keywords internal
+#' @noRd
+aruloc.parse.datetime <- function(date, time) {
+  ## ---- date -> "YYYY-MM-DD" --------------------------------------------
+  if (inherits(date, c("Date", "POSIXt"))) {
+    date.txt <- format(as.Date(date), "%Y-%m-%d")
+  } else {
+    txt <- trimws(as.character(date))
+    formats <- c("%Y-%m-%d", "%Y/%m/%d", "%m/%d/%Y", "%m-%d-%Y", "%Y-%b-%d")
+    ok <- !is.na(txt) & nzchar(txt)
+    date.txt <- rep(NA_character_, length(txt))
+    for (f in formats) {
+      parsed <- as.Date(txt, format = f)
+      yr <- as.integer(format(parsed, "%Y"))
+      if (all(!is.na(parsed[ok])) && all(yr[ok] > 1900)) {
+        date.txt <- format(parsed, "%Y-%m-%d"); break
+      }
+    }
+    if (all(is.na(date.txt))) {                 # no single layout fits: per value
+      for (f in formats) {
+        parsed <- as.Date(txt, format = f)
+        fill <- is.na(date.txt) & !is.na(parsed) & as.integer(format(parsed, "%Y")) > 1900
+        date.txt[fill] <- format(parsed[fill], "%Y-%m-%d")
+      }
+    }
+  }
+  ## ---- time -> seconds after midnight -----------------------------------
+  if (inherits(time, "POSIXt")) {
+    lt <- as.POSIXlt(time)
+    secs <- lt$hour * 3600 + lt$min * 60 + floor(lt$sec)
+  } else if (inherits(time, "difftime")) {
+    secs <- as.numeric(time, units = "secs")
+  } else if (is.numeric(time)) {
+    secs <- round(ifelse(time >= 0 & time < 1, time * 86400, NA))
+  } else {
+    txt <- trimws(as.character(time))
+    m <- regmatches(txt, regexec("^([0-9]{1,2}):([0-9]{2})(:([0-9]{2}))?", txt))
+    secs <- vapply(m, function(p) {
+      if (length(p) == 0) return(NA_real_)
+      h <- as.numeric(p[2]); mi <- as.numeric(p[3])
+      se <- if (nzchar(p[5])) as.numeric(p[5]) else 0
+      if (h > 23 || mi > 59 || se > 59) NA_real_ else h * 3600 + mi * 60 + se
+    }, numeric(1))
+  }
+  as.POSIXct(date.txt, tz = "UTC", format = "%Y-%m-%d") + secs
 }

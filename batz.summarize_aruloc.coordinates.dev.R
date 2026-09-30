@@ -18,6 +18,10 @@
 #  3. 0,0 (no GPS fix) records are dropped by default (zero.remove = TRUE).
 #  4. "More than 1 day of missing records" = a gap > 24 h between
 #     consecutive records at the same location (gap.days = 1).
+#  6. FOLLOW-UP 2026-09-30: Josh's real run dropped every record as an
+#     unreadable date/time. aruloc.parse.datetime() (below) now accepts
+#     Date columns, M/D/YYYY, YYYY/MM/DD, YYYY-Mon-DD, HH:MM, readxl
+#     POSIXct/hms times and Excel day-fractions.
 #  5. NWS03 alternates between one stored position and a fresh nightly GPS
 #     fix, so it produces ~74 location records under the exact-match rule.
 # =============================================================================
@@ -71,11 +75,12 @@ batz.summarize_aruloc.coordinates <- function(data,
       d <- d[!zero, , drop = FALSE]
     }
   }
-  d$datetime <- as.POSIXct(paste(trimws(d$date), trimws(d$time)),
-                           tz = "UTC", format = "%Y-%m-%d %H:%M:%S")
+  d$datetime <- aruloc.parse.datetime(d$date, d$time)
   bad.dt <- is.na(d$datetime)
   if (any(bad.dt)) {
-    cat("NOTE:", sum(bad.dt), "record(s) with an unreadable date/time dropped.\n")
+    i <- which(bad.dt)[1]
+    cat("NOTE:", sum(bad.dt), "record(s) with an unreadable date/time dropped",
+        paste0("(e.g. date = '", format(d$date[i]), "', time = '", format(d$time[i]), "').\n"))
     d <- d[!bad.dt, , drop = FALSE]
   }
   if (nrow(d) == 0) stop("no usable records left in data")
@@ -139,6 +144,51 @@ batz.summarize_aruloc.coordinates <- function(data,
   caller.env <- parent.frame()
   for (nm in names(result)) assign(nm, result[[nm]], envir = caller.env)
   invisible(result)
+}
+
+aruloc.parse.datetime <- function(date, time) {
+  ## ---- date -> "YYYY-MM-DD" --------------------------------------------
+  if (inherits(date, c("Date", "POSIXt"))) {
+    date.txt <- format(as.Date(date), "%Y-%m-%d")
+  } else {
+    txt <- trimws(as.character(date))
+    formats <- c("%Y-%m-%d", "%Y/%m/%d", "%m/%d/%Y", "%m-%d-%Y", "%Y-%b-%d")
+    ok <- !is.na(txt) & nzchar(txt)
+    date.txt <- rep(NA_character_, length(txt))
+    for (f in formats) {
+      parsed <- as.Date(txt, format = f)
+      yr <- as.integer(format(parsed, "%Y"))
+      if (all(!is.na(parsed[ok])) && all(yr[ok] > 1900)) {
+        date.txt <- format(parsed, "%Y-%m-%d"); break
+      }
+    }
+    if (all(is.na(date.txt))) {                 # no single layout fits: per value
+      for (f in formats) {
+        parsed <- as.Date(txt, format = f)
+        fill <- is.na(date.txt) & !is.na(parsed) & as.integer(format(parsed, "%Y")) > 1900
+        date.txt[fill] <- format(parsed[fill], "%Y-%m-%d")
+      }
+    }
+  }
+  ## ---- time -> seconds after midnight -----------------------------------
+  if (inherits(time, "POSIXt")) {
+    lt <- as.POSIXlt(time)
+    secs <- lt$hour * 3600 + lt$min * 60 + floor(lt$sec)
+  } else if (inherits(time, "difftime")) {
+    secs <- as.numeric(time, units = "secs")
+  } else if (is.numeric(time)) {
+    secs <- round(ifelse(time >= 0 & time < 1, time * 86400, NA))
+  } else {
+    txt <- trimws(as.character(time))
+    m <- regmatches(txt, regexec("^([0-9]{1,2}):([0-9]{2})(:([0-9]{2}))?", txt))
+    secs <- vapply(m, function(p) {
+      if (length(p) == 0) return(NA_real_)
+      h <- as.numeric(p[2]); mi <- as.numeric(p[3])
+      se <- if (nzchar(p[5])) as.numeric(p[5]) else 0
+      if (h > 23 || mi > 59 || se > 59) NA_real_ else h * 3600 + mi * 60 + se
+    }, numeric(1))
+  }
+  as.POSIXct(date.txt, tz = "UTC", format = "%Y-%m-%d") + secs
 }
 
 # =============================================================================
@@ -210,5 +260,28 @@ batz.summarize_aruloc.coordinates(syn2, data.frame(Sets = "A"))
 ok(nrow(coordinate.summary) == 6, "snake_case / capitalised headers accepted")
 e <- tryCatch(batz.summarize_aruloc.coordinates(syn[c("aru.name","date","longitude")], data.frame(Sets = "A")), error = function(x) conditionMessage(x))
 ok(e == "data is missing these headers: time, latitude", "missing headers named in the error")
+
+cat("\n=== date/time layouts (follow-up 2026-09-30) ===\n")
+base <- data.frame(aru.name = c("A","A","B"), longitude = c(-70,-70,-71), latitude = c(44,44,45))
+want <- c("2026-05-28 19:45:00", "2026-05-28 19:46:00", "2026-06-02 05:30:00")
+check <- function(dates, times, label) {
+  x <- base; x$date <- dates; x$time <- times
+  batz.summarize_aruloc.coordinates(x, data.frame(Sets = "A; B"))
+  got <- c(coordinate.summary$datetime.start[1], coordinate.summary$datetime.end[1], coordinate.summary$datetime.start[2])
+  ok(identical(got, want), label)
+}
+check(c("2026-05-28","2026-05-28","2026-06-02"), c("19:45:00","19:46:00","05:30:00"), "YYYY-MM-DD + HH:MM:SS")
+check(c("5/28/2026","5/28/2026","6/2/2026"), c("19:45","19:46","5:30"), "Excel-saved M/D/YYYY + H:MM")
+check(c("2026/05/28","2026/05/28","2026/06/02"), c("19:45:00","19:46:00","05:30:00"), "YYYY/MM/DD")
+check(c("2026-May-28","2026-May-28","2026-Jun-02"), c("19:45:00","19:46:00","05:30:00"), "raw SM YYYY-Mon-DD")
+check(as.Date(c("2026-05-28","2026-05-28","2026-06-02")),
+      as.POSIXct(c("1899-12-31 19:45:00","1899-12-31 19:46:00","1899-12-31 05:30:00"), tz = "UTC"),
+      "readxl: Date + POSIXct time on 1899-12-31")
+check(as.Date(c("2026-05-28","2026-05-28","2026-06-02")),
+      as.difftime(c(71100, 71160, 19800), units = "secs"), "hms/difftime time")
+check(c("2026-05-28","2026-05-28","2026-06-02"), c(71100, 71160, 19800) / 86400, "Excel fraction-of-day time")
+x <- base; x$date <- c("2026-05-28","garbage","2026-06-02"); x$time <- c("19:45:00","19:46:00","05:30:00")
+out <- capture.output(batz.summarize_aruloc.coordinates(x, data.frame(Sets = "A")))
+ok(any(grepl("1 record\\(s\\) with an unreadable date/time dropped \\(e.g. date = 'garbage'", out)), "unreadable value shown in NOTE, only that row dropped")
 
 cat("\nALL TESTS PASSED\n")
