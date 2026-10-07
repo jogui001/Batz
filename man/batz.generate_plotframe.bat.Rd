@@ -19,7 +19,8 @@ batz.generate_plotframe.bat(
   snake_case = FALSE,
   strip.special = TRUE,
   pool.interval = "1day",
-  pool.start = "observed"
+  pool.start = "observed",
+  detection.timing = "1 day"
 )
 }
 \arguments{
@@ -122,7 +123,8 @@ unit, with or without a space: minutes (\code{"15 min"},
 \code{"20min"}), hours (\code{"1 hour"}, \code{"2 hr"}), days
 (\code{"1day"}, \code{"2 day"}) or weeks (\code{"1 week"}).
 Intervals over 24 hours must be whole days. \code{"1day"} gives
-exactly the same rows as before this option existed.}
+exactly the same rows as before this option existed. May not be
+less than \code{"1 minute"}.}
 
 \item{pool.start}{Character, default \code{"observed"}. Only used
 when \code{pool.interval} is more than one day: the day the first
@@ -130,12 +132,22 @@ pool starts counting from. \code{"observed"} = the earliest date in
 the data; a date such as \code{"2026-05-01"}; a month
 (\code{"\%m = 5"}, \code{"may"}, \code{"May"}) = the 1st of that
 month in each year; or \code{"julian"} = January 1st of each year.}
+
+\item{detection.timing}{Character, default \code{"1 day"}. The window
+\code{$mins2.noon.min}/\code{$mins2.noon.max} (first/last detection)
+are taken over - same format as \code{pool.interval}. May not be
+greater than \code{"1 day"} or less than \code{pool.interval}, and
+must be a whole multiple of \code{pool.interval}. Ignored when
+\code{pool.interval} is longer than a day. See Details,
+"detection.timing".}
 }
 \value{
 A data frame, \code{plfr.batsummary}, with columns
 \code{$spp.id}, \code{$date}, \code{$pool.interval},
-\code{$pool.start}, \code{$pool.end}, \code{$group}, \code{$groupedby},
-\code{$groupby.date}, \code{$sunregion}, \code{$obs},
+\code{$detection.timing}, \code{$pool.start}, \code{$pool.end},
+\code{$group}, \code{$groupedby}, \code{$groupby.date},
+\code{$aru.name}, \code{$aru.serial}, \code{$aru.count},
+\code{$sunregion}, \code{$observations.count},
 \code{$mins2.noon.min}, \code{$mins2.noon.max}, \code{$vetting.type}
 (or their snake_case equivalents if \code{snake_case = TRUE} - see
 that parameter above). See \strong{$group vs $groupedby} in Details
@@ -157,7 +169,7 @@ joins its \code{$sunregion} column onto \code{data} itself (see
 \details{
 \strong{Required input columns.} \code{data} must have every one of:
 \code{filename}, \code{date.monitoringnight}, \code{manid}, \code{autoid.kp},
-\code{autoid.sb}, \code{lat}, \code{serial}, \code{longitude},
+\code{autoid.sb}, \code{lat}, \code{aru.serial}, \code{longitude},
 \code{aru.name}, \code{date}, \code{time}, \code{call.datetime}. All
 twelve come straight out of \code{\link{batz.merge_vetted.acoustics}}
 \itemize{
@@ -253,7 +265,7 @@ passed in is overwritten by this fresh join, not preserved.
 \strong{Steps.} If any required header is missing, stops immediately
 and lists every missing header by name. If \code{duplicates.remove =
 TRUE} (default), exact duplicate rows are dropped from \code{data}.
-Every row gets a helper \code{$obs = 1}. \code{$mins2.noon} is computed
+Every row gets a helper \code{$observations.count = 1}. \code{$mins2.noon} is computed
 per row as the number of minutes from noon on the date named by
 \code{groupby.date} (the start of that monitoring night, since these
 are nocturnal-animal records - a night starting at noon on
@@ -270,7 +282,7 @@ A per-\code{spp.id}/\code{groupby.date}/\code{groupby} summary
 detector name like \code{"105059-NW3"} - see \strong{$group vs
 $groupedby} below), \code{$groupedby}/\code{$groupby.date} (metadata -
 see below), \code{$sunregion} (the \code{data}'s own \code{$sunregion}
-value for that group - see \strong{Follow-up} below), \code{$obs}
+value for that group - see \strong{Follow-up} below), \code{$observations.count}
 (count of detections in that group), and \code{$mins2.noon.min}/
 \code{$mins2.noon.max} (the smallest/largest \code{$mins2.noon} in
 that group).
@@ -646,6 +658,48 @@ stripped the same way, the \code{$sunregion} match is consistent.
 \code{strip.special = FALSE} keeps the characters. This function has no
 log, so no \code{$strip.special} log column was added. Output is
 unchanged for inputs without special characters.
+
+\strong{Follow-up, 2026-10-07, per Josh - \code{$obs} renamed
+\code{$observations.count}.} The per-row count column is now
+\code{$observations.count} (was \code{$obs}).
+
+\strong{Follow-up, 2026-10-07, per Josh - $aru.serial and the old
+$serial header.} \code{$aru.serial} is the required header (was
+\code{$serial}). Old files still run:
+\itemize{
+\item Both present: each record uses whichever one has data. Where
+  both have data but differ, \code{$aru.serial} is used. A WARNING
+  gives the number of rows missing from each, and/or the number of
+  rows that didn't match.
+\item Only \code{$serial} present: it is used as \code{$aru.serial},
+  with a WARNING.
+\item Neither present: \code{$aru.serial} is added with the value
+  \code{"missing"}, with a WARNING.
+}
+In every case, a WARNING gives the number of rows with no serial number
+(blank or \code{"missing"}).
+
+\strong{Follow-up, 2026-10-07, per Josh - detector columns.} Each output
+row now has \code{$aru.name} and \code{$aru.serial} (every detector
+name/serial with a detection in that row's species/pool/group,
+separated by \code{"; "}) and \code{$aru.count} (number of unique
+detectors). Detectors are counted by serial number; a record with no
+usable serial (blank or \code{"missing"}) is counted by its
+\code{$aru.name} instead.
+
+\strong{Follow-up, 2026-10-07, per Josh - detection.timing.}
+\code{$observations.count} is always the count per
+\code{pool.interval}; \code{detection.timing} sets the window that
+\code{$mins2.noon.min}/\code{$mins2.noon.max} are taken over. With
+\code{pool.interval = "15 min", detection.timing = "1 day"}, each
+15-minute row carries the first/last detection of that whole
+monitoring night (for the same species and group); with
+\code{detection.timing = "15 min"}, the first/last detection within
+that 15-minute pool. Windows start at the day start (noon for a
+monitoring-night date, midnight otherwise), like pools. The output
+\code{$detection.timing} column holds the window label. When
+\code{pool.interval} is longer than a day, first/last detection is
+taken over the whole pool and \code{detection.timing} is ignored.
 
 \strong{Follow-up, 2026-10-02, per Josh - accents simplified.} With
 \code{strip.special = TRUE}, accented letters and common symbols are

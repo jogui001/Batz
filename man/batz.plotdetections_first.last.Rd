@@ -19,7 +19,7 @@ batz.plotdetections_first.last(
 \arguments{
 \item{data}{A data frame of already-summarized per-species,
 per-night detection windows. Must have \code{$spp.id}, \code{$date},
-\code{$group}, \code{$obs}, \code{$mins2.noon.min},
+\code{$group}, \code{$observations.count}, \code{$mins2.noon.min},
 \code{$mins2.noon.max}, \code{$vetting.type}.}
 
 \item{fig.list}{A data frame listing the plot(s) to generate - one
@@ -127,7 +127,7 @@ summarizing function. \code{DATA.REQUIRED}/\code{SUNTIMES.REQUIRED}/
 \code{AES.DEFAULT.REQUIRED.PARAMETERS} in this function's code are its
 own hardcoded interface contracts with those upstream functions'/files'
 already-established output schemas (e.g. \code{$spp.id}/\code{$date}/
-\code{$group}/\code{$obs}), not raw text copied from a loaded
+\code{$group}/\code{$observations.count}), not raw text copied from a loaded
 file's real header row, so there is no raw-header step here for the
 preference to attach to and none of these names were renamed. If
 \code{fig.list}/\code{aes.default}/\code{suntimes} are ever built by
@@ -1088,7 +1088,7 @@ that isn't a name format stops with an error naming the
 detections"}, \code{"40kHzMyo"}) keep their own name. If \code{data}
 comes from \code{\link{batz.generate_plotframe.bat}} with a
 \code{pool.interval} under one day, its time-bin rows are combined to
-one row per species/group/date before plotting (\code{$obs} summed, earliest \code{$mins2.noon.min}, latest \code{$mins2.noon.max}),
+one row per species/group/date before plotting (\code{$observations.count} summed, earliest \code{$mins2.noon.min}, latest \code{$mins2.noon.max}),
 with a NOTE. Pools of a day or longer are plotted at their start date
 (\code{$date}).
 }

@@ -142,7 +142,7 @@ Invisibly, a list with \code{data} (the filtered per-detection
 data frame, with \code{$time} and \code{$date.monitoringnight} added -
 suitable as the \code{data} input to
 \code{\link{batz.plotactivity_heatmap}}), \code{daily} (the aggregated
-per-night data frame: \code{$date.monitoringnight}, \code{$obs}), and
+per-night data frame: \code{$date.monitoringnight}, \code{$observations.count}), and
 \code{ggplot} (the ggplot object, only populated when \code{ggplot2}
 is available).
 }
@@ -209,9 +209,9 @@ directly), not a generally-correct default - pass \code{date.start}/
 matching how this package's other plotting functions avoid a
 \code{tidyverse} dependency (e.g.
 \code{\link{batz.plotactivity_observations}} uses \code{stats::aggregate}
-directly, not \code{dplyr::count()}). Each row gets a helper \code{$obs =
+directly, not \code{dplyr::count()}). Each row gets a helper \code{$observations.count =
 1} (same convention \code{\link{batz.generate_plotframe.bat}} uses), then
-\code{stats::aggregate(obs ~ date.monitoringnight, ...)} sums it per night - the
+\code{stats::aggregate(observations.count ~ date.monitoringnight, ...)} sums it per night - the
 original script's own \code{dplyr::count()} equivalent. The Y axis reuses
 the \code{log1p()}-transform-then-label-with-the-real-count approach
 already established in \code{\link{batz.plotactivity_observations}}
@@ -273,9 +273,9 @@ with nothing for a second pass of \code{standardize.headers()} to
 change) plus three columns this function itself adds - \code{$time},
 \code{$date.monitoringnight} (named \code{$date.mon} when this paragraph
 was written - see the round twenty-five entry below for the further
-rename), \code{$obs}. Of those three, only
+rename), \code{$obs} (renamed \code{$observations.count} 2026-10-07). Of those three, only
 \code{$date.monitoringnight} actually contains this package's dot-separated
-convention (\code{$time}/\code{$obs} are single words already). So for
+convention (\code{$time}/\code{$obs} were single words). So for
 the realistic default-column-name case, \code{snake_case = TRUE} here
 changes exactly one header - \code{date.monitoringnight} -> \code{date_monitoringnight}
 \itemize{

@@ -108,7 +108,7 @@
 #'   data frame, with \code{$time} and \code{$date.monitoringnight} added -
 #'   suitable as the \code{data} input to
 #'   \code{\link{batz.plotactivity_heatmap}}), \code{daily} (the aggregated
-#'   per-night data frame: \code{$date.monitoringnight}, \code{$obs}), and
+#'   per-night data frame: \code{$date.monitoringnight}, \code{$observations.count}), and
 #'   \code{ggplot} (the ggplot object, only populated when \code{ggplot2}
 #'   is available).
 #'
@@ -165,9 +165,9 @@
 #' matching how this package's other plotting functions avoid a
 #' \code{tidyverse} dependency (e.g.
 #' \code{\link{batz.plotactivity_observations}} uses \code{stats::aggregate}
-#' directly, not \code{dplyr::count()}). Each row gets a helper \code{$obs =
+#' directly, not \code{dplyr::count()}). Each row gets a helper \code{$observations.count =
 #' 1} (same convention \code{\link{batz.generate_plotframe.bat}} uses), then
-#' \code{stats::aggregate(obs ~ date.monitoringnight, ...)} sums it per night - the
+#' \code{stats::aggregate(observations.count ~ date.monitoringnight, ...)} sums it per night - the
 #' original script's own \code{dplyr::count()} equivalent. The Y axis reuses
 #' the \code{log1p()}-transform-then-label-with-the-real-count approach
 #' already established in \code{\link{batz.plotactivity_observations}}
@@ -229,9 +229,9 @@
 #' change) plus three columns this function itself adds - \code{$time},
 #' \code{$date.monitoringnight} (named \code{$date.mon} when this paragraph
 #' was written - see the round twenty-five entry below for the further
-#' rename), \code{$obs}. Of those three, only
+#' rename), \code{$obs} (renamed \code{$observations.count} 2026-10-07). Of those three, only
 #' \code{$date.monitoringnight} actually contains this package's dot-separated
-#' convention (\code{$time}/\code{$obs} are single words already). So for
+#' convention (\code{$time}/\code{$obs} were single words). So for
 #' the realistic default-column-name case, \code{snake_case = TRUE} here
 #' changes exactly one header - \code{date.monitoringnight} -> \code{date_monitoringnight}
 #' - not a true no-op, but close to one; implemented anyway (rather than
@@ -669,11 +669,11 @@ batz.plotactivity_daily.count <- function(data,
   ## batz.plotactivity_observations().
   daterange.token <- sprintf("%sto%s", format(date.start, "%Y%m%d"), format(date.end, "%Y%m%d"))
 
-  # --- daily aggregate: a helper $obs = 1 per row (same convention
+  # --- daily aggregate: a helper $observations.count = 1 per row (same convention
   # batz.generate_plotframe.bat() uses), summed per $date.monitoringnight -
   # see @details, "Aggregation and Y-axis scale". ---
-  data$obs <- 1
-  daily <- stats::aggregate(obs ~ date.monitoringnight, data = data, FUN = sum)
+  data$observations.count <- 1
+  daily <- stats::aggregate(observations.count ~ date.monitoringnight, data = data, FUN = sum)
   daily <- daily[order(daily$date.monitoringnight), , drop = FALSE]
 
   cat(sprintf("Rows after trim.noid + date filter: %d (%d distinct monitoring night(s)).\n", nrow(data), nrow(daily)))
@@ -686,8 +686,8 @@ batz.plotactivity_daily.count <- function(data,
     if (length(y.custom) < 2) {
       stop("aes.default's $y.custom must have at least 2 semicolon-separated numbers (e.g. \"0;5;30;200;1200;7500\").")
     }
-    y.upper <- max(c(y.custom, daily$obs), na.rm = TRUE)
-    daily$obs.plot <- log1p(daily$obs)
+    y.upper <- max(c(y.custom, daily$observations.count), na.rm = TRUE)
+    daily$obs.plot <- log1p(daily$observations.count)
     break.pos <- log1p(y.custom)
     break.labels <- format(y.custom, big.mark = ",", trim = TRUE, scientific = FALSE)
 

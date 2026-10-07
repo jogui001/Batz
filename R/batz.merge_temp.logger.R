@@ -192,7 +192,7 @@
 #' lose its unit). \code{templog.notes} gains a last column
 #' \code{$strip.special}, one label per logger file: raw logger columns are
 #' positional, so they are reported by their output names (\code{V1} ->
-#' \code{obs}, \code{V2} -> \code{date.time}, \code{V3} -> \code{temp.dry.c},
+#' \code{observations.count}, \code{V2} -> \code{date.time}, \code{V3} -> \code{temp.dry.c},
 #' \code{V4} -> \code{temp.wet.c}; excess columns keep \code{V5}, ...), and -
 #' when the file matched a meta row - any \code{templog.meta.csv} headers
 #' where characters were removed are added as \code{meta:<header>} (the
@@ -264,7 +264,7 @@
 #'
 #' @return Invisibly, a list with two data frames:
 #'   \describe{
-#'     \item{templog.merged}{\code{$obs}, \code{$date.time},
+#'     \item{templog.merged}{\code{$observations.count}, \code{$date.time},
 #'       \code{$temp.dry.c}, \code{$temp.wet.c}, \code{$rh},
 #'       \code{$logger.serial}, plus every other column from the matched
 #'       \code{templog.meta.csv} row (standardized names - see "Header
@@ -603,7 +603,7 @@ batz.merge_temp.logger <- function(dir.load = getwd(),
   )
 
   templog.merged <- data.frame(
-    obs = integer(0), date.time = as.POSIXct(character(0)),
+    observations.count = integer(0), date.time = as.POSIXct(character(0)),
     temp.dry.c = numeric(0), temp.wet.c = numeric(0), rh = numeric(0),
     logger.serial = character(0), stringsAsFactors = FALSE
   )
@@ -643,7 +643,7 @@ batz.merge_temp.logger <- function(dir.load = getwd(),
     ## column it changed, the way read.csv would)
     for (col in s.strip$headers) df[[col]] <- as.character(df[[col]])
     row.id <- seq_len(nrow(df))
-    v.out.names <- c(V1 = "obs", V2 = "date.time", V3 = "temp.dry.c", V4 = "temp.wet.c")
+    v.out.names <- c(V1 = "observations.count", V2 = "date.time", V3 = "temp.dry.c", V4 = "temp.wet.c")
     file.special <- ifelse(s.strip$headers %in% names(v.out.names),
                            v.out.names[s.strip$headers], s.strip$headers)
 
@@ -789,7 +789,7 @@ batz.merge_temp.logger <- function(dir.load = getwd(),
     ## already recorded in templog.notes above regardless.
     if (nrow(df) > 0) {
       file.df <- do.call(data.frame, c(
-        list(obs = seq_len(nrow(df)), date.time = date.time, temp.dry.c = temp.dry.c,
+        list(observations.count = seq_len(nrow(df)), date.time = date.time, temp.dry.c = temp.dry.c,
              temp.wet.c = temp.wet.c, rh = rh, logger.serial = serial.num),
         meta.extra,
         stringsAsFactors = FALSE

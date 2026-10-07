@@ -8,7 +8,7 @@
 #'
 #' @param data A data frame of already-summarized per-species,
 #'   per-night detection windows. Must have \code{$spp.id}, \code{$date},
-#'   \code{$group}, \code{$obs}, \code{$mins2.noon.min},
+#'   \code{$group}, \code{$observations.count}, \code{$mins2.noon.min},
 #'   \code{$mins2.noon.max}, \code{$vetting.type}.
 #' @param fig.list A data frame listing the plot(s) to generate - one
 #'   row per plot. Must have \code{$plot.type}, \code{$plot.name},
@@ -100,7 +100,7 @@
 #' \code{AES.DEFAULT.REQUIRED.PARAMETERS} in this function's code are its
 #' own hardcoded interface contracts with those upstream functions'/files'
 #' already-established output schemas (e.g. \code{$spp.id}/\code{$date}/
-#' \code{$group}/\code{$obs}), not raw text copied from a loaded
+#' \code{$group}/\code{$observations.count}), not raw text copied from a loaded
 #' file's real header row, so there is no raw-header step here for the
 #' preference to attach to and none of these names were renamed. If
 #' \code{fig.list}/\code{aes.default}/\code{suntimes} are ever built by
@@ -1063,7 +1063,7 @@
 #' detections"}, \code{"40kHzMyo"}) keep their own name. If \code{data}
 #' comes from \code{\link{batz.generate_plotframe.bat}} with a
 #' \code{pool.interval} under one day, its time-bin rows are combined to
-#' one row per species/group/date before plotting (\code{$obs} summed, earliest \code{$mins2.noon.min}, latest \code{$mins2.noon.max}),
+#' one row per species/group/date before plotting (\code{$observations.count} summed, earliest \code{$mins2.noon.min}, latest \code{$mins2.noon.max}),
 #' with a NOTE. Pools of a day or longer are plotted at their start date
 #' (\code{$date}).
 #'
@@ -1165,7 +1165,7 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
   ## column): FIG.LIST.REQUIRED's "Alldect" entry is now "all.dectections"
   ## (Josh's own spelling, kept exactly as given) - see @details, "Column
   ## identifiers renamed, 2026-09-27...".
-  DATA.REQUIRED <- c("spp.id", "date", "group", "obs",
+  DATA.REQUIRED <- c("spp.id", "date", "group", "observations.count",
                            "mins2.noon.min", "mins2.noon.max", "vetting.type")
   SUNTIMES.REQUIRED <- c("aru.name", "date", "date.monitoringnight", "sunregion", "time.zone",
                              "sunregion.type", "schedual1", "schedual2", "sunset",
@@ -1229,6 +1229,15 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
   ## "date_mon"), then every matched column is renamed, in this function's
   ## own local copy only, to the exact spelling this function's code
   ## already expects. See @details "BUGFIX (2026-09-21...)" above.
+  ## $obs -> $observations.count (2026-10-07, per Josh). Old plot frames
+  ## saved before the rename still load: a lone $obs column is renamed to
+  ## $observations.count in this function's own local copy.
+  obs.std <- standardize.headers(names(data))
+  if ("obs" %in% obs.std && !("observations_count" %in% obs.std)) {
+    names(data)[obs.std == "obs"] <- "observations.count"
+    cat("WARNING: `data` has the old header $obs - used as $observations.count. ",
+        "Re-run batz.generate_plotframe.bat() to update the input file.\n", sep = "")
+  }
   data.canon        <- canonicalize.headers(data, DATA.REQUIRED)
   suntimes.canon    <- canonicalize.headers(suntimes, SUNTIMES.REQUIRED)
   fig.list.canon    <- canonicalize.headers(fig.list, FIG.LIST.REQUIRED)

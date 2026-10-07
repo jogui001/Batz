@@ -2,14 +2,14 @@
 #'
 #' Generates the standard report plot showing, for every species (plus an
 #' "All detections" panel and an optional overlaid 40kHzMyo indicator), the
-#' number of observations (\code{$obs}) recorded each monitoring night, as a
+#' number of observations (\code{$observations.count}) recorded each monitoring night, as a
 #' bar per night per panel. One plot is produced per row of \code{fig.list}
 #' whose \code{$plot.type} is \code{"call.observations"} (see Details for why
 #' this value was chosen and how to change it).
 #'
 #' @param data A data frame of already-summarized per-species, per-night
 #'   observation counts. Must have \code{$spp.id}, \code{$date},
-#'   \code{$obs}, plus whatever column each \code{fig.list} row's own
+#'   \code{$observations.count}, plus whatever column each \code{fig.list} row's own
 #'   \code{$plot.group} names when given - see Details, "Follow-up,
 #'   2026-09-23 ($plot.group made optional)" - defaults to \code{$group}
 #'   (matching \code{\link{batz.generate_plotframe.bat}}'s own output
@@ -111,7 +111,7 @@
 #' \code{AES.DEFAULT.REQUIRED.PARAMETERS} below are this function's own
 #' hardcoded interface contracts with those upstream functions'/files'
 #' already-established output schemas (e.g. \code{$spp.id}/\code{$date}/
-#' \code{$obs} from \code{batz.generate_plotframe.bat()}), not raw text
+#' \code{$observations.count} from \code{batz.generate_plotframe.bat()}), not raw text
 #' copied from a loaded file's real header row, so there is no raw-header
 #' step here for the preference to attach to and none of these names were
 #' renamed. If \code{fig.list}/\code{aes.default}/\code{suntimes} are ever
@@ -180,7 +180,7 @@
 #' sunrise/sunset) math that supported them - per Josh's explicit
 #' instruction ("There are no DAWN, DUSK or Midnight variables to be
 #' ploted"). Each bar is simply one \code{fig.list}-matched data row's own
-#' \code{$obs} value, plotted at its \code{$date} - no per-night aggregation
+#' \code{$observations.count} value, plotted at its \code{$date} - no per-night aggregation
 #' happens inside this function (a night's "All detections" bar is
 #' \code{data}'s own pre-computed \code{$spp.id = "All Detections"} row for
 #' that night/ARU, exactly parallel to how \code{batz.plotdetections_first.last()}
@@ -279,7 +279,7 @@
 #'     not expected for detector/group names, but worth knowing.
 #'   \item \code{$pool} (\code{TRUE}/\code{FALSE}) controls how the
 #'     (possibly several) selected \code{$plot.set} values are combined:
-#'     \code{TRUE} sums \code{$obs} across all of them into ONE pooled bar
+#'     \code{TRUE} sums \code{$observations.count} across all of them into ONE pooled bar
 #'     per date/panel (as if they were a single group); \code{FALSE} keeps
 #'     each selected value as its own bar, drawn side-by-side (dodged)
 #'     within the same date/panel. Bars are dodged via \code{ggplot2}'s own
@@ -394,9 +394,9 @@
 #' \strong{Y-axis resolution - the newest, most detailed part of this
 #' function - implements Josh's spec as follows:} \code{$Yaxe.trans}
 #' (\code{"none"} default / \code{"log"} / \code{"log10"}) picks a transform
-#' applied to \code{$obs} before it's used as a bar's plotted height;
-#' \strong{\code{"log"}/\code{"log10"} are implemented as \code{log1p(obs)}/
-#' \code{log10(obs + 1)}, not a bare \code{log(obs)}/\code{log10(obs)}} - a
+#' applied to \code{$observations.count} before it's used as a bar's plotted height;
+#' \strong{\code{"log"}/\code{"log10"} are implemented as \code{log1p(observations.count)}/
+#' \code{log10(observations.count + 1)}, not a bare \code{log(observations.count)}/\code{log10(observations.count)}} - a
 #' deliberate choice (Josh's spec didn't say how to handle a night with 0
 #' observations, but \code{data} can and does have real detections that
 #' would sum to a whole-number 0 for some species/night combinations
@@ -408,7 +408,7 @@
 #' 1.11 log-units), confirming this is the transform that image's axis
 #' actually used, not a coincidence. \code{$loglabels} (\code{FALSE}
 #' default) then controls whether each break is LABELED with the real
-#' \code{$obs}-scale number (\code{FALSE}) or the transformed value itself
+#' \code{$observations.count}-scale number (\code{FALSE}) or the transformed value itself
 #' (\code{TRUE}) - it only has any effect when \code{$Yaxe.trans} isn't
 #' \code{"none"}, per Josh's spec.
 #'
@@ -488,7 +488,7 @@
 #'
 #' \code{$ymax} sets the top of the Y axis. When a \code{fig.list} row
 #' leaves it blank (or gives something that isn't a usable positive
-#' number), it's auto-computed as \code{max($obs)} across that plot's own
+#' number), it's auto-computed as \code{max($observations.count)} across that plot's own
 #' filtered data, with a console \code{NOTE} reporting the value used -
 #' \strong{a placeholder for this first iteration, flagged for Josh}: this
 #' gives the axis exactly enough headroom to fit the tallest bar and no
@@ -496,7 +496,7 @@
 #' 10% above the max) could be added in a later iteration if wanted. The
 #' actual plotted axis upper limit is never allowed to clip a real bar or a
 #' user-supplied \code{$y.custom} value even if \code{$ymax} itself is
-#' smaller than one of those (\code{max($ymax, $y.custom values, $obs)} is
+#' smaller than one of those (\code{max($ymax, $y.custom values, $observations.count)} is
 #' used as the true limit) - this protects against a \code{$ymax}/
 #' \code{$y.custom} mismatch silently cutting off part of the plot.
 #'
@@ -866,7 +866,7 @@
 #' detections"}, \code{"40kHzMyo"}) keep their own name. If \code{data}
 #' comes from \code{\link{batz.generate_plotframe.bat}} with a
 #' \code{pool.interval} under one day, its time-bin rows are combined to
-#' one row per species/group/date before plotting (\code{$obs} summed),
+#' one row per species/group/date before plotting (\code{$observations.count} summed),
 #' with a NOTE. Pools of a day or longer are plotted at their start date
 #' (\code{$date}).
 #'
@@ -938,7 +938,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
   ## (further down, where the header check happens) so that a column
   ## arriving in a different casing/separator style than these constants
   ## still matches correctly - see @details "Follow-up, 2026-09-21" above.
-  DATA.REQUIRED <- c("spp.id", "date", "obs")
+  DATA.REQUIRED <- c("spp.id", "date", "observations.count")
   # Renamed 2026-09-25 (round twenty-six, per Josh's package-wide suntimes
   # header rename - see @details, "Follow-up, 2026-09-25...round
   # twenty-six"): matches batz.generate_suntimes.arulist()'s own renamed
@@ -1022,6 +1022,15 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     NULL
   }
 
+  ## $obs -> $observations.count (2026-10-07, per Josh). Old plot frames
+  ## saved before the rename still load: a lone $obs column is renamed to
+  ## $observations.count in this function's own local copy.
+  obs.std <- standardize.headers(names(data))
+  if ("obs" %in% obs.std && !("observations_count" %in% obs.std)) {
+    names(data)[obs.std == "obs"] <- "observations.count"
+    cat("WARNING: `data` has the old header $obs - used as $observations.count. ",
+        "Re-run batz.generate_plotframe.bat() to update the input file.\n", sep = "")
+  }
   data.canon        <- canonicalize.headers(data, DATA.REQUIRED)
   suntimes.canon    <- canonicalize.headers(suntimes, SUNTIMES.REQUIRED)
   fig.list.canon    <- canonicalize.headers(fig.list, FIG.LIST.REQUIRED)
@@ -1240,13 +1249,13 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     pd$bar.type <- ifelse(tolower(pd$spp.common) == "40khzmyo", "40kHzMyo", "All detections")
     pd$group.val <- as.character(pd[[group.col]])
 
-    # --- $pool: TRUE sums $obs across every selected $plot.set value into
+    # --- $pool: TRUE sums $observations.count across every selected $plot.set value into
     # ONE pooled bar per date/panel; FALSE keeps each selected value as its
     # own bar (drawn side-by-side/dodged at plotting time below) - see
     # Details/Follow-up 2026-08-28. ---
     pool.flag <- isTRUE(as.logical(job$pool))
     if (pool.flag) {
-      pd <- stats::aggregate(obs ~ spp.common + facet.panel.value + bar.type + date.parsed,
+      pd <- stats::aggregate(observations.count ~ spp.common + facet.panel.value + bar.type + date.parsed,
                               data = pd, FUN = sum)
       pd$group.val <- "pooled"
     }
@@ -1289,7 +1298,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
 
     ymax.raw <- suppressWarnings(as.numeric(get.setting(job, "ymax")))
     if (is.na(ymax.raw) || ymax.raw <= 0) {
-      ymax.raw <- max(pd$obs, na.rm = TRUE)
+      ymax.raw <- max(pd$observations.count, na.rm = TRUE)
       cat(sprintf("NOTE: '%s' - $ymax not given (or not a usable positive number) - defaulting to the max observed count in this plot's data (%s).\n",
                    job.label, ymax.raw))
     }
@@ -1334,9 +1343,9 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     }
     raw.breaks <- sort(unique(raw.breaks))
     # never let $ymax/$y.custom clip a real bar or a user-declared break
-    y.upper <- max(c(ymax.raw, raw.breaks, pd$obs), na.rm = TRUE)
+    y.upper <- max(c(ymax.raw, raw.breaks, pd$observations.count), na.rm = TRUE)
 
-    pd$obs.plot <- trans.fn(pd$obs)
+    pd$obs.plot <- trans.fn(pd$observations.count)
     break.pos <- trans.fn(raw.breaks)
     # break.pos (axis position) is always computed from the exact, unrounded raw.breaks so the
     # BUGFIX 2026-08-28 even-spacing above stays exact. label.breaks is a display-only copy: under

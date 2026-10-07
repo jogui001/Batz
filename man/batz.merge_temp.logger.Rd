@@ -89,7 +89,7 @@ them loading, whatever this is set to.}
 \value{
 Invisibly, a list with two data frames:
 \describe{
-\item{templog.merged}{\code{$obs}, \code{$date.time},
+\item{templog.merged}{\code{$observations.count}, \code{$date.time},
 \code{$temp.dry.c}, \code{$temp.wet.c}, \code{$rh},
 \code{$logger.serial}, plus every other column from the matched
 \code{templog.meta.csv} row (standardized names - see "Header
@@ -303,7 +303,7 @@ text columns when \code{strip.special = TRUE}. \strong{Judgment call:} the
 lose its unit). \code{templog.notes} gains a last column
 \code{$strip.special}, one label per logger file: raw logger columns are
 positional, so they are reported by their output names (\code{V1} ->
-\code{obs}, \code{V2} -> \code{date.time}, \code{V3} -> \code{temp.dry.c},
+\code{observations.count}, \code{V2} -> \code{date.time}, \code{V3} -> \code{temp.dry.c},
 \code{V4} -> \code{temp.wet.c}; excess columns keep \code{V5}, ...), and -
 when the file matched a meta row - any \code{templog.meta.csv} headers
 where characters were removed are added as \code{meta:<header>} (the

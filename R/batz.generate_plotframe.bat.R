@@ -13,7 +13,7 @@
 #'
 #' \strong{Required input columns.} `data` must have every one of:
 #' \code{filename}, \code{date.monitoringnight}, \code{manid}, \code{autoid.kp},
-#' \code{autoid.sb}, \code{lat}, \code{serial}, \code{longitude},
+#' \code{autoid.sb}, \code{lat}, \code{aru.serial}, \code{longitude},
 #' \code{aru.name}, \code{date}, \code{time}, \code{call.datetime}. All
 #' twelve come straight out of \code{\link{batz.merge_vetted.acoustics}}
 #' - no renaming needed (an earlier version of this function required
@@ -105,7 +105,7 @@
 #' \strong{Steps.} If any required header is missing, stops immediately
 #' and lists every missing header by name. If \code{duplicates.remove =
 #' TRUE} (default), exact duplicate rows are dropped from \code{data}.
-#' Every row gets a helper \code{$obs = 1}. \code{$mins2.noon} is computed
+#' Every row gets a helper \code{$observations.count = 1}. \code{$mins2.noon} is computed
 #' per row as the number of minutes from noon on the date named by
 #' \code{groupby.date} (the start of that monitoring night, since these
 #' are nocturnal-animal records - a night starting at noon on
@@ -122,7 +122,7 @@
 #' detector name like \code{"105059-NW3"} - see \strong{$group vs
 #' $groupedby} below), \code{$groupedby}/\code{$groupby.date} (metadata -
 #' see below), \code{$sunregion} (the \code{data}'s own \code{$sunregion}
-#' value for that group - see \strong{Follow-up} below), \code{$obs}
+#' value for that group - see \strong{Follow-up} below), \code{$observations.count}
 #' (count of detections in that group), and \code{$mins2.noon.min}/
 #' \code{$mins2.noon.max} (the smallest/largest \code{$mins2.noon} in
 #' that group).
@@ -579,18 +579,28 @@
 #'   \code{"20min"}), hours (\code{"1 hour"}, \code{"2 hr"}), days
 #'   (\code{"1day"}, \code{"2 day"}) or weeks (\code{"1 week"}).
 #'   Intervals over 24 hours must be whole days. \code{"1day"} gives
-#'   exactly the same rows as before this option existed.
+#'   exactly the same rows as before this option existed. May not be
+#'   less than \code{"1 minute"}.
 #' @param pool.start Character, default \code{"observed"}. Only used
 #'   when \code{pool.interval} is more than one day: the day the first
 #'   pool starts counting from. \code{"observed"} = the earliest date in
 #'   the data; a date such as \code{"2026-05-01"}; a month
 #'   (\code{"\%m = 5"}, \code{"may"}, \code{"May"}) = the 1st of that
 #'   month in each year; or \code{"julian"} = January 1st of each year.
+#' @param detection.timing Character, default \code{"1 day"}. The window
+#'   \code{$mins2.noon.min}/\code{$mins2.noon.max} (first/last detection)
+#'   are taken over - same format as \code{pool.interval}. May not be
+#'   greater than \code{"1 day"} or less than \code{pool.interval}, and
+#'   must be a whole multiple of \code{pool.interval}. Ignored when
+#'   \code{pool.interval} is longer than a day. See Details,
+#'   "detection.timing".
 #'
 #' @return A data frame, \code{plfr.batsummary}, with columns
 #'   \code{$spp.id}, \code{$date}, \code{$pool.interval},
-#'   \code{$pool.start}, \code{$pool.end}, \code{$group}, \code{$groupedby},
-#'   \code{$groupby.date}, \code{$sunregion}, \code{$obs},
+#'   \code{$detection.timing}, \code{$pool.start}, \code{$pool.end},
+#'   \code{$group}, \code{$groupedby}, \code{$groupby.date},
+#'   \code{$aru.name}, \code{$aru.serial}, \code{$aru.count},
+#'   \code{$sunregion}, \code{$observations.count},
 #'   \code{$mins2.noon.min}, \code{$mins2.noon.max}, \code{$vetting.type}
 #'   (or their snake_case equivalents if \code{snake_case = TRUE} - see
 #'   that parameter above). See \strong{$group vs $groupedby} in Details
@@ -598,6 +608,48 @@
 #'   hold.
 #'
 #' @details
+#' \strong{Follow-up, 2026-10-07, per Josh - \code{$obs} renamed
+#' \code{$observations.count}.} The per-row count column is now
+#' \code{$observations.count} (was \code{$obs}).
+#'
+#' \strong{Follow-up, 2026-10-07, per Josh - $aru.serial and the old
+#' $serial header.} \code{$aru.serial} is the required header (was
+#' \code{$serial}). Old files still run:
+#' \itemize{
+#'   \item Both present: each record uses whichever one has data. Where
+#'     both have data but differ, \code{$aru.serial} is used. A WARNING
+#'     gives the number of rows missing from each, and/or the number of
+#'     rows that didn't match.
+#'   \item Only \code{$serial} present: it is used as \code{$aru.serial},
+#'     with a WARNING.
+#'   \item Neither present: \code{$aru.serial} is added with the value
+#'     \code{"missing"}, with a WARNING.
+#' }
+#' In every case, a WARNING gives the number of rows with no serial number
+#' (blank or \code{"missing"}).
+#'
+#' \strong{Follow-up, 2026-10-07, per Josh - detector columns.} Each output
+#' row now has \code{$aru.name} and \code{$aru.serial} (every detector
+#' name/serial with a detection in that row's species/pool/group,
+#' separated by \code{"; "}) and \code{$aru.count} (number of unique
+#' detectors). Detectors are counted by serial number; a record with no
+#' usable serial (blank or \code{"missing"}) is counted by its
+#' \code{$aru.name} instead.
+#'
+#' \strong{Follow-up, 2026-10-07, per Josh - detection.timing.}
+#' \code{$observations.count} is always the count per
+#' \code{pool.interval}; \code{detection.timing} sets the window that
+#' \code{$mins2.noon.min}/\code{$mins2.noon.max} are taken over. With
+#' \code{pool.interval = "15 min", detection.timing = "1 day"}, each
+#' 15-minute row carries the first/last detection of that whole
+#' monitoring night (for the same species and group); with
+#' \code{detection.timing = "15 min"}, the first/last detection within
+#' that 15-minute pool. Windows start at the day start (noon for a
+#' monitoring-night date, midnight otherwise), like pools. The output
+#' \code{$detection.timing} column holds the window label. When
+#' \code{pool.interval} is longer than a day, first/last detection is
+#' taken over the whole pool and \code{detection.timing} is ignored.
+#'
 #' \strong{Follow-up, 2026-10-02, per Josh - accents simplified.} With
 #' \code{strip.special = TRUE}, accented letters and common symbols are
 #' now simplified instead of dropped (\code{café} -> \code{cafe},
@@ -659,13 +711,41 @@ batz.generate_plotframe.bat <- function(data,
                                          snake_case = FALSE,
                                          strip.special = TRUE,
                                          pool.interval = "1day",
-                                         pool.start = "observed") {
+                                         pool.start = "observed",
+                                         detection.timing = "1 day") {
 
   if (!is.data.frame(data)) stop("`data` must be a data frame.")
 
   ## ---- pooling (2026-10-02, per Josh) - see @details "Pooling" ----------
-  pool.mins <- plotframe.parse.interval(pool.interval)
+  pool.mins <- plotframe.parse.interval(pool.interval, "pool.interval")
   pool.label <- plotframe.interval.label(pool.mins)
+
+  ## ---- detection.timing (2026-10-07, per Josh) - see @details
+  ## "detection.timing". The window $mins2.noon.min/$mins2.noon.max are
+  ## taken over. Must be <= 1 day and >= pool.interval.
+  timing.mins <- plotframe.parse.interval(detection.timing, "detection.timing")
+  if (timing.mins > 1440) {
+    stop("`detection.timing` = \"", detection.timing, "\" may not be greater than \"1 day\".")
+  }
+  if (pool.mins <= 1440) {
+    if (timing.mins < pool.mins) {
+      stop("`detection.timing` = \"", detection.timing, "\" may not be less than `pool.interval` (\"",
+           pool.interval, "\").")
+    }
+    if (timing.mins < 1440 && timing.mins %% pool.mins != 0) {
+      stop("`detection.timing` = \"", detection.timing, "\" must be a whole multiple of `pool.interval` (\"",
+           pool.interval, "\") so each pool sits inside one detection.timing window.")
+    }
+    timing.label <- plotframe.interval.label(timing.mins)
+  } else {
+    ## pools longer than a day: one row covers several days, so first/last
+    ## detection is taken over the whole pool (same as before this option)
+    if (timing.mins != 1440) {
+      cat("NOTE: pool.interval is longer than 1 day - detection.timing is ignored; ",
+          "$mins2.noon.min/$mins2.noon.max cover the whole pool.\n", sep = "")
+    }
+    timing.label <- pool.label
+  }
   ## monitoring-night dates start at noon, calendar dates at midnight
   pool.anchor.hour <- if (grepl("monitoringnight", groupby.date, ignore.case = TRUE)) 12 else 0
 
@@ -673,6 +753,11 @@ batz.generate_plotframe.bat <- function(data,
   ## from `data` (this function's own local copy only) before any header
   ## check, matching or summarizing - see @details, "Follow-up, 2026-09-30".
   data <- special.strip(data, strip.special)$df
+
+  ## ---- $aru.serial / old $serial header (2026-10-07, per Josh) - see
+  ## @details "$aru.serial and the old $serial header" and
+  ## plotframe.reconcile.serial() at the bottom of this file.
+  data <- plotframe.reconcile.serial(data)
 
   ## $sunregion is NOT in this list (and no longer needs to already be a
   ## column of `data`) - it's now loaded from an *arulist.csv file and
@@ -691,7 +776,7 @@ batz.generate_plotframe.bat <- function(data,
   ## this check keeps referencing $date.monitoringnight/$aru.name/etc. exactly as
   ## before. See @details, "Header standardization"/"BUGFIX/NEW".
   required.headers <- c("filename", "date.monitoringnight", "manid", "autoid.kp",
-                         "autoid.sb", "lat", "serial", "longitude", "aru.name",
+                         "autoid.sb", "lat", "aru.serial", "longitude", "aru.name",
                          "date", "time", "call.datetime")
   data.canon <- canonicalize.headers(data, required.headers)
   if (length(data.canon$missing) > 0) {
@@ -819,7 +904,7 @@ batz.generate_plotframe.bat <- function(data,
     data <- data[!duplicated(data), , drop = FALSE]
   }
 
-  data$obs <- 1
+  data$observations.count <- 1
 
   ## noon-of-monitoring-night anchor, reusing batz.datawrangler_call.datetime()'s
   ## own date-format auto-detection
@@ -895,6 +980,17 @@ batz.generate_plotframe.bat <- function(data,
     data$.pool.start <- as.POSIXct(paste(p.start, sprintf("%02d:00:00", pool.anchor.hour)), tz = "UTC")
     data$.pool.end   <- as.POSIXct(paste(p.end, sprintf("%02d:00:00", pool.anchor.hour)), tz = "UTC")
   }
+  ## ---- detection.timing window each record falls in (2026-10-07) ----
+  ## .timing.key - window $mins2.noon.min/$mins2.noon.max are taken over
+  if (pool.mins >= 1440) {
+    data$.timing.key <- data$.pool.key
+  } else if (timing.mins == 1440) {
+    data$.timing.key <- date.str
+  } else {
+    timing.offset <- as.numeric(difftime(call.dt, day.anchor, units = "mins"))
+    data$.timing.key <- paste(date.str, floor(timing.offset / timing.mins))
+  }
+
   fmt.dt <- function(x) ifelse(is.na(x), NA_character_, format(x, "%Y-%m-%d %H:%M:%S", tz = "UTC"))
 
   safe.min <- function(x) if (all(is.na(x))) NA_real_ else min(x, na.rm = TRUE)
@@ -932,9 +1028,31 @@ batz.generate_plotframe.bat <- function(data,
     k.date  <- first.of(as.character(df$.pool.date))
     k.start <- first.of(fmt.dt(df$.pool.start))
     k.end   <- first.of(fmt.dt(df$.pool.end))
-    ag.obs <- tapply(df$obs, key, sum)
-    ag.min <- tapply(df$.mins2.noon, key, safe.min)
-    ag.max <- tapply(df$.mins2.noon, key, safe.max)
+    ag.obs <- tapply(df$observations.count, key, sum)
+
+    ## first/last detection over each record's detection.timing window
+    ## (2026-10-07) - same spp.id/groupby, window from .timing.key
+    tkey  <- paste(spp.vals, as.character(df$.timing.key), group.vals, sep = "\r")
+    t.min <- tapply(df$.mins2.noon, tkey, safe.min)
+    t.max <- tapply(df$.mins2.noon, tkey, safe.max)
+    k.tkey <- first.of(tkey)
+
+    ## detectors in each row (2026-10-07): every $aru.name / $aru.serial
+    ## with a detection in that spp.id/pool/group, and how many detectors.
+    ## A detector is counted by its serial; a record with no usable serial
+    ## (blank or "missing") is counted by its $aru.name instead.
+    serial.vals <- trimws(as.character(df$aru.serial))
+    name.vals   <- trimws(as.character(df$aru.name))
+    usable.serial <- !is.na(serial.vals) & nzchar(serial.vals) & tolower(serial.vals) != "missing"
+    detector.id <- ifelse(usable.serial, paste0("serial:", serial.vals),
+                          ifelse(!is.na(name.vals) & nzchar(name.vals), paste0("name:", name.vals), NA_character_))
+    collapse.unique <- function(v) {
+      v <- sort(unique(v[!is.na(v) & nzchar(v)]))
+      if (length(v) == 0) NA_character_ else paste(v, collapse = "; ")
+    }
+    ag.serial <- tapply(serial.vals, key, collapse.unique)
+    ag.name   <- tapply(name.vals, key, collapse.unique)
+    ag.count  <- tapply(detector.id, key, function(v) length(unique(v[!is.na(v)])))
 
     keys  <- names(ag.obs)
     parts <- strsplit(keys, "\r", fixed = TRUE)
@@ -952,15 +1070,19 @@ batz.generate_plotframe.bat <- function(data,
       spp.id         = vapply(parts, `[`, character(1), 1),
       date           = as.character(k.date[keys]),
       pool.interval  = pool.label,
+      detection.timing = timing.label,
       pool.start     = as.character(k.start[keys]),
       pool.end       = as.character(k.end[keys]),
       group          = vapply(parts, `[`, character(1), 3),
       groupedby      = groupby,
       groupby.date   = groupby.date,
+      aru.name       = as.character(ag.name[keys]),
+      aru.serial     = as.character(ag.serial[keys]),
+      aru.count      = as.integer(ag.count[keys]),
       sunregion      = as.character(ag.sun[keys]),
-      obs            = as.numeric(ag.obs[keys]),
-      mins2.noon.min = as.numeric(ag.min[keys]),
-      mins2.noon.max = as.numeric(ag.max[keys]),
+      observations.count = as.numeric(ag.obs[keys]),
+      mins2.noon.min = as.numeric(t.min[k.tkey[keys]]),
+      mins2.noon.max = as.numeric(t.max[k.tkey[keys]]),
       stringsAsFactors = FALSE
     )
     rownames(out) <- NULL
@@ -1012,17 +1134,18 @@ batz.generate_plotframe.bat <- function(data,
 #' multi-day pools are counted from.
 #' @keywords internal
 #' @noRd
-plotframe.parse.interval <- function(x) {
-  if (!is.character(x) || length(x) != 1 || is.na(x)) stop("`pool.interval` must be one text value, e.g. \"1day\", \"2 hour\" or \"15 min\".")
+plotframe.parse.interval <- function(x, arg = "pool.interval") {
+  if (!is.character(x) || length(x) != 1 || is.na(x)) stop("`", arg, "` must be one text value, e.g. \"1day\", \"2 hour\" or \"15 min\".")
   s <- tolower(gsub("\\s+", "", x))
   m <- regmatches(s, regexec("^([0-9]*\\.?[0-9]+)?(minutes|minute|mins|min|m|hours|hour|hrs|hr|h|days|day|d|weeks|week|wks|wk|w)$", s))[[1]]
-  if (length(m) == 0) stop("`pool.interval` = \"", x, "\" not recognized - use a number and a unit, e.g. \"1day\", \"2 day\", \"1 hour\", \"15 min\" or \"1 week\".")
+  if (length(m) == 0) stop("`", arg, "` = \"", x, "\" not recognized - use a number and a unit, e.g. \"1day\", \"2 day\", \"1 hour\", \"15 min\" or \"1 week\".")
   n <- if (nzchar(m[2])) as.numeric(m[2]) else 1
   unit <- substr(m[3], 1, 1)
   mins <- n * switch(unit, m = 1, h = 60, d = 1440, w = 10080)
-  if (!is.finite(mins) || mins <= 0) stop("`pool.interval` must be greater than zero.")
-  if (mins > 1440 && mins %% 1440 != 0) stop("`pool.interval` = \"", x, "\": intervals longer than a day must be whole days (e.g. \"2 day\", \"1 week\").")
-  if (mins < 1440 && abs(mins - round(mins)) > 1e-9) stop("`pool.interval` = \"", x, "\": intervals shorter than a day must be whole minutes.")
+  if (!is.finite(mins) || mins <= 0) stop("`", arg, "` must be greater than zero.")
+  if (mins < 1) stop("`", arg, "` = \"", x, "\" may not be less than \"1 minute\".")
+  if (mins > 1440 && mins %% 1440 != 0) stop("`", arg, "` = \"", x, "\": intervals longer than a day must be whole days (e.g. \"2 day\", \"1 week\").")
+  if (mins < 1440 && abs(mins - round(mins)) > 1e-9) stop("`", arg, "` = \"", x, "\": intervals shorter than a day must be whole minutes.")
   mins
 }
 
@@ -1066,4 +1189,70 @@ plotframe.pool.origin <- function(pool.start, d) {
   origin <- as.Date(sprintf("%04d-%02d-01", y, month))
   cycle.end <- as.Date(sprintf("%04d-%02d-01", y + 1L, month))
   list(origin = origin, cycle.end = cycle.end)
+}
+
+
+#' $aru.serial / old $serial reconciliation for batz.generate_plotframe.bat() (internal)
+#'
+#' Added 2026-10-07, per Josh. \code{$aru.serial} is the current header;
+#' \code{$serial} is the old one. Returns \code{data} with exactly one
+#' \code{$aru.serial} column (and no \code{$serial}), printing a
+#' WARNING for each case - see the \code{@details} entry "$aru.serial and
+#' the old $serial header" in \code{batz.generate_plotframe.bat()}.
+#' @keywords internal
+#' @noRd
+plotframe.reconcile.serial <- function(data) {
+  std <- standardize.headers(names(data))
+  new.idx <- which(std == "aru_serial")
+  old.idx <- which(std == "serial")
+  is.blank <- function(x) is.na(x) | !nzchar(trimws(x))
+
+  if (length(new.idx) > 0 && length(old.idx) > 0) {
+    new.vals <- as.character(data[[new.idx[1]]])
+    old.vals <- as.character(data[[old.idx[1]]])
+    new.blank <- is.blank(new.vals)
+    old.blank <- is.blank(old.vals)
+    n.missing.new <- sum(new.blank & !old.blank)
+    n.missing.old <- sum(old.blank & !new.blank)
+    n.diff <- sum(!new.blank & !old.blank & trimws(new.vals) != trimws(old.vals))
+
+    if (n.missing.new > 0 || n.missing.old > 0) {
+      cat(sprintf(paste0("WARNING: Check input file, it has both $aru.serial & $serial headers.\n",
+                         "  %d row(s) of data are missing from $aru.serial\n",
+                         "  %d row(s) of data are missing from $serial\n"),
+                  n.missing.new, n.missing.old))
+    }
+    if (n.diff > 0) {
+      cat(sprintf(paste0("WARNING: Check input file, it has both $aru.serial & $serial headers. There were\n",
+                         "  %d row(s) of data which did not match between the two, defaulted to $aru.serial for those records.\n"),
+                  n.diff))
+    }
+    if (n.missing.new == 0 && n.missing.old == 0 && n.diff == 0) {
+      cat("WARNING: Check input file, it has both $aru.serial & $serial headers (their values match - $aru.serial was used).\n")
+    }
+
+    ## fill each blank $aru.serial from $serial; where both have data,
+    ## $aru.serial wins
+    new.vals[new.blank] <- old.vals[new.blank]
+    data[[new.idx[1]]] <- new.vals
+    names(data)[new.idx[1]] <- "aru.serial"
+    data <- data[, -old.idx, drop = FALSE]
+  } else if (length(old.idx) > 0) {
+    names(data)[old.idx[1]] <- "aru.serial"
+    cat("WARNING: Check input file, $aru.serial was absent, but the old header $serial was present - that was used instead.\n")
+  } else if (length(new.idx) > 0) {
+    names(data)[new.idx[1]] <- "aru.serial"
+  } else {
+    data$aru.serial <- rep("missing", nrow(data))
+    cat("WARNING: input file was missing $aru.serial - added it with the value \"missing\" as a placeholder. ",
+        "Check input file to allow later QA/QC.\n", sep = "")
+  }
+
+  vals <- as.character(data$aru.serial)
+  n.no.serial <- sum(is.blank(vals) | tolower(trimws(vals)) == "missing")
+  if (n.no.serial > 0) {
+    cat(sprintf("WARNING: %d row(s) of data did not have a serial number.\n", n.no.serial))
+  }
+
+  data
 }
