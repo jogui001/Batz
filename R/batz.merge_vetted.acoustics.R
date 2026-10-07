@@ -5,8 +5,8 @@
 #' SonoBat vetting software, merges every file that has the expected columns
 #' into one master data frame, standardizes/reorders its headers, adds a
 #' combined call date-time column, recodes species identifiers to a single
-#' format, optionally fills blank manual IDs from the matching auto ID
-#' column, and optionally drops noise/unidentified rows.
+#' format, and optionally fills blank manual IDs from the matching auto ID
+#' column. Noise/NoID rows are kept; filter them downstream if needed.
 #'
 #' \strong{Header standardization (per Josh, 2026-09-14 project preference)
 #' - real matching-behavior change, flagged not silently made.} This
@@ -113,20 +113,17 @@
 #'   \item If \code{manid.sb = TRUE} (default), the same thing happens for
 #'     \code{$manid.sb}, filled from \code{$autoid.sb} ("$auto.sb" in the
 #'     spec's prose, read the same way).
-#'   \item If \code{trim.noise = TRUE} (default), every row whose
-#'     \code{$manid} equals \code{"noise"} (case-insensitive, whitespace-
-#'     trimmed) is removed.
-#'   \item If \code{trim.noid = TRUE} (default \code{FALSE}), every row
-#'     whose \code{$manid} equals \code{"NoID"} (case-insensitive,
-#'     whitespace-trimmed) is removed.
 #' }
 #' \code{$manid.kp}/\code{$manid.sb} (when created) and \code{$call.datetime}
 #' are appended at the very end of the column order (not specified where
-#' they should go). \code{trim.noise}/\code{trim.noid} check \code{$manid}
-#' itself (not \code{$manid.kp}/\code{$manid.sb}), AFTER the
-#' \code{batz.batusa_recode.names()} step - safe because that step passes
-#' unrecognized values like \code{"noise"}/\code{"NoID"} through unchanged,
-#' so they're still there to match against.
+#' they should go).
+#'
+#' \strong{trim.noise / trim.noid removed (2026-10-07, per Josh).} The
+#' former \code{trim.noise}/\code{trim.noid} arguments were removed. When
+#' \code{$manid} was entirely blank (read by \code{read.csv()} as logical
+#' \code{NA}), their \code{df[NA, ]} row filter turned every row into an
+#' all-\code{NA} row. No rows are dropped by this function anymore;
+#' noise/NoID rows pass through unchanged.
 #'
 #' \strong{Update (2026-08-26, later) - \code{bat.names.out}.} Josh's own
 #' instruction for this input was terse ("If bat.names = 'code4' ... set
@@ -344,10 +341,6 @@
 #' @param manid.sb Logical, default \code{TRUE}. Create \code{$manid.sb}
 #'   (a copy of \code{$manid} with blanks filled from \code{$autoid.sb} -
 #'   SonoBat's auto ID). See Details.
-#' @param trim.noise Logical, default \code{TRUE}. Remove rows where
-#'   \code{$manid} is \code{"noise"} (case-insensitive). See Details.
-#' @param trim.noid Logical, default \code{FALSE}. Remove rows where
-#'   \code{$manid} is \code{"NoID"} (case-insensitive). See Details.
 #' @param snake_case Logical, default \code{FALSE}. Added 2026-09-22, per
 #'   Josh's request to audit and extend the snake_case output option
 #'   package-wide (see \code{\link{batz.generate_plotframe.bat}}'s sibling
@@ -430,8 +423,6 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
                                                bat.names.out = "code4",
                                                manid.kp = TRUE,
                                                manid.sb = TRUE,
-                                               trim.noise = TRUE,
-                                               trim.noid = FALSE,
                                                snake_case = FALSE,
                                                strip.special = TRUE) {
 
@@ -567,7 +558,7 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
     aru.model.vals         <- fn.parts$aru.model
 
     ## --- rename, reorder, call.datetime, recode.names, manid.kp/sb
-    ## fill-in, trim.noise/trim.noid - see @details above -----------------
+    ## fill-in - see @details above -----------------
 
     ## positional rename ($sunregion, appended right after $aru.serial back
     ## in the per-file loop above, keeps its own name here - no rename
@@ -605,14 +596,6 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
       vetted.merged$manid.sb <- vetted.merged$manid
       blank <- is.empty(vetted.merged$manid.sb)
       vetted.merged$manid.sb[blank] <- vetted.merged$autoid.sb[blank]
-    }
-
-    if (trim.noise) {
-      vetted.merged <- vetted.merged[!(tolower(trimws(vetted.merged$manid)) == "noise"), , drop = FALSE]
-    }
-
-    if (trim.noid) {
-      vetted.merged <- vetted.merged[!(tolower(trimws(vetted.merged$manid)) == "noid"), , drop = FALSE]
     }
   }
 

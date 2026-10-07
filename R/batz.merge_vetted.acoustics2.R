@@ -44,10 +44,6 @@
 #'   if \code{$autoid.kp} survived the all-NA column drop (see Details).
 #' @param manid.sb Logical, default \code{TRUE}. Same idea, filled from
 #'   \code{$autoid.sb}.
-#' @param trim.noise Logical, default \code{TRUE}. Remove rows where
-#'   \code{$manid} is \code{"noise"} (case-insensitive).
-#' @param trim.noid Logical, default \code{FALSE}. Remove rows where
-#'   \code{$manid} is \code{"NoID"} (case-insensitive).
 #' @param project.name Character, default \code{""}. Used to build the saved
 #'   xlsx file's name (see \code{save.xlsx} below). \strong{As of round
 #'   twenty-two (2026-09-24) the saved file name also includes a
@@ -201,8 +197,13 @@
 #' passed to the recode function) on \code{$manid} and whichever auto-ID
 #' column(s) survived, then \code{$manid.kp}/\code{$manid.sb} blank-fill
 #' (each only created if its flag is TRUE AND its source auto-ID column
-#' survived the all-NA drop), and finally \code{trim.noise}/\code{trim.noid}
-#' row removal - unchanged since the 2026-09-06 revision.
+#' survived the all-NA drop) - unchanged since the 2026-09-06 revision.
+#'
+#' \strong{trim.noise / trim.noid removed (2026-10-07, per Josh).} The
+#' former \code{trim.noise}/\code{trim.noid} arguments were removed. Their
+#' \code{df[NA, ]} row filter turned rows into all-\code{NA} rows whenever
+#' \code{$manid} was \code{NA}. No rows are dropped by that step anymore;
+#' noise/NoID rows pass through unchanged.
 #'
 #' \strong{\code{log.file} format.} One row per file the function attempted
 #' to load (success or failure - always, since the 2026-09-06 revision
@@ -287,7 +288,7 @@
 #'     writing it as literal real-world text is both more legible and
 #'     future-proof than hand-squishing it. See the "Header standardization"
 #'     paragraph above for why this was necessary (not just cosmetic).
-#'   \item \code{trim.noise}/\code{trim.noid}/\code{manid.kp}/\code{
+#'   \item \code{manid.kp}/\code{
 #'     manid.sb} are unchanged carryovers from the 2026-09-04 build (not
 #'     mentioned in the 2026-09-06 round's add/remove-inputs sections at
 #'     all, and untouched by the 2026-09-08 removal above).
@@ -379,8 +380,7 @@
 #' date-only range reads more naturally as a \verb{<DATE1>to<DATE2>} token
 #' than a full datetime would. \strong{Please confirm \code{$date} (not
 #' \code{$call.datetime}) is the right source.} If \code{data.merged} has
-#' zero rows (nothing loaded/merged, or everything trimmed away by
-#' \code{trim.noise}/\code{trim.noid}), the literal token \code{"nodata"}
+#' zero rows (nothing loaded/merged), the literal token \code{"nodata"}
 #' is used in place of a real date range rather than crashing on an empty
 #' \code{min()}/\code{max()} - also not explicitly specified, likewise a
 #' judgment call. \code{<timestamp>} uses the same 14-digit, no-separator
@@ -531,8 +531,6 @@ batz.merge_vetted.acoustics2 <- function(dir.load = getwd(),
                                           bat.names.out = "code4",
                                           manid.kp = TRUE,
                                           manid.sb = TRUE,
-                                          trim.noise = TRUE,
-                                          trim.noid = FALSE,
                                           project.name = "",
                                           save.xlsx = TRUE,
                                           snake_case = FALSE,
@@ -783,14 +781,6 @@ batz.merge_vetted.acoustics2 <- function(dir.load = getwd(),
         blank <- is.empty(data.merged[[out.nm]])
         data.merged[[out.nm]][blank] <- data.merged[[spec$src]][blank]
       }
-    }
-
-    if (trim.noise) {
-      data.merged <- data.merged[!(tolower(trimws(data.merged$manid)) == "noise"), , drop = FALSE]
-    }
-
-    if (trim.noid) {
-      data.merged <- data.merged[!(tolower(trimws(data.merged$manid)) == "noid"), , drop = FALSE]
     }
   }
 
