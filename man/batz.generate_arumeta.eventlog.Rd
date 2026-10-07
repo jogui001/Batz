@@ -10,7 +10,8 @@ batz.generate_arumeta.eventlog(
   load.pattern = c("*HabitatAssessments_20m.csv", "*Acoustic_SiteVisitARU.csv"),
   duplicates.remove = TRUE,
   log.file = FALSE,
-  max.missing = 5
+  max.missing = 5,
+  strip.special = TRUE
 )
 }
 \arguments{
@@ -31,16 +32,29 @@ duplicate rows from the final combined event log.}
 
 \item{log.file}{Logical, default \code{FALSE}. If \code{TRUE}, also
 return (and auto-assign) \code{aru.eventlog.filelog} (one row per input
-file: \code{$filename}, \code{$file.type}, \code{$status}, \code{$notes})
+file: \code{$filename}, \code{$file.type}, \code{$status}, \code{$notes},
+\code{$strip.special})
 and \code{aru.eventlog.sitelog} (one row per site: \code{$client},
 \code{$project}, \code{$project.code}, \code{$site.name}, \code{$deployment},
-\code{$service.count}, \code{$recovery}, \code{$duplicates.removed}).}
+\code{$service.count}, \code{$recovery}, \code{$duplicates.removed},
+\code{$strip.special}). \code{$strip.special} (last column of both) is
+\code{"FALSE"} (not selected), \code{"TRUE NONE"} (nothing found), or
+\code{"TRUE ; <header>; ..."} (the headers where characters were
+removed - in that file for \code{aru.eventlog.filelog}; across all files
+read in the call for \code{aru.eventlog.sitelog}).}
 
 \item{max.missing}{Integer, default \code{5}. The largest number of
 canonical headers a file is allowed to be missing (after exact,
 case-insensitive matching) and still be merged in; missing headers are
 padded with \code{NA}. A file missing more than this many headers is
 not merged and is logged with status \code{"failed"}.}
+
+\item{strip.special}{Logical, default \code{TRUE}. If \code{TRUE},
+simplifies accented letters and
+symbols (\code{é} -> \code{e}, \code{×} -> \code{X}) and removes other non-ASCII special characters (e.g. \code{°}, \code{µ},
+\code{™}) from the data after loading - see
+\code{@details}. Files are always read with a UTF-8/Latin-1 fallback,
+so a stray \code{°} can't stop them loading, whatever this is set to.}
 }
 \value{
 Invisibly, a named list: \code{aru.eventlog} (always), plus
@@ -171,6 +185,36 @@ unrenamed appearances of \code{"service"}/\code{"site"} in this file are
 the general English words (a service visit, a site's rows) or unrelated
 \code{event.type}/\code{file.type} category labels, not this function's
 \code{service.count}/\code{site.name} columns.
+
+\strong{Follow-up, 2026-09-30, per Josh - special characters.} Every
+input CSV is now read with \code{special.read.csv()} (UTF-8, falling back
+to Latin-1), so a form export with a stray Excel-saved \code{°} byte no
+longer fails with \code{invalid multibyte string}. With the new
+\code{strip.special = TRUE} (default), each file is passed through
+\code{special.strip()} straight after reading - before header
+standardization, duplicate-column resolution, classification or header
+matching - removing non-ASCII characters from its text columns (a column
+that changed is re-typed, so e.g. \code{"42.5°"} in \code{$x}/\code{$y}
+becomes the number \code{42.5}). Column names are not changed by
+stripping. Both log tables gain a last column \code{$strip.special}:
+per file in \code{aru.eventlog.filelog} (standardized header names), and
+for the whole call in \code{aru.eventlog.sitelog} (a site's rows can
+come from several files).
+
+\strong{Follow-up, 2026-10-02, per Josh - accents simplified, log
+counts.} With \code{strip.special = TRUE}, accented letters and common
+symbols are now simplified instead of dropped (\code{café} ->
+\code{cafe}, \code{Quercus × bebbiana} -> \code{Quercus X bebbiana},
+curly quotes -> straight quotes); characters with no plain equivalent
+(e.g. \code{°}, \code{µ}, \code{™}) are still removed. Column names
+are cleaned the same way. The log gets four new columns right after
+\code{$strip.special}: \code{$Accented.letters.header} and
+\code{$removed.symbols.header} (number of unique column names with a
+character simplified / removed), and \code{$Accented.letters.data} and
+\code{$removed.symbols.data} (number of unique data values with a
+character simplified / removed - \code{café} in 500 rows counts once;
+\code{café} and \code{French café} count twice). They are \code{NA}
+when \code{strip.special = FALSE}.
 }
 \examples{
 \dontrun{

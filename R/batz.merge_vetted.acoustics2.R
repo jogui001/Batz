@@ -76,13 +76,21 @@
 #'   $aru_serial}) - for a caller who specifically wants a snake_case
 #'   CSV/xlsx/data frame out of this function, without having to convert it
 #'   themselves afterward.
+#' @param strip.special Logical, default \code{TRUE}. If \code{TRUE},
+#'   simplifies accented letters and
+#'   symbols (\code{é} -> \code{e}, \code{×} -> \code{X}) and removes other non-ASCII special characters (e.g. \code{°}, \code{µ},
+#'   \code{™}) from each vetted file and from the
+#'   \code{header.rename.path} table after loading - see \code{@details}.
+#'   Files are always read with a UTF-8/Latin-1 fallback, so a stray
+#'   \code{°} can't stop them loading, whatever this is set to.
 #'
 #' @return Invisibly, a named list of exactly two data frames: \code{data}
 #'   (the merged/processed table) and \code{log.file} (one row per file the
 #'   function ATTEMPTED to load - success or failure, always, since the
 #'   2026-09-06 revision removed the old \code{log.file} INPUT parameter that
 #'   used to gate this - with \code{$filename}, \code{$status}, \code{
-#'   $reason}, \code{$missing.headers}). As a side effect, \code{data} and
+#'   $reason}, \code{$missing.headers}, \code{$strip.special} -
+#'   \code{"FALSE"}, \code{"TRUE NONE"} or \code{"TRUE ; <header>; ..."}). As a side effect, \code{data} and
 #'   \code{log.file} are also assigned directly into the calling
 #'   environment (same auto-assign convention as
 #'   \code{batz.merge_vetted.acoustics}), so a bare call with no assignment
@@ -473,6 +481,36 @@
 #' this function will recognize real Kaleidoscope/SonoBat auto-ID columns
 #' again.}
 #'
+#' \strong{Follow-up, 2026-09-30, per Josh - special characters.} New input
+#' \code{strip.special} (default \code{TRUE}). Vetted files and the header
+#' rename table are read with \code{special.read.csv()} (UTF-8 with a
+#' Latin-1 fallback) and, when \code{strip.special = TRUE}, stripped of
+#' non-ASCII characters right after loading, before header matching. The
+#' \code{log.file} data frame gets a new last column \code{$strip.special}
+#' (\code{"FALSE"}, \code{"TRUE NONE"}, or \code{"TRUE ; <header>; ..."}
+#' listing the standardized headers where characters were removed). Kept
+#' as \code{strip.special} even when \code{snake_case = TRUE}.
+#'
+#' \strong{Follow-up, 2026-10-02, per Josh - accents simplified, log
+#' counts.} With \code{strip.special = TRUE}, accented letters and common
+#' symbols are now simplified instead of dropped (\code{café} ->
+#' \code{cafe}, \code{Quercus × bebbiana} -> \code{Quercus X bebbiana},
+#' curly quotes -> straight quotes); characters with no plain equivalent
+#' (e.g. \code{°}, \code{µ}, \code{™}) are still removed. Column names
+#' are cleaned the same way. The log gets four new columns right after
+#' \code{$strip.special}: \code{$Accented.letters.header} and
+#' \code{$removed.symbols.header} (number of unique column names with a
+#' character simplified / removed), and \code{$Accented.letters.data} and
+#' \code{$removed.symbols.data} (number of unique data values with a
+#' character simplified / removed - \code{café} in 500 rows counts once;
+#' \code{café} and \code{French café} count twice). They are \code{NA}
+#' when \code{strip.special = FALSE}.
+#'
+#' \strong{Follow-up, 2026-10-02, per Josh - SM5 file names.}
+#' \code{$aru.name}/\code{$date}/\code{$time} are also read from SM5 file
+#' names (\verb{<ARU>_<MIC>_<YYYYMMDD>_<HHMMSS>_<...>}); the microphone
+#' part is not kept. SM4 names give the same result as before.
+#'
 #' @examples
 #' \dontrun{
 #' # bare call - creates `data` and `log.file` directly in the calling
@@ -497,7 +535,8 @@ batz.merge_vetted.acoustics2 <- function(dir.load = getwd(),
                                           trim.noid = FALSE,
                                           project.name = "",
                                           save.xlsx = TRUE,
-                                          snake_case = FALSE) {
+                                          snake_case = FALSE,
+                                          strip.special = TRUE) {
 
   ## ---- three header categories - location is under "optional" ----
   required.headers <- c("filename", "date.monitoringnight", "manid")
@@ -523,7 +562,8 @@ batz.merge_vetted.acoustics2 <- function(dir.load = getwd(),
   header.rename.table <- headers.default
 
   if (rename) {
-    user.headers <- read.csv(header.rename.path, stringsAsFactors = FALSE, check.names = FALSE)
+    user.headers <- special.read.csv(header.rename.path, stringsAsFactors = FALSE, check.names = FALSE)
+    user.headers <- special.strip(user.headers, strip.special)$df
     user.headers <- data.frame(
       ## only the RAW/source column is standardized, to match a file's own
       ## standardized headers - the STANDARD/target column is the literal
@@ -582,19 +622,30 @@ batz.merge_vetted.acoustics2 <- function(dir.load = getwd(),
   data.merged <- data.frame()
   log.rows <- list()
 
-  add.log <- function(filepath, status, reason, headers.missing) {
+  add.log <- function(filepath, status, reason, headers.missing,
+                      special.headers = character(0)) {
     log.rows[[length(log.rows) + 1]] <<- data.frame(
       filename = filepath, status = status, reason = reason,
-      missing.headers = headers.missing, stringsAsFactors = FALSE,
+      missing.headers = headers.missing,
+      special.log.cols(strip.special, special.headers, cur.counts),
+      stringsAsFactors = FALSE,
       check.names = FALSE
     )
   }
 
+  cur.counts <- NULL   # 2026-10-02: simplified/removed counts for the current file's log row
   for (f in files) {
-    tmp <- tryCatch(read.csv(f, stringsAsFactors = FALSE, check.names = FALSE),
+    cur.counts <- NULL
+    tmp <- tryCatch(special.read.csv(f, stringsAsFactors = FALSE, check.names = FALSE),
                      error = function(e) NULL)
     if (is.null(tmp)) { add.log(f, "failure", "unreadable", "none"); next }
-    if (nrow(tmp) == 0) { add.log(f, "failure", "missing rows", "none"); next }
+    ## special characters (per Josh, 2026-09-30): strip right after loading;
+    ## stripped headers are reported under their standardized names.
+    s.strip <- special.strip(tmp, strip.special)
+    tmp <- s.strip$df
+    special.hdrs <- standardize.headers(s.strip$headers)
+    cur.counts <- s.strip$counts
+    if (nrow(tmp) == 0) { add.log(f, "failure", "missing rows", "none", special.hdrs); next }
 
     names(tmp) <- standardize.headers(names(tmp))
 
@@ -634,7 +685,7 @@ batz.merge_vetted.acoustics2 <- function(dir.load = getwd(),
         fail.reasons <- c(fail.reasons, "missing results headers")
         fail.missing <- c(fail.missing, results.headers)
       }
-      add.log(f, "failure", paste(fail.reasons, collapse = "; "),
+      add.log(f, "failure", paste(fail.reasons, collapse = "; "), special.headers = special.hdrs,
               paste(fail.missing, collapse = ", "))
       next
     }
@@ -650,9 +701,9 @@ batz.merge_vetted.acoustics2 <- function(dir.load = getwd(),
     }
 
     if (length(still.missing) == 0) {
-      add.log(f, "success all headers", "", "")
+      add.log(f, "success all headers", "", "", special.hdrs)
     } else {
-      add.log(f, "success missing", "", paste(still.missing, collapse = ", "))
+      add.log(f, "success missing", "", paste(still.missing, collapse = ", "), special.hdrs)
     }
 
     data.merged <- rbind(data.merged, row)
@@ -672,6 +723,17 @@ batz.merge_vetted.acoustics2 <- function(dir.load = getwd(),
     data.merged$aru.name <- vapply(m, function(x) if (length(x) >= 2) x[2] else NA_character_, character(1))
     data.merged$date     <- vapply(m, function(x) if (length(x) >= 3) x[3] else NA_character_, character(1))
     data.merged$time     <- vapply(m, function(x) if (length(x) >= 4) x[4] else NA_character_, character(1))
+    ## 2026-10-02, per Josh: SM5 names have a microphone part -
+    ## "<ARU>_<MIC>_<YYYYMMDD>_<HHMMSS>_<junk>" (mic not kept). Only used
+    ## where the SM4 pattern above didn't match, so SM4 results are unchanged.
+    sm5 <- is.na(data.merged$aru.name)
+    if (any(sm5)) {
+      m5 <- regmatches(data.merged$filename[sm5],
+                       regexec("^([^_]+)_[^_]+_(\\d{8})_(\\d{6})(_|\\.|$)", data.merged$filename[sm5]))
+      data.merged$aru.name[sm5] <- vapply(m5, function(x) if (length(x) >= 2) x[2] else NA_character_, character(1))
+      data.merged$date[sm5]     <- vapply(m5, function(x) if (length(x) >= 3) x[3] else NA_character_, character(1))
+      data.merged$time[sm5]     <- vapply(m5, function(x) if (length(x) >= 4) x[4] else NA_character_, character(1))
+    }
 
     ## reorder (only the auto-id columns actually present at this point are
     ## included here - none have been dropped yet, so both that were ever
@@ -736,7 +798,8 @@ batz.merge_vetted.acoustics2 <- function(dir.load = getwd(),
 
   log.file.df <- if (length(log.rows) > 0) do.call(rbind, log.rows) else
     data.frame(filename = character(0), status = character(0), reason = character(0),
-               missing.headers = character(0), stringsAsFactors = FALSE, check.names = FALSE)
+               missing.headers = character(0), special.log.cols.empty(),
+               stringsAsFactors = FALSE, check.names = FALSE)
   rownames(log.file.df) <- NULL
 
   ## ---- daterange token (round twenty-two, 2026-09-24, per Josh) - see
@@ -764,6 +827,11 @@ batz.merge_vetted.acoustics2 <- function(dir.load = getwd(),
   if (snake_case) {
     names(data.merged) <- standardize.headers(names(data.merged))
     names(log.file.df) <- standardize.headers(names(log.file.df))
+    ## keep the log column's exact name (2026-09-30)
+    special.cols <- c("strip.special", "Accented.letters.header", "removed.symbols.header",
+                      "Accented.letters.data", "removed.symbols.data")
+    hit <- match(names(log.file.df), standardize.headers(special.cols))
+    names(log.file.df)[!is.na(hit)] <- special.cols[hit[!is.na(hit)]]
   }
 
   result <- list(data = data.merged, log.file = log.file.df)

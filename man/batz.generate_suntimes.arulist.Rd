@@ -11,7 +11,8 @@ batz.generate_suntimes.arulist(
   write.output = TRUE,
   dir.save = getwd(),
   project.name = "",
-  snake_case = FALSE
+  snake_case = FALSE,
+  strip.special = TRUE
 )
 }
 \arguments{
@@ -53,7 +54,7 @@ file was written (\code{YYYYMMDDHHMMSS}, e.g. \code{20260826114426}).
 \strong{Reordered and the \code{"sav"} prefix dropped (round
 twenty-two, 2026-09-24, per Josh) - see @details, "File naming (round
 twenty-two)"; the previous shape was \verb{<base>_<DATE1>to<DATE2>_
-sav<timestamp>_suntimes.csv}.} \code{""} (default) uses \code{"aru"}
+  sav<timestamp>_suntimes.csv}.} \code{""} (default) uses \code{"aru"}
 as \verb{<base>}. Any other value is used as \verb{<base>} instead -
 e.g. \code{project.name = "projectname"} produces something like
 \code{"projectname_suntimes_20250101to20250202_20260924113700.csv"}.
@@ -80,6 +81,12 @@ becomes \code{$sunrise_monitoringnight_unix}, \code{$aru.name} becomes
 \code{$aru_name}) - for a caller who specifically wants a snake_case
 CSV/data frame out of this function, without having to convert it
 themselves afterward.}
+
+\item{strip.special}{Logical, default \code{TRUE}. If \code{TRUE}, simplifies accented
+letters (\code{é} -> \code{e}) and removes other non-ASCII special
+characters (e.g. \code{°}, \code{µ}) from each \verb{*arulist.csv} after loading - see
+\code{@details}. Files are always read with a UTF-8/Latin-1 fallback,
+so a stray \code{°} can't stop them loading, whatever this is set to.}
 }
 \value{
 Invisibly, a list with:
@@ -579,6 +586,32 @@ needed: an existing \verb{*arulist.csv} with an underscore-spelled
 \code{sunregion_type} column continues to satisfy the required-header
 check exactly as before. Full dev-script test suite re-run clean after
 this change.
+
+\strong{Follow-up, 2026-09-30, per Josh - special characters.} A real
+\code{Norcross.arulist.csv} failed to load with \code{invalid multibyte
+string at '<b0>'} (a degree sign saved by Excel as a single Latin-1
+byte in a latitude cell). Every \verb{*arulist.csv} is now read with the
+shared \code{special.read.csv()} helper (UTF-8, falling back to
+Latin-1), so such a file always loads. New argument
+\code{strip.special} (default \code{TRUE}) then removes every
+non-ASCII character from each file's data immediately after loading,
+before header standardization and the required-header check, so e.g.
+\code{"42.036373°"} becomes \code{"42.036373"} and converts to a number
+normally. Stripped columns are kept as character (the file is still read
+with \code{colClasses = "character"}); numeric conversion happens later
+exactly as before. With \code{strip.special = FALSE} the characters are
+kept (and a coordinate like \code{"42.036373°"} then becomes \code{NA}
+at the numeric-conversion step). Column names
+are not changed by stripping. This function has no log, so no
+\code{$strip.special} log column was added. Output is unchanged for
+files without special characters.
+
+\strong{Follow-up, 2026-10-02, per Josh - accents simplified.} With
+\code{strip.special = TRUE}, accented letters and common symbols are
+now simplified instead of dropped (\code{café} -> \code{cafe},
+\code{×} -> \code{X}, curly quotes -> straight quotes); characters
+with no plain equivalent (e.g. \code{°}, \code{µ}, \code{™}) are still
+removed. Column names are cleaned the same way.
 }
 \examples{
 \dontrun{

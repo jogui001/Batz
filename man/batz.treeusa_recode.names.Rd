@@ -11,7 +11,8 @@ batz.treeusa_recode.names(
   load.pattern = c("*USA.treeshrub_recode.names*", "*tree_species_and_shrubs*"),
   dir.sub = TRUE,
   pattern = "plant.names.csv",
-  reference.data = "default"
+  reference.data = "default",
+  strip.special = TRUE
 )
 }
 \arguments{
@@ -30,7 +31,7 @@ requested in \code{head.out}. An unrecognized header is an error.}
 
 \item{dir.load}{Character. Directory to search for the base reference
 database file (\code{load.pattern}) and, when \code{reference.data !=
-"default"}, for supplemental files (\code{pattern}). Default
+  "default"}, for supplemental files (\code{pattern}). Default
 \code{getwd()}.}
 
 \item{load.pattern}{Character, default
@@ -48,7 +49,7 @@ applicable, for \code{pattern}.}
 (a vector is fine) file name(s)/glob pattern(s) identifying
 supplemental reference CSVs to search for in \code{dir.load} (and its
 subdirectories, if \code{dir.sub = TRUE}) when \code{reference.data !=
-"default"}. Ignored entirely when \code{reference.data = "default"}.}
+  "default"}. Ignored entirely when \code{reference.data = "default"}.}
 
 \item{reference.data}{Character, default \code{"default"}. One of:
 \code{"default"} - use only the base reference table loaded via
@@ -58,6 +59,14 @@ subdirectories, if \code{dir.sub = TRUE}) when \code{reference.data !=
 base table; \code{"overwrite"} - also search for and load every file
 matching \code{pattern}, but use ONLY those rows in place of the base
 table (see Details for the fallback when nothing usable is found).}
+
+\item{strip.special}{Logical, default \code{TRUE}. If \code{TRUE}, removes
+non-ASCII special characters (e.g. \code{°}, \code{µ}, \code{é}, smart
+quotes, the hybrid sign \code{×}) from the base reference file and
+every supplemental reference file after loading - see \code{@details}.
+\code{data} is a plain vector and is not stripped. Files are always
+read with a UTF-8/Latin-1 fallback, so a stray \code{°} can't stop
+them loading, whatever this is set to.}
 }
 \value{
 A vector (if \code{head.out} has length 1) or data frame (if
@@ -282,6 +291,10 @@ workspace convention used by \code{\link{batz.generate_arumeta.eventlog}}
 \code{scientific_name}/\code{common.name}/\code{common.name2}, by Levenshtein edit
 distance via \code{utils::adist()} on the normalized strings). When
 every input matches, \code{treesmismatch.log} is not created/updated.
+A last column, \code{$strip.special} (added 2026-09-30), is the same on
+every row: \code{"FALSE"} (not selected), \code{"TRUE NONE"} (nothing
+found), or \code{"TRUE ; <header>; ..."} (the reference-file headers
+where characters were removed, across every file loaded in the call).
 
 \strong{Column identifiers renamed, 2026-09-27, per Josh's reference-workbook "Change.to" column.} The following column identifiers were renamed throughout this function's inputs/outputs and this reference table's own columns: \code{grouping_one} -> \code{grouping.one}, \code{grouping_two} -> \code{grouping.two}, \code{grouping_three} -> \code{grouping.three}, \code{growth_habit} -> \code{growth.habit}, \code{native_status} -> \code{native.status}, \code{wood_type} -> \code{wood.type}, \code{missmatch_count} -> \code{missmatch.count} (an output-only column of \code{treesmismatch.log}), and the reference table's own species-identifier column \code{species} -> \code{scientific_name} (this function loads its reference table from disk rather than embedding one, so there is no embedded lookup table to update here - only \code{match.cols}/\code{plant.schema.cols} and every \code{$}/\code{[["..."]]}/string-literal reference to these column names). General prose uses of the word "species" (e.g. describing tree species, species identifiers) were left unchanged, as were unrelated identifiers such as \code{batz.batusa_list.species}.
 
@@ -349,6 +362,45 @@ against the real reference file - previously an immediate error
 correctly - and confirmed \code{grouping.one}/\code{grouping.two}/
 \code{grouping.three}/\code{native.status}/\code{wood.type} all resolve
 the same way.
+
+\strong{Follow-up, 2026-09-30, per Josh - special characters.} Every
+reference CSV (base \code{load.pattern} file and every supplemental
+\code{pattern} file) is now read with the shared
+\code{special.read.csv()} helper (UTF-8, falling back to Latin-1), so a
+file with a stray Latin-1 byte loads instead of failing (a supplemental
+file would previously have been "skipped as unreadable"). Excel files
+are still read with \code{readxl::read_excel()}. New argument
+\code{strip.special} (default \code{TRUE}) removes every non-ASCII
+character from each reference file's data immediately after it loads,
+before header reconciliation and matching. \code{data} is a plain
+vector (not a data frame), so it is not stripped. Matching is
+unaffected either way, because \code{normalize.tree()} already drops
+everything except \code{a-z0-9} before comparing (so
+\code{"Quercus × bebbiana"} and \code{"Quercus bebbiana"} already
+matched each other). What stripping DOES change is the returned
+\code{head.out} values: a reference entry containing e.g. the hybrid
+sign is returned without it (\code{"Quercus  bebbiana"}, with the
+surrounding spaces left as they were), and the same for
+\code{treesmismatch.log$closest.match}. Set \code{strip.special = FALSE}
+to return reference values exactly as spelled in the file.
+\code{treesmismatch.log} gains a last column \code{$strip.special} (see
+\strong{Unmatched inputs} above). Output is unchanged for reference
+files without special characters.
+
+\strong{Follow-up, 2026-10-02, per Josh - accents simplified, log
+counts.} With \code{strip.special = TRUE}, accented letters and common
+symbols are now simplified instead of dropped (\code{café} ->
+\code{cafe}, \code{Quercus × bebbiana} -> \code{Quercus X bebbiana},
+curly quotes -> straight quotes); characters with no plain equivalent
+(e.g. \code{°}, \code{µ}, \code{™}) are still removed. Column names
+are cleaned the same way. The log gets four new columns right after
+\code{$strip.special}: \code{$Accented.letters.header} and
+\code{$removed.symbols.header} (number of unique column names with a
+character simplified / removed), and \code{$Accented.letters.data} and
+\code{$removed.symbols.data} (number of unique data values with a
+character simplified / removed - \code{café} in 500 rows counts once;
+\code{café} and \code{French café} count twice). They are \code{NA}
+when \code{strip.special = FALSE}.
 }
 \examples{
 \dontrun{

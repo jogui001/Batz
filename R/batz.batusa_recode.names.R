@@ -27,8 +27,13 @@
 #'   \code{code4}/\code{code6} only, regardless of \code{batname.format.out} -
 #'   so, for example, \code{batname.format.out = "listing.status_federal"}
 #'   looks a species up by any of its four names/codes and returns its
-#'   federal listing status instead of another name/code. An unrecognized
-#'   value is an error.
+#'   federal listing status instead of another name/code. Since 2026-10-02
+#'   the value is also matched ignoring case, spaces, dots and underscores
+#'   (\code{"Common Name"} = \code{"common_name"}), the older short names
+#'   still work (\code{"common"} -> \code{"common_name"}; \code{"latin"},
+#'   \code{"scientific"} -> \code{"scientific_name"}), and \code{"both"}
+#'   gives \code{"Common name (Scientific name)"}. Any other value is an
+#'   error that lists the accepted values.
 #'
 #'   \code{"hibernation.strategy"} is one of \code{"migratory"} (tree bats that
 #'   head south for winter), \code{"hibernating"} (cave bats that go into
@@ -62,6 +67,11 @@
 #'   (hyphens kept, e.g. \code{"Silver-haired bat"}); \code{FALSE} replaces
 #'   every hyphen in a matched value with a space instead (e.g.
 #'   \code{"Silver haired bat"}).
+#' @param strip.special Logical, default \code{TRUE}. If \code{TRUE}, simplifies accented
+#'   letters (\code{é} -> \code{e}) and removes other non-ASCII special
+#'   characters (e.g. \code{°}, \code{µ}) from \code{data} when it is a data frame, before matching - see
+#'   \code{@details}. A plain vector is not stripped. This function reads no
+#'   files.
 #'
 #' @return A vector (if \code{data} is a vector) or data frame (if
 #'   \code{data} is a data frame) of the same length/dimensions as
@@ -304,6 +314,26 @@
 #' 2026-08-27)} - not added here, since that's a reference-table content
 #' change beyond what was asked in this round.
 #'
+#' \strong{Follow-up, 2026-09-30, per Josh - special characters.} New
+#' argument \code{strip.special} (default \code{TRUE}). When \code{data} is
+#' a data frame, every non-ASCII character is removed from it (this
+#' function's local copy only) at the very start of the function, before
+#' matching, so e.g. \code{"Eptesicus fuscus°"} or a value with a trailing
+#' non-breaking space now matches its reference row instead of being
+#' returned unmatched. When \code{data} is a plain vector it is passed
+#' through unchanged (not stripped), per the package-wide rule that only
+#' data-frame inputs are stripped. The embedded \code{nabat.names}
+#' reference table is never stripped (it contains no non-ASCII characters
+#' anyway). This function reads no files and has no log. Output is
+#' unchanged for inputs without special characters.
+#'
+#' \strong{Follow-up, 2026-10-02, per Josh - accents simplified.} With
+#' \code{strip.special = TRUE}, accented letters and common symbols are
+#' now simplified instead of dropped (\code{café} -> \code{cafe},
+#' \code{×} -> \code{X}, curly quotes -> straight quotes); characters
+#' with no plain equivalent (e.g. \code{°}, \code{µ}, \code{™}) are still
+#' removed. Column names are cleaned the same way.
+#'
 #' @examples
 #' \dontrun{
 #' batz.batusa_recode.names(c("epfu", "myotis_lucifugus", "Hoary bat"))
@@ -336,7 +366,14 @@
 #' }
 #'
 #' @export
-batz.batusa_recode.names <- function(data, batname.format.out = "common_name", grammar.dash = TRUE) {
+batz.batusa_recode.names <- function(data, batname.format.out = "common_name", grammar.dash = TRUE,
+                                     strip.special = TRUE) {
+
+  ## special characters (per Josh, 2026-09-30): strip non-ASCII characters
+  ## from `data` when it is a data frame (this function's local copy only;
+  ## a plain vector passes through unchanged) - see @details, "Follow-up,
+  ## 2026-09-30". The embedded reference table below is never stripped.
+  data <- special.strip(data, strip.special)$df
 
   # ---------------------------------------------------------------------------
   # Reference database (Josh's real NAbat.names.csv, embedded as supplied -
@@ -562,10 +599,10 @@ batz.batusa_recode.names <- function(data, batname.format.out = "common_name", g
 
   match.cols <- c("scientific_name", "common_name", "code4", "code6")
 
-  if (!(batname.format.out %in% names(nabat.names))) {
-    stop(sprintf("batname.format.out must be one of the reference database's headers: %s (got '%s')",
-                  paste(names(nabat.names), collapse = ", "), batname.format.out))
-  }
+  ## 2026-10-02, per Josh: accept old/short format names ("common",
+  ## "latin", ...), any case/separator, and the derived "both" format -
+  ## see batusa.resolve.format() at the end of this file.
+  batname.format.out <- batusa.resolve.format(batname.format.out, names(nabat.names))
 
   reference <- nabat.names
   reference[] <- lapply(reference, function(col) trimws(as.character(col)))
@@ -607,7 +644,14 @@ batz.batusa_recode.names <- function(data, batname.format.out = "common_name", g
     found     <- !is.na(row.idx)
 
     out <- x.orig
-    out[found] <- as.character(reference[[batname.format.out]][row.idx[found]])
+    if (identical(batname.format.out, "both")) {
+      cn <- reference[["common_name"]][row.idx[found]]
+      sn <- reference[["scientific_name"]][row.idx[found]]
+      out[found] <- ifelse(is.na(sn) | !nzchar(sn) | tolower(sn) == tolower(cn),
+                           cn, sprintf("%s (%s)", cn, sn))
+    } else {
+      out[found] <- as.character(reference[[batname.format.out]][row.idx[found]])
+    }
 
     if (!grammar.dash) {
       out[found] <- gsub("-", " ", out[found])
@@ -638,4 +682,39 @@ batz.batusa_recode.names <- function(data, batname.format.out = "common_name", g
   }
 
   out
+}
+
+
+#' Resolve a batname.format.out value to a reference-table header
+#'
+#' Exact header first; then the same text ignoring case and
+#' spaces/dots/underscores/dashes; then the older short names. Added
+#' 2026-10-02, per Josh (a fig.list $facet.label of "common" stopped with
+#' an error after the reference headers were renamed to common_name etc.).
+#' @keywords internal
+#' @noRd
+batusa.resolve.format <- function(fmt, valid) {
+  aliases <- c(common = "common_name", commonname = "common_name", name = "common_name",
+               latin = "scientific_name", latinname = "scientific_name",
+               scientific = "scientific_name", sci = "scientific_name",
+               sciname = "scientific_name", species = "scientific_name",
+               code = "code4", fourlettercode = "code4", sixlettercode = "code6",
+               both = "both", commonlatin = "both", commonscientific = "both",
+               commonandscientific = "both", commonandlatin = "both")
+  accepted <- c(valid, "both")
+  if (length(fmt) != 1 || is.na(fmt) || !nzchar(trimws(as.character(fmt)))) {
+    stop(sprintf("batname.format.out must be one value, one of: %s",
+                 paste(accepted, collapse = ", ")))
+  }
+  f <- trimws(as.character(fmt))
+  f <- gsub('^"(.*)"$', "\\1", f)
+  if (f %in% accepted) return(f)
+  key <- gsub("[^a-z0-9]", "", tolower(f))
+  hit <- match(key, gsub("[^a-z0-9]", "", tolower(valid)))
+  if (!is.na(hit)) return(valid[hit])
+  if (key %in% names(aliases)) return(unname(aliases[key]))
+  stop(sprintf(paste0("batname.format.out must be one of the reference database's headers: %s ",
+                      "- or \"both\" (common name (scientific name)); the short names ",
+                      "\"common\", \"latin\"/\"scientific\" and \"code\" also work (got '%s')"),
+               paste(valid, collapse = ", "), f))
 }

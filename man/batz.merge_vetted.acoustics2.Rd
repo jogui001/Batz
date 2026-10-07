@@ -20,7 +20,8 @@ batz.merge_vetted.acoustics2(
   trim.noid = FALSE,
   project.name = "",
   save.xlsx = TRUE,
-  snake_case = FALSE
+  snake_case = FALSE,
+  strip.special = TRUE
 )
 }
 \arguments{
@@ -54,7 +55,7 @@ lookup table - see Details.}
 \item{bat.names.out}{Character, default \code{"code4"}. Passed as
 \code{batname.format.out} to \code{\link{batz.batusa_recode.names}} when
 recoding \code{$manid} and any surviving auto-ID column(s) (\code{
-$autoid.kp}/\code{$autoid.sb}).}
+  $autoid.kp}/\code{$autoid.sb}).}
 
 \item{manid.kp}{Logical, default \code{TRUE}. Create \code{$manid.kp} (a
 copy of \code{$manid} with blanks/NA filled from \code{$autoid.kp}) - only
@@ -93,12 +94,20 @@ very last step before the optional xlsx write and before they're
 returned/auto-assigned - it has no effect on how an incoming file's
 headers are matched/validated. \code{FALSE} (default) keeps this
 function's normal dot-separated output column names (\code{
-$date.monitoringnight}, \code{$autoid.kp}, \code{$aru.serial}, ...) exactly as
+  $date.monitoringnight}, \code{$autoid.kp}, \code{$aru.serial}, ...) exactly as
 always. \code{TRUE} runs every output column name through
 \code{standardize.headers()} instead (e.g. \code{$mon_ngh}, \code{
-$aru_serial}) - for a caller who specifically wants a snake_case
+  $aru_serial}) - for a caller who specifically wants a snake_case
 CSV/xlsx/data frame out of this function, without having to convert it
 themselves afterward.}
+
+\item{strip.special}{Logical, default \code{TRUE}. If \code{TRUE},
+simplifies accented letters and
+symbols (\code{é} -> \code{e}, \code{×} -> \code{X}) and removes other non-ASCII special characters (e.g. \code{°}, \code{µ},
+\code{™}) from each vetted file and from the
+\code{header.rename.path} table after loading - see \code{@details}.
+Files are always read with a UTF-8/Latin-1 fallback, so a stray
+\code{°} can't stop them loading, whatever this is set to.}
 }
 \value{
 Invisibly, a named list of exactly two data frames: \code{data}
@@ -106,7 +115,8 @@ Invisibly, a named list of exactly two data frames: \code{data}
 function ATTEMPTED to load - success or failure, always, since the
 2026-09-06 revision removed the old \code{log.file} INPUT parameter that
 used to gate this - with \code{$filename}, \code{$status}, \code{
-  $reason}, \code{$missing.headers}). As a side effect, \code{data} and
+  $reason}, \code{$missing.headers}, \code{$strip.special} -
+\code{"FALSE"}, \code{"TRUE NONE"} or \code{"TRUE ; <header>; ..."}). As a side effect, \code{data} and
 \code{log.file} are also assigned directly into the calling
 environment (same auto-assign convention as
 \code{batz.merge_vetted.acoustics}), so a bare call with no assignment
@@ -513,6 +523,36 @@ update \code{arumerge.headerrename.csv}'s target column (\code{auto.kp}
 -> \code{autoid.kp}, \code{auto.sb} -> \code{autoid.sb}) himself before
 this function will recognize real Kaleidoscope/SonoBat auto-ID columns
 again.}
+
+\strong{Follow-up, 2026-09-30, per Josh - special characters.} New input
+\code{strip.special} (default \code{TRUE}). Vetted files and the header
+rename table are read with \code{special.read.csv()} (UTF-8 with a
+Latin-1 fallback) and, when \code{strip.special = TRUE}, stripped of
+non-ASCII characters right after loading, before header matching. The
+\code{log.file} data frame gets a new last column \code{$strip.special}
+(\code{"FALSE"}, \code{"TRUE NONE"}, or \code{"TRUE ; <header>; ..."}
+listing the standardized headers where characters were removed). Kept
+as \code{strip.special} even when \code{snake_case = TRUE}.
+
+\strong{Follow-up, 2026-10-02, per Josh - accents simplified, log
+counts.} With \code{strip.special = TRUE}, accented letters and common
+symbols are now simplified instead of dropped (\code{café} ->
+\code{cafe}, \code{Quercus × bebbiana} -> \code{Quercus X bebbiana},
+curly quotes -> straight quotes); characters with no plain equivalent
+(e.g. \code{°}, \code{µ}, \code{™}) are still removed. Column names
+are cleaned the same way. The log gets four new columns right after
+\code{$strip.special}: \code{$Accented.letters.header} and
+\code{$removed.symbols.header} (number of unique column names with a
+character simplified / removed), and \code{$Accented.letters.data} and
+\code{$removed.symbols.data} (number of unique data values with a
+character simplified / removed - \code{café} in 500 rows counts once;
+\code{café} and \code{French café} count twice). They are \code{NA}
+when \code{strip.special = FALSE}.
+
+\strong{Follow-up, 2026-10-02, per Josh - SM5 file names.}
+\code{$aru.name}/\code{$date}/\code{$time} are also read from SM5 file
+names (\verb{<ARU>_<MIC>_<YYYYMMDD>_<HHMMSS>_<...>}); the microphone
+part is not kept. SM4 names give the same result as before.
 }
 \examples{
 \dontrun{

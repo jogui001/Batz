@@ -6,7 +6,8 @@
 \usage{
 batz.generate_headers.acceptold(
   dir.load = getwd(),
-  file.name = "batz_headers_acceptold.csv"
+  file.name = "batz_headers_acceptold.csv",
+  strip.special = TRUE
 )
 }
 \arguments{
@@ -15,6 +16,13 @@ the master reference CSV (\code{file.name}).}
 
 \item{file.name}{Character, default \code{"batz_headers_acceptold.csv"}.
 Name of the reference CSV to read.}
+
+\item{strip.special}{Logical, default \code{TRUE}. If \code{TRUE},
+simplifies accented letters and
+symbols (\code{é} -> \code{e}, \code{×} -> \code{X}) and removes other non-ASCII special characters (e.g. \code{°}, \code{µ},
+\code{™}) from the data after loading - see
+\code{@details}. Files are always read with a UTF-8/Latin-1 fallback,
+so a stray \code{°} can't stop them loading, whatever this is set to.}
 }
 \value{
 A data frame with \code{$header.old} (the phased-out header
@@ -181,6 +189,15 @@ maintained going forward, not a new parameter or code path on
 \code{batz.generate_headers.acceptold()} itself, which remains a plain
 read of whatever the CSV currently says.
 
+\strong{Follow-up, 2026-09-30, per Josh - special characters.} The
+reference CSV is now read with \code{special.read.csv()} (UTF-8, falling
+back to Latin-1), so an Excel-saved stray \code{°} byte no longer stops
+it loading. With the new \code{strip.special = TRUE} (default), the table
+is passed through \code{special.strip()} straight after reading, before
+the required-column check, removing non-ASCII characters from its
+values (column names are not changed). Every column is still returned as
+character. No log.
+
 \strong{A lighter, non-blocking note (not held back, applied as
 given): \code{plot.sets -> plot.set}} means
 \code{\link{batz.plotactivity_observations}}'s own job-sheet column
@@ -191,6 +208,13 @@ across their two, never-combined job-sheet CSVs - each function still
 reads/parses its own sheet independently, so this doesn't create a
 runtime collision, just worth knowing the same name now carries
 different cardinality in each function's own job sheet.
+
+\strong{Follow-up, 2026-10-02, per Josh - accents simplified.} With
+\code{strip.special = TRUE}, accented letters and common symbols are
+now simplified instead of dropped (\code{café} -> \code{cafe},
+\code{×} -> \code{X}, curly quotes -> straight quotes); characters
+with no plain equivalent (e.g. \code{°}, \code{µ}, \code{™}) are still
+removed. Column names are cleaned the same way.
 }
 \examples{
 \dontrun{

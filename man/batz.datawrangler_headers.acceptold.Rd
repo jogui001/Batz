@@ -13,7 +13,8 @@ batz.datawrangler_headers.acceptold(
   log.file = FALSE,
   headers.table = NULL,
   dir.load = getwd(),
-  file.name = "batz_headers_acceptold.csv"
+  file.name = "batz_headers_acceptold.csv",
+  strip.special = TRUE
 )
 }
 \arguments{
@@ -47,6 +48,14 @@ When \code{NULL} (the default), it's loaded fresh via
 \item{dir.load, file.name}{Passed through to
 \code{\link{batz.generate_headers.acceptold}} when \code{headers.table}
 is \code{NULL}. See that function's own documentation.}
+
+\item{strip.special}{Logical, default \code{TRUE}. If \code{TRUE},
+simplifies accented letters and
+symbols (\code{é} -> \code{e}, \code{×} -> \code{X}) and removes other non-ASCII special characters (e.g. \code{°}, \code{µ},
+\code{™}) from every data frame input (\code{data} and a
+supplied \code{headers.table}) at the start of the call - see
+\code{@details}. Files are always read with a UTF-8/Latin-1 fallback,
+so a stray \code{°} can't stop them loading, whatever this is set to.}
 }
 \value{
 \code{data}, with every column that matched exactly one
@@ -57,7 +66,12 @@ Details) is attached to the returned object as an attribute, i.e.
 \code{attr(result, "header.conflict.log")} - the return value is
 always just the data frame itself either way, so
 \code{data <- batz.datawrangler_headers.acceptold(data, ...)} works
-the same regardless of \code{log.file}.
+the same regardless of \code{log.file}. \code{header.conflict.log}
+columns: \code{$filename}, \code{$path}, \code{$function},
+\code{$header.old}, \code{$header.new}, and (last)
+\code{$strip.special}: \code{"FALSE"} (not selected),
+\code{"TRUE NONE"} (nothing found), or \code{"TRUE ; <header>; ..."}
+(the columns of \code{data} where characters were removed).
 }
 \description{
 Consults \code{\link{batz.generate_headers.acceptold}}'s reference table
@@ -135,6 +149,36 @@ reference table maps that key to more than one distinct non-blank
 \code{$header.new}, it's a real conflict (see
 \code{\link{batz.generate_headers.acceptold}}'s own \code{@details} for
 the 8 rows currently flagged this way) and nothing is guessed.
+
+\strong{Follow-up, 2026-09-30, per Josh - special characters.} New last
+argument \code{strip.special = TRUE}. \code{data} (and
+\code{headers.table}, if supplied as a data frame) are passed through
+\code{special.strip()} at the very start of the call, removing non-ASCII
+characters (e.g. \code{°}) from text columns and re-typing any column
+that changed, so \code{"42.5°"} becomes \code{42.5}; this also applies to
+the returned \code{data}. Column names are not changed by stripping, so
+header matching is unaffected. When \code{headers.table = NULL}, the
+reference CSV is loaded via \code{batz.generate_headers.acceptold()},
+which now reads it with a UTF-8/Latin-1 fallback and strips it too. The
+default \code{filename} is captured before stripping, so it still names
+the object passed in. \code{header.conflict.log} gains a last column
+\code{$strip.special} (the columns of \code{data} that had characters
+removed).
+
+\strong{Follow-up, 2026-10-02, per Josh - accents simplified, log
+counts.} With \code{strip.special = TRUE}, accented letters and common
+symbols are now simplified instead of dropped (\code{café} ->
+\code{cafe}, \code{Quercus × bebbiana} -> \code{Quercus X bebbiana},
+curly quotes -> straight quotes); characters with no plain equivalent
+(e.g. \code{°}, \code{µ}, \code{™}) are still removed. Column names
+are cleaned the same way. The log gets four new columns right after
+\code{$strip.special}: \code{$Accented.letters.header} and
+\code{$removed.symbols.header} (number of unique column names with a
+character simplified / removed), and \code{$Accented.letters.data} and
+\code{$removed.symbols.data} (number of unique data values with a
+character simplified / removed - \code{café} in 500 rows counts once;
+\code{café} and \code{French café} count twice). They are \code{NA}
+when \code{strip.special = FALSE}.
 }
 \examples{
 \dontrun{

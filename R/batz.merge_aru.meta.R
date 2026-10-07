@@ -26,6 +26,15 @@
 #'   rows/columns - not counting the surviving one - the action was done to).
 #'   Only actions that actually did something are logged; nothing duplicated
 #'   means no log rows at all for that file/category.
+#'   \code{$strip.special} (last column): \code{"FALSE"} (not selected),
+#'   \code{"TRUE NONE"} (nothing found), or \code{"TRUE ; <header>; ..."}
+#'   (the headers, standardized, where characters were removed in the file
+#'   or sheet that row is about).
+#' @param strip.special Logical, default \code{TRUE}. If \code{TRUE}, simplifies accented
+#'   letters (\code{é} -> \code{e}) and removes other non-ASCII special
+#'   characters (e.g. \code{°}, \code{µ}) from the data after loading - see \code{@details}. Files are
+#'   always read with a UTF-8/Latin-1 fallback, so a stray \code{°} can't stop
+#'   them loading, whatever this is set to.
 #'
 #' @return Invisibly, a named list with three elements: \code{aru.visit},
 #'   \code{aru.quad}, \code{aru.20m}. Each is a merged, de-duplicated data
@@ -135,6 +144,36 @@
 #' log data frame returned when \code{log.file = TRUE}): \code{event} ->
 #' \code{event.type}, and \code{inputfile} -> \code{filename}.
 #'
+#' \strong{Follow-up, 2026-09-30, per Josh - special characters.} New
+#' argument \code{strip.special} (default \code{TRUE}). Every \code{.csv} is
+#' now read with the shared \code{special.read.csv()} helper, which falls back
+#' to Latin-1 when a file isn't valid UTF-8 (so a stray Excel degree sign no
+#' longer fails with "invalid multibyte string"); this always applies.
+#' Immediately after each csv file or xlsx sheet is loaded (before BOM
+#' stripping, header standardization and duplicate handling),
+#' \code{special.strip()} removes non-ASCII characters from its text columns
+#' when \code{strip.special = TRUE} (\code{readxl} data are already UTF-8
+#' but are stripped the same way). \code{arumeta.mergelog} gains a last
+#' column \code{$strip.special} naming, per row, the (standardized) headers
+#' of that row's file/sheet where characters were removed. As before, the log
+#' only has rows for duplicate-row/column actions, so a file with special
+#' characters but no duplicates does not appear in it.
+#'
+#' \strong{Follow-up, 2026-10-02, per Josh - accents simplified, log
+#' counts.} With \code{strip.special = TRUE}, accented letters and common
+#' symbols are now simplified instead of dropped (\code{café} ->
+#' \code{cafe}, \code{Quercus × bebbiana} -> \code{Quercus X bebbiana},
+#' curly quotes -> straight quotes); characters with no plain equivalent
+#' (e.g. \code{°}, \code{µ}, \code{™}) are still removed. Column names
+#' are cleaned the same way. The log gets four new columns right after
+#' \code{$strip.special}: \code{$Accented.letters.header} and
+#' \code{$removed.symbols.header} (number of unique column names with a
+#' character simplified / removed), and \code{$Accented.letters.data} and
+#' \code{$removed.symbols.data} (number of unique data values with a
+#' character simplified / removed - \code{café} in 500 rows counts once;
+#' \code{café} and \code{French café} count twice). They are \code{NA}
+#' when \code{strip.special = FALSE}.
+#'
 #' @examples
 #' \dontrun{
 #' result <- batz.merge_aru.meta("path/to/raw/data", dir.sub = TRUE)
@@ -150,17 +189,23 @@
 batz.merge_aru.meta <- function(dir.load = getwd(),
                                        load.pattern     = c("*.csv", "*.xlsx"),
                                        dir.sub          = FALSE,
-                                       log.file         = FALSE) {
+                                       log.file         = FALSE,
+                                       strip.special    = TRUE) {
 
   ## convert a plain wildcard/glob suffix pattern (or vector of them) into
   ## one combined regex suitable for list.files()'s pattern= argument
   pattern.regex <- function(p) paste(vapply(p, utils::glob2rx, character(1)), collapse = "|")
 
   log.rows <- list()
+  special.headers <- list()   # per source label: headers where special characters were removed
+  special.counts <- list()    # per source label: simplified/removed counts (2026-10-02)
   add.log <- function(filename, event.type, action, count) {
     if (!log.file || count <= 0) return(invisible(NULL))
+    hdrs <- special.headers[[filename]]
+    if (is.null(hdrs)) hdrs <- character(0)
     log.rows[[length(log.rows) + 1]] <<- data.frame(
       filename = filename, event.type = event.type, action = action, count = as.integer(count),
+      special.log.cols(strip.special, hdrs, special.counts[[filename]]),
       stringsAsFactors = FALSE)
   }
 
@@ -220,7 +265,7 @@ batz.merge_aru.meta <- function(dir.load = getwd(),
   }
 
   strip.bom <- function(df) {
-    names(df) <- gsub("﻿", "", names(df), fixed = TRUE)
+    names(df) <- gsub("\ufeff", "", names(df), fixed = TRUE)
     df
   }
 
@@ -231,7 +276,10 @@ batz.merge_aru.meta <- function(dir.load = getwd(),
 
   buckets <- setNames(vector("list", length(category.patterns)), names(category.patterns))
 
-  add.to.bucket <- function(cat.name, df, source.label) {
+  add.to.bucket <- function(cat.name, df, source.label, stripped.headers = character(0),
+                            stripped.counts = NULL) {
+    special.counts[[source.label]] <<- stripped.counts
+    special.headers[[source.label]] <<- standardize.headers(gsub("\ufeff", "", stripped.headers, fixed = TRUE))
     df <- strip.bom(df)
     ## header standardization (per Josh, 2026-09-14 project preference) -
     ## reverses this function's prior "preserve raw headers verbatim" design
@@ -258,8 +306,9 @@ batz.merge_aru.meta <- function(dir.load = getwd(),
     if (grepl("\\.csv$", fname, ignore.case = TRUE)) {
       cat.name <- classify(fname)
       if (!is.na(cat.name)) {
-        df <- read.csv(f, stringsAsFactors = FALSE, check.names = FALSE)
-        add.to.bucket(cat.name, df, fname)
+        df <- special.read.csv(f, stringsAsFactors = FALSE, check.names = FALSE)
+        s.strip <- special.strip(df, strip.special); df <- s.strip$df
+        add.to.bucket(cat.name, df, fname, s.strip$headers, s.strip$counts)
       }
     } else if (grepl("\\.xlsx$", fname, ignore.case = TRUE)) {
       if (grepl("ARUdeployments\\.xlsx$", fname, ignore.case = TRUE)) {
@@ -269,7 +318,8 @@ batz.merge_aru.meta <- function(dir.load = getwd(),
           if (!is.na(cat.name)) {
             df <- suppressMessages(as.data.frame(
               readxl::read_excel(f, sheet = s, .name_repair = "minimal"), stringsAsFactors = FALSE, check.names = FALSE))
-            add.to.bucket(cat.name, df, paste0(fname, " [sheet: ", s, "]"))
+            s.strip <- special.strip(df, strip.special); df <- s.strip$df
+            add.to.bucket(cat.name, df, paste0(fname, " [sheet: ", s, "]"), s.strip$headers, s.strip$counts)
           }
         }
       } else {
@@ -277,7 +327,8 @@ batz.merge_aru.meta <- function(dir.load = getwd(),
         if (!is.na(cat.name)) {
           df <- suppressMessages(as.data.frame(
             readxl::read_excel(f, .name_repair = "minimal"), stringsAsFactors = FALSE, check.names = FALSE))
-          add.to.bucket(cat.name, df, fname)
+          s.strip <- special.strip(df, strip.special); df <- s.strip$df
+          add.to.bucket(cat.name, df, fname, s.strip$headers, s.strip$counts)
         }
       }
     }
@@ -311,7 +362,8 @@ batz.merge_aru.meta <- function(dir.load = getwd(),
       do.call(rbind, log.rows)
     } else {
       data.frame(filename = character(0), event.type = character(0),
-                 action = character(0), count = integer(0), stringsAsFactors = FALSE)
+                 action = character(0), count = integer(0), special.log.cols.empty(),
+                 stringsAsFactors = FALSE)
     }
   }
 

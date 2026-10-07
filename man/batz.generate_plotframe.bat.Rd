@@ -16,7 +16,10 @@ batz.generate_plotframe.bat(
   dir.load = getwd(),
   load.pattern = c("*.arulist.csv"),
   dir.sub = FALSE,
-  snake_case = FALSE
+  snake_case = FALSE,
+  strip.special = TRUE,
+  pool.interval = "1day",
+  pool.start = "observed"
 )
 }
 \arguments{
@@ -59,12 +62,12 @@ Josh's explicit request.)}
 \item{alldetections}{Logical, default \code{TRUE}. See Details.}
 
 \item{trim.noise}{Logical, default \code{TRUE}. When \code{alldetections
-= TRUE}, exclude rows where the \code{spp.id} column is
+  = TRUE}, exclude rows where the \code{spp.id} column is
 \code{"noise"} (case-insensitive) from the \code{"All Detections"}
 summary.}
 
 \item{trim.noid}{Logical, default \code{FALSE}. When \code{alldetections
-= TRUE}, exclude rows where the \code{spp.id} column is
+  = TRUE}, exclude rows where the \code{spp.id} column is
 \code{"NoID"} (case-insensitive) from the \code{"All Detections"}
 summary. (Named \code{"trim.noid"} rather than the originally-specced
 \code{"trim.noID"}, to match the identically-purposed parameter
@@ -105,10 +108,33 @@ column name through \code{standardize.headers()} instead (e.g.
 \code{$spp_id}, \code{$mins2_noon_min}) - for a caller who
 specifically wants a snake_case CSV/data frame out of this function,
 without having to convert it themselves afterward.}
+
+\item{strip.special}{Logical, default \code{TRUE}. If \code{TRUE}, simplifies accented
+letters (\code{é} -> \code{e}) and removes other non-ASCII special
+characters (e.g. \code{°}, \code{µ}) from \code{data} and from every loaded \verb{*arulist.csv}
+after loading - see \code{@details}. Files are always read with a
+UTF-8/Latin-1 fallback, so a stray \code{°} can't stop them loading,
+whatever this is set to.}
+
+\item{pool.interval}{Character, default \code{"1day"}. Length of each
+pooling window that detections are counted over. A number plus a
+unit, with or without a space: minutes (\code{"15 min"},
+\code{"20min"}), hours (\code{"1 hour"}, \code{"2 hr"}), days
+(\code{"1day"}, \code{"2 day"}) or weeks (\code{"1 week"}).
+Intervals over 24 hours must be whole days. \code{"1day"} gives
+exactly the same rows as before this option existed.}
+
+\item{pool.start}{Character, default \code{"observed"}. Only used
+when \code{pool.interval} is more than one day: the day the first
+pool starts counting from. \code{"observed"} = the earliest date in
+the data; a date such as \code{"2026-05-01"}; a month
+(\code{"\%m = 5"}, \code{"may"}, \code{"May"}) = the 1st of that
+month in each year; or \code{"julian"} = January 1st of each year.}
 }
 \value{
 A data frame, \code{plfr.batsummary}, with columns
-\code{$spp.id}, \code{$date}, \code{$group}, \code{$groupedby},
+\code{$spp.id}, \code{$date}, \code{$pool.interval},
+\code{$pool.start}, \code{$pool.end}, \code{$group}, \code{$groupedby},
 \code{$groupby.date}, \code{$sunregion}, \code{$obs},
 \code{$mins2.noon.min}, \code{$mins2.noon.max}, \code{$vetting.type}
 (or their snake_case equivalents if \code{snake_case = TRUE} - see
@@ -603,6 +629,50 @@ internal arulist lookup table already renames to \code{$aru.name} too,
 so both of those items were already done as of round twenty-two/round
 twenty-six above, with nothing left to change.
 }
+
+\strong{Follow-up, 2026-09-30, per Josh - special characters.} Each
+\verb{*arulist.csv} used for the \code{$sunregion} lookup is now read
+with the shared \code{special.read.csv()} helper (UTF-8, falling back to
+Latin-1), so a file containing a stray Latin-1 byte (e.g. a \code{°}
+saved by Excel) loads instead of being silently skipped as "could not
+read file". New argument \code{strip.special} (default \code{TRUE})
+removes every non-ASCII character from \code{data} (this function's
+local copy only) at the very start of the function and from each
+arulist file immediately after it loads, before any header check,
+matching or summarizing; a column that had characters removed is
+re-typed the way \code{read.csv()} would (e.g. \code{"42.5°"} becomes
+\code{42.5}). Because both sides of the \code{$aru.name} join are
+stripped the same way, the \code{$sunregion} match is consistent.
+\code{strip.special = FALSE} keeps the characters. This function has no
+log, so no \code{$strip.special} log column was added. Output is
+unchanged for inputs without special characters.
+
+\strong{Follow-up, 2026-10-02, per Josh - accents simplified.} With
+\code{strip.special = TRUE}, accented letters and common symbols are
+now simplified instead of dropped (\code{café} -> \code{cafe},
+\code{×} -> \code{X}, curly quotes -> straight quotes); characters
+with no plain equivalent (e.g. \code{°}, \code{µ}, \code{™}) are still
+removed. Column names are cleaned the same way.
+
+\strong{Follow-up, 2026-10-02, per Josh - pooling
+(\code{pool.interval}/\code{pool.start}).} Detections are counted per
+pool instead of always per day. When \code{groupby.date} is a
+monitoring-night column (its name contains \code{"monitoringnight"}),
+each day runs noon to noon; for any other date column (e.g.
+\code{$date}, \code{$date.calendar}) each day runs midnight to
+midnight. Pools shorter than a day split each of those days into
+equal bins from the day start (\code{"2 hour"} on a monitoring night
+gives 12:00-14:00, 14:00-16:00, ...). Pools longer than a day are
+counted in blocks from \code{pool.start}; with a month or
+\code{"julian"} start the count restarts each year, and the last pool
+before the restart is cut short at the restart date. \code{$date}
+holds the date the pool starts on; \code{$pool.start}/\code{$pool.end}
+hold the pool's start and end (date-time for pools under a day, date
+otherwise); \code{$pool.interval} holds the interval label (e.g.
+\code{"2 hour"}). Only pools with at least one detection get a row
+(empty pools are not zero-filled). \code{$mins2.noon.min}/
+\code{$mins2.noon.max} are still minutes from noon of each call's own
+monitoring night.
 }
 \examples{
 \dontrun{

@@ -9,13 +9,14 @@ batz.generate_plotopts(
     "batz.plotactivity_observations"),
   project.name = "new project",
   dir.load = getwd(),
-  dir.save = getwd()
+  dir.save = getwd(),
+  strip.special.plotopts = FALSE
 )
 }
 \arguments{
 \item{generate.files}{Character vector, default all three recognized
 plot function names (\code{c("batz.plotcover_bullseye",
-"batz.plotdetections_first.last", "batz.plotactivity_observations")}):
+  "batz.plotdetections_first.last", "batz.plotactivity_observations")}):
 which plot function(s) to generate a new settings file for. Every
 element must be one of these three recognized names - see Details.}
 
@@ -34,6 +35,16 @@ Details). Default \code{getwd()}. Added this round - see Details.}
 
 \item{dir.save}{Directory to write the generated settings file(s) into.
 Default \code{getwd()}.}
+
+\item{strip.special.plotopts}{Logical, default \code{FALSE}. Replaces
+the \code{strip.special} input added 2026-09-30 (2026-10-02, per Josh:
+plot-settings files are controlled by \code{strip.special.plotopts},
+not \code{strip.special}). \code{FALSE} (default) copies the master
+settings file with every character kept (e.g. an axis label like
+\code{"Temperature (°C)"}); \code{TRUE} simplifies accented letters
+and removes other special characters in the copy. Files are always
+read with a UTF-8/Latin-1 fallback, so a stray \code{°} can't stop
+them loading.}
 }
 \value{
 Invisibly, a character vector of the file names written (not
@@ -106,6 +117,23 @@ hardcoded - consistent with this project's existing
 \code{dir.load}/\code{dir.save} naming pair used elsewhere in the
 package (see the Naming conventions section of this project's
 preferences).
+
+\strong{Follow-up, 2026-09-30, per Josh - special characters.} Each
+master settings CSV is now read with \code{special.read.csv()} (UTF-8,
+falling back to Latin-1), so an Excel-saved stray \code{°} byte no
+longer stops it loading. With the new \code{strip.special = TRUE}
+(default), each master table is passed through \code{special.strip()}
+straight after reading, removing non-ASCII characters from its values
+before the copy is written; every column is kept as character, so
+values are otherwise written back exactly as read. \strong{Flagged:}
+this also removes characters from settings that may legitimately need
+them (plot titles/axis labels such as \code{"°C"} or \code{"µs"},
+accented site names) - pass \code{strip.special = FALSE} to copy the
+master file's text unchanged. No log.
+
+\strong{Follow-up, 2026-10-02, per Josh.} Input \code{strip.special}
+renamed to \code{strip.special.plotopts} with default \code{FALSE}, so
+copies keep plot-label symbols unless asked otherwise.
 }
 \examples{
 \dontrun{

@@ -38,6 +38,13 @@
 #' @param dir.load,file.name Passed through to
 #'   \code{\link{batz.generate_headers.acceptold}} when \code{headers.table}
 #'   is \code{NULL}. See that function's own documentation.
+#' @param strip.special Logical, default \code{TRUE}. If \code{TRUE},
+#'   simplifies accented letters and
+#'   symbols (\code{é} -> \code{e}, \code{×} -> \code{X}) and removes other non-ASCII special characters (e.g. \code{°}, \code{µ},
+#'   \code{™}) from every data frame input (\code{data} and a
+#'   supplied \code{headers.table}) at the start of the call - see
+#'   \code{@details}. Files are always read with a UTF-8/Latin-1 fallback,
+#'   so a stray \code{°} can't stop them loading, whatever this is set to.
 #'
 #' @return \code{data}, with every column that matched exactly one
 #'   confirmed replacement header renamed to it. Columns that didn't match
@@ -47,7 +54,12 @@
 #'   \code{attr(result, "header.conflict.log")} - the return value is
 #'   always just the data frame itself either way, so
 #'   \code{data <- batz.datawrangler_headers.acceptold(data, ...)} works
-#'   the same regardless of \code{log.file}.
+#'   the same regardless of \code{log.file}. \code{header.conflict.log}
+#'   columns: \code{$filename}, \code{$path}, \code{$function},
+#'   \code{$header.old}, \code{$header.new}, and (last)
+#'   \code{$strip.special}: \code{"FALSE"} (not selected),
+#'   \code{"TRUE NONE"} (nothing found), or \code{"TRUE ; <header>; ..."}
+#'   (the columns of \code{data} where characters were removed).
 #'
 #' @details
 #' \strong{Built 2026-09-25, per Josh's request, alongside
@@ -110,6 +122,36 @@
 #' \code{\link{batz.generate_headers.acceptold}}'s own \code{@details} for
 #' the 8 rows currently flagged this way) and nothing is guessed.
 #'
+#' \strong{Follow-up, 2026-09-30, per Josh - special characters.} New last
+#' argument \code{strip.special = TRUE}. \code{data} (and
+#' \code{headers.table}, if supplied as a data frame) are passed through
+#' \code{special.strip()} at the very start of the call, removing non-ASCII
+#' characters (e.g. \code{°}) from text columns and re-typing any column
+#' that changed, so \code{"42.5°"} becomes \code{42.5}; this also applies to
+#' the returned \code{data}. Column names are not changed by stripping, so
+#' header matching is unaffected. When \code{headers.table = NULL}, the
+#' reference CSV is loaded via \code{batz.generate_headers.acceptold()},
+#' which now reads it with a UTF-8/Latin-1 fallback and strips it too. The
+#' default \code{filename} is captured before stripping, so it still names
+#' the object passed in. \code{header.conflict.log} gains a last column
+#' \code{$strip.special} (the columns of \code{data} that had characters
+#' removed).
+#'
+#' \strong{Follow-up, 2026-10-02, per Josh - accents simplified, log
+#' counts.} With \code{strip.special = TRUE}, accented letters and common
+#' symbols are now simplified instead of dropped (\code{café} ->
+#' \code{cafe}, \code{Quercus × bebbiana} -> \code{Quercus X bebbiana},
+#' curly quotes -> straight quotes); characters with no plain equivalent
+#' (e.g. \code{°}, \code{µ}, \code{™}) are still removed. Column names
+#' are cleaned the same way. The log gets four new columns right after
+#' \code{$strip.special}: \code{$Accented.letters.header} and
+#' \code{$removed.symbols.header} (number of unique column names with a
+#' character simplified / removed), and \code{$Accented.letters.data} and
+#' \code{$removed.symbols.data} (number of unique data values with a
+#' character simplified / removed - \code{café} in 500 rows counts once;
+#' \code{café} and \code{French café} count twice). They are \code{NA}
+#' when \code{strip.special = FALSE}.
+#'
 #' @seealso \code{\link{batz.generate_headers.acceptold}}, whose reference
 #'   table this function consults.
 #'
@@ -135,7 +177,8 @@ batz.datawrangler_headers.acceptold <- function(data,
                                                  log.file = FALSE,
                                                  headers.table = NULL,
                                                  dir.load = getwd(),
-                                                 file.name = "batz_headers_acceptold.csv") {
+                                                 file.name = "batz_headers_acceptold.csv",
+                                                 strip.special = TRUE) {
 
   if (missing(function.name) || is.null(function.name) || !nzchar(function.name)) {
     stop("batz.datawrangler_headers.acceptold(): 'function.name' is required - ",
@@ -143,6 +186,15 @@ batz.datawrangler_headers.acceptold <- function(data,
          "\"batz.merge_vetted.acoustics\"), so any logged conflict can be traced ",
          "back to where it occurred.")
   }
+
+  ## special characters (per Josh, 2026-09-30): strip every data-frame
+  ## input up front. filename is forced first so its default
+  ## deparse(substitute(data)) still names the caller's object.
+  force(filename)
+  s <- special.strip(data, strip.special)
+  data <- s$df
+  strip.cols <- special.log.cols(strip.special, s$headers, s$counts)
+  headers.table <- special.strip(headers.table, strip.special)$df
 
   if (is.null(headers.table)) {
     headers.table <- batz.generate_headers.acceptold(dir.load = dir.load, file.name = file.name)
@@ -178,6 +230,7 @@ batz.datawrangler_headers.acceptold <- function(data,
       log.rows[[length(log.rows) + 1]] <- data.frame(
         filename = filename, path = path, `function` = function.name,
         header.old = nm.orig[i], header.new = "NOMATCH",
+        strip.cols,
         stringsAsFactors = FALSE, check.names = FALSE
       )
     } else if (length(nonblank) > 1) {
@@ -190,6 +243,7 @@ batz.datawrangler_headers.acceptold <- function(data,
       log.rows[[length(log.rows) + 1]] <- data.frame(
         filename = filename, path = path, `function` = function.name,
         header.old = nm.orig[i], header.new = paste(nonblank, collapse = "; "),
+        strip.cols,
         stringsAsFactors = FALSE, check.names = FALSE
       )
     } else {
@@ -211,7 +265,8 @@ batz.datawrangler_headers.acceptold <- function(data,
     for (h in hit) {
       log.rows[[length(log.rows) + 1]] <- data.frame(
         filename = filename, path = path, `function` = function.name,
-        header.old = nm.orig[h], header.new = dt, stringsAsFactors = FALSE,
+        header.old = nm.orig[h], header.new = dt,
+        strip.cols, stringsAsFactors = FALSE,
         check.names = FALSE
       )
       nm.new[h] <- nm.orig[h]   # revert to original spelling
@@ -226,7 +281,8 @@ batz.datawrangler_headers.acceptold <- function(data,
     } else {
       data.frame(filename = character(0), path = character(0),
                  `function` = character(0), header.old = character(0),
-                 header.new = character(0), stringsAsFactors = FALSE,
+                 header.new = character(0), special.log.cols.empty(),
+                 stringsAsFactors = FALSE,
                  check.names = FALSE)
     }
     attr(data, "header.conflict.log") <- header.conflict.log

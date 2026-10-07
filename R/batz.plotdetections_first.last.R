@@ -61,6 +61,23 @@
 #'   (see \code{project.name} above) - \code{aes.default}'s
 #'   \code{$output.filename.pattern} is DEPRECATED and no longer read.
 #'
+#' @param strip.special Logical, default \code{TRUE}. If \code{TRUE},
+#'   simplifies accented letters and
+#'   symbols (\code{é} -> \code{e}, \code{×} -> \code{X}) and removes other non-ASCII special characters (e.g. \code{°}, \code{µ},
+#'   \code{™}) from the data input(s) (\code{data} and \code{suntimes}; \code{fig.list}/\code{aes.default} follow \code{strip.special.plotopts})
+#'   at the very start, before any header check - see \code{@details}.
+#'   This function reads no files itself; inputs loaded with a batz
+#'   reader already get a UTF-8/Latin-1 fallback, so a stray \code{°}
+#'   can't stop them loading, whatever this is set to.
+#' @param strip.special.plotopts Logical, default \code{FALSE}. Added
+#'   2026-10-02, per Josh. Controls special characters in the settings
+#'   table(s) - \code{fig.list} and \code{aes.default} - separately from the data. \code{FALSE} (default)
+#'   leaves them untouched, so plot text such as \code{"Temperature (°C)"}
+#'   keeps its symbol; if a cell can't be read in this R session (e.g. a
+#'   Latin-1 \code{°} byte), the function stops with an error naming the
+#'   table, the number of incompatible characters, and the first 5 rows per
+#'   header (\code{+} if more). \code{TRUE} simplifies/removes special
+#'   characters in them the same way \code{strip.special} does for data.
 #' @return Invisibly, a list with \code{plots} (one entry per generated
 #'   plot's prepared data - detection rows, suntimes rows, panel labels,
 #'   resolved settings) and \code{ggplots} (the corresponding ggplot objects,
@@ -1009,6 +1026,47 @@
 #' needed for it. \code{FIG.LIST.REQUIRED}'s \code{"Alldect"} entry and the
 #' \code{job$Alldect}/\code{alldect.flag} reference in the code below were
 #' updated to \code{"all.dectections"}/\code{job$all.dectections} to match.
+#'
+#' \strong{Follow-up, 2026-09-30, per Josh - special characters.} New
+#' last argument \code{strip.special = TRUE}. Every data frame input
+#' (\code{data}, \code{fig.list}, \code{suntimes} and \code{aes.default}) is now passed through the shared internal
+#' helper \code{special.strip()} as the very first step of the function,
+#' before any header standardization or required-header check: with
+#' \code{strip.special = TRUE}, non-ASCII characters (e.g. \code{°},
+#' \code{µ}, \code{é}, smart quotes) are removed from text/factor
+#' columns, and a column that had characters removed is re-typed the way
+#' \code{read.csv()} would (so \code{"42.5°"} becomes the number
+#' \code{42.5}); column names are not changed. This includes plot-text
+#' settings in \code{aes.default} (titles, axis/legend labels), so a
+#' label such as \code{"Temperature (°C)"} is drawn as
+#' \code{"Temperature (C)"} - pass \code{strip.special = FALSE} to keep
+#' such characters. This function reads no files and writes no log, so
+#' there is no \code{$strip.special} log column. Inputs without special
+#' characters behave exactly as before.
+#'
+#' \strong{Follow-up, 2026-10-02, per Josh - plot settings and accents.}
+#' \code{strip.special} now applies to the data input(s) only; \code{fig.list} and \code{aes.default}
+#' are governed by the new \code{strip.special.plotopts} (default
+#' \code{FALSE}), so symbols in plot labels are kept unless you ask
+#' otherwise. Accented letters are now simplified rather than dropped
+#' (\code{café} -> \code{cafe}).
+#'
+#' \strong{Follow-up, 2026-10-02, per Josh - species name formats and
+#' pooled data.} With \code{fig.list $facet = "sppid"}, each row's
+#' \code{$facet.label} sets the format of the species panel titles:
+#' \code{"common_name"} (used when blank), \code{"scientific_name"},
+#' \code{"code4"}, \code{"code6"}, \code{"both"} (\code{"Big brown bat
+#' (Eptesicus fuscus)"}), or the older names \code{"common"},
+#' \code{"latin"}, \code{"scientific"} - any case or separator. A value
+#' that isn't a name format stops with an error naming the
+#' \code{fig.list} row. Panels that aren't species (\code{"All
+#' detections"}, \code{"40kHzMyo"}) keep their own name. If \code{data}
+#' comes from \code{\link{batz.generate_plotframe.bat}} with a
+#' \code{pool.interval} under one day, its time-bin rows are combined to
+#' one row per species/group/date before plotting (\code{$obs} summed, earliest \code{$mins2.noon.min}, latest \code{$mins2.noon.max}),
+#' with a NOTE. Pools of a day or longer are plotted at their start date
+#' (\code{$date}).
+#'
 #' @examples
 #' \dontrun{
 #' # default dir.save = getwd() - saves into the current working directory,
@@ -1036,7 +1094,34 @@
 batz.plotdetections_first.last <- function(data, fig.list, suntimes,
                                             aes.default, project.name = "new.project",
                                             aes.style = "overide.value",
-                                            dir.save = getwd()) {
+                                            dir.save = getwd(),
+                                            strip.special = TRUE,
+                                            strip.special.plotopts = FALSE) {
+
+  ## strip.special (2026-09-30, per Josh - see @details): remove non-ASCII
+  ## special characters from every data-frame input before anything else
+  ## (header standardization/checks included). special.strip() returns
+  ## non-data-frames unchanged and only modifies these local copies.
+  objname.fig.list <- paste(deparse(substitute(fig.list)), collapse = "")
+  objname.aes.default <- paste(deparse(substitute(aes.default)), collapse = "")
+  data <- special.strip(data, strip.special)$df
+  ## fig.list is a settings table, not data - stripped only when
+  ## strip.special.plotopts = TRUE (2026-10-02, per Josh); otherwise checked
+  ## for characters that can't be read, with a readable error.
+  if (isTRUE(strip.special.plotopts)) {
+    fig.list <- special.strip(fig.list, TRUE)$df
+  } else {
+    special.check.plotopts(fig.list, "fig.list", objname.fig.list, "batz.plotdetections_first.last")
+  }
+  suntimes <- special.strip(suntimes, strip.special)$df
+  ## aes.default is a settings table, not data - stripped only when
+  ## strip.special.plotopts = TRUE (2026-10-02, per Josh); otherwise checked
+  ## for characters that can't be read, with a readable error.
+  if (isTRUE(strip.special.plotopts)) {
+    aes.default <- special.strip(aes.default, TRUE)$df
+  } else {
+    special.check.plotopts(aes.default, "aes.default", objname.aes.default, "batz.plotdetections_first.last")
+  }
 
   ## Header standardization (per Josh, 2026-09-14 project preference): NOT
   ## applied to any of the four *.REQUIRED*/DATA.REQUIRED constants below -
@@ -1200,6 +1285,11 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
   suntimes    <- suntimes.canon$df
   fig.list    <- fig.list.canon$df
   aes.default <- aes.default.canon$df
+
+  ## 2026-10-02, per Josh: data from batz.generate_plotframe.bat() with a
+  ## pool.interval under one day has several rows per species/group/date -
+  ## combined here to one row per date (see plot.collapse.pools()).
+  data <- plot.collapse.pools(data, "batz.plotdetections_first.last")
 
   unquote <- function(x) {
     x <- trimws(as.character(x))
@@ -1435,14 +1525,14 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
     # ---- facet panel labels, via batz.batusa_recode.names() ----
     # Every panel in facpan is shown even with 0 matching detections (see
     # @details) - so the full facpan list defines the facet levels.
-    facet.label.fmt <- unquote(get.setting(job, "facet.label"))
-    # default was "common" prior to 2026-09-25 - see @details, "Follow-up,
-    # 2026-09-25...column rename"
-    if (!nzchar(facet.label.fmt)) facet.label.fmt <- "common_name"
-
+    # $facet = "sppid": $facet.label sets the species name format of the
+    # panel titles (2026-10-02, per Josh) - "common_name" (default when
+    # blank), "scientific_name", "code4", "code6", "both", or the older
+    # "common"/"latin"/"scientific". See plot.facet.labels() in
+    # batz.util_plot.helpers.R.
     panel.levels.raw <- facpan
-    panel.labels <- batz.batusa_recode.names(panel.levels.raw, batname.format.out = facet.label.fmt)
-    names(panel.labels) <- panel.levels.raw
+    panel.labels <- plot.facet.labels(panel.levels.raw, get.setting(job, "facet.label"),
+                                      job.label, "batz.plotdetections_first.last")
 
     plot.order.raw <- strsplit(get.setting(job, "plot.order"), ";", fixed = TRUE)[[1]]
     ordered.levels <- intersect(trimws(plot.order.raw), panel.levels.raw)

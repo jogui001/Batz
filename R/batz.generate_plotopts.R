@@ -63,6 +63,19 @@
 #' package (see the Naming conventions section of this project's
 #' preferences).
 #'
+#' \strong{Follow-up, 2026-09-30, per Josh - special characters.} Each
+#' master settings CSV is now read with \code{special.read.csv()} (UTF-8,
+#' falling back to Latin-1), so an Excel-saved stray \code{°} byte no
+#' longer stops it loading. With the new \code{strip.special = TRUE}
+#' (default), each master table is passed through \code{special.strip()}
+#' straight after reading, removing non-ASCII characters from its values
+#' before the copy is written; every column is kept as character, so
+#' values are otherwise written back exactly as read. \strong{Flagged:}
+#' this also removes characters from settings that may legitimately need
+#' them (plot titles/axis labels such as \code{"°C"} or \code{"µs"},
+#' accented site names) - pass \code{strip.special = FALSE} to copy the
+#' master file's text unchanged. No log.
+#'
 #' @param generate.files Character vector, default all three recognized
 #'   plot function names (\code{c("batz.plotcover_bullseye",
 #'   "batz.plotdetections_first.last", "batz.plotactivity_observations")}):
@@ -81,12 +94,26 @@
 #'   Details). Default \code{getwd()}. Added this round - see Details.
 #' @param dir.save Directory to write the generated settings file(s) into.
 #'   Default \code{getwd()}.
+#' @param strip.special.plotopts Logical, default \code{FALSE}. Replaces
+#'   the \code{strip.special} input added 2026-09-30 (2026-10-02, per Josh:
+#'   plot-settings files are controlled by \code{strip.special.plotopts},
+#'   not \code{strip.special}). \code{FALSE} (default) copies the master
+#'   settings file with every character kept (e.g. an axis label like
+#'   \code{"Temperature (°C)"}); \code{TRUE} simplifies accented letters
+#'   and removes other special characters in the copy. Files are always
+#'   read with a UTF-8/Latin-1 fallback, so a stray \code{°} can't stop
+#'   them loading.
 #'
 #' @return Invisibly, a character vector of the file names written (not
 #'   full paths - just the \verb{"<project.name>_plotopts_<function.name>.csv"}
 #'   name for each element of \code{generate.files}, in the same order).
 #'   As a side effect, each saved file's name is also printed to the
 #'   console (per Josh: "Print the save names for all").
+#'
+#' @details
+#' \strong{Follow-up, 2026-10-02, per Josh.} Input \code{strip.special}
+#' renamed to \code{strip.special.plotopts} with default \code{FALSE}, so
+#' copies keep plot-label symbols unless asked otherwise.
 #'
 #' @examples
 #' \dontrun{
@@ -107,7 +134,8 @@ batz.generate_plotopts <- function(generate.files = c("batz.plotcover_bullseye",
                                                         "batz.plotactivity_observations"),
                                     project.name = "new project",
                                     dir.load = getwd(),
-                                    dir.save = getwd()) {
+                                    dir.save = getwd(),
+                                    strip.special.plotopts = FALSE) {
 
   ## Round nineteen, per Josh (2026-09-16): fixed mapping of recognized
   ## plot function name -> its master settings CSV file name. See
@@ -150,8 +178,12 @@ batz.generate_plotopts <- function(generate.files = c("batz.plotcover_bullseye",
     ## standing preference against silent column-name mangling - see
     ## preferences.md, "CRITICAL - check.names") and write it back out
     ## unchanged under the new project-specific name.
-    opts <- utils::read.csv(master.path, stringsAsFactors = FALSE, check.names = FALSE,
+    opts <- special.read.csv(master.path, stringsAsFactors = FALSE, check.names = FALSE,
                              colClasses = "character")
+    ## special characters (per Josh, 2026-09-30): strip, then keep every
+    ## column character (as read) so the copy isn't re-typed.
+    s <- special.strip(opts, strip.special.plotopts); opts <- s$df
+    for (h in s$headers) opts[[h]] <- as.character(opts[[h]])
 
     out.name <- sprintf("%s_plotopts_%s.csv", project.name, fn.name)
     out.path <- file.path(dir.save, out.name)

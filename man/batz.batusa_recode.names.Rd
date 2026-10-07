@@ -7,7 +7,8 @@
 batz.batusa_recode.names(
   data,
   batname.format.out = "common_name",
-  grammar.dash = TRUE
+  grammar.dash = TRUE,
+  strip.special = TRUE
 )
 }
 \arguments{
@@ -30,8 +31,13 @@ to a reference row always uses \code{scientific_name}/\code{common_name}/
 \code{code4}/\code{code6} only, regardless of \code{batname.format.out} -
 so, for example, \code{batname.format.out = "listing.status_federal"}
 looks a species up by any of its four names/codes and returns its
-federal listing status instead of another name/code. An unrecognized
-value is an error.
+federal listing status instead of another name/code. Since 2026-10-02
+the value is also matched ignoring case, spaces, dots and underscores
+(\code{"Common Name"} = \code{"common_name"}), the older short names
+still work (\code{"common"} -> \code{"common_name"}; \code{"latin"},
+\code{"scientific"} -> \code{"scientific_name"}), and \code{"both"}
+gives \code{"Common name (Scientific name)"}. Any other value is an
+error that lists the accepted values.
 
 \code{"hibernation.strategy"} is one of \code{"migratory"} (tree bats that
 head south for winter), \code{"hibernating"} (cave bats that go into
@@ -66,6 +72,12 @@ returns matched values exactly as written in the reference table
 (hyphens kept, e.g. \code{"Silver-haired bat"}); \code{FALSE} replaces
 every hyphen in a matched value with a space instead (e.g.
 \code{"Silver haired bat"}).}
+
+\item{strip.special}{Logical, default \code{TRUE}. If \code{TRUE}, simplifies accented
+letters (\code{é} -> \code{e}) and removes other non-ASCII special
+characters (e.g. \code{°}, \code{µ}) from \code{data} when it is a data frame, before matching - see
+\code{@details}. A plain vector is not stripped. This function reads no
+files.}
 }
 \value{
 A vector (if \code{data} is a vector) or data frame (if
@@ -320,6 +332,26 @@ real, distinct category, not a typo for one of the 8 existing rows.
 a 9th non-species category row (same pattern as the existing 8, added
 2026-08-27)} - not added here, since that's a reference-table content
 change beyond what was asked in this round.
+
+\strong{Follow-up, 2026-09-30, per Josh - special characters.} New
+argument \code{strip.special} (default \code{TRUE}). When \code{data} is
+a data frame, every non-ASCII character is removed from it (this
+function's local copy only) at the very start of the function, before
+matching, so e.g. \code{"Eptesicus fuscus°"} or a value with a trailing
+non-breaking space now matches its reference row instead of being
+returned unmatched. When \code{data} is a plain vector it is passed
+through unchanged (not stripped), per the package-wide rule that only
+data-frame inputs are stripped. The embedded \code{nabat.names}
+reference table is never stripped (it contains no non-ASCII characters
+anyway). This function reads no files and has no log. Output is
+unchanged for inputs without special characters.
+
+\strong{Follow-up, 2026-10-02, per Josh - accents simplified.} With
+\code{strip.special = TRUE}, accented letters and common symbols are
+now simplified instead of dropped (\code{café} -> \code{cafe},
+\code{×} -> \code{X}, curly quotes -> straight quotes); characters
+with no plain equivalent (e.g. \code{°}, \code{µ}, \code{™}) are still
+removed. Column names are cleaned the same way.
 }
 \examples{
 \dontrun{

@@ -13,7 +13,8 @@ batz.batusa_list.species(
   table.type = "state",
   symbol_presence.absence = c("*", "-"),
   phonic.group = TRUE,
-  species.extirpated = TRUE
+  species.extirpated = TRUE,
+  strip.special = TRUE
 )
 }
 \arguments{
@@ -53,11 +54,11 @@ shape:
 (state, species) PRESENT pair (a species absent from a given state
 simply has no row for that state). Columns, in order: \code{"State"},
 \code{"common.name"}, \code{"Species Code"} (if \code{bat.code !=
-"none"}), \code{"listing.status_federal"}, \code{"State"} (again - see
+  "none"}), \code{"listing.status_federal"}, \code{"State"} (again - see
 Details), \code{"Phonic Group"} (if \code{phonic.group = TRUE}).
 \code{"matrix"} (matches \code{"batlist model2.csv"}) - one row per
 requested/implied species, columns \code{"common.name"}, \code{"Species
-Code"}, \code{"Phonic Group"}, \code{"listing.status_federal"}, then one column per
+  Code"}, \code{"Phonic Group"}, \code{"listing.status_federal"}, then one column per
 requested/implied state (named per \code{statename.format.out}), each cell
 per \code{symbol_presence.absence} (see Details).}
 
@@ -78,6 +79,12 @@ extirpation column (per Josh's own note that "this information may not
 be available yet"). If the reference table has no column literally
 named \code{states.extirpated}, this flag has no effect beyond printing
 a one-time notice (not an error).}
+
+\item{strip.special}{Logical, default \code{TRUE}. If \code{TRUE}, simplifies accented
+letters (\code{é} -> \code{e}) and removes other non-ASCII special
+characters (e.g. \code{°}, \code{µ}) from \code{data} when it is a data frame, before matching - see
+\code{@details}. A plain vector is not stripped. This function reads no
+files.}
 }
 \value{
 A data frame - one row per (state, species) present pair
@@ -283,6 +290,26 @@ passes for every one of \code{nabat}'s 15 columns, and
 \code{"myke"}/\code{"mygr"}/\code{"myle"}/\code{"mylu"}/\code{"nyhu"}
 (the rows whose \code{state.soc} values shift with this fix) all ran end
 to end with plausible output.
+
+\strong{Follow-up, 2026-09-30, per Josh - special characters.} New
+argument \code{strip.special} (default \code{TRUE}). When \code{data} is
+a data frame, every non-ASCII character is removed from it (this
+function's local copy only) at the very start of the function, before it
+is flattened and matched, so e.g. \code{"epfu°"} or \code{"Québec"}-style
+stray characters no longer stop a species/state identifier matching.
+When \code{data} is a plain vector it is passed through unchanged (not
+stripped), per the package-wide rule that only data-frame inputs are
+stripped. The embedded \code{nabat}/\code{states} reference tables are
+never stripped (they contain no non-ASCII characters anyway). This
+function reads no files and has no log. Output is unchanged for inputs
+without special characters.
+
+\strong{Follow-up, 2026-10-02, per Josh - accents simplified.} With
+\code{strip.special = TRUE}, accented letters and common symbols are
+now simplified instead of dropped (\code{café} -> \code{cafe},
+\code{×} -> \code{X}, curly quotes -> straight quotes); characters
+with no plain equivalent (e.g. \code{°}, \code{µ}, \code{™}) are still
+removed. Column names are cleaned the same way.
 }
 \examples{
 \dontrun{

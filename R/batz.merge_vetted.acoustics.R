@@ -20,8 +20,8 @@
 #' invented shorthand), so per this project's header-standardization
 #' preference both sides are standardized together: two of its six entries
 #' change, because the real headers they represent contain spaces/
-#' punctuation that used to be deleted and are now preserved as underscores
-#' - \code{"speciesmanualid"} -> \code{"species_manual_id"} (real header:
+#' punctuation that used to be deleted and are now preserved as underscores -
+#' \code{"speciesmanualid"} -> \code{"species_manual_id"} (real header:
 #' \code{"Species Manual ID"}) and \code{"wakaleidoscopeautoid"} ->
 #' \code{"wa_kaleidoscope_auto_id"} (real header: \code{"WA|Kaleidoscope|
 #' Auto ID"}). The other four (\code{filename}, \code{monitoringnight},
@@ -294,6 +294,22 @@
 #' has no such alias concern, since it is never read from a raw file header
 #' at all - it is entirely computed internally by splitting \code{$lat}.
 #'
+#' \strong{Follow-up, 2026-09-30, per Josh - special characters.} New
+#' argument \code{strip.special} (default \code{TRUE}). Every vetted file is
+#' now read with the shared \code{special.read.csv()} helper, which falls back
+#' to Latin-1 when a file isn't valid UTF-8 (so a stray Excel degree sign no
+#' longer makes the file fail as "could not read file"); this always applies.
+#' Immediately after each file is loaded (before header standardization,
+#' header checks, trimming and merging), \code{special.strip()} removes
+#' non-ASCII characters from its text columns when \code{strip.special =
+#' TRUE}. \code{vetted.merged_log.file} (which, as before, only lists
+#' SKIPPED files) gains a last column \code{$strip.special} giving, per
+#' skipped file, the (standardized) headers where characters were removed;
+#' a file that could not be read at all gets \code{"FALSE"}/\code{"TRUE
+#' NONE"}. The column keeps the exact name \code{strip.special} even when
+#' \code{snake_case = TRUE}. Merged files that had characters stripped are
+#' not listed, since the log has no rows for successfully merged files.
+#'
 #' @param dir.load Character, default \code{getwd()}. Directory to scan.
 #' @param load.pattern Character vector, default \code{c("*vetted.csv")}. A
 #'   wildcard/glob pattern (or vector of patterns) identifying which files to
@@ -308,7 +324,10 @@
 #'   pipeline runs).
 #' @param log.file Logical, default \code{FALSE}. When \code{TRUE}, also
 #'   creates \code{vetted.merged_log.file} (one row per SKIPPED file, with
-#'   \code{$filepath}, \code{$reason}, \code{$headers.missing}).
+#'   \code{$filepath}, \code{$reason}, \code{$headers.missing}, and - last -
+#'   \code{$strip.special}: \code{"FALSE"} (not selected), \code{"TRUE NONE"}
+#'   (nothing found), or \code{"TRUE ; <header>; ..."} (the headers where
+#'   characters were removed)).
 #' @param bat.names.out Character, default \code{"code4"}. The
 #'   \code{batname.format.out} passed to \code{\link{batz.batusa_recode.names}}
 #'   when recoding \code{$manid}/\code{$autoid.kp}/\code{$autoid.sb} - must
@@ -343,6 +362,11 @@
 #'   \code{$date_monitoringnight}, \code{$aru_name}) - for a caller who specifically
 #'   wants a snake_case CSV/data frame out of this function, without having
 #'   to convert it themselves afterward.
+#' @param strip.special Logical, default \code{TRUE}. If \code{TRUE}, simplifies accented
+#'   letters (\code{é} -> \code{e}) and removes other non-ASCII special
+#'   characters (e.g. \code{°}, \code{µ}) from the data after loading - see \code{@details}. Files are
+#'   always read with a UTF-8/Latin-1 fallback, so a stray \code{°} can't stop
+#'   them loading, whatever this is set to.
 #'
 #' @return Invisibly, a named list: \code{vetted.merged} (always), and
 #'   \code{vetted.merged_log.file} (only if \code{log.file = TRUE}) - or
@@ -352,7 +376,38 @@
 #'   convention as \code{batz.merge_aru.meta}/
 #'   \code{batz.datawrangler_load.files}), so a bare call with no
 #'   assignment populates \code{vetted.merged} (and
-#'   \code{vetted.merged_log.file}) directly.
+#'   \code{vetted.merged_log.file}) directly. \code{vetted.merged} has a
+#'   \code{$aru.model} column (\code{"SM4"} or \code{"SM5"}) right after
+#'   \code{$aru.name}, and the log has an \code{$aru.model} column too.
+#'
+#' @details
+#' \strong{Follow-up, 2026-10-02, per Josh - accents simplified, log
+#' counts.} With \code{strip.special = TRUE}, accented letters and common
+#' symbols are now simplified instead of dropped (\code{café} ->
+#' \code{cafe}, \code{Quercus × bebbiana} -> \code{Quercus X bebbiana},
+#' curly quotes -> straight quotes); characters with no plain equivalent
+#' (e.g. \code{°}, \code{µ}, \code{™}) are still removed. Column names
+#' are cleaned the same way. The log gets four new columns right after
+#' \code{$strip.special}: \code{$Accented.letters.header} and
+#' \code{$removed.symbols.header} (number of unique column names with a
+#' character simplified / removed), and \code{$Accented.letters.data} and
+#' \code{$removed.symbols.data} (number of unique data values with a
+#' character simplified / removed - \code{café} in 500 rows counts once;
+#' \code{café} and \code{French café} count twice). They are \code{NA}
+#' when \code{strip.special = FALSE}.
+#'
+#' \strong{Follow-up, 2026-10-02, per Josh - SM5 file names and
+#' monitoring-night aliases.} \code{$aru.name}, \code{$date} and
+#' \code{$time} are read from \code{$filename} in either layout:
+#' SM4 \verb{<ARU>_<YYYYMMDD>_<HHMMSS>_<anything>} or SM5
+#' \verb{<ARU>_<MIC>_<YYYYMMDD>_<HHMMSS>_<anything>}. The layout found is
+#' stored in the new \code{$aru.model} column (\code{"SM4"}/\code{"SM5"};
+#' \code{NA} if the name fits neither). The MIC part of an SM5 name is
+#' not kept as a column. The log's \code{$aru.model} lists the model(s)
+#' found in that file (\code{"SM4"}, \code{"SM5"} or \code{"SM4; SM5"}).
+#' The required \code{date.monitoringnight} column is also accepted as
+#' \code{MONITORINGNIGHT} or \code{DATE-12} (any case); it is renamed to
+#' \code{$date.monitoringnight}.
 #'
 #' @examples
 #' \dontrun{
@@ -377,7 +432,8 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
                                                manid.sb = TRUE,
                                                trim.noise = TRUE,
                                                trim.noid = FALSE,
-                                               snake_case = FALSE) {
+                                               snake_case = FALSE,
+                                               strip.special = TRUE) {
 
   ## header standardization (per Josh, 2026-09-14 project preference):
   ## expected.headers is a literal, uninvented copy of the vetting
@@ -394,32 +450,79 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
   vetted.merged <- data.frame()
   log.rows <- list()
 
-  add.log <- function(filepath, reason, headers.missing) {
+  ## 2026-10-02, per Josh: SM4 vs SM5 recordings have different file names -
+  ##   SM4: <ARU>_<YYYYMMDD>_<HHMMSS>_<junk>
+  ##   SM5: <ARU>_<MIC>_<YYYYMMDD>_<HHMMSS>_<junk>
+  ## parse.aru.filename() works out which, row by row, and pulls out the ARU
+  ## name, date and time. The part after HHMMSS may also be just the file
+  ## extension (e.g. ".wav") or nothing.
+  parse.aru.filename <- function(fn) {
+    fn <- as.character(fn)
+    rx5 <- "^([^_]+)_([^_]+)_(\\d{8})_(\\d{6})(_|\\.|$)"
+    rx4 <- "^([^_]+)_(\\d{8})_(\\d{6})(_|\\.|$)"
+    m4 <- regmatches(fn, regexec(rx4, fn))
+    m5 <- regmatches(fn, regexec(rx5, fn))
+    out <- data.frame(aru.name = rep(NA_character_, length(fn)), aru.model = NA_character_,
+                      date = NA_character_, time = NA_character_, stringsAsFactors = FALSE)
+    for (i in seq_along(fn)) {
+      if (length(m4[[i]]) >= 4) {
+        out[i, ] <- c(m4[[i]][2], "SM4", m4[[i]][3], m4[[i]][4])
+      } else if (length(m5[[i]]) >= 5) {
+        out[i, ] <- c(m5[[i]][2], "SM5", m5[[i]][4], m5[[i]][5])
+      }
+    }
+    out
+  }
+  ## one log value per file: "SM4", "SM5", "SM4; SM5" (mixed) or NA
+  file.aru.model <- function(df) {
+    if (is.null(df) || !("filename" %in% names(df)) || nrow(df) == 0) return(NA_character_)
+    mods <- sort(unique(stats::na.omit(parse.aru.filename(df$filename)$aru.model)))
+    if (length(mods) == 0) NA_character_ else paste(mods, collapse = "; ")
+  }
+
+  add.log <- function(filepath, reason, headers.missing, special.headers = character(0)) {
     log.rows[[length(log.rows) + 1]] <<- data.frame(
       filepath = filepath, reason = reason, headers.missing = headers.missing,
+      aru.model = cur.model,
+      special.log.cols(strip.special, special.headers, cur.counts),
       stringsAsFactors = FALSE
     )
   }
 
+  cur.counts <- NULL   # 2026-10-02: simplified/removed counts for the current file's log row
+  cur.model <- NA_character_
   for (f in files) {
-    tmp <- tryCatch(read.csv(f, stringsAsFactors = FALSE, check.names = FALSE),
+    cur.counts <- NULL
+    cur.model <- NA_character_
+    tmp <- tryCatch(special.read.csv(f, stringsAsFactors = FALSE, check.names = FALSE),
                      error = function(e) NULL)
     if (is.null(tmp)) { add.log(f, "could not read file", "none"); next }
+    ## strip special characters right after loading (2026-09-30)
+    s.strip <- special.strip(tmp, strip.special)
+    tmp <- s.strip$df
+    special.hdrs <- standardize.headers(s.strip$headers)
+    cur.counts <- s.strip$counts
+    special.hdrs[special.hdrs == "monitoringnight"] <- "date.monitoringnight"
     names(tmp) <- standardize.headers(names(tmp))
+    cur.model <- file.aru.model(tmp)
     ## Column identifiers renamed 2026-09-27 (see @details, "Column
     ## identifiers renamed" above): this function's own required raw-column
     ## identifier is now "date.monitoringnight", but the real vetting-
     ## software header ("MonitoringNight") still standardizes to the OLD
     ## spelling "monitoringnight" - accepted here as a legacy input alias so
     ## real incoming files keep matching.
-    if ("monitoringnight" %in% names(tmp) && !("date.monitoringnight" %in% names(tmp))) {
-      names(tmp)[names(tmp) == "monitoringnight"] <- "date.monitoringnight"
+    ## 2026-10-02, per Josh: also accept "DATE-12" (Kaleidoscope's
+    ## noon-shifted date) and a literal "date.monitoringnight" (which
+    ## standardizes to "date_monitoringnight") - first one found is used.
+    if (!("date.monitoringnight" %in% names(tmp))) {
+      mn.alias <- intersect(c("date_monitoringnight", "monitoringnight", "date_12"), names(tmp))
+      if (length(mn.alias) > 0) names(tmp)[names(tmp) == mn.alias[1]] <- "date.monitoringnight"
     }
     missing.headers <- setdiff(expected.headers, names(tmp))
     if (length(missing.headers) > 0) {
-      add.log(f, "mismatched headers", paste(missing.headers, collapse = ", ")); next
+      add.log(f, "mismatched headers", paste(missing.headers, collapse = ", "), special.hdrs); next
     }
-    if (nrow(tmp) == 0) { add.log(f, "no records", "none"); next }
+    if (nrow(tmp) == 0) { add.log(f, "no records", "none", special.hdrs); next }
     ## $aru.serial is OPTIONAL (2026-08-30 follow-up), not one of the required
     ## expected.headers - a file is never skipped for lacking it (e.g. a
     ## Mobile-transect export, which has no fixed instrument serial number at
@@ -456,12 +559,12 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
     vetted.merged$lat <- vapply(latlon, function(x) as.numeric(x[1]), numeric(1))
     vetted.merged$lon <- vapply(latlon, function(x) if (length(x) >= 2) as.numeric(x[2]) else NA_real_, numeric(1))
 
-    ## $filename = "<ARU>_<YYYYMMDD>_<HHMMSS>_<junk>" -> $aru.name/$date/$time
-    m <- regmatches(vetted.merged$filename,
-                     regexec("^([^_]+)_(\\d{8})_(\\d{6})_", vetted.merged$filename))
-    vetted.merged$aru.name <- vapply(m, function(x) if (length(x) >= 2) x[2] else NA_character_, character(1))
-    vetted.merged$date     <- vapply(m, function(x) if (length(x) >= 3) x[3] else NA_character_, character(1))
-    vetted.merged$time     <- vapply(m, function(x) if (length(x) >= 4) x[4] else NA_character_, character(1))
+    ## $filename -> $aru.name/$date/$time, SM4 or SM5 layout (2026-10-02)
+    fn.parts <- parse.aru.filename(vetted.merged$filename)
+    vetted.merged$aru.name <- fn.parts$aru.name
+    vetted.merged$date     <- fn.parts$date
+    vetted.merged$time     <- fn.parts$time
+    aru.model.vals         <- fn.parts$aru.model
 
     ## --- rename, reorder, call.datetime, recode.names, manid.kp/sb
     ## fill-in, trim.noise/trim.noid - see @details above -----------------
@@ -475,7 +578,8 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
 
     ## reorder ($sunregion placed with the other detector-level columns,
     ## next to $aru.serial/$aru.name)
-    vetted.merged <- vetted.merged[, c("filename", "date.monitoringnight", "aru.name",
+    vetted.merged$aru.model <- aru.model.vals
+    vetted.merged <- vetted.merged[, c("filename", "date.monitoringnight", "aru.name", "aru.model",
                                         "aru.serial", "sunregion", "lat", "longitude",
                                         "manid", "autoid.kp", "autoid.sb",
                                         "date", "time")]
@@ -524,9 +628,17 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
 
   if (log.file) {
     vetted.merged_log.file <- if (length(log.rows) > 0) do.call(rbind, log.rows) else
-      data.frame(filepath = character(0), reason = character(0), headers.missing = character(0))
+      data.frame(filepath = character(0), reason = character(0), headers.missing = character(0),
+                 aru.model = character(0), special.log.cols.empty())
     rownames(vetted.merged_log.file) <- NULL
-    if (snake_case) names(vetted.merged_log.file) <- standardize.headers(names(vetted.merged_log.file))
+    if (snake_case) {
+      names(vetted.merged_log.file) <- standardize.headers(names(vetted.merged_log.file))
+      ## keep the log column's exact name (2026-09-30)
+      special.cols <- c("strip.special", "Accented.letters.header", "removed.symbols.header",
+                        "Accented.letters.data", "removed.symbols.data")
+      hit <- match(names(vetted.merged_log.file), standardize.headers(special.cols))
+      names(vetted.merged_log.file)[!is.na(hit)] <- special.cols[hit[!is.na(hit)]]
+    }
     result$vetted.merged_log.file <- vetted.merged_log.file
   }
 

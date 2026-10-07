@@ -8,7 +8,9 @@ batz.summarize_aruloc.coordinates(
   data,
   aru.combo,
   gap.days = 1,
-  zero.remove = TRUE
+  zero.remove = TRUE,
+  group.by = "aru.name",
+  strip.special = TRUE
 )
 }
 \arguments{
@@ -22,7 +24,7 @@ columns are ignored.}
 \item{aru.combo}{Data frame of ARU sets. The \strong{first column} is
 used, whatever it is called (e.g. \code{$Sets}); each row lists one set
 of ARU names separated by \code{";"} (e.g. \code{"NWS01; NWS02;
-NWS03"}). Blank rows are dropped. Names are matched to
+  NWS03"}). Blank rows are dropped. Names are matched to
 \code{data$aru.name} ignoring case and surrounding spaces.}
 
 \item{gap.days}{Numeric, default \code{1}. A gap longer than this many
@@ -32,22 +34,36 @@ location starts a new location record.}
 \item{zero.remove}{Logical, default \code{TRUE}. Drop records where
 \code{longitude} and \code{latitude} are both \code{0} - what SM units
 log before they get a GPS fix - before summarizing.}
+
+\item{group.by}{Character, default \code{"aru.name"}. The column in
+\code{data} that identifies each ARU: \code{"aru.name"} or
+\code{"aru.label"} (any other single column name also works). Location
+records are split by this column, \code{aru.combo} names are matched
+against it, and it is the first column of \code{coordinate.summary}
+(named after \code{group.by}).}
+
+\item{strip.special}{Logical, default \code{TRUE}. If \code{TRUE},
+simplifies accented letters and
+symbols (\code{é} -> \code{e}, \code{×} -> \code{X}) and removes other non-ASCII special characters (e.g. \code{°}, \code{µ},
+\code{™}) from \code{data} and \code{aru.combo} before
+anything else, so e.g. a latitude of \code{"42.036373°"} is read as
+the number \code{42.036373} instead of being dropped as unreadable.}
 }
 \value{
 Invisibly, a named list with two data frames, also auto-assigned
-  into the calling environment:
+into the calling environment:
 
-  \code{coordinate.summary} - one row per location record, ordered by
-  \code{$aru.name} then \code{$datetime.start}:
-  \code{$aru.name}, \code{$datetime.start} and \code{$datetime.end}
-  (earliest/latest record, character \code{"YYYY-MM-DD HH:MM:SS"} in the
-  unit's own clock time), \code{$longitude}, \code{$latitude},
-  \code{$records} (number of records).
+\code{coordinate.summary} - one row per location record, ordered by
+the \code{group.by} column then \code{$datetime.start}:
+\code{$aru.name} (or whichever column \code{group.by} names), \code{$datetime.start} and \code{$datetime.end}
+(earliest/latest record, character \code{"YYYY-MM-DD HH:MM:SS"} in the
+unit's own clock time), \code{$longitude}, \code{$latitude},
+\code{$records} (number of records).
 
-  \code{coordinate.average} - one row per row of \code{aru.combo}:
-  \code{$aru.names} (the set as written in \code{aru.combo}),
-  \code{$longitude}, \code{$latitude} (median of the unique locations of
-  the ARUs in that set).
+\code{coordinate.average} - one row per row of \code{aru.combo}:
+\code{$aru.names} (the set as written in \code{aru.combo}),
+\code{$longitude}, \code{$latitude} (median of the unique locations of
+the ARUs in that set).
 }
 \description{
 Added 2026-09-30, per Josh. Splits each ARU's records into separate
@@ -92,6 +108,23 @@ read by \code{readxl} (\code{POSIXct} on 1899-12-31), an
 Day-first dates (\code{D/M/YYYY}) aren't supported, since they can't be
 told apart from US dates. The NOTE for unreadable records now shows an
 example value.
+
+\strong{Follow-up, 2026-09-30, per Josh - group.by and special
+characters.} New input \code{group.by} (default \code{"aru.name"}) to
+summarize by \code{"aru.label"} instead - useful when one ARU was
+redeployed under several labels (e.g. \code{NWS03-1}, \code{NWS03-2}).
+The required-header check, the location-record breaks, the
+\code{aru.combo} matching and the first output column all follow it. New
+input \code{strip.special} (default \code{TRUE}) removes non-ASCII
+characters from both inputs first. This function has no log, so there is
+no \code{$strip.special} column.
+
+\strong{Follow-up, 2026-10-02, per Josh - accents simplified.} With
+\code{strip.special = TRUE}, accented letters and common symbols are
+now simplified instead of dropped (\code{café} -> \code{cafe},
+\code{×} -> \code{X}, curly quotes -> straight quotes); characters
+with no plain equivalent (e.g. \code{°}, \code{µ}, \code{™}) are still
+removed. Column names are cleaned the same way.
 }
 \examples{
 \dontrun{

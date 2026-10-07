@@ -450,6 +450,25 @@
 #' check exactly as before. Full dev-script test suite re-run clean after
 #' this change.
 #'
+#' \strong{Follow-up, 2026-09-30, per Josh - special characters.} A real
+#' \code{Norcross.arulist.csv} failed to load with \code{invalid multibyte
+#' string at '<b0>'} (a degree sign saved by Excel as a single Latin-1
+#' byte in a latitude cell). Every \verb{*arulist.csv} is now read with the
+#' shared \code{special.read.csv()} helper (UTF-8, falling back to
+#' Latin-1), so such a file always loads. New argument
+#' \code{strip.special} (default \code{TRUE}) then removes every
+#' non-ASCII character from each file's data immediately after loading,
+#' before header standardization and the required-header check, so e.g.
+#' \code{"42.036373°"} becomes \code{"42.036373"} and converts to a number
+#' normally. Stripped columns are kept as character (the file is still read
+#' with \code{colClasses = "character"}); numeric conversion happens later
+#' exactly as before. With \code{strip.special = FALSE} the characters are
+#' kept (and a coordinate like \code{"42.036373°"} then becomes \code{NA}
+#' at the numeric-conversion step). Column names
+#' are not changed by stripping. This function has no log, so no
+#' \code{$strip.special} log column was added. Output is unchanged for
+#' files without special characters.
+#'
 #' @param dir.load Directory to search for files matching \code{load.pattern}.
 #'   Default: current working directory. Must actually contain the
 #'   \verb{*arulist.csv} file(s) - if no matching file is found, the
@@ -509,6 +528,11 @@
 #'   \code{$aru_name}) - for a caller who specifically wants a snake_case
 #'   CSV/data frame out of this function, without having to convert it
 #'   themselves afterward.
+#' @param strip.special Logical, default \code{TRUE}. If \code{TRUE}, simplifies accented
+#'   letters (\code{é} -> \code{e}) and removes other non-ASCII special
+#'   characters (e.g. \code{°}, \code{µ}) from each \verb{*arulist.csv} after loading - see
+#'   \code{@details}. Files are always read with a UTF-8/Latin-1 fallback,
+#'   so a stray \code{°} can't stop them loading, whatever this is set to.
 #'
 #' @return Invisibly, a list with:
 #'   \describe{
@@ -548,6 +572,14 @@
 #'       \code{snake_case} - see that parameter above.}
 #'   }
 #'
+#' @details
+#' \strong{Follow-up, 2026-10-02, per Josh - accents simplified.} With
+#' \code{strip.special = TRUE}, accented letters and common symbols are
+#' now simplified instead of dropped (\code{café} -> \code{cafe},
+#' \code{×} -> \code{X}, curly quotes -> straight quotes); characters
+#' with no plain equivalent (e.g. \code{°}, \code{µ}, \code{™}) are still
+#' removed. Column names are cleaned the same way.
+#'
 #' @examples
 #' \dontrun{
 #' result <- batz.generate_suntimes.arulist(dir.load = "path/to/data")
@@ -565,7 +597,8 @@ batz.generate_suntimes.arulist <- function(dir.load = getwd(),
                                     write.output = TRUE,
                                     dir.save = getwd(),
                                     project.name = "",
-                                    snake_case = FALSE) {
+                                    snake_case = FALSE,
+                                    strip.special = TRUE) {
 
   ## convert a plain wildcard/glob suffix pattern (or vector of them) into
   ## one combined regex suitable for list.files()'s pattern= argument
@@ -676,9 +709,20 @@ batz.generate_suntimes.arulist <- function(dir.load = getwd(),
          "to the folder containing your *arulist.csv file.")
   }
 
-  aru.list <- do.call(rbind, lapply(aru.files, read.csv,
-                                     stringsAsFactors = FALSE,
-                                     colClasses = "character"))
+  ## special characters (per Josh, 2026-09-30): each file is read with the
+  ## shared UTF-8/Latin-1 fallback (special.read.csv) so a stray Latin-1
+  ## degree byte can't stop it loading, then stripped of non-ASCII
+  ## characters (special.strip) when strip.special = TRUE, immediately
+  ## after loading and before any header check. Stripped columns are put
+  ## back to character so every column still arrives as character, exactly
+  ## as colClasses = "character" intends (numeric conversion happens below).
+  aru.list <- do.call(rbind, lapply(aru.files, function(f) {
+    df <- special.read.csv(f, stringsAsFactors = FALSE, colClasses = "character")
+    s  <- special.strip(df, strip.special)
+    df <- s$df
+    for (h in s$headers) df[[h]] <- as.character(df[[h]])
+    df
+  }))
 
   ## header standardization (per Josh, 2026-09-14 project preference): the
   ## raw *arulist.csv's own headers are standardized (trim, collapse

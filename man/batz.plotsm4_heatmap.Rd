@@ -11,7 +11,9 @@ batz.plotsm4_heatmap(
   aes.default,
   project.name = "new.project",
   aes.style = "overide.value",
-  dir.save = getwd()
+  dir.save = getwd(),
+  strip.special = TRUE,
+  strip.special.plotopts = FALSE
 )
 }
 \arguments{
@@ -66,6 +68,25 @@ over both.}
 
 \item{dir.save}{Character, default \code{getwd()}. Directory every
 generated PNG is saved into.}
+
+\item{strip.special}{Logical, default \code{TRUE}. If \code{TRUE},
+simplifies accented letters and
+symbols (\code{é} -> \code{e}, \code{×} -> \code{X}) and removes other non-ASCII special characters (e.g. \code{°}, \code{µ},
+\code{™}) from the data input(s) (\code{data} and \code{suntimes}; \code{fig.list}/\code{aes.default} follow \code{strip.special.plotopts})
+at the very start, before any header check - see \code{@details}.
+This function reads no files itself; inputs loaded with a batz
+reader already get a UTF-8/Latin-1 fallback, so a stray \code{°}
+  can't stop them loading, whatever this is set to.}
+
+\item{strip.special.plotopts}{Logical, default \code{FALSE}. Added
+2026-10-02, per Josh. Controls special characters in the settings
+table(s) - \code{fig.list} and \code{aes.default} - separately from the data. \code{FALSE} (default)
+leaves them untouched, so plot text such as \code{"Temperature (°C)"}
+  keeps its symbol; if a cell can't be read in this R session (e.g. a
+Latin-1 \code{°} byte), the function stops with an error naming the
+table, the number of incompatible characters, and the first 5 rows per
+header (\code{+} if more). \code{TRUE} simplifies/removes special
+characters in them the same way \code{strip.special} does for data.}
 }
 \value{
 Invisibly, a list with \code{plots} (one entry per generated
@@ -390,6 +411,30 @@ column's spelling changed, not which value is read). Unlike
 \code{"date.monitoringnight"} (not the stale \code{"date.mon"}) from
 the round-twenty-five entry directly above, so no separate date-field
 fix was needed here during this audit pass.
+
+\strong{Follow-up, 2026-09-30, per Josh - special characters.} New
+last argument \code{strip.special = TRUE}. Every data frame input
+(\code{data}, \code{fig.list}, \code{suntimes} and \code{aes.default}) is now passed through the shared internal
+helper \code{special.strip()} as the very first step of the function,
+before any header standardization or required-header check: with
+\code{strip.special = TRUE}, non-ASCII characters (e.g. \code{°},
+\code{µ}, \code{é}, smart quotes) are removed from text/factor
+columns, and a column that had characters removed is re-typed the way
+\code{read.csv()} would (so \code{"42.5°"} becomes the number
+\code{42.5}); column names are not changed. This includes plot-text
+settings in \code{aes.default} (titles, axis/legend labels), so a
+label such as \code{"Temperature (°C)"} is drawn as
+\code{"Temperature (C)"} - pass \code{strip.special = FALSE} to keep
+such characters. This function reads no files and writes no log, so
+there is no \code{$strip.special} log column. Inputs without special
+characters behave exactly as before.
+
+\strong{Follow-up, 2026-10-02, per Josh - plot settings and accents.}
+\code{strip.special} now applies to the data input(s) only; \code{fig.list} and \code{aes.default}
+are governed by the new \code{strip.special.plotopts} (default
+\code{FALSE}), so symbols in plot labels are kept unless you ask
+otherwise. Accented letters are now simplified rather than dropped
+(\code{café} -> \code{cafe}).
 }
 \examples{
 \dontrun{

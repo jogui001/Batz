@@ -65,6 +65,11 @@
 #'   be available yet"). If the reference table has no column literally
 #'   named \code{states.extirpated}, this flag has no effect beyond printing
 #'   a one-time notice (not an error).
+#' @param strip.special Logical, default \code{TRUE}. If \code{TRUE}, simplifies accented
+#'   letters (\code{é} -> \code{e}) and removes other non-ASCII special
+#'   characters (e.g. \code{°}, \code{µ}) from \code{data} when it is a data frame, before matching - see
+#'   \code{@details}. A plain vector is not stripped. This function reads no
+#'   files.
 #'
 #' @return A data frame - one row per (state, species) present pair
 #'   (\code{table.type = "state"}) or one row per species
@@ -257,6 +262,26 @@
 #' (the rows whose \code{state.soc} values shift with this fix) all ran end
 #' to end with plausible output.
 #'
+#' \strong{Follow-up, 2026-09-30, per Josh - special characters.} New
+#' argument \code{strip.special} (default \code{TRUE}). When \code{data} is
+#' a data frame, every non-ASCII character is removed from it (this
+#' function's local copy only) at the very start of the function, before it
+#' is flattened and matched, so e.g. \code{"epfu°"} or \code{"Québec"}-style
+#' stray characters no longer stop a species/state identifier matching.
+#' When \code{data} is a plain vector it is passed through unchanged (not
+#' stripped), per the package-wide rule that only data-frame inputs are
+#' stripped. The embedded \code{nabat}/\code{states} reference tables are
+#' never stripped (they contain no non-ASCII characters anyway). This
+#' function reads no files and has no log. Output is unchanged for inputs
+#' without special characters.
+#'
+#' \strong{Follow-up, 2026-10-02, per Josh - accents simplified.} With
+#' \code{strip.special = TRUE}, accented letters and common symbols are
+#' now simplified instead of dropped (\code{café} -> \code{cafe},
+#' \code{×} -> \code{X}, curly quotes -> straight quotes); characters
+#' with no plain equivalent (e.g. \code{°}, \code{µ}, \code{™}) are still
+#' removed. Column names are cleaned the same way.
+#'
 #' @examples
 #' \dontrun{
 #' # which states have Big brown bat and Little brown bat? (table.type = "state")
@@ -282,7 +307,14 @@ batz.batusa_list.species <- function(data,
                                       table.type = "state",
                                       symbol_presence.absence = c("*", "-"),
                                       phonic.group = TRUE,
-                                      species.extirpated = TRUE) {
+                                      species.extirpated = TRUE,
+                                      strip.special = TRUE) {
+
+  ## special characters (per Josh, 2026-09-30): strip non-ASCII characters
+  ## from `data` when it is a data frame (this function's local copy only;
+  ## a plain vector passes through unchanged) - see @details, "Follow-up,
+  ## 2026-09-30". The embedded reference tables below are never stripped.
+  data <- special.strip(data, strip.special)$df
 
   # ---------------------------------------------------------------------------
   # Reference database 1: bat species (Josh's NAbat.names.csv, embedded as

@@ -15,7 +15,8 @@ batz.merge_vetted.acoustics(
   manid.sb = TRUE,
   trim.noise = TRUE,
   trim.noid = FALSE,
-  snake_case = FALSE
+  snake_case = FALSE,
+  strip.special = TRUE
 )
 }
 \arguments{
@@ -37,7 +38,10 @@ pipeline runs).}
 
 \item{log.file}{Logical, default \code{FALSE}. When \code{TRUE}, also
 creates \code{vetted.merged_log.file} (one row per SKIPPED file, with
-\code{$filepath}, \code{$reason}, \code{$headers.missing}).}
+\code{$filepath}, \code{$reason}, \code{$headers.missing}, and - last -
+\code{$strip.special}: \code{"FALSE"} (not selected), \code{"TRUE NONE"}
+(nothing found), or \code{"TRUE ; <header>; ..."} (the headers where
+characters were removed)).}
 
 \item{bat.names.out}{Character, default \code{"code4"}. The
 \code{batname.format.out} passed to \code{\link{batz.batusa_recode.names}}
@@ -78,6 +82,12 @@ output column name through \code{standardize.headers()} instead (e.g.
 \code{$date_monitoringnight}, \code{$aru_name}) - for a caller who specifically
 wants a snake_case CSV/data frame out of this function, without having
 to convert it themselves afterward.}
+
+\item{strip.special}{Logical, default \code{TRUE}. If \code{TRUE}, simplifies accented
+letters (\code{é} -> \code{e}) and removes other non-ASCII special
+characters (e.g. \code{°}, \code{µ}) from the data after loading - see \code{@details}. Files are
+always read with a UTF-8/Latin-1 fallback, so a stray \code{°} can't stop
+them loading, whatever this is set to.}
 }
 \value{
 Invisibly, a named list: \code{vetted.merged} (always), and
@@ -88,7 +98,9 @@ assigned directly into the calling environment (same auto-assign
 convention as \code{batz.merge_aru.meta}/
 \code{batz.datawrangler_load.files}), so a bare call with no
 assignment populates \code{vetted.merged} (and
-\code{vetted.merged_log.file}) directly.
+\code{vetted.merged_log.file}) directly. \code{vetted.merged} has a
+\code{$aru.model} column (\code{"SM4"} or \code{"SM5"}) right after
+\code{$aru.name}, and the log has an \code{$aru.model} column too.
 }
 \description{
 Searches a directory (and its subdirectories, if \code{dir.sub = TRUE})
@@ -113,8 +125,8 @@ of the vetting software's own real column text (not a \code{batz}-
 invented shorthand), so per this project's header-standardization
 preference both sides are standardized together: two of its six entries
 change, because the real headers they represent contain spaces/
-punctuation that used to be deleted and are now preserved as underscores
-\item \code{"speciesmanualid"} -> \code{"species_manual_id"} (real header:
+punctuation that used to be deleted and are now preserved as underscores -
+\code{"speciesmanualid"} -> \code{"species_manual_id"} (real header:
 \code{"Species Manual ID"}) and \code{"wakaleidoscopeautoid"} ->
 \code{"wa_kaleidoscope_auto_id"} (real header: \code{"WA|Kaleidoscope|
 Auto ID"}). The other four (\code{filename}, \code{monitoringnight},
@@ -391,6 +403,50 @@ matching proceeds - mirroring this project's existing
 \code{\link{batz.merge_vetted.acoustics2}}). \code{$lon}/\code{$longitude}
 has no such alias concern, since it is never read from a raw file header
 at all - it is entirely computed internally by splitting \code{$lat}.
+
+\strong{Follow-up, 2026-09-30, per Josh - special characters.} New
+argument \code{strip.special} (default \code{TRUE}). Every vetted file is
+now read with the shared \code{special.read.csv()} helper, which falls back
+to Latin-1 when a file isn't valid UTF-8 (so a stray Excel degree sign no
+longer makes the file fail as "could not read file"); this always applies.
+Immediately after each file is loaded (before header standardization,
+header checks, trimming and merging), \code{special.strip()} removes
+non-ASCII characters from its text columns when \code{strip.special =
+TRUE}. \code{vetted.merged_log.file} (which, as before, only lists
+SKIPPED files) gains a last column \code{$strip.special} giving, per
+skipped file, the (standardized) headers where characters were removed;
+a file that could not be read at all gets \code{"FALSE"}/\code{"TRUE
+NONE"}. The column keeps the exact name \code{strip.special} even when
+\code{snake_case = TRUE}. Merged files that had characters stripped are
+not listed, since the log has no rows for successfully merged files.
+
+\strong{Follow-up, 2026-10-02, per Josh - accents simplified, log
+counts.} With \code{strip.special = TRUE}, accented letters and common
+symbols are now simplified instead of dropped (\code{café} ->
+\code{cafe}, \code{Quercus × bebbiana} -> \code{Quercus X bebbiana},
+curly quotes -> straight quotes); characters with no plain equivalent
+(e.g. \code{°}, \code{µ}, \code{™}) are still removed. Column names
+are cleaned the same way. The log gets four new columns right after
+\code{$strip.special}: \code{$Accented.letters.header} and
+\code{$removed.symbols.header} (number of unique column names with a
+character simplified / removed), and \code{$Accented.letters.data} and
+\code{$removed.symbols.data} (number of unique data values with a
+character simplified / removed - \code{café} in 500 rows counts once;
+\code{café} and \code{French café} count twice). They are \code{NA}
+when \code{strip.special = FALSE}.
+
+\strong{Follow-up, 2026-10-02, per Josh - SM5 file names and
+monitoring-night aliases.} \code{$aru.name}, \code{$date} and
+\code{$time} are read from \code{$filename} in either layout:
+SM4 \verb{<ARU>_<YYYYMMDD>_<HHMMSS>_<anything>} or SM5
+\verb{<ARU>_<MIC>_<YYYYMMDD>_<HHMMSS>_<anything>}. The layout found is
+stored in the new \code{$aru.model} column (\code{"SM4"}/\code{"SM5"};
+\code{NA} if the name fits neither). The MIC part of an SM5 name is
+not kept as a column. The log's \code{$aru.model} lists the model(s)
+found in that file (\code{"SM4"}, \code{"SM5"} or \code{"SM4; SM5"}).
+The required \code{date.monitoringnight} column is also accepted as
+\code{MONITORINGNIGHT} or \code{DATE-12} (any case); it is renamed to
+\code{$date.monitoringnight}.
 }
 \examples{
 \dontrun{

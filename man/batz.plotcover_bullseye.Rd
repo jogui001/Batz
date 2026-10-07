@@ -17,7 +17,9 @@ batz.plotcover_bullseye(
   quadrant.cover = TRUE,
   auto.scale = TRUE,
   subplot.size.height = 3,
-  subplot.size.width = 2
+  subplot.size.width = 2,
+  strip.special = TRUE,
+  strip.special.plotopts = FALSE
 )
 }
 \arguments{
@@ -26,8 +28,8 @@ Josh's \code{bulleye_model_data.xlsx}, "cover" sheet). Column headers
 are run through \code{standardize.headers()} on receipt (see Details,
 "Header standardization"), after which it must have (in any original
 spelling that standardizes to): \code{aru.label}, \code{"Select the
-quadrant you are assessing"}, \code{"Canopy cover"}, \code{"Understory
-cover"}. One row per quadrant per \code{aru.label} - every
+  quadrant you are assessing"}, \code{"Canopy cover"}, \code{"Understory
+  cover"}. One row per quadrant per \code{aru.label} - every
 \code{aru.label} that will be plotted needs exactly the four quadrant
 values \code{"northeast"}/\code{"southeast"}/\code{"southwest"}/
 \code{"northwest"} (case/whitespace-insensitive).}
@@ -36,7 +38,7 @@ values \code{"northeast"}/\code{"southeast"}/\code{"southwest"}/
 \code{bulleye_model_data.xlsx}, "mic" sheet). Also header-standardized
 on receipt; must have (in any spelling that standardizes to):
 \code{aru.label}, \code{"Microphone Height"}, \code{"Horizontal
-Microphone Orientation"}, \code{"Vertical Microphone Orientation"}.
+  Microphone Orientation"}, \code{"Vertical Microphone Orientation"}.
 One row per \code{aru.label}.}
 
 \item{aes.default}{A data frame of default plot settings, one row per
@@ -50,7 +52,7 @@ Details, "Settings resolution (round nineteen)".}
 nineteenth follow-up (2026-09-16), this NO LONGER selects an
 \code{aes.default} override column - it is now used ONLY to build the
 first part of every saved file name: \code{"<project.name>_<ARU>_
-<timestamp>.png"}. See Details, "Settings resolution (round
+  <timestamp>.png"}. See Details, "Settings resolution (round
 nineteen)" for what replaced the old column-matching behavior.}
 
 \item{aes.style}{Character, default \code{"overide.value"}. Names which
@@ -67,7 +69,7 @@ name itself is now always \code{"<project.name>_<ARU>_<timestamp>.png"}
 \code{$output.filename.pattern} is DEPRECATED and no longer read.}
 
 \item{sub.plots}{Character vector, default \code{c("canopy.bull",
-"mic.bar", "mic.bull", "understory.bull")} (i.e. all four, in that
+  "mic.bar", "mic.bull", "understory.bull")} (i.e. all four, in that
 order) - which panels to draw, and in what left-to-right order.
 Every element must be one of \code{"canopy.bull"} (the Canopy cover
 bullseye), \code{"mic.bar"} (the Microphone Height bar + Vertical
@@ -117,6 +119,25 @@ panel shares one row). Ignored when \code{auto.scale = TRUE}.}
 Only used when \code{auto.scale = FALSE} - the width, in inches, of
 EACH sub-plot; the combined figure's total width is this times
 \code{length(sub.plots)}. Ignored when \code{auto.scale = TRUE}.}
+
+\item{strip.special}{Logical, default \code{TRUE}. If \code{TRUE},
+simplifies accented letters and
+symbols (\code{é} -> \code{e}, \code{×} -> \code{X}) and removes other non-ASCII special characters (e.g. \code{°}, \code{µ},
+\code{™}) from the data input(s) (\code{data} and \code{mic}; \code{aes.default} follows \code{strip.special.plotopts})
+at the very start, before any header check - see \code{@details}.
+This function reads no files itself; inputs loaded with a batz
+reader already get a UTF-8/Latin-1 fallback, so a stray \code{°}
+  can't stop them loading, whatever this is set to.}
+
+\item{strip.special.plotopts}{Logical, default \code{FALSE}. Added
+2026-10-02, per Josh. Controls special characters in the settings
+table(s) - \code{aes.default} - separately from the data. \code{FALSE} (default)
+leaves them untouched, so plot text such as \code{"Temperature (°C)"}
+  keeps its symbol; if a cell can't be read in this R session (e.g. a
+Latin-1 \code{°} byte), the function stops with an error naming the
+table, the number of incompatible characters, and the first 5 rows per
+header (\code{+} if more). \code{TRUE} simplifies/removes special
+characters in them the same way \code{strip.special} does for data.}
 }
 \value{
 Invisibly, a list with \code{plots} (one entry per
@@ -1106,6 +1127,34 @@ headers documented in \code{@param data}/\code{@param mic} above (e.g.
 \code{"ARU Label"}, \code{"Microphone Height"}, \code{"Horizontal
 Microphone Orientation"}, \code{"Vertical Microphone Orientation"}) - see
 this function's own \code{.dev.R} test script.
+
+\strong{Follow-up, 2026-09-30, per Josh - special characters.} New
+last argument \code{strip.special = TRUE}. Every data frame input
+(\code{data}, \code{mic} and \code{aes.default}) is now passed through the shared internal
+helper \code{special.strip()} as the very first step of the function,
+before any header standardization or required-header check: with
+\code{strip.special = TRUE}, non-ASCII characters (e.g. \code{°},
+\code{µ}, \code{é}, smart quotes) are removed from text/factor
+columns, and a column that had characters removed is re-typed the way
+\code{read.csv()} would (so \code{"42.5°"} becomes the number
+\code{42.5}); column names are not changed. This includes plot-text
+settings in \code{aes.default} (titles, axis/legend labels), so a
+label such as \code{"Temperature (°C)"} is drawn as
+\code{"Temperature (C)"} - pass \code{strip.special = FALSE} to keep
+such characters. This function reads no files and writes no log, so
+there is no \code{$strip.special} log column. Inputs without special
+characters behave exactly as before.
+Note that \code{aes.default}'s \code{$icon.dir} is a folder path read
+from the same table, so it is stripped too: a path containing a
+non-ASCII character (e.g. \code{C:/Users/José/icons}) would no longer
+match the real folder - use \code{strip.special = FALSE} in that case.
+
+\strong{Follow-up, 2026-10-02, per Josh - plot settings and accents.}
+\code{strip.special} now applies to the data input(s) only; \code{aes.default}
+are governed by the new \code{strip.special.plotopts} (default
+\code{FALSE}), so symbols in plot labels are kept unless you ask
+otherwise. Accented letters are now simplified rather than dropped
+(\code{café} -> \code{cafe}).
 }
 \examples{
 \dontrun{

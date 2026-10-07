@@ -26,6 +26,20 @@
 #' fails with "These headers are missing: ..." for that version. No
 #' distinguishing header at all, or a tie, gives \code{"unknown"}.
 #'
+#' \strong{Follow-up, 2026-09-30, per Josh - special characters.} Each
+#' file is read with \code{special.read.csv()} (UTF-8, falling back to
+#' Latin-1, so a stray \code{°} can't stop it loading) and, when
+#' \code{strip.special = TRUE}, stripped of non-ASCII characters with
+#' \code{special.strip()} before its headers are checked. Every log row gets
+#' a last column \code{$strip.special}: \code{"FALSE"}, \code{"TRUE NONE"}
+#' or \code{"TRUE ; <header>; ..."} (standardized header names).
+#' \strong{2026-10-02:} accented letters are now simplified (not dropped),
+#' and four count columns follow \code{$strip.special}:
+#' \code{$Accented.letters.header}, \code{$removed.symbols.header},
+#' \code{$Accented.letters.data}, \code{$removed.symbols.data} (unique
+#' values simplified / removed; \code{NA} when \code{strip.special =
+#' FALSE} or the file couldn't be read).
+#'
 #' @keywords internal
 #' @noRd
 sm.logfile.schemas <- function() {
@@ -65,7 +79,13 @@ sm.logfile.detect.version <- function(hdrs) {
 #' @keywords internal
 #' @noRd
 sm.logfile.merge <- function(dir.load, dir.sub, load.pattern, duplicates.remove,
-                             versions.keep, caller.name) {
+                             versions.keep, caller.name, strip.special = TRUE) {
+
+  ## special characters (per Josh, 2026-09-30): headers where non-ASCII
+  ## characters were removed in the file currently being processed - read by
+  ## make.log.row() for the log's $strip.special column.
+  cur.strip <- character(0)
+  cur.counts <- NULL
 
   schemas <- sm.logfile.schemas()
 
@@ -98,7 +118,9 @@ sm.logfile.merge <- function(dir.load, dir.sub, load.pattern, duplicates.remove,
                date.start = date.start, date.end = date.end,
                date.unique = date.unique, date.range = date.range,
                records = records, load.status = load.status, reason = reason,
-               filepath = filepath, stringsAsFactors = FALSE)
+               filepath = filepath,
+               special.log.cols(strip.special, cur.strip, cur.counts)[rep(1L, length(aru.name)), , drop = FALSE],
+               stringsAsFactors = FALSE, row.names = NULL)
   }
 
   other.fn <- function(v) {
@@ -110,10 +132,18 @@ sm.logfile.merge <- function(dir.load, dir.sub, load.pattern, duplicates.remove,
     base.name <- basename(f)
     file.aru.name <- sub("_.*$", "", base.name)
 
+    cur.strip <<- character(0)
+    cur.counts <<- NULL
     raw <- tryCatch(
-      utils::read.csv(f, stringsAsFactors = FALSE, check.names = FALSE, strip.white = TRUE),
+      special.read.csv(f, stringsAsFactors = FALSE, check.names = FALSE, strip.white = TRUE),
       error = function(e) NULL
     )
+    if (!is.null(raw)) {
+      s.strip <- special.strip(raw, strip.special)
+      raw <- s.strip$df
+      cur.strip <<- standardize.headers(s.strip$headers)
+      cur.counts <<- s.strip$counts
+    }
     if (is.null(raw)) {
       return(list(data = NULL, version = "unknown",
                   log = make.log.row(file.aru.name, base.name, f, "unknown",
@@ -233,9 +263,10 @@ sm.logfile.merge <- function(dir.load, dir.sub, load.pattern, duplicates.remove,
   log.df <- if (length(log.rows) > 0) {
     do.call(rbind, log.rows)
   } else {
+    cur.strip <- character(0)
     make.log.row(character(0), character(0), character(0), character(0),
                  character(0), character(0), character(0), character(0),
-                 integer(0), integer(0), integer(0))
+                 integer(0), integer(0), integer(0))[0, ]
   }
 
   list(data = merged, log = log.df)

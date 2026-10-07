@@ -11,7 +11,8 @@ batz.merge_temp.logger(
   dir.save = getwd(),
   write.output = TRUE,
   project.name = "",
-  snake_case = FALSE
+  snake_case = FALSE,
+  strip.special = TRUE
 )
 }
 \arguments{
@@ -60,7 +61,7 @@ output CSV names when \code{write.output = TRUE}:
 \code{$date.time} in \code{templog.merged} (\code{<DATE1>to<DATE2>},
 \code{\%Y\%m\%d} each, or the literal \code{"nodata"} if none is
 available) and \code{<timestamp>} is \code{format(Sys.time(),
-"\%Y\%m\%d\%H\%M\%S")}. \code{""} (default) falls back to the literal
+  "\%Y\%m\%d\%H\%M\%S")}. \code{""} (default) falls back to the literal
 base token \code{"templog"} - a judgment call, please confirm this is
 the right default.}
 
@@ -78,6 +79,12 @@ exactly as always. \code{TRUE} runs every output column name through
 \code{$date_time}, \code{$temp.dry.c} -> \code{$temp_dry_c}) - for a
 caller who specifically wants a snake_case CSV/data frame out of this
 function, without having to convert it themselves afterward.}
+
+\item{strip.special}{Logical, default \code{TRUE}. If \code{TRUE}, simplifies accented
+letters (\code{é} -> \code{e}) and removes other non-ASCII special
+characters (e.g. \code{°}, \code{µ}) from the data after loading - see \code{@details}. Files are
+always read with a UTF-8/Latin-1 fallback, so a stray \code{°} can't stop
+them loading, whatever this is set to.}
 }
 \value{
 Invisibly, a list with two data frames:
@@ -89,7 +96,11 @@ Invisibly, a list with two data frames:
 standardization" above).}
 \item{templog.notes}{\code{$logger.serial}, \code{$date.start},
 \code{$date.end}, \code{$temp.type}, \code{$rows.in},
-\code{$rows.out}, \code{$rows.trimmed}, \code{$notes}.}
+\code{$rows.out}, \code{$rows.trimmed}, \code{$notes},
+\code{$strip.special} (last column): \code{"FALSE"} (not selected),
+\code{"TRUE NONE"} (nothing found), or \code{"TRUE ; <header>; ..."}
+(the headers where characters were removed for that logger file -
+see @details, "Follow-up, 2026-09-30").}
 }
 (or their snake_case equivalents if \code{snake_case = TRUE} - see
 that parameter above).
@@ -274,6 +285,45 @@ renamed internally to its new canonical identifier
 (\code{logger.serial}/\code{logger.serial_short}) for every downstream
 use, including \code{templog.merged}/\code{templog.notes}'s own output
 columns.
+
+\strong{Follow-up, 2026-09-30, per Josh - special characters.} New
+argument \code{strip.special} (default \code{TRUE}). Every
+\code{templog.meta.csv} is now read with the shared
+\code{special.read.csv()} helper and every raw \verb{*templog.csv} with
+\code{special.read.lines()} (the internal BOM-aware line reader now wraps
+it), both of which fall back to Latin-1 when a file isn't valid UTF-8, so
+a degree sign saved by Excel as a single byte no longer breaks loading;
+this always applies. Immediately after each meta file / raw logger file is
+loaded (before de-duplication, header detection, date parsing and meta
+matching), \code{special.strip()} removes non-ASCII characters from its
+text columns when \code{strip.special = TRUE}. \strong{Judgment call:} the
+\code{°F}/\code{°C} unit detection still looks at the file's ORIGINAL
+(unstripped) header row, so stripping the degree sign can never change
+\code{$temp.type} (e.g. a header like \code{"Temp°F"} would otherwise
+lose its unit). \code{templog.notes} gains a last column
+\code{$strip.special}, one label per logger file: raw logger columns are
+positional, so they are reported by their output names (\code{V1} ->
+\code{obs}, \code{V2} -> \code{date.time}, \code{V3} -> \code{temp.dry.c},
+\code{V4} -> \code{temp.wet.c}; excess columns keep \code{V5}, ...), and -
+when the file matched a meta row - any \code{templog.meta.csv} headers
+where characters were removed are added as \code{meta:<header>} (the
+canonical, renamed meta header). The column keeps the exact name
+\code{strip.special} even when \code{snake_case = TRUE}.
+
+\strong{Follow-up, 2026-10-02, per Josh - accents simplified, log
+counts.} With \code{strip.special = TRUE}, accented letters and common
+symbols are now simplified instead of dropped (\code{café} ->
+\code{cafe}, \code{Quercus × bebbiana} -> \code{Quercus X bebbiana},
+curly quotes -> straight quotes); characters with no plain equivalent
+(e.g. \code{°}, \code{µ}, \code{™}) are still removed. Column names
+are cleaned the same way. The log gets four new columns right after
+\code{$strip.special}: \code{$Accented.letters.header} and
+\code{$removed.symbols.header} (number of unique column names with a
+character simplified / removed), and \code{$Accented.letters.data} and
+\code{$removed.symbols.data} (number of unique data values with a
+character simplified / removed - \code{café} in 500 rows counts once;
+\code{café} and \code{French café} count twice). They are \code{NA}
+when \code{strip.special = FALSE}.
 }
 \examples{
 \dontrun{

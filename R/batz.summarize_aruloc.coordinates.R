@@ -24,12 +24,25 @@
 #'   \code{longitude} and \code{latitude} are both \code{0} - what SM units
 #'   log before they get a GPS fix - before summarizing.
 #'
+#' @param group.by Character, default \code{"aru.name"}. The column in
+#'   \code{data} that identifies each ARU: \code{"aru.name"} or
+#'   \code{"aru.label"} (any other single column name also works). Location
+#'   records are split by this column, \code{aru.combo} names are matched
+#'   against it, and it is the first column of \code{coordinate.summary}
+#'   (named after \code{group.by}).
+#' @param strip.special Logical, default \code{TRUE}. If \code{TRUE},
+#'   simplifies accented letters and
+#'   symbols (\code{é} -> \code{e}, \code{×} -> \code{X}) and removes other non-ASCII special characters (e.g. \code{°}, \code{µ},
+#'   \code{™}) from \code{data} and \code{aru.combo} before
+#'   anything else, so e.g. a latitude of \code{"42.036373°"} is read as
+#'   the number \code{42.036373} instead of being dropped as unreadable.
+#'
 #' @return Invisibly, a named list with two data frames, also auto-assigned
 #'   into the calling environment:
 #'
 #'   \code{coordinate.summary} - one row per location record, ordered by
-#'   \code{$aru.name} then \code{$datetime.start}:
-#'   \code{$aru.name}, \code{$datetime.start} and \code{$datetime.end}
+#'   the \code{group.by} column then \code{$datetime.start}:
+#'   \code{$aru.name} (or whichever column \code{group.by} names), \code{$datetime.start} and \code{$datetime.end}
 #'   (earliest/latest record, character \code{"YYYY-MM-DD HH:MM:SS"} in the
 #'   unit's own clock time), \code{$longitude}, \code{$latitude},
 #'   \code{$records} (number of records).
@@ -76,6 +89,23 @@
 #' told apart from US dates. The NOTE for unreadable records now shows an
 #' example value.
 #'
+#' \strong{Follow-up, 2026-09-30, per Josh - group.by and special
+#' characters.} New input \code{group.by} (default \code{"aru.name"}) to
+#' summarize by \code{"aru.label"} instead - useful when one ARU was
+#' redeployed under several labels (e.g. \code{NWS03-1}, \code{NWS03-2}).
+#' The required-header check, the location-record breaks, the
+#' \code{aru.combo} matching and the first output column all follow it. New
+#' input \code{strip.special} (default \code{TRUE}) removes non-ASCII
+#' characters from both inputs first. This function has no log, so there is
+#' no \code{$strip.special} column.
+#'
+#' \strong{Follow-up, 2026-10-02, per Josh - accents simplified.} With
+#' \code{strip.special = TRUE}, accented letters and common symbols are
+#' now simplified instead of dropped (\code{café} -> \code{cafe},
+#' \code{×} -> \code{X}, curly quotes -> straight quotes); characters
+#' with no plain equivalent (e.g. \code{°}, \code{µ}, \code{™}) are still
+#' removed. Column names are cleaned the same way.
+#'
 #' @seealso \code{\link{batz.merge_sm.logfiles}}
 #'
 #' @examples
@@ -90,18 +120,31 @@
 batz.summarize_aruloc.coordinates <- function(data,
                                               aru.combo,
                                               gap.days    = 1,
-                                              zero.remove = TRUE) {
+                                              zero.remove = TRUE,
+                                              group.by    = "aru.name",
+                                              strip.special = TRUE) {
 
   if (!is.data.frame(data)) stop("data must be a data frame")
   if (!is.data.frame(aru.combo) || ncol(aru.combo) < 1) stop("aru.combo must be a data frame with at least one column")
+  if (!is.character(group.by) || length(group.by) != 1 || !nzchar(group.by)) {
+    stop("group.by must be one column name, e.g. \"aru.name\" or \"aru.label\"")
+  }
+
+  ## ---- special characters (per Josh, 2026-09-30) ---------------------------
+  data      <- special.strip(data, strip.special)$df
+  aru.combo <- special.strip(aru.combo, strip.special)$df
 
   ## ---- header check ------------------------------------------------------
-  required <- c("aru.name", "date", "time", "longitude", "latitude")
+  ## group.by (per Josh, 2026-09-30) names the ARU identifier column. Inside
+  ## the function it is always worked on as aru.name; the output column is
+  ## renamed back to group.by at the end.
+  required <- c(group.by, "date", "time", "longitude", "latitude")
   ch <- canonicalize.headers(data, required)
   if (length(ch$missing) > 0) {
     stop("data is missing these headers: ", paste(ch$missing, collapse = ", "))
   }
   d <- ch$df[required]
+  names(d)[1] <- "aru.name"
   d$aru.name  <- trimws(as.character(d$aru.name))
   d$longitude <- suppressWarnings(as.numeric(d$longitude))
   d$latitude  <- suppressWarnings(as.numeric(d$latitude))
@@ -168,7 +211,7 @@ batz.summarize_aruloc.coordinates <- function(data,
     if (any(is.na(hit))) {
       for (m in members[is.na(hit)]) {
         close <- aru.all[which.min(utils::adist(tolower(m), tolower(aru.all)))]
-        warning("aru.combo name '", m, "' not found in data$aru.name (closest: '",
+        warning("aru.combo name '", m, "' not found in data$", group.by, " (closest: '",
                 close, "') - left out of set '", s, "'", call. = FALSE)
       }
     }
@@ -182,6 +225,8 @@ batz.summarize_aruloc.coordinates <- function(data,
     latitude  = vapply(med, `[`, numeric(1), 2),
     stringsAsFactors = FALSE
   )
+
+  names(coordinate.summary)[1] <- group.by
 
   result <- list(coordinate.summary = coordinate.summary,
                  coordinate.average = coordinate.average)

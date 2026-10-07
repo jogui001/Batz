@@ -478,6 +478,23 @@
 #' so both of those items were already done as of round twenty-two/round
 #' twenty-six above, with nothing left to change.
 #'
+#' \strong{Follow-up, 2026-09-30, per Josh - special characters.} Each
+#' \verb{*arulist.csv} used for the \code{$sunregion} lookup is now read
+#' with the shared \code{special.read.csv()} helper (UTF-8, falling back to
+#' Latin-1), so a file containing a stray Latin-1 byte (e.g. a \code{°}
+#' saved by Excel) loads instead of being silently skipped as "could not
+#' read file". New argument \code{strip.special} (default \code{TRUE})
+#' removes every non-ASCII character from \code{data} (this function's
+#' local copy only) at the very start of the function and from each
+#' arulist file immediately after it loads, before any header check,
+#' matching or summarizing; a column that had characters removed is
+#' re-typed the way \code{read.csv()} would (e.g. \code{"42.5°"} becomes
+#' \code{42.5}). Because both sides of the \code{$aru.name} join are
+#' stripped the same way, the \code{$sunregion} match is consistent.
+#' \code{strip.special = FALSE} keeps the characters. This function has no
+#' log, so no \code{$strip.special} log column was added. Output is
+#' unchanged for inputs without special characters.
+#'
 #' @param data A data frame with every column listed above already
 #'   present (see Details for how to assemble one). Column headers may
 #'   arrive in this function's own dot-separated style OR already
@@ -550,15 +567,63 @@
 #'   \code{$spp_id}, \code{$mins2_noon_min}) - for a caller who
 #'   specifically wants a snake_case CSV/data frame out of this function,
 #'   without having to convert it themselves afterward.
+#' @param strip.special Logical, default \code{TRUE}. If \code{TRUE}, simplifies accented
+#'   letters (\code{é} -> \code{e}) and removes other non-ASCII special
+#'   characters (e.g. \code{°}, \code{µ}) from \code{data} and from every loaded \verb{*arulist.csv}
+#'   after loading - see \code{@details}. Files are always read with a
+#'   UTF-8/Latin-1 fallback, so a stray \code{°} can't stop them loading,
+#'   whatever this is set to.
+#' @param pool.interval Character, default \code{"1day"}. Length of each
+#'   pooling window that detections are counted over. A number plus a
+#'   unit, with or without a space: minutes (\code{"15 min"},
+#'   \code{"20min"}), hours (\code{"1 hour"}, \code{"2 hr"}), days
+#'   (\code{"1day"}, \code{"2 day"}) or weeks (\code{"1 week"}).
+#'   Intervals over 24 hours must be whole days. \code{"1day"} gives
+#'   exactly the same rows as before this option existed.
+#' @param pool.start Character, default \code{"observed"}. Only used
+#'   when \code{pool.interval} is more than one day: the day the first
+#'   pool starts counting from. \code{"observed"} = the earliest date in
+#'   the data; a date such as \code{"2026-05-01"}; a month
+#'   (\code{"\%m = 5"}, \code{"may"}, \code{"May"}) = the 1st of that
+#'   month in each year; or \code{"julian"} = January 1st of each year.
 #'
 #' @return A data frame, \code{plfr.batsummary}, with columns
-#'   \code{$spp.id}, \code{$date}, \code{$group}, \code{$groupedby},
+#'   \code{$spp.id}, \code{$date}, \code{$pool.interval},
+#'   \code{$pool.start}, \code{$pool.end}, \code{$group}, \code{$groupedby},
 #'   \code{$groupby.date}, \code{$sunregion}, \code{$obs},
 #'   \code{$mins2.noon.min}, \code{$mins2.noon.max}, \code{$vetting.type}
 #'   (or their snake_case equivalents if \code{snake_case = TRUE} - see
 #'   that parameter above). See \strong{$group vs $groupedby} in Details
 #'   for what \code{$group}/\code{$groupedby}/\code{$groupby.date} each
 #'   hold.
+#'
+#' @details
+#' \strong{Follow-up, 2026-10-02, per Josh - accents simplified.} With
+#' \code{strip.special = TRUE}, accented letters and common symbols are
+#' now simplified instead of dropped (\code{café} -> \code{cafe},
+#' \code{×} -> \code{X}, curly quotes -> straight quotes); characters
+#' with no plain equivalent (e.g. \code{°}, \code{µ}, \code{™}) are still
+#' removed. Column names are cleaned the same way.
+#'
+#' \strong{Follow-up, 2026-10-02, per Josh - pooling
+#' (\code{pool.interval}/\code{pool.start}).} Detections are counted per
+#' pool instead of always per day. When \code{groupby.date} is a
+#' monitoring-night column (its name contains \code{"monitoringnight"}),
+#' each day runs noon to noon; for any other date column (e.g.
+#' \code{$date}, \code{$date.calendar}) each day runs midnight to
+#' midnight. Pools shorter than a day split each of those days into
+#' equal bins from the day start (\code{"2 hour"} on a monitoring night
+#' gives 12:00-14:00, 14:00-16:00, ...). Pools longer than a day are
+#' counted in blocks from \code{pool.start}; with a month or
+#' \code{"julian"} start the count restarts each year, and the last pool
+#' before the restart is cut short at the restart date. \code{$date}
+#' holds the date the pool starts on; \code{$pool.start}/\code{$pool.end}
+#' hold the pool's start and end (date-time for pools under a day, date
+#' otherwise); \code{$pool.interval} holds the interval label (e.g.
+#' \code{"2 hour"}). Only pools with at least one detection get a row
+#' (empty pools are not zero-filled). \code{$mins2.noon.min}/
+#' \code{$mins2.noon.max} are still minutes from noon of each call's own
+#' monitoring night.
 #'
 #' @examples
 #' \dontrun{
@@ -591,9 +656,23 @@ batz.generate_plotframe.bat <- function(data,
                                          dir.load = getwd(),
                                          load.pattern = c("*.arulist.csv"),
                                          dir.sub = FALSE,
-                                         snake_case = FALSE) {
+                                         snake_case = FALSE,
+                                         strip.special = TRUE,
+                                         pool.interval = "1day",
+                                         pool.start = "observed") {
 
   if (!is.data.frame(data)) stop("`data` must be a data frame.")
+
+  ## ---- pooling (2026-10-02, per Josh) - see @details "Pooling" ----------
+  pool.mins <- plotframe.parse.interval(pool.interval)
+  pool.label <- plotframe.interval.label(pool.mins)
+  ## monitoring-night dates start at noon, calendar dates at midnight
+  pool.anchor.hour <- if (grepl("monitoringnight", groupby.date, ignore.case = TRUE)) 12 else 0
+
+  ## special characters (per Josh, 2026-09-30): strip non-ASCII characters
+  ## from `data` (this function's own local copy only) before any header
+  ## check, matching or summarizing - see @details, "Follow-up, 2026-09-30".
+  data <- special.strip(data, strip.special)$df
 
   ## $sunregion is NOT in this list (and no longer needs to already be a
   ## column of `data`) - it's now loaded from an *arulist.csv file and
@@ -706,9 +785,10 @@ batz.generate_plotframe.bat <- function(data,
   arulist <- data.frame(aru.name = character(0), sunregion = character(0), stringsAsFactors = FALSE)
   arulist.skipped <- character(0)
   for (f in arulist.files) {
-    tmp <- tryCatch(read.csv(f, stringsAsFactors = FALSE, check.names = FALSE),
+    tmp <- tryCatch(special.read.csv(f, stringsAsFactors = FALSE, check.names = FALSE),
                      error = function(e) NULL)
     if (is.null(tmp)) { arulist.skipped <- c(arulist.skipped, paste0(f, " (could not read file)")); next }
+    tmp <- special.strip(tmp, strip.special)$df
     names(tmp) <- standardize.headers(names(tmp))
     aru.col.candidates <- intersect(c("aru", "aru_name"), names(tmp))
     if (length(aru.col.candidates) == 0 || !("sunregion" %in% names(tmp))) {
@@ -783,6 +863,40 @@ batz.generate_plotframe.bat <- function(data,
   call.dt <- parse.call.datetime(data$call.datetime)
   data$.mins2.noon <- as.numeric(difftime(call.dt, noon.anchor, units = "mins"))
 
+  ## ---- pool each record (2026-10-02) ----------------------------------
+  ## .pool.key   - grouping key (with spp.id and groupby)
+  ## .pool.date  - value shown in the output $date column
+  ## .pool.start / .pool.end - start/end of the pooled period (POSIXct, UTC
+  ##               clock - i.e. the recorder's own local clock time)
+  day.anchor <- noon.anchor - (12 - pool.anchor.hour) * 3600
+  date.str <- as.character(data[[groupby.date]])
+  if (pool.mins == 1440) {
+    data$.pool.key   <- date.str
+    data$.pool.date  <- date.str
+    data$.pool.start <- day.anchor
+    data$.pool.end   <- day.anchor + 86400
+  } else if (pool.mins < 1440) {
+    offset <- as.numeric(difftime(call.dt, day.anchor, units = "mins"))
+    bin <- floor(offset / pool.mins)
+    data$.pool.key   <- paste(date.str, bin)
+    data$.pool.date  <- date.str
+    data$.pool.start <- day.anchor + bin * pool.mins * 60
+    data$.pool.end   <- data$.pool.start + pool.mins * 60
+  } else {
+    n.days <- pool.mins / 1440
+    d <- as.Date(format(day.anchor, "%Y-%m-%d"))
+    origin <- plotframe.pool.origin(pool.start, d)
+    idx <- floor(as.numeric(d - origin$origin) / n.days)
+    p.start <- origin$origin + idx * n.days
+    p.end <- p.start + n.days
+    if (!is.null(origin$cycle.end)) p.end <- pmin(p.end, origin$cycle.end)
+    data$.pool.key   <- as.character(p.start)
+    data$.pool.date  <- as.character(p.start)
+    data$.pool.start <- as.POSIXct(paste(p.start, sprintf("%02d:00:00", pool.anchor.hour)), tz = "UTC")
+    data$.pool.end   <- as.POSIXct(paste(p.end, sprintf("%02d:00:00", pool.anchor.hour)), tz = "UTC")
+  }
+  fmt.dt <- function(x) ifelse(is.na(x), NA_character_, format(x, "%Y-%m-%d %H:%M:%S", tz = "UTC"))
+
   safe.min <- function(x) if (all(is.na(x))) NA_real_ else min(x, na.rm = TRUE)
   safe.max <- function(x) if (all(is.na(x))) NA_real_ else max(x, na.rm = TRUE)
 
@@ -809,11 +923,15 @@ batz.generate_plotframe.bat <- function(data,
 
   build.summary <- function(df, spp.override = NULL) {
     spp.vals <- if (!is.null(spp.override)) rep(spp.override, nrow(df)) else as.character(df[[spp.id]])
-    date.vals  <- as.character(df[[groupby.date]])
+    date.vals  <- as.character(df$.pool.key)
     group.vals <- as.character(df[[groupby]])
     sun.vals   <- as.character(df$sunregion)
 
     key <- paste(spp.vals, date.vals, group.vals, sep = "\r")
+    first.of <- function(v) { v <- v[!duplicated(key)]; names(v) <- key[!duplicated(key)]; v }
+    k.date  <- first.of(as.character(df$.pool.date))
+    k.start <- first.of(fmt.dt(df$.pool.start))
+    k.end   <- first.of(fmt.dt(df$.pool.end))
     ag.obs <- tapply(df$obs, key, sum)
     ag.min <- tapply(df$.mins2.noon, key, safe.min)
     ag.max <- tapply(df$.mins2.noon, key, safe.max)
@@ -832,7 +950,10 @@ batz.generate_plotframe.bat <- function(data,
 
     out <- data.frame(
       spp.id         = vapply(parts, `[`, character(1), 1),
-      date           = vapply(parts, `[`, character(1), 2),
+      date           = as.character(k.date[keys]),
+      pool.interval  = pool.label,
+      pool.start     = as.character(k.start[keys]),
+      pool.end       = as.character(k.end[keys]),
       group          = vapply(parts, `[`, character(1), 3),
       groupedby      = groupby,
       groupby.date   = groupby.date,
@@ -872,10 +993,77 @@ batz.generate_plotframe.bat <- function(data,
   plfr.batsummary$vetting.type <- spp.id
   plfr.batsummary <- plfr.batsummary[order(plfr.batsummary$group,
                                             plfr.batsummary$date,
+                                            plfr.batsummary$pool.start,
                                             plfr.batsummary$spp.id), ]
   rownames(plfr.batsummary) <- NULL
 
   if (snake_case) names(plfr.batsummary) <- standardize.headers(names(plfr.batsummary))
 
   plfr.batsummary
+}
+
+
+#' Pooling helpers for batz.generate_plotframe.bat() (internal)
+#'
+#' Added 2026-10-02. \code{plotframe.parse.interval()} turns text such as
+#' \code{"1day"}, \code{"2 day"}, \code{"1 hour"}, \code{"2hr"},
+#' \code{"15 min"}, \code{"20min"} or \code{"1 week"} into minutes.
+#' \code{plotframe.pool.origin()} turns \code{pool.start} into the date
+#' multi-day pools are counted from.
+#' @keywords internal
+#' @noRd
+plotframe.parse.interval <- function(x) {
+  if (!is.character(x) || length(x) != 1 || is.na(x)) stop("`pool.interval` must be one text value, e.g. \"1day\", \"2 hour\" or \"15 min\".")
+  s <- tolower(gsub("\\s+", "", x))
+  m <- regmatches(s, regexec("^([0-9]*\\.?[0-9]+)?(minutes|minute|mins|min|m|hours|hour|hrs|hr|h|days|day|d|weeks|week|wks|wk|w)$", s))[[1]]
+  if (length(m) == 0) stop("`pool.interval` = \"", x, "\" not recognized - use a number and a unit, e.g. \"1day\", \"2 day\", \"1 hour\", \"15 min\" or \"1 week\".")
+  n <- if (nzchar(m[2])) as.numeric(m[2]) else 1
+  unit <- substr(m[3], 1, 1)
+  mins <- n * switch(unit, m = 1, h = 60, d = 1440, w = 10080)
+  if (!is.finite(mins) || mins <= 0) stop("`pool.interval` must be greater than zero.")
+  if (mins > 1440 && mins %% 1440 != 0) stop("`pool.interval` = \"", x, "\": intervals longer than a day must be whole days (e.g. \"2 day\", \"1 week\").")
+  if (mins < 1440 && abs(mins - round(mins)) > 1e-9) stop("`pool.interval` = \"", x, "\": intervals shorter than a day must be whole minutes.")
+  mins
+}
+
+#' @keywords internal
+#' @noRd
+plotframe.interval.label <- function(mins) {
+  if (mins %% 1440 == 0) paste(mins / 1440, "day")
+  else if (mins %% 60 == 0) paste(mins / 60, "hour")
+  else paste(mins, "min")
+}
+
+#' @keywords internal
+#' @noRd
+plotframe.pool.origin <- function(pool.start, d) {
+  if (!is.character(pool.start) || length(pool.start) != 1 || is.na(pool.start)) stop("`pool.start` must be one text value.")
+  ps <- trimws(pool.start); low <- tolower(ps)
+  if (all(is.na(d))) stop("No usable dates to pool.")
+  if (low == "observed") return(list(origin = min(d, na.rm = TRUE)))
+  if (grepl("^[0-9]{4}-[0-9]{2}-[0-9]{2}$", ps)) {
+    o <- as.Date(ps)
+    if (is.na(o)) stop("`pool.start` = \"", ps, "\" is not a valid date.")
+    return(list(origin = o))
+  }
+  month <- NA_integer_
+  if (low == "julian") month <- 1L
+  mm <- regmatches(low, regexec("^%m\\s*=\\s*<?\\s*([0-9]{1,2})\\s*>?$", low))[[1]]
+  if (length(mm) == 2) month <- as.integer(mm[2])
+  if (is.na(month)) {
+    hit <- which(substr(tolower(month.name), 1, 3) == substr(low, 1, 3) &
+                 startsWith(tolower(month.name), low))
+    if (length(hit) == 1 && nchar(low) >= 3) month <- hit
+  }
+  if (is.na(month) || month < 1 || month > 12) {
+    stop("`pool.start` = \"", ps, "\" not recognized - use \"observed\", a date \"YYYY-MM-DD\", ",
+         "a month (\"%m = 1\", \"jan\" or \"January\") or \"julian\".")
+  }
+  ## restart every year on the 1st of that month
+  y <- as.integer(format(d, "%Y"))
+  start.this <- as.Date(sprintf("%04d-%02d-01", y, month))
+  y <- ifelse(!is.na(d) & d < start.this, y - 1L, y)
+  origin <- as.Date(sprintf("%04d-%02d-01", y, month))
+  cycle.end <- as.Date(sprintf("%04d-%02d-01", y + 1L, month))
+  list(origin = origin, cycle.end = cycle.end)
 }

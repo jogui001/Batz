@@ -24,15 +24,27 @@
 #'   duplicate rows from the final combined event log.
 #' @param log.file Logical, default \code{FALSE}. If \code{TRUE}, also
 #'   return (and auto-assign) \code{aru.eventlog.filelog} (one row per input
-#'   file: \code{$filename}, \code{$file.type}, \code{$status}, \code{$notes})
+#'   file: \code{$filename}, \code{$file.type}, \code{$status}, \code{$notes},
+#'   \code{$strip.special})
 #'   and \code{aru.eventlog.sitelog} (one row per site: \code{$client},
 #'   \code{$project}, \code{$project.code}, \code{$site.name}, \code{$deployment},
-#'   \code{$service.count}, \code{$recovery}, \code{$duplicates.removed}).
+#'   \code{$service.count}, \code{$recovery}, \code{$duplicates.removed},
+#'   \code{$strip.special}). \code{$strip.special} (last column of both) is
+#'   \code{"FALSE"} (not selected), \code{"TRUE NONE"} (nothing found), or
+#'   \code{"TRUE ; <header>; ..."} (the headers where characters were
+#'   removed - in that file for \code{aru.eventlog.filelog}; across all files
+#'   read in the call for \code{aru.eventlog.sitelog}).
 #' @param max.missing Integer, default \code{5}. The largest number of
 #'   canonical headers a file is allowed to be missing (after exact,
 #'   case-insensitive matching) and still be merged in; missing headers are
 #'   padded with \code{NA}. A file missing more than this many headers is
 #'   not merged and is logged with status \code{"failed"}.
+#' @param strip.special Logical, default \code{TRUE}. If \code{TRUE},
+#'   simplifies accented letters and
+#'   symbols (\code{é} -> \code{e}, \code{×} -> \code{X}) and removes other non-ASCII special characters (e.g. \code{°}, \code{µ},
+#'   \code{™}) from the data after loading - see
+#'   \code{@details}. Files are always read with a UTF-8/Latin-1 fallback,
+#'   so a stray \code{°} can't stop them loading, whatever this is set to.
 #'
 #' @return Invisibly, a named list: \code{aru.eventlog} (always), plus
 #'   \code{aru.eventlog.filelog} and \code{aru.eventlog.sitelog} when
@@ -149,6 +161,36 @@
 #' \code{event.type}/\code{file.type} category labels, not this function's
 #' \code{service.count}/\code{site.name} columns.
 #'
+#' \strong{Follow-up, 2026-09-30, per Josh - special characters.} Every
+#' input CSV is now read with \code{special.read.csv()} (UTF-8, falling back
+#' to Latin-1), so a form export with a stray Excel-saved \code{°} byte no
+#' longer fails with \code{invalid multibyte string}. With the new
+#' \code{strip.special = TRUE} (default), each file is passed through
+#' \code{special.strip()} straight after reading - before header
+#' standardization, duplicate-column resolution, classification or header
+#' matching - removing non-ASCII characters from its text columns (a column
+#' that changed is re-typed, so e.g. \code{"42.5°"} in \code{$x}/\code{$y}
+#' becomes the number \code{42.5}). Column names are not changed by
+#' stripping. Both log tables gain a last column \code{$strip.special}:
+#' per file in \code{aru.eventlog.filelog} (standardized header names), and
+#' for the whole call in \code{aru.eventlog.sitelog} (a site's rows can
+#' come from several files).
+#'
+#' \strong{Follow-up, 2026-10-02, per Josh - accents simplified, log
+#' counts.} With \code{strip.special = TRUE}, accented letters and common
+#' symbols are now simplified instead of dropped (\code{café} ->
+#' \code{cafe}, \code{Quercus × bebbiana} -> \code{Quercus X bebbiana},
+#' curly quotes -> straight quotes); characters with no plain equivalent
+#' (e.g. \code{°}, \code{µ}, \code{™}) are still removed. Column names
+#' are cleaned the same way. The log gets four new columns right after
+#' \code{$strip.special}: \code{$Accented.letters.header} and
+#' \code{$removed.symbols.header} (number of unique column names with a
+#' character simplified / removed), and \code{$Accented.letters.data} and
+#' \code{$removed.symbols.data} (number of unique data values with a
+#' character simplified / removed - \code{café} in 500 rows counts once;
+#' \code{café} and \code{French café} count twice). They are \code{NA}
+#' when \code{strip.special = FALSE}.
+#'
 #' @examples
 #' \dontrun{
 #' batz.generate_arumeta.eventlog()
@@ -164,7 +206,8 @@ batz.generate_arumeta.eventlog <- function(dir.load = getwd(),
                                             load.pattern      = c("*HabitatAssessments_20m.csv", "*Acoustic_SiteVisitARU.csv"),
                                             duplicates.remove = TRUE,
                                             log.file          = FALSE,
-                                            max.missing       = 5) {
+                                            max.missing       = 5,
+                                            strip.special     = TRUE) {
 
   pattern.regex <- function(p) paste(vapply(p, utils::glob2rx, character(1)), collapse = "|")
 
@@ -279,8 +322,13 @@ batz.generate_arumeta.eventlog <- function(dir.load = getwd(),
   }
 
   process.one.file <- function(f) {
-    raw <- read.csv(f, stringsAsFactors = FALSE, check.names = FALSE)
-    names(raw) <- sub("^﻿", "", names(raw))
+    raw <- special.read.csv(f, stringsAsFactors = FALSE, check.names = FALSE)
+    ## special characters (per Josh, 2026-09-30): strip right after reading;
+    ## stripped headers are reported under their standardized names.
+    s <- special.strip(raw, strip.special); raw <- s$df
+    last.counts <<- s$counts
+    strip.headers <- standardize.headers(sub("^\ufeff", "", s$headers))
+    names(raw) <- sub("^\ufeff", "", names(raw))
     ## Standardize incoming raw headers to snake_case (trim whitespace,
     ## replace special characters, lowercase) before anything else touches
     ## them - per project preference, added 2026-09-14.
@@ -311,7 +359,7 @@ batz.generate_arumeta.eventlog <- function(dir.load = getwd(),
       return(list(status = "failed", file.type = file.type,
                   notes = paste0("missing headers (", n.missing, " > max.missing): ",
                                   paste(missing.headers, collapse = ", ")),
-                  data = NULL))
+                  data = NULL, strip.headers = strip.headers))
     }
 
     out <- as.data.frame(tmp[matched[present]], stringsAsFactors = FALSE, check.names = FALSE)
@@ -329,7 +377,8 @@ batz.generate_arumeta.eventlog <- function(dir.load = getwd(),
     }
     notes <- if (length(notes.parts) > 0) paste(notes.parts, collapse = " | ") else NA_character_
 
-    list(status = status, file.type = file.type, notes = notes, data = out)
+    list(status = status, file.type = file.type, notes = notes, data = out,
+         strip.headers = strip.headers)
   }
 
   explode.service.events <- function(df) {
@@ -363,15 +412,23 @@ batz.generate_arumeta.eventlog <- function(dir.load = getwd(),
   deployment <- NULL
   service    <- NULL
   file.log.rows <- list()
+  all.strip.headers <- character(0)
+  all.counts <- NULL
+  last.counts <- NULL
 
   if (length(all.files) == 0) {
     cat("No files matching load.pattern found.\n")
   } else {
     for (f in all.files) {
+      last.counts <- NULL
       r <- process.one.file(f)
+      all.strip.headers <- c(all.strip.headers, r$strip.headers)
+      all.counts <- special.counts.add(all.counts, last.counts)
       file.log.rows[[length(file.log.rows) + 1]] <- data.frame(
         filename = basename(f), file.type = r$file.type, status = r$status,
-        notes = r$notes, stringsAsFactors = FALSE)
+        notes = r$notes,
+        special.log.cols(strip.special, r$strip.headers, last.counts),
+        stringsAsFactors = FALSE)
 
       cat("  ", basename(f), " -> ", r$file.type, " (", r$status, ")\n", sep = "")
 
@@ -389,7 +446,8 @@ batz.generate_arumeta.eventlog <- function(dir.load = getwd(),
     do.call(rbind, file.log.rows)
   } else {
     data.frame(filename = character(0), file.type = character(0), status = character(0),
-               notes = character(0), stringsAsFactors = FALSE)
+               notes = character(0), special.log.cols.empty(),
+               stringsAsFactors = FALSE)
   }
 
   if (!is.null(deployment) && nrow(deployment) > 0) {
@@ -485,6 +543,7 @@ batz.generate_arumeta.eventlog <- function(dir.load = getwd(),
         service.count  = sum(sub$event.type %in% c("status_check", "download", "aru_swap", "mic_swap", "service")),
         recovery       = sum(sub$event.type == "recovery"),
         duplicates.removed = sum(dup.sites == s),
+        special.log.cols(strip.special, all.strip.headers, all.counts),
         stringsAsFactors = FALSE
       )
     })
@@ -494,6 +553,7 @@ batz.generate_arumeta.eventlog <- function(dir.load = getwd(),
                                         project.code = character(0), site.name = character(0),
                                         deployment = integer(0), service.count = integer(0),
                                         recovery = integer(0), duplicates.removed = integer(0),
+                                        special.log.cols.empty(),
                                         stringsAsFactors = FALSE)
   }
 

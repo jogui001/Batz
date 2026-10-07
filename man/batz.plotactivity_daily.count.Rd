@@ -18,7 +18,9 @@ batz.plotactivity_daily.count(
   site.label = "",
   write.csv.data = FALSE,
   dir.save = getwd(),
-  snake_case = FALSE
+  snake_case = FALSE,
+  strip.special = TRUE,
+  strip.special.plotopts = FALSE
 )
 }
 \arguments{
@@ -106,7 +108,7 @@ generated PNG (and CSV, if \code{write.csv.data = TRUE}) is saved into.}
 Josh's request to audit and extend the snake_case output option
 package-wide (see \code{\link{batz.generate_plotframe.bat}}'s sibling
 parameter). Controls only the CSV written when \code{write.csv.data =
-TRUE} - applied to a copy of \code{data} right before that write, never
+  TRUE} - applied to a copy of \code{data} right before that write, never
 to the \code{$data} this function returns (see Value; that object still
 needs its usual dot-separated names, e.g. \code{$date.monitoringnight}, to
 chain straight into \code{\link{batz.plotactivity_heatmap}} per
@@ -115,6 +117,25 @@ headers exactly as before. \code{TRUE} runs the written copy's column
 names through \code{standardize.headers()} first. See Details, "A
 near-no-op for most columns", for why this mostly only affects one
 column here.}
+
+\item{strip.special}{Logical, default \code{TRUE}. If \code{TRUE},
+simplifies accented letters and
+symbols (\code{é} -> \code{e}, \code{×} -> \code{X}) and removes other non-ASCII special characters (e.g. \code{°}, \code{µ},
+\code{™}) from the data input(s) (\code{data}; settings tables follow \code{strip.special.plotopts})
+at the very start, before any header check - see \code{@details}.
+This function reads no files itself; inputs loaded with a batz
+reader already get a UTF-8/Latin-1 fallback, so a stray \code{°}
+  can't stop them loading, whatever this is set to.}
+
+\item{strip.special.plotopts}{Logical, default \code{FALSE}. Added
+2026-10-02, per Josh. Controls special characters in the settings
+table(s) - \code{aes.default} - separately from the data. \code{FALSE} (default)
+leaves them untouched, so plot text such as \code{"Temperature (°C)"}
+  keeps its symbol; if a cell can't be read in this R session (e.g. a
+Latin-1 \code{°} byte), the function stops with an error naming the
+table, the number of incompatible characters, and the first 5 rows per
+header (\code{+} if more). \code{TRUE} simplifies/removes special
+characters in them the same way \code{strip.special} does for data.}
 }
 \value{
 Invisibly, a list with \code{data} (the filtered per-detection
@@ -412,6 +433,30 @@ parameter defaults changed for consistency") - this is a real behavior
 change for any existing caller relying on the old \code{TRUE} default to
 silently drop \code{NoID}/blank rows; such callers now need to pass
 \code{trim.noid = TRUE} explicitly.
+
+\strong{Follow-up, 2026-09-30, per Josh - special characters.} New
+last argument \code{strip.special = TRUE}. Every data frame input
+(\code{data} and \code{aes.default}) is now passed through the shared internal
+helper \code{special.strip()} as the very first step of the function,
+before any header standardization or required-header check: with
+\code{strip.special = TRUE}, non-ASCII characters (e.g. \code{°},
+\code{µ}, \code{é}, smart quotes) are removed from text/factor
+columns, and a column that had characters removed is re-typed the way
+\code{read.csv()} would (so \code{"42.5°"} becomes the number
+\code{42.5}); column names are not changed. This includes plot-text
+settings in \code{aes.default} (titles, axis/legend labels), so a
+label such as \code{"Temperature (°C)"} is drawn as
+\code{"Temperature (C)"} - pass \code{strip.special = FALSE} to keep
+such characters. This function reads no files and writes no log, so
+there is no \code{$strip.special} log column. Inputs without special
+characters behave exactly as before.
+
+\strong{Follow-up, 2026-10-02, per Josh - plot settings and accents.}
+\code{strip.special} now applies to the data input(s) only; \code{aes.default}
+are governed by the new \code{strip.special.plotopts} (default
+\code{FALSE}), so symbols in plot labels are kept unless you ask
+otherwise. Accented letters are now simplified rather than dropped
+(\code{café} -> \code{cafe}).
 }
 \examples{
 \dontrun{
@@ -441,4 +486,14 @@ result <- batz.plotactivity_daily.count(
 \code{\link{batz.plotactivity_heatmap}}, which takes this
 function's own \code{$data} return value (or any data frame shaped the
 same way) as its own \code{data} input.
+
+\strong{Follow-up, 2026-10-02, per Josh - monitoring-night column
+names.} If \code{groupby.date} is \code{"monnight"},
+\code{"monitoringnight"}, \code{"date-12"} or
+\code{"date.monitoringnight"} and that column isn't in \code{data},
+the first of the others that is there is used instead, with a NOTE.
+The call time is now also read from SM5 file names
+(\verb{<ARU>_<MIC>_<YYYYMMDD>_<HHMMSS>_<...>}) as well as SM4 ones
+(\verb{<ARU>_<YYYYMMDD>_<HHMMSS>_<...>}); SM4 names give the same result
+as before.
 }

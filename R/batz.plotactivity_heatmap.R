@@ -51,6 +51,23 @@
 #' @param dir.save Character, default \code{getwd()}. Directory the
 #'   generated PNG is saved into.
 #'
+#' @param strip.special Logical, default \code{TRUE}. If \code{TRUE},
+#'   simplifies accented letters and
+#'   symbols (\code{é} -> \code{e}, \code{×} -> \code{X}) and removes other non-ASCII special characters (e.g. \code{°}, \code{µ},
+#'   \code{™}) from the data input(s) (\code{data}; settings tables follow \code{strip.special.plotopts})
+#'   at the very start, before any header check - see \code{@details}.
+#'   This function reads no files itself; inputs loaded with a batz
+#'   reader already get a UTF-8/Latin-1 fallback, so a stray \code{°}
+#'   can't stop them loading, whatever this is set to.
+#' @param strip.special.plotopts Logical, default \code{FALSE}. Added
+#'   2026-10-02, per Josh. Controls special characters in the settings
+#'   table(s) - \code{aes.default} - separately from the data. \code{FALSE} (default)
+#'   leaves them untouched, so plot text such as \code{"Temperature (°C)"}
+#'   keeps its symbol; if a cell can't be read in this R session (e.g. a
+#'   Latin-1 \code{°} byte), the function stops with an error naming the
+#'   table, the number of incompatible characters, and the first 5 rows per
+#'   header (\code{+} if more). \code{TRUE} simplifies/removes special
+#'   characters in them the same way \code{strip.special} does for data.
 #' @return Invisibly, a list with \code{data} (the complete night x bin
 #'   grid actually plotted: a column named after \code{date.col} (default
 #'   \code{$date.monitoringnight}), \code{$bin.index},
@@ -261,6 +278,13 @@
 #' now genuinely named after whatever \code{date.col} was passed as,
 #' matching this parameter's own documented contract for the first time.
 #'
+#' \strong{Follow-up, 2026-10-02, per Josh - plot settings and accents.}
+#' \code{strip.special} now applies to the data input(s) only; \code{aes.default}
+#' are governed by the new \code{strip.special.plotopts} (default
+#' \code{FALSE}), so symbols in plot labels are kept unless you ask
+#' otherwise. Accented letters are now simplified rather than dropped
+#' (\code{café} -> \code{cafe}).
+#'
 #' @seealso \code{\link{batz.plotactivity_daily.count}}, whose own
 #'   \code{$data} return value is the natural \code{data} input here.
 #'
@@ -271,6 +295,23 @@
 #' detection count). \code{$n.capped} - the internal, already-clamped fill
 #' value used only for the plotted color scale - keeps its own name; it is
 #' a distinct column, not the renamed one.
+#'
+#' \strong{Follow-up, 2026-09-30, per Josh - special characters.} New
+#' last argument \code{strip.special = TRUE}. Every data frame input
+#' (\code{data} and \code{aes.default}) is now passed through the shared internal
+#' helper \code{special.strip()} as the very first step of the function,
+#' before any header standardization or required-header check: with
+#' \code{strip.special = TRUE}, non-ASCII characters (e.g. \code{°},
+#' \code{µ}, \code{é}, smart quotes) are removed from text/factor
+#' columns, and a column that had characters removed is re-typed the way
+#' \code{read.csv()} would (so \code{"42.5°"} becomes the number
+#' \code{42.5}); column names are not changed. This includes plot-text
+#' settings in \code{aes.default} (titles, axis/legend labels), so a
+#' label such as \code{"Temperature (°C)"} is drawn as
+#' \code{"Temperature (C)"} - pass \code{strip.special = FALSE} to keep
+#' such characters. This function reads no files and writes no log, so
+#' there is no \code{$strip.special} log column. Inputs without special
+#' characters behave exactly as before.
 #'
 #' @examples
 #' \dontrun{
@@ -294,7 +335,24 @@ batz.plotactivity_heatmap <- function(data,
                                        project.name = "new.project",
                                        aes.style = "overide.value",
                                        site.label = "",
-                                       dir.save = getwd()) {
+                                       dir.save = getwd(),
+                                       strip.special = TRUE,
+                                       strip.special.plotopts = FALSE) {
+
+  ## strip.special (2026-09-30, per Josh - see @details): remove non-ASCII
+  ## special characters from every data-frame input before anything else
+  ## (header standardization/checks included). special.strip() returns
+  ## non-data-frames unchanged and only modifies these local copies.
+  objname.aes.default <- paste(deparse(substitute(aes.default)), collapse = "")
+  data <- special.strip(data, strip.special)$df
+  ## aes.default is a settings table, not data - stripped only when
+  ## strip.special.plotopts = TRUE (2026-10-02, per Josh); otherwise checked
+  ## for characters that can't be read, with a readable error.
+  if (isTRUE(strip.special.plotopts)) {
+    aes.default <- special.strip(aes.default, TRUE)$df
+  } else {
+    special.check.plotopts(aes.default, "aes.default", objname.aes.default, "batz.plotactivity_heatmap")
+  }
 
   AES.DEFAULT.REQUIRED <- c("category", "parameter", "default.value")
   AES.DEFAULT.REQUIRED.PARAMETERS <- c(

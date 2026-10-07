@@ -175,6 +175,30 @@
 #' use, including \code{templog.merged}/\code{templog.notes}'s own output
 #' columns.
 #'
+#' \strong{Follow-up, 2026-09-30, per Josh - special characters.} New
+#' argument \code{strip.special} (default \code{TRUE}). Every
+#' \code{templog.meta.csv} is now read with the shared
+#' \code{special.read.csv()} helper and every raw \verb{*templog.csv} with
+#' \code{special.read.lines()} (the internal BOM-aware line reader now wraps
+#' it), both of which fall back to Latin-1 when a file isn't valid UTF-8, so
+#' a degree sign saved by Excel as a single byte no longer breaks loading;
+#' this always applies. Immediately after each meta file / raw logger file is
+#' loaded (before de-duplication, header detection, date parsing and meta
+#' matching), \code{special.strip()} removes non-ASCII characters from its
+#' text columns when \code{strip.special = TRUE}. \strong{Judgment call:} the
+#' \code{°F}/\code{°C} unit detection still looks at the file's ORIGINAL
+#' (unstripped) header row, so stripping the degree sign can never change
+#' \code{$temp.type} (e.g. a header like \code{"Temp°F"} would otherwise
+#' lose its unit). \code{templog.notes} gains a last column
+#' \code{$strip.special}, one label per logger file: raw logger columns are
+#' positional, so they are reported by their output names (\code{V1} ->
+#' \code{obs}, \code{V2} -> \code{date.time}, \code{V3} -> \code{temp.dry.c},
+#' \code{V4} -> \code{temp.wet.c}; excess columns keep \code{V5}, ...), and -
+#' when the file matched a meta row - any \code{templog.meta.csv} headers
+#' where characters were removed are added as \code{meta:<header>} (the
+#' canonical, renamed meta header). The column keeps the exact name
+#' \code{strip.special} even when \code{snake_case = TRUE}.
+#'
 #' @param dir.load Directory to search for files matching \code{load.pattern}.
 #'   Default: current working directory.
 #' @param load.pattern Character vector of length 2, default
@@ -232,6 +256,11 @@
 #'   \code{$date_time}, \code{$temp.dry.c} -> \code{$temp_dry_c}) - for a
 #'   caller who specifically wants a snake_case CSV/data frame out of this
 #'   function, without having to convert it themselves afterward.
+#' @param strip.special Logical, default \code{TRUE}. If \code{TRUE}, simplifies accented
+#'   letters (\code{é} -> \code{e}) and removes other non-ASCII special
+#'   characters (e.g. \code{°}, \code{µ}) from the data after loading - see \code{@details}. Files are
+#'   always read with a UTF-8/Latin-1 fallback, so a stray \code{°} can't stop
+#'   them loading, whatever this is set to.
 #'
 #' @return Invisibly, a list with two data frames:
 #'   \describe{
@@ -242,10 +271,30 @@
 #'       standardization" above).}
 #'     \item{templog.notes}{\code{$logger.serial}, \code{$date.start},
 #'       \code{$date.end}, \code{$temp.type}, \code{$rows.in},
-#'       \code{$rows.out}, \code{$rows.trimmed}, \code{$notes}.}
+#'       \code{$rows.out}, \code{$rows.trimmed}, \code{$notes},
+#'       \code{$strip.special} (last column): \code{"FALSE"} (not selected),
+#'       \code{"TRUE NONE"} (nothing found), or \code{"TRUE ; <header>; ..."}
+#'       (the headers where characters were removed for that logger file -
+#'       see @details, "Follow-up, 2026-09-30").}
 #'   }
 #'   (or their snake_case equivalents if \code{snake_case = TRUE} - see
 #'   that parameter above).
+#'
+#' @details
+#' \strong{Follow-up, 2026-10-02, per Josh - accents simplified, log
+#' counts.} With \code{strip.special = TRUE}, accented letters and common
+#' symbols are now simplified instead of dropped (\code{café} ->
+#' \code{cafe}, \code{Quercus × bebbiana} -> \code{Quercus X bebbiana},
+#' curly quotes -> straight quotes); characters with no plain equivalent
+#' (e.g. \code{°}, \code{µ}, \code{™}) are still removed. Column names
+#' are cleaned the same way. The log gets four new columns right after
+#' \code{$strip.special}: \code{$Accented.letters.header} and
+#' \code{$removed.symbols.header} (number of unique column names with a
+#' character simplified / removed), and \code{$Accented.letters.data} and
+#' \code{$removed.symbols.data} (number of unique data values with a
+#' character simplified / removed - \code{café} in 500 rows counts once;
+#' \code{café} and \code{French café} count twice). They are \code{NA}
+#' when \code{strip.special = FALSE}.
 #'
 #' @examples
 #' \dontrun{
@@ -267,7 +316,8 @@ batz.merge_temp.logger <- function(dir.load = getwd(),
                                           dir.save = getwd(),
                                           write.output = TRUE,
                                           project.name = "",
-                                          snake_case = FALSE) {
+                                          snake_case = FALSE,
+                                          strip.special = TRUE) {
 
   ## ---- internal helpers ----------------------------------------------------
   ## convert a plain wildcard/glob suffix pattern (or vector of them) into one
@@ -283,17 +333,13 @@ batz.merge_temp.logger <- function(dir.load = getwd(),
     rbind(a[all.cols], b[all.cols])
   }
 
+  ## 2026-09-30 (special characters): now wraps the shared
+  ## special.read.lines() helper, which skips a UTF-8 BOM and falls back to
+  ## Latin-1 for lines that aren't valid UTF-8 (the previous raw-byte reader
+  ## marked every byte as UTF-8, so a Latin-1 degree byte broke later
+  ## regex/header checks).
   read.raw.lines <- function(file) {
-    raw3 <- readBin(file, what = "raw", n = 3)
-    has.bom <- length(raw3) == 3 &&
-               identical(as.integer(raw3), c(0xEFL, 0xBBL, 0xBFL))
-    con <- file(file, open = "rb")
-    if (has.bom) readBin(con, what = "raw", n = 3)
-    raw.all <- readBin(con, what = "raw", n = file.info(file)$size)
-    close(con)
-    txt <- rawToChar(raw.all, multiple = FALSE)
-    Encoding(txt) <- "UTF-8"
-    strsplit(txt, "\r\n|\n|\r")[[1]]
+    special.read.lines(file)
   }
 
   f.to.c <- function(temp.f) (temp.f - 32) * 5 / 9
@@ -352,17 +398,27 @@ batz.merge_temp.logger <- function(dir.load = getwd(),
   }
 
   is.blank <- function(x) is.na(x) | trimws(x) == ""
-  deg <- "°"
+  deg <- "\u00b0"
 
   ## ===========================================================================
   ## STEP 1: load templog.meta.csv file(s), merge + de-dup
   ## ===========================================================================
   meta.files <- list.files(dir.load, pattern = pattern.regex(load.pattern[2]),
                             recursive = dir.sub, full.names = TRUE)
+  meta.special.raw <- character(0)   # raw meta headers where special characters were removed
+  meta.special.counts <- NULL        # simplified/removed counts across meta files (2026-10-02)
 
   if (length(meta.files) > 0) {
-    meta.list <- lapply(meta.files, read.csv, stringsAsFactors = FALSE,
+    meta.list <- lapply(meta.files, special.read.csv, stringsAsFactors = FALSE,
                          colClasses = "character", check.names = FALSE)
+    ## strip special characters from each meta file right after loading
+    ## (2026-09-30) - before merging/de-duplication
+    for (mi in seq_along(meta.list)) {
+      s.meta <- special.strip(meta.list[[mi]], strip.special)
+      meta.list[[mi]] <- s.meta$df
+      meta.special.raw <- c(meta.special.raw, s.meta$headers)
+      meta.special.counts <- special.counts.add(meta.special.counts, s.meta$counts)
+    }
     templog.meta <- Reduce(rbind.fill, meta.list)
     templog.meta <- templog.meta[!duplicated(templog.meta), ]
     ## header standardization (per Josh, 2026-09-14 project preference):
@@ -435,7 +491,14 @@ batz.merge_temp.logger <- function(dir.load = getwd(),
                  else if ("serial_num" %in% names(templog.meta)) "serial_num"
                  else NA_character_)
 
+  ## canonical (standardized + renamed) names of the meta headers where
+  ## special characters were removed - for templog.notes$strip.special
+  meta.special <- unique(standardize.headers(meta.special.raw))
+  meta.special.idx <- match(meta.special, names(rename.map))
+  meta.special[!is.na(meta.special.idx)] <- rename.map[meta.special.idx[!is.na(meta.special.idx)]]
+
   if (!is.na(serial.col)) {
+    meta.special[meta.special == serial.col] <- "logger.serial"
     names(templog.meta)[names(templog.meta) == serial.col] <- "logger.serial"
     serial.col <- "logger.serial"
   }
@@ -535,7 +598,7 @@ batz.merge_temp.logger <- function(dir.load = getwd(),
     logger.serial = character(0), date.start = character(0),
     date.end = character(0), temp.type = character(0),
     rows.in = integer(0), rows.out = integer(0), rows.trimmed = integer(0),
-    notes = character(0),
+    notes = character(0), special.log.cols.empty(),
     stringsAsFactors = FALSE
   )
 
@@ -569,6 +632,21 @@ batz.merge_temp.logger <- function(dir.load = getwd(),
                    stringsAsFactors = FALSE)
     names(df) <- paste0("V", seq_len(ncol(df)))
 
+    ## strip special characters right after loading (2026-09-30). The
+    ## unstripped copy is kept ONLY so the degree-sign unit detection below
+    ## still sees the original header row; row.id tracks which original
+    ## row each remaining row of df is.
+    df.orig <- df
+    s.strip <- special.strip(df, strip.special)
+    df <- s.strip$df
+    ## keep every column character, as before (special.strip re-types a
+    ## column it changed, the way read.csv would)
+    for (col in s.strip$headers) df[[col]] <- as.character(df[[col]])
+    row.id <- seq_len(nrow(df))
+    v.out.names <- c(V1 = "obs", V2 = "date.time", V3 = "temp.dry.c", V4 = "temp.wet.c")
+    file.special <- ifelse(s.strip$headers %in% names(v.out.names),
+                           v.out.names[s.strip$headers], s.strip$headers)
+
     col.notes <- NA_character_
     if (ncol(df) > 4) {
       n.trim <- ncol(df) - 4
@@ -581,8 +659,11 @@ batz.merge_temp.logger <- function(dir.load = getwd(),
 
     if (nrow(df) > 0 && grepl("^Plot Title", df$V1[1], ignore.case = TRUE)) {
       df <- df[-1, , drop = FALSE]
+      row.id <- row.id[-1]
     }
-    df <- df[!(is.blank(df$V3) & is.blank(df$V4)), , drop = FALSE]
+    keep.nonblank <- !(is.blank(df$V3) & is.blank(df$V4))
+    df <- df[keep.nonblank, , drop = FALSE]
+    row.id <- row.id[keep.nonblank]
     row.names(df) <- NULL
 
     rows.out <- nrow(df)
@@ -595,7 +676,9 @@ batz.merge_temp.logger <- function(dir.load = getwd(),
       header.notes <- "no header present"
       temp.type <- "C.default"
     } else {
-      header.row <- as.character(df[1, ])
+      ## unit detection uses the ORIGINAL (unstripped) header row, so
+      ## strip.special can never change temp.type - see @details
+      header.row <- as.character(df.orig[row.id[1], seq_len(min(4, ncol(df.orig)))])
       if (any(grepl(paste0(deg, "f|\\bF\\b|fahrenheit"), header.row, ignore.case = TRUE))) {
         temp.type <- "F"
       } else if (any(grepl(paste0(deg, "c|\\bC\\b|celsius"), header.row, ignore.case = TRUE))) {
@@ -652,7 +735,11 @@ batz.merge_temp.logger <- function(dir.load = getwd(),
     templog.notes <- rbind.fill(templog.notes, data.frame(
       logger.serial = serial.num, date.start = date.start, date.end = date.end,
       temp.type = temp.type, rows.in = rows.in, rows.out = rows.out,
-      rows.trimmed = rows.trimmed, notes = notes, stringsAsFactors = FALSE
+      rows.trimmed = rows.trimmed, notes = notes,
+      special.log.cols(strip.special, c(
+        file.special, if (!is.null(meta.row) && length(meta.special) > 0) paste0("meta:", meta.special)),
+        if (!is.null(meta.row)) special.counts.add(s.strip$counts, meta.special.counts) else s.strip$counts),
+      stringsAsFactors = FALSE
     ))
 
     temp.col3 <- suppressWarnings(as.numeric(df$V3))
@@ -731,6 +818,11 @@ batz.merge_temp.logger <- function(dir.load = getwd(),
   if (snake_case) {
     names(templog.merged) <- standardize.headers(names(templog.merged))
     names(templog.notes)  <- standardize.headers(names(templog.notes))
+    ## keep the log column's exact name (2026-09-30)
+    special.cols <- c("strip.special", "Accented.letters.header", "removed.symbols.header",
+                      "Accented.letters.data", "removed.symbols.data")
+    hit <- match(names(templog.notes), standardize.headers(special.cols))
+    names(templog.notes)[!is.na(hit)] <- special.cols[hit[!is.na(hit)]]
   }
 
   if (write.output) {

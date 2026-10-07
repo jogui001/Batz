@@ -11,7 +11,8 @@ batz.datawrangler_load.files(
   log.file = FALSE,
   header.match = FALSE,
   duplicates.skip = FALSE,
-  objects.max = 25
+  objects.max = 25,
+  strip.special = TRUE
 )
 }
 \arguments{
@@ -34,7 +35,11 @@ below), with one row per file the scan encountered: \code{$filename},
 \code{$status} (\code{"success"}/\code{"failed"}), \code{$action}
 (\code{"loaded"}/\code{"merged"}/\code{"skipped"}), \code{$reason} (see
 \code{Details}), \code{$objectname} (the object the file ended up in,
-or \code{NA} if it wasn't loaded at all).}
+or \code{NA} if it wasn't loaded at all), and \code{$strip.special}
+(last column): \code{"FALSE"} (not selected), \code{"TRUE NONE"}
+(nothing found), or \code{"TRUE ; <header>; ..."} (the headers where
+characters were removed in that file - across all its sheets for a
+multi-sheet \code{.xlsx}).}
 
 \item{header.match}{Logical, default \code{FALSE}. If \code{TRUE}, every
 file - not just ones sharing a file name with something already loaded
@@ -62,6 +67,13 @@ will create in one call. Once that many exist, no further BRAND-NEW
 objects are created - but merges (by name or by \code{header.match})
 into already-existing objects keep happening regardless, since they
 don't add to the count.}
+
+\item{strip.special}{Logical, default \code{TRUE}. If \code{TRUE},
+simplifies accented letters and
+symbols (\code{é} -> \code{e}, \code{×} -> \code{X}) and removes other non-ASCII special characters (e.g. \code{°}, \code{µ},
+\code{™}) from the data after loading - see
+\code{@details}. Files are always read with a UTF-8/Latin-1 fallback,
+so a stray \code{°} can't stop them loading, whatever this is set to.}
 }
 \value{
 Invisibly, a named list of everything that was loaded (data
@@ -147,6 +159,38 @@ anything via \code{header.match}). For \code{action = "merged"}, either
 \code{"could not read file"} (the file itself failed to read/parse - not
 one of the originally-specified reasons, added because there wasn't
 another option that fit a genuinely corrupt/unreadable file).
+
+\strong{Follow-up, 2026-09-30, per Josh - special characters.} Every
+\code{.csv} is now read with \code{special.read.csv()} (UTF-8, falling
+back to Latin-1), so a file with a stray Excel-saved \code{°} byte no
+longer fails with \code{invalid multibyte string} and gets skipped as
+\code{"could not read file"}. \code{.xlsx} files are still read with
+\code{readxl::read_excel()}. With the new \code{strip.special = TRUE}
+(default), each \code{.csv} and each individual \code{.xlsx} sheet is
+passed through \code{special.strip()} straight after it is read (before
+header standardization, matching or merging), removing non-ASCII
+characters from text columns; a column that had characters removed is
+re-typed, so \code{"42.5°"} becomes the number \code{42.5}. Column names
+are not affected by stripping (they are still standardized as before). If
+\code{log.file = TRUE}, the log gains a last column
+\code{$strip.special} naming, per file, the (standardized) headers where
+characters were removed; a file that could not be read gets
+\code{"TRUE NONE"} (or \code{"FALSE"}).
+
+\strong{Follow-up, 2026-10-02, per Josh - accents simplified, log
+counts.} With \code{strip.special = TRUE}, accented letters and common
+symbols are now simplified instead of dropped (\code{café} ->
+\code{cafe}, \code{Quercus × bebbiana} -> \code{Quercus X bebbiana},
+curly quotes -> straight quotes); characters with no plain equivalent
+(e.g. \code{°}, \code{µ}, \code{™}) are still removed. Column names
+are cleaned the same way. The log gets four new columns right after
+\code{$strip.special}: \code{$Accented.letters.header} and
+\code{$removed.symbols.header} (number of unique column names with a
+character simplified / removed), and \code{$Accented.letters.data} and
+\code{$removed.symbols.data} (number of unique data values with a
+character simplified / removed - \code{café} in 500 rows counts once;
+\code{café} and \code{French café} count twice). They are \code{NA}
+when \code{strip.special = FALSE}.
 }
 \examples{
 \dontrun{

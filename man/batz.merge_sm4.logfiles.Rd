@@ -9,7 +9,8 @@ batz.merge_sm4.logfiles(
   dir.sub = FALSE,
   load.pattern = c("*_A_Summary*.txt", "*_B_Summary*.txt"),
   duplicates.remove = TRUE,
-  log.file = FALSE
+  log.file = FALSE,
+  strip.special = TRUE
 )
 }
 \arguments{
@@ -42,6 +43,16 @@ with columns \code{$aru.name}, \code{$filename}, \code{$version},
 \code{$date.end}, \code{$date.unique}, \code{$date.range},
 \code{$records}, \code{$load.status} (\code{"Success"}/\code{"Failure"}),
 \code{$reason}, and \code{$filepath}.}
+
+\item{strip.special}{Logical, default \code{TRUE}. If \code{TRUE},
+simplifies accented letters and
+symbols (\code{é} -> \code{e}, \code{×} -> \code{X}) and removes other non-ASCII special characters (e.g. \code{°}, \code{µ},
+\code{™}) from each file's data after loading. Files are
+always read with a UTF-8/Latin-1 fallback, so a stray \code{°} can't
+stop them loading, whatever this is set to. The log gets a last column
+\code{$strip.special}: \code{"FALSE"} (not selected), \code{"TRUE
+  NONE"} (nothing found) or \code{"TRUE ; <header>; ..."} (headers where
+characters were removed).}
 }
 \value{
 Invisibly, a named list: \code{sm4logs.merged} (always), plus
@@ -217,6 +228,26 @@ documentation use the new name. Code that reads
 (file \code{R/batz.merge_sm4.logfiles.R}), matching
 \code{batz.merge_sm.logfiles()}. Same inputs and outputs; code calling
 the old name needs updating. Earlier paragraphs use the new name.
+
+\strong{Follow-up, 2026-09-30, per Josh - special characters.} New
+input \code{strip.special} (see above); files now load even with a
+stray Latin-1 \code{°} byte, and the log has a new last column
+\code{$strip.special}.
+
+\strong{Follow-up, 2026-10-02, per Josh - accents simplified, log
+counts.} With \code{strip.special = TRUE}, accented letters and common
+symbols are now simplified instead of dropped (\code{café} ->
+\code{cafe}, \code{Quercus × bebbiana} -> \code{Quercus X bebbiana},
+curly quotes -> straight quotes); characters with no plain equivalent
+(e.g. \code{°}, \code{µ}, \code{™}) are still removed. Column names
+are cleaned the same way. The log gets four new columns right after
+\code{$strip.special}: \code{$Accented.letters.header} and
+\code{$removed.symbols.header} (number of unique column names with a
+character simplified / removed), and \code{$Accented.letters.data} and
+\code{$removed.symbols.data} (number of unique data values with a
+character simplified / removed - \code{café} in 500 rows counts once;
+\code{café} and \code{French café} count twice). They are \code{NA}
+when \code{strip.special = FALSE}.
 }
 \examples{
 \dontrun{

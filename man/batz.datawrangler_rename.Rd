@@ -12,7 +12,8 @@ batz.datawrangler_rename(
   duplicates.count = FALSE,
   duplicates.list = FALSE,
   match.first = TRUE,
-  headers.rename = FALSE
+  headers.rename = FALSE,
+  strip.special = TRUE
 )
 }
 \arguments{
@@ -68,6 +69,16 @@ looks up each of \code{data}'s column HEADERS in \code{recode.table}'s
 first column, and renames any header found there to the matching second-
 column value. Headers with no match in \code{recode.table} are left
 unchanged. Requires \code{data} to be a data frame (errors otherwise).}
+
+\item{strip.special}{Logical, default \code{TRUE}. If \code{TRUE},
+simplifies accented letters and
+symbols (\code{é} -> \code{e}, \code{×} -> \code{X}) and removes other non-ASCII special characters (e.g. \code{°}, \code{µ},
+\code{™}) from every data frame input (\code{data}, when
+it is a data frame, and \code{recode.table}) at the start of the call -
+see \code{@details}. A vector \code{data} passes through unchanged.
+Files are always read with a UTF-8/Latin-1 fallback elsewhere in
+\code{batz}, so a stray \code{°} can't stop them loading, whatever this
+is set to (this function itself reads no files).}
 }
 \value{
 If \code{headers.rename = TRUE}, \code{data} unchanged except for
@@ -149,6 +160,29 @@ the recode itself treats every column the same way. With
 \code{headers.rename = TRUE}, those same diagnostics instead look at the
 column headers themselves (\code{names(data)}), since that's what's being
 matched/renamed in that mode.
+
+\strong{Follow-up, 2026-09-30, per Josh - special characters.} New last
+argument \code{strip.special = TRUE}. At the very start of the call,
+\code{data} (if it is a data frame) and \code{recode.table} are passed
+through \code{special.strip()}, removing non-ASCII characters (e.g.
+\code{°}) from their text columns before any matching, so a lookup key
+and a data value that differ only by such a character now match, and
+replacement values are substituted without them. Column names are not
+changed. Note this means that with \code{headers.rename = TRUE} the
+contents of a data-frame \code{data} are also stripped (and any column
+that changed is re-typed, e.g. \code{"42.5°"} becomes \code{42.5});
+pass \code{strip.special = FALSE} to leave contents exactly as supplied.
+A vector \code{data} is NOT stripped, so a vector value containing e.g.
+\code{°} will no longer match a \code{recode.table} key that contained
+the same character (the key is stripped) - use \code{strip.special =
+FALSE} if that matters. No log.
+
+\strong{Follow-up, 2026-10-02, per Josh - accents simplified.} With
+\code{strip.special = TRUE}, accented letters and common symbols are
+now simplified instead of dropped (\code{café} -> \code{cafe},
+\code{×} -> \code{X}, curly quotes -> straight quotes); characters
+with no plain equivalent (e.g. \code{°}, \code{µ}, \code{™}) are still
+removed. Column names are cleaned the same way.
 }
 \examples{
 \dontrun{

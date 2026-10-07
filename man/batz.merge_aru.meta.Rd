@@ -8,7 +8,8 @@ batz.merge_aru.meta(
   dir.load = getwd(),
   load.pattern = c("*.csv", "*.xlsx"),
   dir.sub = FALSE,
-  log.file = FALSE
+  log.file = FALSE,
+  strip.special = TRUE
 )
 }
 \arguments{
@@ -34,7 +35,17 @@ identical duplicates that were just dropped, \code{"merging"} for
 differing duplicates combined into one), \code{$count} (how many extra
 rows/columns - not counting the surviving one - the action was done to).
 Only actions that actually did something are logged; nothing duplicated
-means no log rows at all for that file/category.}
+means no log rows at all for that file/category.
+\code{$strip.special} (last column): \code{"FALSE"} (not selected),
+\code{"TRUE NONE"} (nothing found), or \code{"TRUE ; <header>; ..."}
+(the headers, standardized, where characters were removed in the file
+or sheet that row is about).}
+
+\item{strip.special}{Logical, default \code{TRUE}. If \code{TRUE}, simplifies accented
+letters (\code{é} -> \code{e}) and removes other non-ASCII special
+characters (e.g. \code{°}, \code{µ}) from the data after loading - see \code{@details}. Files are
+always read with a UTF-8/Latin-1 fallback, so a stray \code{°} can't stop
+them loading, whatever this is set to.}
 }
 \value{
 Invisibly, a named list with three elements: \code{aru.visit},
@@ -148,6 +159,36 @@ the specific file(s) they came from.
 reference-workbook "Change.to" column.} In \code{arumeta.mergelog} (the
 log data frame returned when \code{log.file = TRUE}): \code{event} ->
 \code{event.type}, and \code{inputfile} -> \code{filename}.
+
+\strong{Follow-up, 2026-09-30, per Josh - special characters.} New
+argument \code{strip.special} (default \code{TRUE}). Every \code{.csv} is
+now read with the shared \code{special.read.csv()} helper, which falls back
+to Latin-1 when a file isn't valid UTF-8 (so a stray Excel degree sign no
+longer fails with "invalid multibyte string"); this always applies.
+Immediately after each csv file or xlsx sheet is loaded (before BOM
+stripping, header standardization and duplicate handling),
+\code{special.strip()} removes non-ASCII characters from its text columns
+when \code{strip.special = TRUE} (\code{readxl} data are already UTF-8
+but are stripped the same way). \code{arumeta.mergelog} gains a last
+column \code{$strip.special} naming, per row, the (standardized) headers
+of that row's file/sheet where characters were removed. As before, the log
+only has rows for duplicate-row/column actions, so a file with special
+characters but no duplicates does not appear in it.
+
+\strong{Follow-up, 2026-10-02, per Josh - accents simplified, log
+counts.} With \code{strip.special = TRUE}, accented letters and common
+symbols are now simplified instead of dropped (\code{café} ->
+\code{cafe}, \code{Quercus × bebbiana} -> \code{Quercus X bebbiana},
+curly quotes -> straight quotes); characters with no plain equivalent
+(e.g. \code{°}, \code{µ}, \code{™}) are still removed. Column names
+are cleaned the same way. The log gets four new columns right after
+\code{$strip.special}: \code{$Accented.letters.header} and
+\code{$removed.symbols.header} (number of unique column names with a
+character simplified / removed), and \code{$Accented.letters.data} and
+\code{$removed.symbols.data} (number of unique data values with a
+character simplified / removed - \code{café} in 500 rows counts once;
+\code{café} and \code{French café} count twice). They are \code{NA}
+when \code{strip.special = FALSE}.
 }
 \section{Known open items (not yet resolved - see project notes)}{
 
