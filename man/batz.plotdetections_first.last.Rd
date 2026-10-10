@@ -85,13 +85,13 @@ symbols (\code{é} -> \code{e}, \code{×} -> \code{X}) and removes other non-ASC
 at the very start, before any header check - see \code{@details}.
 This function reads no files itself; inputs loaded with a batz
 reader already get a UTF-8/Latin-1 fallback, so a stray \code{°}
-  can't stop them loading, whatever this is set to.}
+can't stop them loading, whatever this is set to.}
 
 \item{strip.special.plotopts}{Logical, default \code{FALSE}. Added
 2026-10-02, per Josh. Controls special characters in the settings
 table(s) - \code{fig.list} and \code{aes.default} - separately from the data. \code{FALSE} (default)
 leaves them untouched, so plot text such as \code{"Temperature (°C)"}
-  keeps its symbol; if a cell can't be read in this R session (e.g. a
+keeps its symbol; if a cell can't be read in this R session (e.g. a
 Latin-1 \code{°} byte), the function stops with an error naming the
 table, the number of incompatible characters, and the first 5 rows per
 header (\code{+} if more). \code{TRUE} simplifies/removes special
@@ -115,29 +115,29 @@ Dawn/Dusk/Midnight reference lines. One plot is produced per row of
 \strong{fig.list format, 2026-10-09, per Josh.}
 \itemize{
 \item \code{$facet} is renamed \code{$facet.header} (only
-  \code{"sppid"} so far - species facets, IDs are four-letter codes).
+\code{"sppid"} so far - species facets, IDs are four-letter codes).
 \item New \code{$facet.plot}: \code{TRUE} = one faceted plot;
-  \code{FALSE} = one plot per facet.
+\code{FALSE} = one plot per facet.
 \item \code{$facet.set} holds a preset short hand (\code{"NE"}) or a
-  list separated by \code{";"} - species in any format, plus
-  \code{"AllDet"} and preset names, e.g. \code{"AllDet;epfu;labo;lano"}
-  or \code{"AllDet;NE"}. The order written is the facet order.
-  \code{$all.dectections = TRUE} adds All detections as the first facet
-  when \code{$facet.set} doesn't list it. Blank = \code{"NE"}.
-  Presets are in \code{plot.facet.presets} (batz.util_plot.helpers.R).
+list separated by \code{";"} - species in any format, plus
+\code{"AllDet"} and preset names, e.g. \code{"AllDet;epfu;labo;lano"}
+or \code{"AllDet;NE"}. The order written is the facet order.
+\code{$all.dectections = TRUE} adds All detections as the first facet
+when \code{$facet.set} doesn't list it. Blank = \code{"NE"}.
+Presets are in \code{plot.facet.presets} (batz.util_plot.helpers.R).
 \item \code{$facet.panel}, \code{$facpan} and \code{$plot.order} are
-  no longer used. Old fig.list files (\code{$facet}, \code{$Alldect},
-  no \code{$facet.plot}) still load, with a WARNING.
+no longer used. Old fig.list files (\code{$facet}, \code{$Alldect},
+no \code{$facet.plot}) still load, with a WARNING.
 \item Saved file names:
-  \verb{<plot.name>_F_<facet.first>to<facet.last>_<plot.set>_<YYYYMMDD>to<YYYYMMDD>_<TIMESTAMP>.png}
-  (faceted; All detections first = \code{"AllDet"}, a 40kHzMyo drawn in
-  the same facet is not counted) or
-  \verb{<plot.name>_<facet>_<plot.set>_<YYYYMMDD>to<YYYYMMDD>_<TIMESTAMP>.png}
-  (one per facet). \code{project.name} is no longer part of the name.
-  Names over 100 characters are shortened, in order, until they fit:
-  drop the year from the last date (same-year range), cut each word of
-  the facet ID(s), then \code{plot.set}, then \code{plot.name} to 6
-  characters.
+\verb{<plot.name>_F_<facet.first>to<facet.last>_<plot.set>_<YYYYMMDD>to<YYYYMMDD>_<TIMESTAMP>.png}
+(faceted; All detections first = \code{"AllDet"}, a 40kHzMyo drawn in
+the same facet is not counted) or
+\verb{<plot.name>_<facet>_<plot.set>_<YYYYMMDD>to<YYYYMMDD>_<TIMESTAMP>.png}
+(one per facet). \code{project.name} is no longer part of the name.
+Names over 100 characters are shortened, in order, until they fit:
+drop the year from the last date (same-year range), cut each word of
+the facet ID(s), then \code{plot.set}, then \code{plot.name} to 6
+characters.
 }
 
 \strong{Header standardization (per Josh, 2026-09-14 project preference) -

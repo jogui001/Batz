@@ -76,13 +76,13 @@ symbols (\code{é} -> \code{e}, \code{×} -> \code{X}) and removes other non-ASC
 at the very start, before any header check - see \code{@details}.
 This function reads no files itself; inputs loaded with a batz
 reader already get a UTF-8/Latin-1 fallback, so a stray \code{°}
-  can't stop them loading, whatever this is set to.}
+can't stop them loading, whatever this is set to.}
 
 \item{strip.special.plotopts}{Logical, default \code{FALSE}. Added
 2026-10-02, per Josh. Controls special characters in the settings
 table(s) - \code{fig.list} and \code{aes.default} - separately from the data. \code{FALSE} (default)
 leaves them untouched, so plot text such as \code{"Temperature (°C)"}
-  keeps its symbol; if a cell can't be read in this R session (e.g. a
+keeps its symbol; if a cell can't be read in this R session (e.g. a
 Latin-1 \code{°} byte), the function stops with an error naming the
 table, the number of incompatible characters, and the first 5 rows per
 header (\code{+} if more). \code{TRUE} simplifies/removes special

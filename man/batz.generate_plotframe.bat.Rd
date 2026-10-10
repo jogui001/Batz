@@ -63,12 +63,12 @@ Josh's explicit request.)}
 \item{alldetections}{Logical, default \code{TRUE}. See Details.}
 
 \item{trim.noise}{Logical, default \code{TRUE}. When \code{alldetections
-  = TRUE}, exclude rows where the \code{spp.id} column is
+= TRUE}, exclude rows where the \code{spp.id} column is
 \code{"noise"} (case-insensitive) from the \code{"All Detections"}
 summary.}
 
 \item{trim.noid}{Logical, default \code{FALSE}. When \code{alldetections
-  = TRUE}, exclude rows where the \code{spp.id} column is
+= TRUE}, exclude rows where the \code{spp.id} column is
 \code{"NoID"} (case-insensitive) from the \code{"All Detections"}
 summary. (Named \code{"trim.noid"} rather than the originally-specced
 \code{"trim.noID"}, to match the identically-purposed parameter
@@ -668,13 +668,13 @@ $serial header.} \code{$aru.serial} is the required header (was
 \code{$serial}). Old files still run:
 \itemize{
 \item Both present: each record uses whichever one has data. Where
-  both have data but differ, \code{$aru.serial} is used. A WARNING
-  gives the number of rows missing from each, and/or the number of
-  rows that didn't match.
+both have data but differ, \code{$aru.serial} is used. A WARNING
+gives the number of rows missing from each, and/or the number of
+rows that didn't match.
 \item Only \code{$serial} present: it is used as \code{$aru.serial},
-  with a WARNING.
+with a WARNING.
 \item Neither present: \code{$aru.serial} is added with the value
-  \code{"missing"}, with a WARNING.
+\code{"missing"}, with a WARNING.
 }
 In every case, a WARNING gives the number of rows with no serial number
 (blank or \code{"missing"}).

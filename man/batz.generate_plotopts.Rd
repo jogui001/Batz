@@ -16,7 +16,7 @@ batz.generate_plotopts(
 \arguments{
 \item{generate.files}{Character vector, default all three recognized
 plot function names (\code{c("batz.plotcover_bullseye",
-  "batz.plotdetections_first.last", "batz.plotactivity_observations")}):
+"batz.plotdetections_first.last", "batz.plotactivity_observations")}):
 which plot function(s) to generate a new settings file for. Every
 element must be one of these three recognized names - see Details.}
 

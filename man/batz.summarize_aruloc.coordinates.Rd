@@ -24,7 +24,7 @@ columns are ignored.}
 \item{aru.combo}{Data frame of ARU sets. The \strong{first column} is
 used, whatever it is called (e.g. \code{$Sets}); each row lists one set
 of ARU names separated by \code{";"} (e.g. \code{"NWS01; NWS02;
-  NWS03"}). Blank rows are dropped. Names are matched to
+NWS03"}). Blank rows are dropped. Names are matched to
 \code{data$aru.name} ignoring case and surrounding spaces.}
 
 \item{gap.days}{Numeric, default \code{1}. A gap longer than this many

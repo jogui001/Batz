@@ -45,7 +45,7 @@ symbols (\code{é} -> \code{e}, \code{×} -> \code{X}) and removes other non-ASC
 always read with a UTF-8/Latin-1 fallback, so a stray \code{°} can't
 stop them loading, whatever this is set to. The log gets a last column
 \code{$strip.special}: \code{"FALSE"} (not selected), \code{"TRUE
-  NONE"} (nothing found) or \code{"TRUE ; <header>; ..."} (headers where
+NONE"} (nothing found) or \code{"TRUE ; <header>; ..."} (headers where
 characters were removed).}
 }
 \value{

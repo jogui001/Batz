@@ -78,8 +78,8 @@ are saved in.}
 }
 \value{
 Invisibly, a list: \code{$data} (the binned counts, one row per
-  plot/facet/date/time bin), \code{$plots} (named list of ggplot
-  objects) and \code{$files} (saved file paths).
+plot/facet/date/time bin), \code{$plots} (named list of ggplot
+objects) and \code{$files} (saved file paths).
 }
 \description{
 Added 2026-10-07, per Josh. Draws a ggplot2 heatmap of observation
@@ -129,16 +129,16 @@ records count as 0.
 
 \strong{Colour scale (bin.scale, 2026-10-09).}
 \itemize{
-  \item \code{"discrete"} (default): \code{bin.values} are the upper
-    limits of each bin. With \code{c(0, 1, 10, 25, 50)} the bins are 0,
-    1, 2-10, 11-25, 26-50 and 51+, so \code{bin.colors} needs one more
-    colour than \code{bin.values}. Every bin is shown in the legend,
-    with its colour, even when no cell falls in it.
-  \item \code{"continuous"}: a colour gradient from \code{min(bin.values)}
-    to \code{max(bin.values)}, with \code{bin.colors} spread evenly from
-    the bottom to the top of the scale. Counts above the top value get
-    the top colour; the legend ticks are at \code{bin.values}, the top
-    one labelled e.g. \code{"20+"}.
+\item \code{"discrete"} (default): \code{bin.values} are the upper
+limits of each bin. With \code{c(0, 1, 10, 25, 50)} the bins are 0,
+1, 2-10, 11-25, 26-50 and 51+, so \code{bin.colors} needs one more
+colour than \code{bin.values}. Every bin is shown in the legend,
+with its colour, even when no cell falls in it.
+\item \code{"continuous"}: a colour gradient from \code{min(bin.values)}
+to \code{max(bin.values)}, with \code{bin.colors} spread evenly from
+the bottom to the top of the scale. Counts above the top value get
+the top colour; the legend ticks are at \code{bin.values}, the top
+one labelled e.g. \code{"20+"}.
 }
 
 \strong{Named palettes (2026-10-09).} \code{bin.colors} may be a list

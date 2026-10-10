@@ -54,11 +54,11 @@ shape:
 (state, species) PRESENT pair (a species absent from a given state
 simply has no row for that state). Columns, in order: \code{"State"},
 \code{"common.name"}, \code{"Species Code"} (if \code{bat.code !=
-  "none"}), \code{"listing.status_federal"}, \code{"State"} (again - see
+"none"}), \code{"listing.status_federal"}, \code{"State"} (again - see
 Details), \code{"Phonic Group"} (if \code{phonic.group = TRUE}).
 \code{"matrix"} (matches \code{"batlist model2.csv"}) - one row per
 requested/implied species, columns \code{"common.name"}, \code{"Species
-  Code"}, \code{"Phonic Group"}, \code{"listing.status_federal"}, then one column per
+Code"}, \code{"Phonic Group"}, \code{"listing.status_federal"}, then one column per
 requested/implied state (named per \code{statename.format.out}), each cell
 per \code{symbol_presence.absence} (see Details).}
 

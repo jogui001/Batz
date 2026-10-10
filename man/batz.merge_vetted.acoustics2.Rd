@@ -53,7 +53,7 @@ lookup table - see Details.}
 \item{bat.names.out}{Character, default \code{"code4"}. Passed as
 \code{batname.format.out} to \code{\link{batz.batusa_recode.names}} when
 recoding \code{$manid} and any surviving auto-ID column(s) (\code{
-  $autoid.kp}/\code{$autoid.sb}).}
+$autoid.kp}/\code{$autoid.sb}).}
 
 \item{manid.kp}{Logical, default \code{TRUE}. Create \code{$manid.kp} (a
 copy of \code{$manid} with blanks/NA filled from \code{$autoid.kp}) - only
@@ -86,10 +86,10 @@ very last step before the optional xlsx write and before they're
 returned/auto-assigned - it has no effect on how an incoming file's
 headers are matched/validated. \code{FALSE} (default) keeps this
 function's normal dot-separated output column names (\code{
-  $date.monitoringnight}, \code{$autoid.kp}, \code{$aru.serial}, ...) exactly as
+$date.monitoringnight}, \code{$autoid.kp}, \code{$aru.serial}, ...) exactly as
 always. \code{TRUE} runs every output column name through
 \code{standardize.headers()} instead (e.g. \code{$mon_ngh}, \code{
-  $aru_serial}) - for a caller who specifically wants a snake_case
+$aru_serial}) - for a caller who specifically wants a snake_case
 CSV/xlsx/data frame out of this function, without having to convert it
 themselves afterward.}
 

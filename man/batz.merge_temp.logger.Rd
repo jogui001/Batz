@@ -61,7 +61,7 @@ output CSV names when \code{write.output = TRUE}:
 \code{$date.time} in \code{templog.merged} (\code{<DATE1>to<DATE2>},
 \code{\%Y\%m\%d} each, or the literal \code{"nodata"} if none is
 available) and \code{<timestamp>} is \code{format(Sys.time(),
-  "\%Y\%m\%d\%H\%M\%S")}. \code{""} (default) falls back to the literal
+"\%Y\%m\%d\%H\%M\%S")}. \code{""} (default) falls back to the literal
 base token \code{"templog"} - a judgment call, please confirm this is
 the right default.}
 
