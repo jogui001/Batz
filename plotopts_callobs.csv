@@ -27,8 +27,6 @@
 "Legend","legend.groupval.colors","#1b9e77;#d95f02;#7570b3;#e7298a;#66a61e;#e6ab02;#a6761d;#666666","","2026-08-29: semicolon-separated hex colors assigned (in sorted order) to each distinct selected $plot.sets value's bar FILL (was the bar outline in an earlier same-day round - see @details). Cycles back to the first color if there are more selected values than colors listed here."
 "Theme","plot.title.hjust","0","","Horizontal justification of the plot title (0 = left-aligned)."
 "Species / panel selection","spp.plot","40khzmyo;All detections;Big brown bat;Eastern red bat;Hoary bat;Silver-haired bat;Eastern small-footed myotis;Little brown bat;Northern long-eared bat;Tricolored bat","","Species (plus 40khzmyo) included anywhere in the plot; semicolon-separated. Copied from batz.plotdetections_first.last()'s own settings file."
-"Species / panel selection","facpan","All detections;Big brown bat;Eastern red bat;Hoary bat;Silver-haired bat;Eastern small-footed myotis;Little brown bat;Northern long-eared bat;Tricolored bat","","Species given their own facet panel; semicolon-separated. Copied from batz.plotdetections_first.last()'s own settings file."
-"Panel order","plot.order","All detections;Big brown bat;Eastern red bat;Eastern small-footed myotis;Hoary bat;Little brown bat;Northern long-eared bat;Silver-haired bat;Tricolored bat","","The left-to-right, top-to-bottom order panels are drawn in the facet_wrap grid; semicolon-separated. Copied from batz.plotdetections_first.last()'s own settings file."
 "Save / export","ggsave.dpi","300","","Resolution of the saved PNG."
 "Save / export","ggsave.units","in","","Units for the saved plot's width/height."
 "Save / export","ggsave.width.pad","0.5","","Inches added to the computed panel width when saving."

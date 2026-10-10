@@ -43,8 +43,6 @@
 "Theme","panel.border.linewidth","0.5","","Line width of the border box drawn around each facet panel - matches theme_bw()'s own built-in default so nothing changes visually unless edited. Also reused directly for the Midnight reference line's linewidth, per Josh, so the two always match exactly."
 "Other","time.zone","America/New_York","","Time zone used to render detection times for the plot."
 "Species / panel selection","spp.plot","40khzmyo;All detections;Big brown bat;Eastern red bat;Hoary bat;Silver-haired bat;Eastern small-footed myotis;Little brown bat;Northern long-eared bat;Tricolored bat","","Species (plus 40khzmyo) included anywhere in the plot; semicolon-separated."
-"Species / panel selection","facpan","All detections;Big brown bat;Eastern red bat;Hoary bat;Silver-haired bat;Eastern small-footed myotis;Little brown bat;Northern long-eared bat;Tricolored bat","","Species given their own facet panel; semicolon-separated."
-"Panel order","plot.order","All detections;Big brown bat;Eastern red bat;Eastern small-footed myotis;Hoary bat;Little brown bat;Northern long-eared bat;Silver-haired bat;Tricolored bat","","The left-to-right, top-to-bottom order panels are drawn in the facet_wrap grid; semicolon-separated."
 "Layer order","layer.order","Midnight;Dawn;Dusk;All detections;40kHzMyo","","The DRAWING order of the distinct geom layers within each panel, bottom-most first, top-most (frontmost) last; semicolon-separated."
 "Save / export","ggsave.dpi","300","","Resolution of the saved PNG."
 "Save / export","ggsave.units","in","","Units for the saved plot's width/height."

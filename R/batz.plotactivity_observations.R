@@ -15,8 +15,8 @@
 #'   (matching \code{\link{batz.generate_plotframe.bat}}'s own output
 #'   column) when \code{fig.list} doesn't specify one.
 #' @param fig.list A data frame listing the plot(s) to generate - one row
-#'   per plot. Must have \code{$plot.type}, \code{$plot.name}, \code{$facet},
-#'   \code{$facet.set}, \code{$MYSO}, \code{$all.dectections}, \code{$facet.panel},
+#'   per plot. Must have \code{$plot.type}, \code{$plot.name}, \code{$facet.header},
+#'   \code{$facet.plot}, \code{$facet.set}, \code{$MYSO}, \code{$all.dectections},
 #'   \code{$40khzmyo}, \code{$facet.label}, \code{$plot.set}, \code{$pool},
 #'   \code{$date.format}, \code{$date.start}, \code{$date.end},
 #'   \code{$xaxe.interval}. Column names must be unique. \code{$plot.group}
@@ -96,6 +96,34 @@
 #'   objects, only populated when the \code{ggplot2} package is available).
 #'
 #' @details
+#' \strong{fig.list format, 2026-10-09, per Josh.}
+#' \itemize{
+#'   \item \code{$facet} is renamed \code{$facet.header} (only
+#'     \code{"sppid"} so far - species facets, IDs are four-letter codes).
+#'   \item New \code{$facet.plot}: \code{TRUE} = one faceted plot;
+#'     \code{FALSE} = one plot per facet.
+#'   \item \code{$facet.set} holds a preset short hand (\code{"NE"}) or a
+#'     list separated by \code{";"} - species in any format, plus
+#'     \code{"AllDet"} and preset names, e.g. \code{"AllDet;epfu;labo;lano"}
+#'     or \code{"AllDet;NE"}. The order written is the facet order.
+#'     \code{$all.dectections = TRUE} adds All detections as the first facet
+#'     when \code{$facet.set} doesn't list it. Blank = \code{"NE"}.
+#'     Presets are in \code{plot.facet.presets} (batz.util_plot.helpers.R).
+#'   \item \code{$facet.panel}, \code{$facpan} and \code{$plot.order} are
+#'     no longer used. Old fig.list files (\code{$facet}, \code{$Alldect},
+#'     no \code{$facet.plot}) still load, with a WARNING.
+#'   \item Saved file names:
+#'     \verb{<plot.name>_F_<facet.first>to<facet.last>_<plot.set>_<YYYYMMDD>to<YYYYMMDD>_<TIMESTAMP>.png}
+#'     (faceted; All detections first = \code{"AllDet"}, a 40kHzMyo drawn in
+#'     the same facet is not counted) or
+#'     \verb{<plot.name>_<facet>_<plot.set>_<YYYYMMDD>to<YYYYMMDD>_<TIMESTAMP>.png}
+#'     (one per facet). \code{project.name} is no longer part of the name.
+#'     Names over 100 characters are shortened, in order, until they fit:
+#'     drop the year from the last date (same-year range), cut each word of
+#'     the facet ID(s), then \code{plot.set}, then \code{plot.name} to 6
+#'     characters.
+#' }
+#'
 #' \strong{Header standardization (per Josh, 2026-09-14 project preference) -
 #' does not mechanically apply to this function, flagged not silently
 #' skipped.} The project-wide preference is that headers coming from a
@@ -955,8 +983,10 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
   # $all.dectections renamed 2026-09-27 (per Josh's reference-workbook
   # "Change.to" column) - see @details, "Column identifiers renamed,
   # 2026-09-27".
-  FIG.LIST.REQUIRED <- c("plot.type", "plot.name", "facet", "facet.set", "MYSO",
-                          "all.dectections", "facet.panel", "40khzmyo", "facet.label",
+  ## 2026-10-09, per Josh: $facet -> $facet.header, new $facet.plot,
+  ## $facet.panel dropped (old files still load - see plot.figlist.legacy())
+  FIG.LIST.REQUIRED <- c("plot.type", "plot.name", "facet.header", "facet.plot", "facet.set", "MYSO",
+                          "all.dectections", "40khzmyo", "facet.label",
                           "plot.set", "pool", "date.format",
                           "date.start", "date.end", "xaxe.interval")
   # Follow-up, 2026-09-23, per Josh (bug report: an explicit $Yaxe.trans =
@@ -966,8 +996,10 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
   # FIG.LIST.REQUIRED's own columns, and needs the same canonicalize.headers()
   # tolerance - see "Follow-up, 2026-09-23 (fig.list optional-column
   # whitespace/casing bug)" in Details.
+  ## $plot.order/$facpan removed 2026-10-09 - $facet.set now sets the
+  ## facets and their order
   FIG.LIST.OPTIONAL <- c("plot.group", "Yaxe.trans", "loglabels", "y.scale",
-                          "y.custom", "ymax", "legend", "plot.order", "facpan")
+                          "y.custom", "ymax", "legend")
   AES.DEFAULT.REQUIRED <- c("category", "parameter", "default.value")
 
   ## "output.filename.pattern" deliberately removed from this required list
@@ -1031,6 +1063,9 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     cat("WARNING: `data` has the old header $obs - used as $observations.count. ",
         "Re-run batz.generate_plotframe.bat() to update the input file.\n", sep = "")
   }
+  ## fig.list format 2026-10-09: old headers ($facet, $Alldect, no
+  ## $facet.plot) still accepted - see plot.figlist.legacy()
+  fig.list <- plot.figlist.legacy(fig.list, "batz.plotactivity_observations")
   data.canon        <- canonicalize.headers(data, DATA.REQUIRED)
   suntimes.canon    <- canonicalize.headers(suntimes, SUNTIMES.REQUIRED)
   fig.list.canon    <- canonicalize.headers(fig.list, FIG.LIST.REQUIRED)
@@ -1128,10 +1163,8 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     get.default(param)
   }
 
-  NE.ALIASES <- c("new england", "ne")
-  SPECIAL.FACPAN <- c("Big brown bat", "Eastern red bat", "Hoary bat", "Silver-haired bat",
-                       "Eastern small-footed myotis", "Little brown bat",
-                       "Northern long-eared bat", "Tri-colored bat")
+  ## facet presets (e.g. "NE") now live in plot.facet.presets
+  ## (batz.util_plot.helpers.R) - 2026-10-09
 
   # See @details above ("A real data/reference-table mismatch...") for why
   # this exists: Josh's real data uses "40kMyo", batz.batusa_recode.names()'s
@@ -1171,33 +1204,30 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
       next
     }
 
-    facet.kind <- tolower(trimws(job$facet))
+    facet.kind <- tolower(trimws(job$facet.header))
     if (!identical(facet.kind, "sppid")) {
-      cat(sprintf("NOTE: fig.list row for '%s' has facet = '%s' - skipped ($facet = \"sppid\" is the only value implemented so far).\n",
-                   job.label, job$facet))
+      cat(sprintf("NOTE: fig.list row for '%s' has facet.header = '%s' - skipped ($facet.header = \"sppid\" is the only value implemented so far).\n",
+                   job.label, job$facet.header))
       next
     }
+    facet.plot.flag <- !identical(toupper(trimws(as.character(job$facet.plot))), "FALSE")
 
-    facet.set.val <- tolower(trimws(job$facet.set))
-    if (facet.set.val %in% NE.ALIASES) {
-      facpan <- SPECIAL.FACPAN
-    } else {
-      facpan <- strsplit(get.setting(job, "facpan"), ";", fixed = TRUE)[[1]]
-    }
+    ## 2026-10-09, per Josh: $facet.set = a preset (e.g. "NE") or an
+    ## ordered list ("AllDet;epfu;labo"); the order written is the facet
+    ## order. $all.dectections = TRUE adds "All detections" as the FIRST
+    ## facet if $facet.set doesn't list it; a 40kHzMyo facet of its own
+    ## goes last if not listed.
+    facpan <- plot.resolve.facet.set(job$facet.set, job.label, "batz.plotactivity_observations")
+    alldect.flag <- isTRUE(as.logical(job$all.dectections)) || "All detections" %in% facpan
+    khz.flag <- isTRUE(as.logical(job[["40khzmyo"]])) || "40khzmyo" %in% facpan
+    if (alldect.flag && !("All detections" %in% facpan)) facpan <- c("All detections", facpan)
+    if (alldect.flag) facpan <- setdiff(facpan, "40khzmyo")   # drawn inside the All detections facet
+    if (khz.flag && !alldect.flag && !("40khzmyo" %in% facpan)) facpan <- c(facpan, "40khzmyo")
 
     spp.plot <- facpan
     myso.flag <- isTRUE(as.logical(job$MYSO))
     if (myso.flag) spp.plot <- c(spp.plot, "Indiana Bat")
-    alldect.flag <- isTRUE(as.logical(job$all.dectections))
-    if (alldect.flag) {
-      spp.plot <- c(spp.plot, "All detections")
-      facpan <- c(facpan, "All detections")
-    }
-    khz.flag <- isTRUE(as.logical(job[["40khzmyo"]]))
-    if (khz.flag) {
-      spp.plot <- c(spp.plot, "40khzmyo")
-      if (!alldect.flag) facpan <- c(facpan, "40khzmyo")
-    }
+    if (khz.flag) spp.plot <- c(spp.plot, "40khzmyo")
     spp.plot <- unique(trimws(spp.plot))
     facpan <- unique(trimws(facpan))
 
@@ -1275,9 +1305,8 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     panel.levels.raw <- facpan
     panel.labels <- plot.facet.labels(panel.levels.raw, get.setting(job, "facet.label"),
                                       job.label, "batz.plotactivity_observations")
-    plot.order.raw <- strsplit(get.setting(job, "plot.order"), ";", fixed = TRUE)[[1]]
-    ordered.levels <- intersect(trimws(plot.order.raw), panel.levels.raw)
-    ordered.levels <- c(ordered.levels, setdiff(panel.levels.raw, ordered.levels))
+    ## facet order = $facet.set order (2026-10-09; replaces $plot.order)
+    ordered.levels <- panel.levels.raw
     pd$facet.panel.value <- factor(pd$facet.panel.value, levels = ordered.levels, labels = panel.labels[ordered.levels])
 
     # --- Y-axis resolution: see @details above for the full explanation ---
@@ -1369,11 +1398,27 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
       y.upper.plot = trans.fn(y.upper), group.col = group.col,
       plot.sets.vals = plot.sets.vals, pool.flag = pool.flag,
       legend.flag = legend.flag,
+      facet.plot = facet.plot.flag, facet.raw = ordered.levels,
+      facet.ids = plot.facet.id(ordered.levels, facet.kind),
       resolved.legend.position = get.default("legend.position")  # exposed for testing the aes.style resolver (round nineteen)
     )
     cat(sprintf("Prepared plot data for '%s': %d observation row(s) across %d panel(s).\n",
                  job.label, nrow(pd), length(panel.levels.raw)))
   }
+
+  ## $facet.plot = FALSE (2026-10-09): one plot per facet instead of one
+  ## faceted plot
+  plots.expanded <- list()
+  for (job.key in names(plots)) {
+    p <- plots[[job.key]]
+    if (isTRUE(p$facet.plot)) {
+      plots.expanded[[job.key]] <- p
+    } else {
+      parts <- plot.split.facets(p, p$facet.raw, "sppid", "batz.plotactivity_observations")
+      for (k in seq_along(parts)) plots.expanded[[paste0(job.key, ".", k)]] <- parts[[k]]
+    }
+  }
+  plots <- plots.expanded
 
   if (length(plots) == 0) {
     cat("No plots were generated - see NOTE messages above.\n")
@@ -1508,8 +1553,12 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
       ## naming spec - see @details for this scope decision, flagged for
       ## Josh (the $plot.set/pooled distinction is no longer recoverable
       ## from the file name alone).
-      daterange.token <- sprintf("%sto%s", format(p$date.start, "%Y%m%d"), format(p$date.end, "%Y%m%d"))
-      fname <- sprintf("%s_%s_%s_%s.png", project.name, job.label, daterange.token, format(Sys.time(), "%Y%m%d%H%M%S"))
+      ## File naming 2026-10-09, per Josh - see plot.figlist.filename():
+      ## <plot.name>_F_<facet.first>to<facet.last>_<plot.set>_<dates>_<TIMESTAMP>.png
+      ## (faceted) or <plot.name>_<facet>_<plot.set>_<dates>_<TIMESTAMP>.png
+      fname <- plot.figlist.filename(p$job$plot.name, p$facet.ids, p$facet.plot,
+                                     if (isTRUE(p$pool.flag)) paste0(paste(p$plot.sets.vals, collapse = "+"), "-pooled") else p$plot.sets.vals,
+                                     p$date.start, p$date.end, fn.name = "batz.plotactivity_observations")
       fname <- file.path(dir.save, fname)
 
       ggplot2::ggsave(fname, plot = g,

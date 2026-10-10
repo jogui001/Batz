@@ -1,0 +1,4 @@
+plot.type,plot.name,facet.header,facet.plot,facet.set,all.dectections,40khzmyo,facet.label,plot.set,date.start,date.end,date.col,time.col,bin.scale,bin.intervals,bin.values,bin.colors,time.start,time.end,time.interval,date.format,xaxe.interval,xaxe.title,yaxe.title
+activity.heatmap,Riverpoint activity,sppid,TRUE,AllDet;lano;labo,TRUE,FALSE,code4,RPBO-FIELD1,8/14/2026,9/21/2026,date.monitoringnight,pool.start,discrete,,,,,,,,,,
+activity.heatmap,Riverpoint activity,sppid,FALSE,lano;labo,FALSE,FALSE,common_name,RPBO-FIELD1,8/14/2026,9/21/2026,date.monitoringnight,pool.start,continuous,15 min,0;1;10;12;20,-magma,,,,,,,
+activity.heatmap,Riverpoint calendar,sppid,TRUE,NE,TRUE,FALSE,common_name,RPBO-FIELD1,8/14/2026,9/21/2026,date.calendar,pool.start,continuous,30 min,0;5;10;25;50,scico::lajolla,00:00,24:00,2 hour,%d %b,,Date,

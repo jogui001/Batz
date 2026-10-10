@@ -1,0 +1,30 @@
+category,parameter,default.value,overide.value,notes
+Data,date.col,date.monitoringnight,,"Date column and day layout: date.monitoringnight (noon to noon, black line at 00:00) or date.calendar (midnight to midnight, black line at 12:00). A plotframe's $date is used when it has no column of this name."
+Data,time.col,pool.start,,Column holding each record's time of day (only the time is read).
+Bins,bin.intervals,15 min,,"Height of each time bin, e.g. 15 min, 30 min, 1 hour. Must divide evenly into 24 hours."
+Bins,bin.scale,discrete,,discrete = one colour per count bin (all bins always in the legend); continuous = colour gradient from the lowest to the highest bin.values.
+Bins,bin.values,0;1;10;25;50,,"Semicolon-separated upper limit of each count bin (discrete: 0, 1, 2-10, 11-25, 26-50, 51+) or the scale's tick values (continuous: bottom = first, top = last)."
+Bins,bin.colors,white;#FFFF80;#FFFF00;#FFAA00;#FF5500;#FF0000,,"Semicolon-separated colours (discrete: one more than bin.values) or ONE palette name: viridis (magma), scico (batlow), RColorBrewer (YlOrRd), Okabe-Ito or colorspace (Heat). Use pkg::name to be exact (colorspace reuses many names) and a leading - to reverse (-magma)."
+Y axis,time.start,15:00,,Time at the bottom of the Y axis (HH:MM).
+Y axis,time.end,08:00,,Time at the top of the Y axis (HH:MM). Monitoring-night layout may run past midnight (15:00 to 08:00).
+Y axis,time.interval,1 hour,,Spacing of the Y-axis labels.
+Y axis,yaxe.title,Time of Day,,Y-axis title.
+X axis,date.format,%d %b,,strftime format for the date labels; /n = new line.
+X axis,xaxe.interval,,,Number of date labels (blank = automatic).
+X axis,xaxe.title,,,"X-axis title (blank = Monitoring Night or Date, from the layout)."
+Reference line,midline.color,black,,Colour of the line at 00:00 (monitoring night) or 12:00 (calendar).
+Reference line,midline.linewidth,0.6,,Width of that line.
+Legend,legend.title,Number of Observations,,Legend title.
+Legend,legend.position,bottom,,"bottom, top, left, right or none."
+Panel layout,facpan.numcol,1,,Columns of facet panels when facet.plot = TRUE.
+Panel layout,facpan.hgt,3,,Height (inches) per row of facet panels when there is more than one row.
+Text sizes,plot.title.size,12,,Plot title size (pt).
+Text sizes,axis.title.size,12,,Axis title size (pt).
+Text sizes,axis.text.size,10,,Axis label size (pt).
+Text sizes,strip.text.size,10,,Facet title size (pt).
+Text sizes,legend.title.size,11,,Legend title size (pt).
+Text sizes,legend.text.size,10,,Legend label size (pt).
+Saving,plot.width,10,,Saved plot width.
+Saving,plot.height,6,,Saved plot height (one panel or one row of panels).
+Saving,ggsave.units,in,,Units for plot.width/plot.height/facpan.hgt.
+Saving,ggsave.dpi,300,,Resolution of the saved PNG.

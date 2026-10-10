@@ -24,8 +24,8 @@ per-night detection windows. Must have \code{$spp.id}, \code{$date},
 
 \item{fig.list}{A data frame listing the plot(s) to generate - one
 row per plot. Must have \code{$plot.type}, \code{$plot.name},
-\code{$facet}, \code{$facet.set}, \code{$MYSO}, \code{$all.dectections},
-\code{$facet.panel}, \code{$40khzmyo}, \code{$facet.label},
+\code{$facet.header}, \code{$facet.plot}, \code{$facet.set}, \code{$MYSO},
+\code{$all.dectections}, \code{$40khzmyo}, \code{$facet.label},
 \code{$plot.set}, \code{$date.format}, \code{$date.start},
 \code{$date.end}, \code{$xaxe.interval}, \code{$xaxe.title}. Column
 names must be unique (see Details for a real duplicate-header bug this
@@ -112,6 +112,34 @@ Dawn/Dusk/Midnight reference lines. One plot is produced per row of
 \code{aru.metadata.db} whose \code{$plot.type} is \code{"bat.detection"}.
 }
 \details{
+\strong{fig.list format, 2026-10-09, per Josh.}
+\itemize{
+\item \code{$facet} is renamed \code{$facet.header} (only
+  \code{"sppid"} so far - species facets, IDs are four-letter codes).
+\item New \code{$facet.plot}: \code{TRUE} = one faceted plot;
+  \code{FALSE} = one plot per facet.
+\item \code{$facet.set} holds a preset short hand (\code{"NE"}) or a
+  list separated by \code{";"} - species in any format, plus
+  \code{"AllDet"} and preset names, e.g. \code{"AllDet;epfu;labo;lano"}
+  or \code{"AllDet;NE"}. The order written is the facet order.
+  \code{$all.dectections = TRUE} adds All detections as the first facet
+  when \code{$facet.set} doesn't list it. Blank = \code{"NE"}.
+  Presets are in \code{plot.facet.presets} (batz.util_plot.helpers.R).
+\item \code{$facet.panel}, \code{$facpan} and \code{$plot.order} are
+  no longer used. Old fig.list files (\code{$facet}, \code{$Alldect},
+  no \code{$facet.plot}) still load, with a WARNING.
+\item Saved file names:
+  \verb{<plot.name>_F_<facet.first>to<facet.last>_<plot.set>_<YYYYMMDD>to<YYYYMMDD>_<TIMESTAMP>.png}
+  (faceted; All detections first = \code{"AllDet"}, a 40kHzMyo drawn in
+  the same facet is not counted) or
+  \verb{<plot.name>_<facet>_<plot.set>_<YYYYMMDD>to<YYYYMMDD>_<TIMESTAMP>.png}
+  (one per facet). \code{project.name} is no longer part of the name.
+  Names over 100 characters are shortened, in order, until they fit:
+  drop the year from the last date (same-year range), cut each word of
+  the facet ID(s), then \code{plot.set}, then \code{plot.name} to 6
+  characters.
+}
+
 \strong{Header standardization (per Josh, 2026-09-14 project preference) -
 does not mechanically apply to this function, flagged not silently
 skipped.} The project-wide preference is that headers coming from a
