@@ -135,7 +135,7 @@ list separated by \code{";"} - species in any format, plus
 or \code{"AllDet;NE"}. The order written is the facet order.
 \code{$all.dectections = TRUE} adds All detections as the first facet
 when \code{$facet.set} doesn't list it. Blank = \code{"NE"}.
-Presets are in \code{plot.facet.presets} (batz.util_plot.helpers.R).
+Presets are in \code{plotutil_facet_presets} (batz.util_plot.helpers.R).
 \item \code{$facet.panel}, \code{$facpan} and \code{$plot.order} are
 no longer used. Old fig.list files (\code{$facet}, \code{$Alldect},
 no \code{$facet.plot}) still load, with a WARNING.

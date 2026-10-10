@@ -15,7 +15,7 @@
 #' @return Named character vector: labels, named by \code{levels}.
 #' @keywords internal
 #' @noRd
-plot.facet.labels <- function(levels, fmt, job.label, fn.name) {
+plotutil_facet_labels <- function(levels, fmt, job.label, fn.name) {
   fmt <- if (length(fmt) == 0 || is.na(fmt)) "" else trimws(gsub('"', "", as.character(fmt)))
   if (!nzchar(fmt)) fmt <- "common_name"
   res <- tryCatch(
@@ -43,7 +43,7 @@ plot.facet.labels <- function(levels, fmt, job.label, fn.name) {
 #' with nothing to combine (the default "1day"), is returned unchanged.
 #' @keywords internal
 #' @noRd
-plot.collapse.pools <- function(data, fn.name) {
+plotutil_collapse_pools <- function(data, fn.name) {
   if (!all(c("pool.start", "pool.end") %in% names(data)) || nrow(data) == 0) return(data)
   value.cols <- intersect(c("observations.count", "obs", "mins2.noon.min", "mins2.noon.max", "pool.start", "pool.end"),
                           names(data))
@@ -88,15 +88,15 @@ plot.collapse.pools <- function(data, fn.name) {
 #'
 #' Named list; each name is a preset's short hand (matched case-
 #' insensitively) and each value the species in plotting order. Add a new
-#' preset by adding one more entry. \code{plot.facet.preset.aliases} maps
+#' preset by adding one more entry. \code{plotutil_facet_preset_aliases} maps
 #' other spellings onto a preset name.
 #' @keywords internal
 #' @noRd
-plot.facet.presets <- list(
+plotutil_facet_presets <- list(
   NE = c("Big brown bat", "Eastern red bat", "Eastern small-footed myotis", "Hoary bat",
          "Little brown bat", "Northern long-eared bat", "Silver-haired bat", "Tri-colored bat")
 )
-plot.facet.preset.aliases <- c("new england" = "NE")
+plotutil_facet_preset_aliases <- c("new england" = "NE")
 
 #' Old fig.list headers -> current ones (internal)
 #'
@@ -107,7 +107,7 @@ plot.facet.preset.aliases <- c("new england" = "NE")
 #' WARNING for each change.
 #' @keywords internal
 #' @noRd
-plot.figlist.legacy <- function(fig.list, fn.name) {
+plotutil_figlist_legacy <- function(fig.list, fn.name) {
   if (!is.data.frame(fig.list)) return(fig.list)
   std <- standardize.headers(names(fig.list))
   rename.old <- function(old, new) {
@@ -144,7 +144,7 @@ plot.figlist.legacy <- function(fig.list, fn.name) {
 #'   \code{"All detections"} / \code{"40khzmyo"}), in order, no duplicates.
 #' @keywords internal
 #' @noRd
-plot.resolve.facet.set <- function(x, job.label, fn.name) {
+plotutil_resolve_facet_set <- function(x, job.label, fn.name) {
   x <- if (length(x) == 0 || is.na(x)) "" else trimws(as.character(x))
   if (!nzchar(x)) {
     cat(sprintf("NOTE: %s - '%s' has a blank $facet.set - using the \"NE\" preset.\n", fn.name, job.label))
@@ -153,14 +153,14 @@ plot.resolve.facet.set <- function(x, job.label, fn.name) {
   tokens <- trimws(strsplit(x, "[;,]")[[1]])
   tokens <- tokens[nzchar(tokens)]
   simple <- function(v) gsub("[^a-z0-9]", "", tolower(v))
-  preset.names <- names(plot.facet.presets)
+  preset.names <- names(plotutil_facet_presets)
   alias.map <- c(stats::setNames(preset.names, simple(preset.names)),
-                 stats::setNames(unname(plot.facet.preset.aliases), simple(names(plot.facet.preset.aliases))))
+                 stats::setNames(unname(plotutil_facet_preset_aliases), simple(names(plotutil_facet_preset_aliases))))
   out <- character(0)
   for (tk in tokens) {
     st <- simple(tk)
     if (st %in% names(alias.map)) {
-      out <- c(out, plot.facet.presets[[alias.map[[st]]]])
+      out <- c(out, plotutil_facet_presets[[alias.map[[st]]]])
     } else if (st %in% c("alldet", "alldetections", "alldetection", "alldect")) {
       out <- c(out, "All detections")
     } else if (st %in% c("40khzmyo", "40kmyo")) {
@@ -186,7 +186,7 @@ plot.resolve.facet.set <- function(x, job.label, fn.name) {
 #' code is kept, with characters unsafe in file names removed.
 #' @keywords internal
 #' @noRd
-plot.facet.id <- function(x, facet.header = "sppid") {
+plotutil_facet_id <- function(x, facet.header = "sppid") {
   x <- as.character(x)
   simple <- gsub("[^a-z0-9]", "", tolower(x))
   out <- x
@@ -216,7 +216,7 @@ plot.facet.id <- function(x, facet.header = "sppid") {
 #' @return File name (no folder).
 #' @keywords internal
 #' @noRd
-plot.figlist.filename <- function(plot.name, facet.ids, faceted, plot.set, date.start, date.end,
+plotutil_figlist_filename <- function(plot.name, facet.ids, faceted, plot.set, date.start, date.end,
                                   max.len = 100, timestamp = format(Sys.time(), "%Y%m%d%H%M%S"),
                                   fn.name = "batz") {
   clean <- function(x) {
@@ -264,7 +264,7 @@ plot.figlist.filename <- function(plot.name, facet.ids, faceted, plot.set, date.
 #' skipped with a NOTE.
 #' @keywords internal
 #' @noRd
-plot.split.facets <- function(entry, facet.raw, facet.header, fn.name) {
+plotutil_split_facets <- function(entry, facet.raw, facet.header, fn.name) {
   labs <- levels(entry$pd$facet.panel.value)
   out <- list()
   for (i in seq_along(labs)) {
@@ -277,7 +277,7 @@ plot.split.facets <- function(entry, facet.raw, facet.header, fn.name) {
     sub$facet.panel.value <- factor(as.character(sub$facet.panel.value), levels = labs[i])
     e <- entry
     e$pd <- sub
-    e$facet.ids <- plot.facet.id(facet.raw[i], facet.header)
+    e$facet.ids <- plotutil_facet_id(facet.raw[i], facet.header)
     e$facet.plot <- FALSE
     out[[length(out) + 1]] <- e
   }

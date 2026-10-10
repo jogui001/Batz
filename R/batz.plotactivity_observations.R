@@ -108,7 +108,7 @@
 #'     or \code{"AllDet;NE"}. The order written is the facet order.
 #'     \code{$all.dectections = TRUE} adds All detections as the first facet
 #'     when \code{$facet.set} doesn't list it. Blank = \code{"NE"}.
-#'     Presets are in \code{plot.facet.presets} (batz.util_plot.helpers.R).
+#'     Presets are in \code{plotutil_facet_presets} (batz.util_plot.helpers.R).
 #'   \item \code{$facet.panel}, \code{$facpan} and \code{$plot.order} are
 #'     no longer used. Old fig.list files (\code{$facet}, \code{$Alldect},
 #'     no \code{$facet.plot}) still load, with a WARNING.
@@ -984,7 +984,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
   # "Change.to" column) - see @details, "Column identifiers renamed,
   # 2026-09-27".
   ## 2026-10-09, per Josh: $facet -> $facet.header, new $facet.plot,
-  ## $facet.panel dropped (old files still load - see plot.figlist.legacy())
+  ## $facet.panel dropped (old files still load - see plotutil_figlist_legacy())
   FIG.LIST.REQUIRED <- c("plot.type", "plot.name", "facet.header", "facet.plot", "facet.set", "MYSO",
                           "all.dectections", "40khzmyo", "facet.label",
                           "plot.set", "pool", "date.format",
@@ -1064,8 +1064,8 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
         "Re-run batz.generate_plotframe.bat() to update the input file.\n", sep = "")
   }
   ## fig.list format 2026-10-09: old headers ($facet, $Alldect, no
-  ## $facet.plot) still accepted - see plot.figlist.legacy()
-  fig.list <- plot.figlist.legacy(fig.list, "batz.plotactivity_observations")
+  ## $facet.plot) still accepted - see plotutil_figlist_legacy()
+  fig.list <- plotutil_figlist_legacy(fig.list, "batz.plotactivity_observations")
   data.canon        <- canonicalize.headers(data, DATA.REQUIRED)
   suntimes.canon    <- canonicalize.headers(suntimes, SUNTIMES.REQUIRED)
   fig.list.canon    <- canonicalize.headers(fig.list, FIG.LIST.REQUIRED)
@@ -1103,8 +1103,8 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
 
   ## 2026-10-02, per Josh: data from batz.generate_plotframe.bat() with a
   ## pool.interval under one day has several rows per species/group/date -
-  ## combined here to one row per date (see plot.collapse.pools()).
-  data <- plot.collapse.pools(data, "batz.plotactivity_observations")
+  ## combined here to one row per date (see plotutil_collapse_pools()).
+  data <- plotutil_collapse_pools(data, "batz.plotactivity_observations")
 
   unquote <- function(x) {
     x <- trimws(as.character(x))
@@ -1163,7 +1163,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     get.default(param)
   }
 
-  ## facet presets (e.g. "NE") now live in plot.facet.presets
+  ## facet presets (e.g. "NE") now live in plotutil_facet_presets
   ## (batz.util_plot.helpers.R) - 2026-10-09
 
   # See @details above ("A real data/reference-table mismatch...") for why
@@ -1217,7 +1217,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     ## order. $all.dectections = TRUE adds "All detections" as the FIRST
     ## facet if $facet.set doesn't list it; a 40kHzMyo facet of its own
     ## goes last if not listed.
-    facpan <- plot.resolve.facet.set(job$facet.set, job.label, "batz.plotactivity_observations")
+    facpan <- plotutil_resolve_facet_set(job$facet.set, job.label, "batz.plotactivity_observations")
     alldect.flag <- isTRUE(as.logical(job$all.dectections)) || "All detections" %in% facpan
     khz.flag <- isTRUE(as.logical(job[["40khzmyo"]])) || "40khzmyo" %in% facpan
     if (alldect.flag && !("All detections" %in% facpan)) facpan <- c("All detections", facpan)
@@ -1300,10 +1300,10 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     # $facet = "sppid": $facet.label sets the species name format of the
     # panel titles (2026-10-02, per Josh) - "common_name" (default when
     # blank), "scientific_name", "code4", "code6", "both", or the older
-    # "common"/"latin"/"scientific". See plot.facet.labels() in
+    # "common"/"latin"/"scientific". See plotutil_facet_labels() in
     # batz.util_plot.helpers.R.
     panel.levels.raw <- facpan
-    panel.labels <- plot.facet.labels(panel.levels.raw, get.setting(job, "facet.label"),
+    panel.labels <- plotutil_facet_labels(panel.levels.raw, get.setting(job, "facet.label"),
                                       job.label, "batz.plotactivity_observations")
     ## facet order = $facet.set order (2026-10-09; replaces $plot.order)
     ordered.levels <- panel.levels.raw
@@ -1399,7 +1399,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
       plot.sets.vals = plot.sets.vals, pool.flag = pool.flag,
       legend.flag = legend.flag,
       facet.plot = facet.plot.flag, facet.raw = ordered.levels,
-      facet.ids = plot.facet.id(ordered.levels, facet.kind),
+      facet.ids = plotutil_facet_id(ordered.levels, facet.kind),
       resolved.legend.position = get.default("legend.position")  # exposed for testing the aes.style resolver (round nineteen)
     )
     cat(sprintf("Prepared plot data for '%s': %d observation row(s) across %d panel(s).\n",
@@ -1414,7 +1414,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     if (isTRUE(p$facet.plot)) {
       plots.expanded[[job.key]] <- p
     } else {
-      parts <- plot.split.facets(p, p$facet.raw, "sppid", "batz.plotactivity_observations")
+      parts <- plotutil_split_facets(p, p$facet.raw, "sppid", "batz.plotactivity_observations")
       for (k in seq_along(parts)) plots.expanded[[paste0(job.key, ".", k)]] <- parts[[k]]
     }
   }
@@ -1553,10 +1553,10 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
       ## naming spec - see @details for this scope decision, flagged for
       ## Josh (the $plot.set/pooled distinction is no longer recoverable
       ## from the file name alone).
-      ## File naming 2026-10-09, per Josh - see plot.figlist.filename():
+      ## File naming 2026-10-09, per Josh - see plotutil_figlist_filename():
       ## <plot.name>_F_<facet.first>to<facet.last>_<plot.set>_<dates>_<TIMESTAMP>.png
       ## (faceted) or <plot.name>_<facet>_<plot.set>_<dates>_<TIMESTAMP>.png
-      fname <- plot.figlist.filename(p$job$plot.name, p$facet.ids, p$facet.plot,
+      fname <- plotutil_figlist_filename(p$job$plot.name, p$facet.ids, p$facet.plot,
                                      if (isTRUE(p$pool.flag)) paste0(paste(p$plot.sets.vals, collapse = "+"), "-pooled") else p$plot.sets.vals,
                                      p$date.start, p$date.end, fn.name = "batz.plotactivity_observations")
       fname <- file.path(dir.save, fname)

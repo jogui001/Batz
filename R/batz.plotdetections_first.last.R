@@ -97,7 +97,7 @@
 #'     or \code{"AllDet;NE"}. The order written is the facet order.
 #'     \code{$all.dectections = TRUE} adds All detections as the first facet
 #'     when \code{$facet.set} doesn't list it. Blank = \code{"NE"}.
-#'     Presets are in \code{plot.facet.presets} (batz.util_plot.helpers.R).
+#'     Presets are in \code{plotutil_facet_presets} (batz.util_plot.helpers.R).
 #'   \item \code{$facet.panel}, \code{$facpan} and \code{$plot.order} are
 #'     no longer used. Old fig.list files (\code{$facet}, \code{$Alldect},
 #'     no \code{$facet.plot}) still load, with a WARNING.
@@ -1200,7 +1200,7 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
                              "sunset.unix", "sunrise", "sunrise.unix", "sunrise.monitoringnight",
                              "sunrise.monitoringnight.unix")
   ## 2026-10-09, per Josh: $facet -> $facet.header, new $facet.plot,
-  ## $facet.panel dropped (old files still load - see plot.figlist.legacy())
+  ## $facet.panel dropped (old files still load - see plotutil_figlist_legacy())
   FIG.LIST.REQUIRED <- c("plot.type", "plot.name", "facet.header", "facet.plot", "facet.set", "MYSO",
                                  "all.dectections", "40khzmyo", "facet.label",
                                  "plot.set", "date.format", "date.start", "date.end",
@@ -1269,8 +1269,8 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
         "Re-run batz.generate_plotframe.bat() to update the input file.\n", sep = "")
   }
   ## fig.list format 2026-10-09: old headers ($facet, $Alldect, no
-  ## $facet.plot) still accepted - see plot.figlist.legacy()
-  fig.list <- plot.figlist.legacy(fig.list, "batz.plotdetections_first.last")
+  ## $facet.plot) still accepted - see plotutil_figlist_legacy()
+  fig.list <- plotutil_figlist_legacy(fig.list, "batz.plotdetections_first.last")
   data.canon        <- canonicalize.headers(data, DATA.REQUIRED)
   suntimes.canon    <- canonicalize.headers(suntimes, SUNTIMES.REQUIRED)
   fig.list.canon    <- canonicalize.headers(fig.list, FIG.LIST.REQUIRED)
@@ -1330,8 +1330,8 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
 
   ## 2026-10-02, per Josh: data from batz.generate_plotframe.bat() with a
   ## pool.interval under one day has several rows per species/group/date -
-  ## combined here to one row per date (see plot.collapse.pools()).
-  data <- plot.collapse.pools(data, "batz.plotdetections_first.last")
+  ## combined here to one row per date (see plotutil_collapse_pools()).
+  data <- plotutil_collapse_pools(data, "batz.plotdetections_first.last")
 
   unquote <- function(x) {
     x <- trimws(as.character(x))
@@ -1404,7 +1404,7 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
     get.default(param)
   }
 
-  ## facet presets (e.g. "NE") now live in plot.facet.presets
+  ## facet presets (e.g. "NE") now live in plotutil_facet_presets
   ## (batz.util_plot.helpers.R) - 2026-10-09
 
   jobs <- fig.list[!is.na(fig.list$plot.type) & nzchar(trimws(fig.list$plot.type)), , drop = FALSE]
@@ -1460,7 +1460,7 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
     ## order. $all.dectections = TRUE adds "All detections" as the FIRST
     ## facet if $facet.set doesn't list it; a 40kHzMyo facet of its own
     ## goes last if not listed.
-    facpan <- plot.resolve.facet.set(job$facet.set, job.label, "batz.plotdetections_first.last")
+    facpan <- plotutil_resolve_facet_set(job$facet.set, job.label, "batz.plotdetections_first.last")
     alldect.flag <- isTRUE(as.logical(job$all.dectections)) || "All detections" %in% facpan
     khz.flag <- isTRUE(as.logical(job[["40khzmyo"]])) || "40khzmyo" %in% facpan
     if (alldect.flag && !("All detections" %in% facpan)) facpan <- c("All detections", facpan)
@@ -1558,10 +1558,10 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
     # $facet = "sppid": $facet.label sets the species name format of the
     # panel titles (2026-10-02, per Josh) - "common_name" (default when
     # blank), "scientific_name", "code4", "code6", "both", or the older
-    # "common"/"latin"/"scientific". See plot.facet.labels() in
+    # "common"/"latin"/"scientific". See plotutil_facet_labels() in
     # batz.util_plot.helpers.R.
     panel.levels.raw <- facpan
-    panel.labels <- plot.facet.labels(panel.levels.raw, get.setting(job, "facet.label"),
+    panel.labels <- plotutil_facet_labels(panel.levels.raw, get.setting(job, "facet.label"),
                                       job.label, "batz.plotdetections_first.last")
 
     ## facet order = $facet.set order (2026-10-09; replaces $plot.order)
@@ -1595,7 +1595,7 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
       date.start = date.start,   # carried through so the X axis can be forced to this exact range below, not just whatever dates happen to have data
       date.end = date.end,
       facet.plot = facet.plot.flag, facet.raw = ordered.levels,
-      facet.ids = plot.facet.id(ordered.levels, facet.kind),
+      facet.ids = plotutil_facet_id(ordered.levels, facet.kind),
       khz.flag = khz.flag,   # carried through so the legend key below can be driven by "$40khzmyo is TRUE for this plot" rather than "a detection happened to occur" - see the follow-up note below
       resolved.legend.position = get.default("legend.position"),  # exposed for testing the aes.style-driven resolver (round nineteen) without needing to render/introspect a ggplot object
       resolved.dawn.color = get.default("dawn.color")              # exposed for testing the fall-through-to-default case
@@ -1613,7 +1613,7 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
     if (isTRUE(p$facet.plot)) {
       plots.expanded[[job.key]] <- p
     } else {
-      parts <- plot.split.facets(p, p$facet.raw, "sppid", "batz.plotdetections_first.last")
+      parts <- plotutil_split_facets(p, p$facet.raw, "sppid", "batz.plotdetections_first.last")
       for (k in seq_along(parts)) plots.expanded[[paste0(job.key, ".", k)]] <- parts[[k]]
     }
   }
@@ -1911,10 +1911,10 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
       ## Round nineteen, per Josh (2026-09-16): every saved file name is now
       ## always "<project.name>_<ARU>_<timestamp>.png" -
       ## $output.filename.pattern is DEPRECATED and no longer read.
-      ## File naming 2026-10-09, per Josh - see plot.figlist.filename():
+      ## File naming 2026-10-09, per Josh - see plotutil_figlist_filename():
       ## <plot.name>_F_<facet.first>to<facet.last>_<plot.set>_<dates>_<TIMESTAMP>.png
       ## (faceted) or <plot.name>_<facet>_<plot.set>_<dates>_<TIMESTAMP>.png
-      fname <- plot.figlist.filename(p$job$plot.name, p$facet.ids, p$facet.plot, trimws(p$job$plot.set),
+      fname <- plotutil_figlist_filename(p$job$plot.name, p$facet.ids, p$facet.plot, trimws(p$job$plot.set),
                                      p$date.start, p$date.end, fn.name = "batz.plotdetections_first.last")
       ## save into dir.save (default getwd(), i.e. unchanged behavior for
       ## existing callers) rather than always the working directory - see

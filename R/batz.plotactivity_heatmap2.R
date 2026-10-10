@@ -257,7 +257,7 @@ batz.plotactivity_heatmap2 <- function(data,
     jobs <- list(list(job = NULL, mode = "legacy"))
   } else {
     if (!is.data.frame(fig.list)) stop("`fig.list` must be a data frame (e.g. read.csv(\"heat2.figlist.csv\")).")
-    fig.list <- plot.figlist.legacy(fig.list, FN)
+    fig.list <- plotutil_figlist_legacy(fig.list, FN)
     FIG.LIST.REQUIRED <- c("plot.type", "plot.name", "facet.header", "facet.plot", "facet.set",
                            "all.dectections", "40khzmyo", "facet.label", "plot.set",
                            "date.start", "date.end")
@@ -354,7 +354,7 @@ batz.plotactivity_heatmap2 <- function(data,
         next
       }
       faceted <- !identical(toupper(trimws(as.character(job$facet.plot))), "FALSE")
-      facets <- plot.resolve.facet.set(job$facet.set, job.label, FN)
+      facets <- plotutil_resolve_facet_set(job$facet.set, job.label, FN)
       if (isTRUE(as.logical(job$all.dectections)) && !("All detections" %in% facets)) facets <- c("All detections", facets)
       if (isTRUE(as.logical(job[["40khzmyo"]])) && !("40khzmyo" %in% facets)) facets <- c(facets, "40khzmyo")
 
@@ -398,8 +398,8 @@ batz.plotactivity_heatmap2 <- function(data,
         }
         facet.recs[[fc]] <- sub
       }
-      labs <- plot.facet.labels(facets, setting(job, "facet.label"), job.label, FN)
-      ids <- plot.facet.id(facets, "sppid")
+      labs <- plotutil_facet_labels(facets, setting(job, "facet.label"), job.label, FN)
+      ids <- plotutil_facet_id(facets, "sppid")
       set.tok <- if (length(sets) > 0) sets else ""
       if (faceted) {
         allrec <- do.call(rbind, lapply(facets, function(fc) {
@@ -408,7 +408,7 @@ batz.plotactivity_heatmap2 <- function(data,
           cat(sprintf("NOTE: %s - '%s' matched 0 rows of data - no plot.\n", FN, job.label)); next
         }
         plot.units <- list(list(rec = allrec, facets = unname(labs[facets]), faceted = TRUE, title = job.label,
-                                fname = plot.figlist.filename(job$plot.name, ids, TRUE, set.tok, d.start, d.end, fn.name = FN),
+                                fname = plotutil_figlist_filename(job$plot.name, ids, TRUE, set.tok, d.start, d.end, fn.name = FN),
                                 d.start = d.start, d.end = d.end))
       } else {
         plot.units <- list()
@@ -421,7 +421,7 @@ batz.plotactivity_heatmap2 <- function(data,
           s$facet <- labs[[facets[k]]]
           plot.units[[length(plot.units) + 1]] <- list(
             rec = s, facets = unname(labs[[facets[k]]]), faceted = FALSE, title = job.label,
-            fname = plot.figlist.filename(job$plot.name, ids[k], FALSE, set.tok, d.start, d.end, fn.name = FN),
+            fname = plotutil_figlist_filename(job$plot.name, ids[k], FALSE, set.tok, d.start, d.end, fn.name = FN),
             d.start = d.start, d.end = d.end)
         }
       }
