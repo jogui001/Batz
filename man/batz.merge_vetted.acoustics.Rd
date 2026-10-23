@@ -14,7 +14,10 @@ batz.merge_vetted.acoustics(
   manid.kp = TRUE,
   manid.sb = TRUE,
   snake_case = FALSE,
-  strip.special = TRUE
+  strip.special = TRUE,
+  regions = c("ALL", "NABAT"),
+  autoid.header_in = c("autoid"),
+  autoid.header_out = c("auto.kp")
 )
 }
 \arguments{
@@ -39,7 +42,11 @@ creates \code{vetted.merged_log.file} (one row per SKIPPED file, with
 \code{$filepath}, \code{$reason}, \code{$headers.missing}, and - last -
 \code{$strip.special}: \code{"FALSE"} (not selected), \code{"TRUE NONE"}
 (nothing found), or \code{"TRUE ; <header>; ..."} (the headers where
-characters were removed)).}
+characters were removed)). If no file was skipped, no log is created
+(and any \code{vetted.merged_log.file} left from an earlier call is
+removed); instead \code{"All <n> files successfully merged, no log
+file created"} is printed. The log is kept in R only - it is not
+written to disk.}
 
 \item{bat.names.out}{Character, default \code{"code4"}. The
 \code{batname.format.out} passed to \code{\link{batz.batusa_recode.names}}
@@ -80,10 +87,38 @@ letters (\code{é} -> \code{e}) and removes other non-ASCII special
 characters (e.g. \code{°}, \code{µ}) from the data after loading - see \code{@details}. Files are
 always read with a UTF-8/Latin-1 fallback, so a stray \code{°} can't stop
 them loading, whatever this is set to.}
+
+\item{regions}{Character vector, default \code{c("ALL", "NABAT")}. Added
+2026-10-23. The region(s) the bats were recorded in. When
+\code{$manid}/\code{$autoid.kp}/\code{$autoid.sb} (and any extra auto-ID
+column) are recoded, only the records of the \code{BAT Groupings},
+\code{NABATFrequency Classes} and \code{bat.names} tables whose
+\code{$Region} matches one of these are used; records marked \code{All}
+are always used. A \code{$Region} cell may list several regions separated
+by \code{;} or \code{,} (e.g. \code{NABAT; CA, SouthAmerica}) - the record
+is used if any of them matches. Case and quotes are ignored.}
+
+\item{autoid.header_in}{Character vector, default \code{c("autoid")}. Added
+2026-10-23. Other names for an auto-ID column, for vetting sheets not made
+with the standard BRI pipeline. Compared after header standardization
+(case, spaces and punctuation ignored), as a whole header - e.g.
+\code{"AUTO ID"} matches a header \code{AUTO ID} or \code{auto_id}, but
+not \code{WA|Kaleidoscope|Auto ID}. Only used when the file doesn't
+already have the standard column.}
+
+\item{autoid.header_out}{Character vector, default \code{c("auto.kp")}, the
+same length as \code{autoid.header_in} (otherwise the function stops).
+Which program each \code{autoid.header_in} header comes from:
+\code{"auto.kp"} (k-Pro/Kaleidoscope, merged into \code{$autoid.kp}) or
+\code{"auto.sb"} (SonoBat, merged into \code{$autoid.sb}). Any other name
+is treated as a different vetting program and added as its own output
+column with exactly that name (after \code{$autoid.sb}); files without it
+get \code{NA}. Its values are recoded like the other ID columns.}
 }
 \value{
 Invisibly, a named list: \code{vetted.merged} (always), and
-\code{vetted.merged_log.file} (only if \code{log.file = TRUE}) - or
+\code{vetted.merged_log.file} (only if \code{log.file = TRUE} and at
+least one file was skipped) - or
 their snake_case equivalents if \code{snake_case = TRUE} (see that
 parameter above). As a side effect, the same object(s) are also
 assigned directly into the calling environment (same auto-assign
@@ -436,6 +471,86 @@ found in that file (\code{"SM4"}, \code{"SM5"} or \code{"SM4; SM5"}).
 The required \code{date.monitoringnight} column is also accepted as
 \code{MONITORINGNIGHT} or \code{DATE-12} (any case); it is renamed to
 \code{$date.monitoringnight}.
+
+\strong{Follow-up, 2026-10-23, per Josh - log message and quieter
+recode warnings.} (1) With \code{log.file = TRUE}, if every file merged
+(nothing skipped) no empty log is created; the function prints
+\code{"All <n> files successfully merged, no log file created"}. (2)
+Blank values, \code{"NOISE"} and \code{"NoID"} in \code{$manid},
+\code{$autoid.kp} and \code{$autoid.sb} are no longer sent to
+\code{\link{batz.batusa_recode.names}} - they are not species, so they
+are kept exactly as they are without a \code{"WARNING: ... inputs did
+not match"} message. Any other unmatched value (e.g. SonoBat's
+\code{"Luso"}) is still reported.
+
+\strong{Follow-up, 2026-10-23 (later), per Josh - shared bat tables,
+regions, alternative headers.}
+\enumerate{
+  \item Bat names are recoded with the shared tables in
+    \code{R/batz.util_bat.reference.R}: \code{BAT Groupings} and
+    \code{NABATFrequency Classes} are checked first, then \code{bat.names}
+    (see \code{\link{batz.batusa_recode.names}}), using only records that
+    match \code{regions}. E.g. SonoBat's \code{Luso} is now recoded to
+    \code{LUSO} (little brown bat / Indiana bat) instead of being reported
+    as unmatched.
+  \item New inputs \code{autoid.header_in}/\code{autoid.header_out} - see
+    their descriptions above.
+  \item A header made only of the words Manual, Species, ID and
+    Identification, ending in ID or Identification and containing Manual or
+    Species (e.g. \code{Manual ID}, \code{Species ID}, \code{Species
+    Identification}) is read as \code{Species Manual ID}, if the file has no
+    \code{Species Manual ID} column. The first one found is used.
+  \item \strong{Behavior change:} a file no longer needs BOTH the k-Pro
+    (\code{WA|Kaleidoscope|Auto ID}) and SonoBat (\code{SppAccp}) columns -
+    at least one auto-ID column (k-Pro, SonoBat, or one named in
+    \code{autoid.header_out}) is enough; the missing one is filled with
+    \code{NA}. Without this, a non-BRI sheet with a single auto-ID column
+    would always be skipped. \code{Filename}, \code{MonitoringNight},
+    \code{Species Manual ID} and \code{Lat} are still required.
+  \item The column rename after merging is now done by name instead of by
+    position (same output for standard files).
+  \item \code{$manid.kp}/\code{$manid.sb} are unchanged; no
+    \code{$manid.<other>} column is made for an extra auto-ID column.
+}
+
+\strong{Follow-up, 2026-10-23 (later still), per Josh - other export
+layouts (e.g. a Kaleidoscope export of the Amboseli survey).}
+\enumerate{
+  \item \code{IN FILE} (or \code{File Name}, \code{File}) is read as
+    \code{Filename} when the file has no \code{Filename} column.
+  \item \code{Latitude} is read as \code{Lat}. A separate \code{Longitude}
+    (or \code{Long}, \code{Lon}) column is joined onto \code{Lat} as
+    \verb{<lat> <lon>}, then split into \code{$lat}/\code{$longitude} as for
+    the standard files. A row with either value blank keeps only what it
+    has.
+  \item \code{aru.serial} is accepted as well as \code{Serial} for
+    \code{$aru.serial}.
+  \item If a file has an \code{aru.name} or \code{site} column AND a serial
+    column, and the first part of a row's wav name is that row's serial
+    number (e.g. \code{656346_20230506_180008_000.wav}, serial
+    \code{656346}), \code{$aru.name} comes from the \code{aru.name}/
+    \code{site} column instead of the wav name. Otherwise it is read from
+    the wav name as before.
+  \item Dates are not converted: \code{MonitoringNight}/\code{DATE-12} is
+    \verb{m/d/yyyy} in both the BRI files and the Amboseli export, so
+    \code{$date.monitoringnight} is kept as it is.
+  \item \code{$aru.model} is still worked out from the wav-name layout, so
+    a non-Wildlife Acoustics recorder with the same naming (e.g. the
+    Amboseli \code{Chorus} units) shows as \code{"SM4"}.
+}
+
+\strong{Follow-up, 2026-10-23, per Josh - recorder model from the file
+(\code{aru.types}).} \code{$aru.model} now first looks for a recorder
+model in the file's own columns, using the \code{aru.types} tab of the
+master reference workbook (\code{aru.ref.types()}): the headers in
+\code{$header} (\code{model}, \code{MODEL}, \code{aru.model},
+\code{aru.type}) are searched, and a value equal to one of
+\code{$recorder.type} (e.g. \code{Chorus}, \code{AudioMoth}, \code{SM4} -
+case, spaces, \code{-} and \code{_} ignored) is used, spelled as in the
+table. A value not in the list (e.g. \code{Song Meter SM4BAT-FS}) is not
+used. Rows without a match fall back to the wav-name layout
+(\code{"SM4"}/\code{"SM5"}) as before. The log's \code{$aru.model} uses the
+same rule. This replaces point 6 of the previous follow-up.
 }
 \examples{
 \dontrun{

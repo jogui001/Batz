@@ -72,6 +72,12 @@
 #'   characters (e.g. \code{°}, \code{µ}) from \code{data} when it is a data frame, before matching - see
 #'   \code{@details}. A plain vector is not stripped. This function reads no
 #'   files.
+#' @param regions Character vector, default \code{c("ALL", "NABAT")}. Added
+#'   2026-10-23. Only records of the \code{BAT Groupings},
+#'   \code{NABATFrequency Classes} and \code{bat.names} tables whose
+#'   \code{$Region} matches one of these are used (records marked \code{All}
+#'   are always used). A \code{$Region} cell may list several regions
+#'   separated by \code{;} or \code{,}; the record is used if any matches.
 #'
 #' @return A vector (if \code{data} is a vector) or data frame (if
 #'   \code{data} is a data frame) of the same length/dimensions as
@@ -334,6 +340,35 @@
 #' with no plain equivalent (e.g. \code{°}, \code{µ}, \code{™}) are still
 #' removed. Column names are cleaned the same way.
 #'
+#' \strong{Follow-up, 2026-10-23, per Josh - shared tables, groupings and
+#' frequency classes, regions.}
+#' \enumerate{
+#'   \item The bat table is no longer embedded here: it is the shared
+#'     \code{bat.names} table (\code{bat.ref.names()},
+#'     \code{R/batz.util_bat.reference.R}), taken from Josh's edited
+#'     \code{Batz reference tables_20261023.xlsx}. It gains \code{$Region}
+#'     (\code{NABAT} for species, \code{All} for category labels) and
+#'     \code{$family} (bat family, blank for category labels), so both are also
+#'     valid \code{batname.format.out} values. \code{"Multiple"}'s
+#'     common/scientific name is now \code{"Multiple Bats"}.
+#'   \item Each value is first looked up in \code{BAT Groupings} (columns
+#'     \code{code4}, \code{code6}, \code{common_name}, \code{scientific_name}),
+#'     then \code{NABATFrequency Classes} (\code{Label}, \code{code4},
+#'     \code{code6}, \code{common_name}, \code{scientific_name}); first match
+#'     wins. Only if neither matches is the typo correction + \code{bat.names}
+#'     lookup used. These two tables only have name/code columns, so any other
+#'     \code{batname.format.out} (e.g. \code{listing.status_federal},
+#'     \code{family}) gives \code{""} for them. \strong{Output change:}
+#'     category labels now take their names from \code{NABATFrequency Classes}
+#'     - e.g. \code{HiF} with \code{batname.format.out = "common_name"} is now
+#'     \code{"Unidentifiable Species > 30 kHz"} (was \code{"HiF"}), and
+#'     \code{LowF/LoF} now returns \code{"LowF/LoF"} as \code{code4} (the table
+#'     says so; it used to be corrected to \code{"LoF"}).
+#'   \item New \code{regions} argument (see above). If no \code{bat.names}
+#'     record matches, a NOTE is printed and only the \code{All} records are
+#'     used.
+#' }
+#'
 #' @examples
 #' \dontrun{
 #' batz.batusa_recode.names(c("epfu", "myotis_lucifugus", "Hoary bat"))
@@ -367,7 +402,7 @@
 #'
 #' @export
 batz.batusa_recode.names <- function(data, batname.format.out = "common_name", grammar.dash = TRUE,
-                                     strip.special = TRUE) {
+                                     strip.special = TRUE, regions = c("ALL", "NABAT")) {
 
   ## special characters (per Josh, 2026-09-30): strip non-ASCII characters
   ## from `data` when it is a data frame (this function's local copy only;
@@ -376,203 +411,24 @@ batz.batusa_recode.names <- function(data, batname.format.out = "common_name", g
   data <- special.strip(data, strip.special)$df
 
   # ---------------------------------------------------------------------------
-  # Reference database (Josh's real NAbat.names.csv, embedded as supplied -
-  # 54 species x 15 columns, including $hibernation.strat/$phonic.group/
-  # $notes added 2026-08-25, plus 8 non-species detection/category label
-  # rows - All detections/40KHzMyo/HiF/LoF/HiFrag/LoFrag/Multiple/Social -
-  # added 2026-08-27, per Josh). See @details above for how to update this.
-  #
-  # BUGFIX (2026-09-21, RECURRED and re-fixed 2026-09-22): $fed.proposed
-  # was one element short (61 vs 62) - restored below. The 2026-09-21 fix
-  # was documented but never actually landed in this data (still 61 as of
-  # 2026-09-22); this time confirmed by directly running
-  # sapply(nabat.names, length) against the live file, not just re-reading
-  # the prose. See @details "BUGFIX"/"RECURRENCE" paragraphs above for the
-  # full story and how the correct row alignment was confirmed.
-  #
-  # Header standardization (per Josh, 2026-09-14 project preference): NOT
-  # applied to this table's own column names (scientific_name/common_name/
-  # code4/code6/listing.status_federal/etc.) - these are this function's own fixed, already-established
-  # output-schema names, not raw headers freshly copied from a loaded file for
-  # this rollout. Nor is it applied anywhere to `data` itself: `data`'s
-  # elements are recoded as VALUES (species identifiers), never as headers,
-  # and when `data` is a data frame its column NAMES are only ever passed
-  # through unchanged (`names(out) <- names(data)`), never read or matched
-  # against. See @details "Header standardization" above.
+  # Reference tables (2026-10-23, per Josh): the embedded nabat.names table
+  # that used to live here was moved to the shared bat.ref.names()
+  # (R/batz.util_bat.reference.R), which every bat function now uses. The
+  # "BAT Groupings" and "NABATFrequency Classes" tables are checked FIRST
+  # (see recode.vec below), then the bat.names table. Only rows whose $Region
+  # matches `regions` (rows marked "All" always) are used.
   # ---------------------------------------------------------------------------
-  nabat.names <- structure(list(scientific_name = c("Antrozous pallidus", "Artibeus jamaicensis", 
-"Brachyphylla cavernarum", "Choeronycteris mexicana", "Corynorhinus rafinesquii", 
-"Corynorhinus townsendii", "Corynorhinus townsendii ingens", 
-"Corynorhinus townsendii virginianus", "Diphylla ecaudata", "Eptesicus fuscus", 
-"Euderma maculatum", "Eumops floridanus", "Eumops perotis", "Eumops underwoodi", 
-"Idionycteris phyllotis", "Lasionycteris noctivagans", "Lasiurus borealis", 
-"Lasiurus cinereus", "Lasiurus cinereus semotus", "Lasiurus ega", 
-"Lasiurus frantzii", "Lasiurus intermedius", "Lasiurus minor", 
-"Lasiurus seminolus", "Lasiurus xanthinus", "Leptonycteris nivalis", 
-"Leptonycteris yerbabuenae", "Macrotus californicus", "Molossus molossus", 
-"Mormoops megalophylla", "Myotis auriculus", "Myotis austroriparius", 
-"Myotis californicus", "Myotis ciliolabrum", "Myotis evotis", 
-"Myotis grisescens", "Myotis keenii", "Myotis leibii", "Myotis lucifugus", 
-"Myotis occultus", "Myotis septentrionalis", "Myotis sodalis", 
-"Myotis thysanodes", "Myotis velifer", "Myotis volans", "Myotis yumanensis", 
-"Noctilio leporinus", "Nycticeius humeralis", "Nyctinomops femorosaccus", 
-"Nyctinomops macrotis", "Parastrellus hesperus", "Perimyotis subflavus", 
-"Stenoderma rufum", "Tadarida brasiliensis", "All detections", 
-"40KHzMyo", "HiF", "LoF", "HiFrag", "LoFrag", "Multiple", "Social"
-), common_name = c("Pallid bat", "Jamaican fruit-eating bat", 
-"Antillean fruit-eating bat", "Mexican long-tongued bat", "Rafinesque's big-eared bat", 
-"Townsend's big-eared bat", "Ozark big-eared bat", "Virginia big-eared bat", 
-"Hairy-legged vampire bat", "Big brown bat", "Spotted bat", "Florida bonneted bat", 
-"Greater bonneted bat", "Underwood's bonneted bat", "Allen's big-eared bat", 
-"Silver-haired bat", "Eastern red bat", "Hoary bat", "Hawaiian hoary bat", 
-"Southern yellow bat", "Desert Red Bat", "Northern yellow bat", 
-"Minor red bat", "Seminole bat", "Western yellow bat", "Mexican long-nosed bat", 
-"Lesser long-nosed bat", "California leaf-nosed bat", "Pallas' mastiff bat", 
-"Peter's ghost-faced bat", "Southwestern myotis", "Southeastern myotis", 
-"California myotis", "Western small-footed myotis", "Long-eared myotis", 
-"Gray bat", "Keen's myotis", "Eastern small-footed myotis", "Little brown bat", 
-"Arizona myotis", "Northern long-eared bat", "Indiana bat", "Fringed myotis", 
-"Cave bat myotis", "Long-legged myotis", "Yuma myotis", "Greater bulldog bat", 
-"Evening bat", "Pocketed free-tailed bat", "Big free-tailed bat", 
-"Canyon bat", "Tri-colored bat", "Red fruit bat", "Brazilian free-tailed bat", 
-"All detections", "40KHzMyo", "HiF", "LoF", "HiFrag", "LoFrag", 
-"Multiple", "Social"), code4 = c("anpa", "arja", "brca", "chme", 
-"cora", "coto", "coti", "cotv", "diec", "epfu", "euma", "eufl", 
-"eupe", "euun", "idph", "lano", "labo", "laci", "lacs", "laeg", 
-"lafr", "lain", "lami", "lase", "laxa", "leni", "leye", "maca", 
-"momo", "mome", "myar", "myau", "myca", "myci", "myev", "mygr", 
-"myke", "myle", "mylu", "myoc", "myse", "myso", "myth", "myve", 
-"myvo", "myyu", "nole", "nyhu", "nyfe", "nyma", "pahe", "pesu", 
-"stru", "tabr", "All detections", "40KHzMyo", "HiF", "LoF", "HiFrag", 
-"LoFrag", "Multiple", "Social"), code6 = c("antpal", "artjam", 
-"bracav", "chomex", "corraf", "cortow", "cotoin", "cotovi", "dipeca", 
-"eptfus", "eudmac", "eumflo", "eumper", "eumund", "idiphy", "lasnoc", 
-"lasbor", "lascin", "lacise", "lasega", "lasfra", "lasint", "lasmin", 
-"lassem", "lasxan", "lepniv", "lepyer", "maccal", "molmol", "mormeg", 
-"myoaur", "myoaus", "myocal", "myocil", "myoevo", "myogri", "myokee", 
-"myolei", "myoluc", "myoocc", "myosep", "myosod", "myothy", "myovel", 
-"myovol", "myoyum", "noclep", "nychum", "nycfem", "nycmac", "parhes", 
-"persub", "steruf", "tadbra", "All detections", "40KHzMyo", "HiF", 
-"LoF", "HiFrag", "LoFrag", "Multiple", "Social"), listing.status_federal = c("Not Listed", 
-"Not Listed", "Not Listed", "Not Listed", "Not Listed", "Not Listed", 
-"Endangered", "Endangered", "Not Listed", "Not Listed", "Not Listed", 
-"Endangered", "Not Listed", "Not Listed", "Not Listed", "Not Listed", 
-"Not Listed", "Endangered", "Endangered", "Not Listed", "Not Listed", 
-"Not Listed", "Not Listed", "Not Listed", "Not Listed", "Endangered", 
-"Not Listed", "Not Listed", "Not Listed", "Not Listed", "Not Listed", 
-"Not Listed", "Not Listed", "Not Listed", "Not Listed", "Endangered", 
-"Not Listed", "Not Listed", "Under Review", "Not Listed", "Endangered", 
-"Endangered", "Not Listed", "Not Listed", "Not Listed", "Not Listed", 
-"Not Listed", "Not Listed", "Not Listed", "Not Listed", "Not Listed", 
-"Proposed Endangered", "Not Listed", "Not Listed", "", "", "", 
-"", "", "", "", ""), listing.status_iucn = c("Least Concern", 
-"Least Concern", "Least Concern", "Near Threatened", "Least Concern", 
-"Least Concern", "", "", "Least Concern", "Least Concern", "Least Concern", 
-"Vulnerable", "Least Concern", "Least Concern", "Least Concern", 
-"Least Concern", "Least Concern", "Least Concern", "Least Concern", 
-"Least Concern", "", "Least Concern", "Vulnerable", "Least Concern", 
-"Least Concern", "Endangered", "Vulnerable", "Least Concern", 
-"Least Concern", "Least Concern", "Least Concern", "Least Concern", 
-"Least Concern", "Least Concern", "Least Concern", "Vulnerable", 
-"Least Concern", "Endangered", "Endangered", "Least Concern", 
-"Near Threatened", "Near Threatened", "Least Concern", "Least Concern", 
-"Least Concern", "Least Concern", "Least Concern", "Least Concern", 
-"Least Concern", "Least Concern", "Least Concern", "Vulnerable", 
-"Near Threatened", "Least Concern", "", "", "", "", "", "", "", 
-""), states.listed = c("", "", "", "AZ,CA", "", "", "", "", "", 
-"", "", "FL", "", "", "", "", "", "", "", "", "", "", "", "OK", 
-"", "NM,TX", "", "", "", "", "", "", "", "", "", "", "AK,WA", 
-"CT,GA,MA,MD,MO,NC,NH,NJ,NY,OH,OK,PA,TN,VA,VT,WV", "CT,MA,ME,MI,NH,NJ,OH,PA,TN,VA,VT,WI", 
-"", "", "", "", "", "", "", "", "IN,KY,MI,OH", "", "", "", "", 
-"", "", "", "", "", "", "", "", "", ""), states.present = c("AZ,CA,CO,ID,KS,MT,NM,NV,OK,OR,TX,UT,WA", 
-"PR", "PR,VI", "AZ,CA,NM,TX", "AL,AR,FL,GA,IL,IN,KY,LA,MS,NC,SC,TN,VA,WV", 
-"AR,AZ,CA,CO,ID,KS,KY,MO,MT,NC,ND,NE,NM,NV,OK,OR,SD,TX,UT,VA,WA,WV,WY", 
-"AR,MO,OK", "KY,NC,VA,WV", "TX", "AK,AL,AR,AZ,CA,CO,CT,DC,DE,FL,GA,IA,ID,IL,IN,KS,KY,LA,MA,MD,ME,MI,MN,MO,MS,MT,NC,ND,NE,NH,NJ,NM,NV,NY,OH,OK,OR,PA,RI,SC,SD,TN,TX,UT,VA,VT,WA,WI,WV,WY", 
-"AZ,CA,CO,MT,NM,NV,OR,UT,WA,WY", "FL", "AZ,CA,NM,TX", "AZ", "AZ,CA,CO,NM,NV,UT", 
-"AK,AL,AR,AZ,CA,CO,CT,DE,FL,GA,IA,ID,IL,IN,KS,KY,LA,MA,MD,ME,MI,MN,MO,MS,MT,NC,ND,NE,NH,NJ,NM,NV,NY,OH,OK,OR,PA,RI,SC,SD,TN,TX,UT,VA,VT,WA,WI,WV,WY", 
-"AL,AR,CO,CT,DE,FL,GA,IA,IL,IN,KS,KY,LA,MA,MD,ME,MI,MN,MO,MS,MT,NC,ND,NE,NH,NJ,NM,NY,OH,OK,PA,RI,SC,SD,TN,TX,VA,VT,WI,WV,WY", 
-"AK,AL,AR,AZ,CA,CO,CT,DE,FL,GA,HI,IA,ID,IL,IN,KS,KY,LA,MA,MD,ME,MI,MN,MO,MS,MT,NC,ND,NE,NH,NJ,NM,NV,NY,OH,OK,OR,PA,RI,SC,SD,TN,TX,UT,VA,VT,WA,WI,WV,WY", 
-"HI", "AZ,CA,NM,TX", "AZ,CA,NM,TX", "AL,FL,GA,LA,MS,NC,PA,SC,TX,VA", 
-"PR", "AL,AR,FL,GA,KY,LA,MO,MS,NC,OK,SC,TN,TX,VA", "AZ,CA,NM", 
-"AZ,NM,TX", "AZ,CA,NM", "AZ,CA,NV", "FL", "AZ,TX", "AZ,NM", "AL,AR,FL,GA,IL,IN,KY,LA,MS,NC,OK,SC,TN,TX", 
-"AZ,CA,CO,ID,MT,NM,NV,OR,TX,UT,WA,WY", "AZ,CA,CO,ID,KS,MT,ND,NE,NM,NV,OK,OR,SD,TX,UT,WA,WY", 
-"AZ,CA,CO,ID,MT,ND,NM,NV,OR,SD,UT,WA,WY", "AL,AR,GA,IL,IN,KS,KY,MO,MS,NC,OK,TN,VA,WV", 
-"AK,WA", "AL,AR,CT,GA,KY,MA,MD,ME,MI,MO,NC,NH,NJ,NY,OH,OK,PA,RI,TN,VA,VT,WV", 
-"AK,AL,AR,AZ,CA,CO,CT,DE,FL,GA,IA,ID,IL,IN,KS,KY,MA,MD,ME,MI,MN,MO,MS,MT,NC,ND,NE,NH,NJ,NM,NV,NY,OH,OK,OR,PA,RI,SC,SD,TN,UT,VA,VT,WA,WI,WV,WY", 
-"AZ,CA,NM", "AL,AR,CT,DE,GA,IA,IL,IN,KS,KY,LA,MA,MD,ME,MI,MN,MO,MS,MT,NC,ND,NE,NH,NJ,NY,OH,OK,PA,RI,SC,SD,TN,VA,VT,WI,WV,WY", 
-"AL,AR,CT,IA,IL,IN,KY,MD,MI,MO,NC,NJ,NY,OH,OK,PA,TN,VA,VT,WV", 
-"AZ,CA,CO,NM,NV,OR,SD,TX,UT,WA,WY", "AZ,CA,KS,NM,OK,TX", "AK,CA,CO,ID,MT,ND,NE,NM,OR,SD,TX,WY", 
-"CA,CO,ID,MT,NV,OR,TX,UT,WA", "", "AL,AR,FL,GA,IA,IL,IN,KS,KY,LA,MD,MI,MN,MO,MS,NC,NE,OH,OK,PA,SC,TN,TX,VA,WI,WV", 
-"AZ,CA,NM,TX", "CA,NV,TX,UT", "AZ,CA,CO,NM,NV,OK,TX,UT,WA", "AL,AR,CO,CT,DC,DE,FL,GA,IA,IL,IN,KS,KY,LA,MA,MD,ME,MI,MN,MO,MS,NC,NE,NH,NJ,NM,NY,OH,OK,PA,RI,SC,SD,TN,TX,VA,VT,WI,WV,WY", 
-"PR,VI", "AZ,CA,CO,FL,KS,NM,NV,OK,TX,UT", "", "", "", "", "", 
-"", "", ""), states.endangered = c("", "", "", "", "", "", "", 
-"", "", "", "", "FL", "", "", "", "", "", "", "", "", "", "", 
-"", "", "", "NM,TX", "", "", "", "", "", "", "", "", "", "", 
-"", "NH", "CT,MA,ME,NH,NJ,PA,VA,VT", "", "", "", "", "", "", 
-"", "", "IN", "", "", "", "", "", "", "", "", "", "", "", "", 
-"", ""), states.threatened = c("", "", "", "", "", "", "", "", 
-"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", 
-"", "", "", "", "", "", "", "", "", "", "", "", "", "PA,VT", 
-"TN,WI", "", "", "", "", "", "", "", "", "KY,MI", "", "", "", 
-"", "", "", "", "", "", "", "", "", "", ""), state.sppofconcern = c("", 
-"", "", "AZ,CA", "", "", "", "", "", "", "", "", "", "", "", 
-"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", 
-"", "", "", "", "", "AK,WA", "CT,GA,MA,MD,MO,NC,NJ,NY,OH,OK,TN,VA,WV", 
-"MI,OH", "", "", "", "", "", "", "", "", "OH", "", "", "", "", 
-"", "", "", "", "", "", "", "", "", ""), listing.status_federal.proposed = c("", 
-"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", 
-"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", 
-"", "", "", "", "", "Under Review, start year unconfirmed", "", 
-"", "", "", "", "", "", "", "", "", "", "", "Proposed Endangered, 2022", 
-"", "", "", "", "", "", "", "", "", ""), hibernation.strategy = c("resident", 
-"resident", "resident", "migratory", "hibernating", "hibernating", 
-"hibernating", "hibernating", "unknown", "hibernating", "mixed", 
-"resident", "resident", "resident", "unknown", "migratory", "migratory", 
-"migratory", "resident", "resident", "migratory", "resident", 
-"resident", "mixed", "resident", "migratory", "migratory", "resident", 
-"resident", "unknown", "hibernating", "mixed", "hibernating", 
-"hibernating", "hibernating", "hibernating", "hibernating", "hibernating", 
-"hibernating", "hibernating", "hibernating", "hibernating", "hibernating", 
-"mixed", "hibernating", "mixed", "unknown", "migratory", "migratory", 
-"migratory", "resident", "hibernating", "resident", "mixed", 
-"", "", "", "", "", "", "", ""), phonic.group = c("Lof", "None", 
-"None", "Hif", "Lof", "Lof", "Lof", "Lof", "None", "Lof", "Lof", 
-"Lof", "Lof", "Lof", "Lof", "Lof", "Hif", "Lof", "Lof", "Hif", 
-"Hif", "Hif", "Hif", "Hif", "Hif", "Hif", "Hif", "None", "Hif", 
-"Hif", "Hif", "Hif", "Hif", "Hif", "Hif", "Hif", "Hif", "Hif", 
-"Hif", "Hif", "Hif", "Hif", "Hif", "Hif", "Hif", "Hif", "Hif", 
-"Hif", "Lof", "Lof", "Hif", "Hif", "None", "Lof", "", "", "", 
-"", "", "", "", ""), notes = c("", "", "", "", "", "", "same as C. townsendii (subspecies)", 
-"same as C. townsendii (subspecies)", "only marginal/historical US records - winter behavior in US range not documented; $phonic.group reflects general vampire-bat biology (faint, short-range echolocation), not US-specific data", 
-"", "some individuals migrate to warmer areas in winter, others do not - genuinely mixed at species level per general accounts, LOWER CONFIDENCE on the exact split", 
-"", "", "very limited US (AZ) records", "poorly studied - winter/hibernation-site behavior not well documented for this species", 
-"", "", "", "same call/hibernation biology as mainland L. cinereus, but the Hawaiian population does not undertake the mainland's continental migration", 
-"LOWER CONFIDENCE call-frequency estimate (yellow bat group, less-studied)", 
-"recently split from L. blossevillii - LOWER CONFIDENCE, based on close congeners", 
-"LOWER CONFIDENCE call-frequency estimate (yellow bat group)", 
-"Caribbean population - LOWER CONFIDENCE, based on close congeners (L. borealis-type)", 
-"documented partial migrant - some individuals overwinter via torpor in the Deep South rather than migrating", 
-"LOWER CONFIDENCE call-frequency estimate (yellow bat group)", 
-"", "", "the ONLY North American bat documented to stay fully active year-round with no hibernation or migration, even in the desert", 
-"", "LOWER CONFIDENCE hibernation call: only a marginal edge-of-range US (TX/AZ) population, poorly documented", 
-"LOWER CONFIDENCE (desert Myotis, less-studied than eastern species)", 
-"documented species-level variability - some populations hibernate in caves, Florida populations largely remain active year-round", 
-"LOWER CONFIDENCE (mild-climate coastal populations may be less strict hibernators than assumed here)", 
-"", "", "", "", "", "", "LOWER CONFIDENCE (desert Myotis, less-studied)", 
-"", "", "", "documented species-level variability - northern populations hibernate, southern/border populations may remain active in mild winters", 
-"", "documented species-level variability - similar pattern to M. velifer/austroriparius", 
-"no confirmed current PR/US-territory population per $states.present (blank) - hibernation.strat reflects lack of a documented US-range population, not species biology generally; $phonic.group instead reflects general species/family biology (a loud, high-frequency fishing bat) since call type is a fixed physical trait independent of range presence", 
-"some populations migrate, southern populations may be more resident - classified migratory per general accounts, LOWER CONFIDENCE on the split", 
-"", "", "", "", "", "very well-documented species-level mix: most populations (e.g. the famous Bracken Cave, TX colony) migrate to Mexico for winter, but Florida/Gulf coast populations are non-migratory and active year-round", 
-"Category/detection-type label (not a species), added 2026-08-27 per Josh's request. latin/common/code4/code6 all hold this same literal string, so it matches case-insensitively (same normalize() rule as species rows) and any of those four batname.format.out values return the exact given casing. Species-only batname.format.out columns return \"\".", 
-"Category/detection-type label (not a species), added 2026-08-27 per Josh's request. latin/common/code4/code6 all hold this same literal string, so it matches case-insensitively (same normalize() rule as species rows) and any of those four batname.format.out values return the exact given casing. Species-only batname.format.out columns return \"\".", 
-"Category/detection-type label (not a species), added 2026-08-27 per Josh's request. latin/common/code4/code6 all hold this same literal string, so it matches case-insensitively (same normalize() rule as species rows) and any of those four batname.format.out values return the exact given casing. Species-only batname.format.out columns return \"\".", 
-"Category/detection-type label (not a species), added 2026-08-27 per Josh's request. latin/common/code4/code6 all hold this same literal string, so it matches case-insensitively (same normalize() rule as species rows) and any of those four batname.format.out values return the exact given casing. Species-only batname.format.out columns return \"\".", 
-"Category/detection-type label (not a species), added 2026-08-27 per Josh's request. latin/common/code4/code6 all hold this same literal string, so it matches case-insensitively (same normalize() rule as species rows) and any of those four batname.format.out values return the exact given casing. Species-only batname.format.out columns return \"\".", 
-"Category/detection-type label (not a species), added 2026-08-27 per Josh's request. latin/common/code4/code6 all hold this same literal string, so it matches case-insensitively (same normalize() rule as species rows) and any of those four batname.format.out values return the exact given casing. Species-only batname.format.out columns return \"\".", 
-"Category/detection-type label (not a species), added 2026-08-27 per Josh's request. latin/common/code4/code6 all hold this same literal string, so it matches case-insensitively (same normalize() rule as species rows) and any of those four batname.format.out values return the exact given casing. Species-only batname.format.out columns return \"\".", 
-"Category/detection-type label (not a species), added 2026-08-27 per Josh's request. latin/common/code4/code6 all hold this same literal string, so it matches case-insensitively (same normalize() rule as species rows) and any of those four batname.format.out values return the exact given casing. Species-only batname.format.out columns return \"\"."
-)), row.names = c(NA, -62L), class = "data.frame")
+  nabat.names <- bat.ref.filter.regions(bat.ref.names(), regions)
+  if (!any(tolower(nabat.names$Region) != "all")) {
+    cat(sprintf("NOTE: no bat.names records match regions = %s - only the \"All\" records are used.\n",
+                paste(regions, collapse = ", ")))
+  }
+  pre.tables <- list(
+    groups = list(df = bat.ref.filter.regions(bat.ref.groups(), regions),
+                  cols = c("code4", "code6", "common_name", "scientific_name")),
+    freq   = list(df = bat.ref.filter.regions(bat.ref.freqclasses(), regions),
+                  cols = c("Label", "code4", "code6", "common_name", "scientific_name"))
+  )
 
   # ---------------------------------------------------------------------------
   # Known typo/variant corrections for the non-species category labels -
@@ -617,12 +473,43 @@ batz.batusa_recode.names <- function(data, batname.format.out = "common_name", g
     tolower(x)
   }
 
+  # value returned for a "BAT Groupings"/"NABATFrequency Classes" row: these
+  # tables only have name/code columns, so any other batname.format.out
+  # (listing status, family, ...) gives "" - same as the category labels.
+  pre.value <- function(df, fmt) {
+    if (identical(fmt, "both")) {
+      cn <- df$common_name; sn <- df$scientific_name
+      return(ifelse(is.na(sn) | !nzchar(sn) | tolower(sn) == tolower(cn), cn, sprintf("%s (%s)", cn, sn)))
+    }
+    if (fmt %in% names(df) && fmt != "Region") return(as.character(df[[fmt]]))
+    rep("", nrow(df))
+  }
+
   recode.vec <- function(x) {
     lookup.values <- unlist(lapply(match.cols, function(cn) normalize(reference[[cn]])),
                              use.names = FALSE)
     lookup.rowidx <- rep(seq_len(nrow(reference)), times = length(match.cols))
 
     x.orig <- as.character(x)
+
+    # 2026-10-23: "BAT Groupings" then "NABATFrequency Classes" first. Within
+    # each table the columns are tried in the order given in pre.tables
+    # (first match wins); a value found here skips the bat.names lookup.
+    pre.done <- rep(FALSE, length(x.orig))
+    pre.out  <- x.orig
+    x.pre    <- normalize(x.orig)
+    for (pt in pre.tables) {
+      if (nrow(pt$df) == 0) next
+      pt.vals <- pre.value(pt$df, batname.format.out)
+      for (cn in pt$cols) {
+        idx <- match(x.pre, normalize(pt$df[[cn]]))
+        hit <- !pre.done & !is.na(idx) & nzchar(x.pre)
+        if (any(hit)) {
+          pre.out[hit]  <- pt.vals[idx[hit]]
+          pre.done[hit] <- TRUE
+        }
+      }
+    }
 
     # Known typo/variant corrections - see typo.corrections above and
     # @details. A recognized misspelling/shorthand is rewritten to its
@@ -657,7 +544,11 @@ batz.batusa_recode.names <- function(data, batname.format.out = "common_name", g
       out[found] <- gsub("-", " ", out[found])
     }
 
-    list(values = out, unmatched = x.orig[!found])
+    if (any(pre.done)) {
+      out[pre.done] <- if (grammar.dash) pre.out[pre.done] else gsub("-", " ", pre.out[pre.done])
+    }
+
+    list(values = out, unmatched = x.orig[!found & !pre.done])
   }
 
   if (is.data.frame(data)) {

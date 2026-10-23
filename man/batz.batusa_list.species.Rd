@@ -310,6 +310,15 @@ now simplified instead of dropped (\code{café} -> \code{cafe},
 \code{×} -> \code{X}, curly quotes -> straight quotes); characters
 with no plain equivalent (e.g. \code{°}, \code{µ}, \code{™}) are still
 removed. Column names are cleaned the same way.
+
+\strong{Follow-up, 2026-10-23, per Josh - shared bat table.} The
+embedded bat table was removed; this function now uses the shared
+\code{bat.names} table (\code{bat.ref.names()},
+\code{R/batz.util_bat.reference.R}) that \code{\link{batz.batusa_recode.names}}
+also uses, species rows only. Checked: output is identical to before. (The
+old embedded copy had used the pre-2026-09-25 column names and differed in
+one cell - Seminole bat \code{states.threatened = "OK"} - which this
+function never reads.)
 }
 \examples{
 \dontrun{

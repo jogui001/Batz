@@ -8,7 +8,8 @@ batz.batusa_recode.names(
   data,
   batname.format.out = "common_name",
   grammar.dash = TRUE,
-  strip.special = TRUE
+  strip.special = TRUE,
+  regions = c("ALL", "NABAT")
 )
 }
 \arguments{
@@ -78,6 +79,13 @@ letters (\code{é} -> \code{e}) and removes other non-ASCII special
 characters (e.g. \code{°}, \code{µ}) from \code{data} when it is a data frame, before matching - see
 \code{@details}. A plain vector is not stripped. This function reads no
 files.}
+
+\item{regions}{Character vector, default \code{c("ALL", "NABAT")}. Added
+2026-10-23. Only records of the \code{BAT Groupings},
+\code{NABATFrequency Classes} and \code{bat.names} tables whose
+\code{$Region} matches one of these are used (records marked \code{All}
+are always used). A \code{$Region} cell may list several regions
+separated by \code{;} or \code{,}; the record is used if any matches.}
 }
 \value{
 A vector (if \code{data} is a vector) or data frame (if
@@ -352,6 +360,35 @@ now simplified instead of dropped (\code{café} -> \code{cafe},
 \code{×} -> \code{X}, curly quotes -> straight quotes); characters
 with no plain equivalent (e.g. \code{°}, \code{µ}, \code{™}) are still
 removed. Column names are cleaned the same way.
+
+\strong{Follow-up, 2026-10-23, per Josh - shared tables, groupings and
+frequency classes, regions.}
+\enumerate{
+  \item The bat table is no longer embedded here: it is the shared
+    \code{bat.names} table (\code{bat.ref.names()},
+    \code{R/batz.util_bat.reference.R}), taken from Josh's edited
+    \code{Batz reference tables_20261023.xlsx}. It gains \code{$Region}
+    (\code{NABAT} for species, \code{All} for category labels) and
+    \code{$family} (bat family, blank for category labels), so both are also
+    valid \code{batname.format.out} values. \code{"Multiple"}'s
+    common/scientific name is now \code{"Multiple Bats"}.
+  \item Each value is first looked up in \code{BAT Groupings} (columns
+    \code{code4}, \code{code6}, \code{common_name}, \code{scientific_name}),
+    then \code{NABATFrequency Classes} (\code{Label}, \code{code4},
+    \code{code6}, \code{common_name}, \code{scientific_name}); first match
+    wins. Only if neither matches is the typo correction + \code{bat.names}
+    lookup used. These two tables only have name/code columns, so any other
+    \code{batname.format.out} (e.g. \code{listing.status_federal},
+    \code{family}) gives \code{""} for them. \strong{Output change:}
+    category labels now take their names from \code{NABATFrequency Classes}
+    - e.g. \code{HiF} with \code{batname.format.out = "common_name"} is now
+    \code{"Unidentifiable Species > 30 kHz"} (was \code{"HiF"}), and
+    \code{LowF/LoF} now returns \code{"LowF/LoF"} as \code{code4} (the table
+    says so; it used to be corrected to \code{"LoF"}).
+  \item New \code{regions} argument (see above). If no \code{bat.names}
+    record matches, a NOTE is printed and only the \code{All} records are
+    used.
+}
 }
 \examples{
 \dontrun{

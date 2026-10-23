@@ -324,7 +324,11 @@
 #'   \code{$filepath}, \code{$reason}, \code{$headers.missing}, and - last -
 #'   \code{$strip.special}: \code{"FALSE"} (not selected), \code{"TRUE NONE"}
 #'   (nothing found), or \code{"TRUE ; <header>; ..."} (the headers where
-#'   characters were removed)).
+#'   characters were removed)). If no file was skipped, no log is created
+#'   (and any \code{vetted.merged_log.file} left from an earlier call is
+#'   removed); instead \code{"All <n> files successfully merged, no log
+#'   file created"} is printed. The log is kept in R only - it is not
+#'   written to disk.
 #' @param bat.names.out Character, default \code{"code4"}. The
 #'   \code{batname.format.out} passed to \code{\link{batz.batusa_recode.names}}
 #'   when recoding \code{$manid}/\code{$autoid.kp}/\code{$autoid.sb} - must
@@ -360,9 +364,34 @@
 #'   characters (e.g. \code{°}, \code{µ}) from the data after loading - see \code{@details}. Files are
 #'   always read with a UTF-8/Latin-1 fallback, so a stray \code{°} can't stop
 #'   them loading, whatever this is set to.
+#' @param regions Character vector, default \code{c("ALL", "NABAT")}. Added
+#'   2026-10-23. The region(s) the bats were recorded in. When
+#'   \code{$manid}/\code{$autoid.kp}/\code{$autoid.sb} (and any extra auto-ID
+#'   column) are recoded, only the records of the \code{BAT Groupings},
+#'   \code{NABATFrequency Classes} and \code{bat.names} tables whose
+#'   \code{$Region} matches one of these are used; records marked \code{All}
+#'   are always used. A \code{$Region} cell may list several regions separated
+#'   by \code{;} or \code{,} (e.g. \code{NABAT; CA, SouthAmerica}) - the record
+#'   is used if any of them matches. Case and quotes are ignored.
+#' @param autoid.header_in Character vector, default \code{c("autoid")}. Added
+#'   2026-10-23. Other names for an auto-ID column, for vetting sheets not made
+#'   with the standard BRI pipeline. Compared after header standardization
+#'   (case, spaces and punctuation ignored), as a whole header - e.g.
+#'   \code{"AUTO ID"} matches a header \code{AUTO ID} or \code{auto_id}, but
+#'   not \code{WA|Kaleidoscope|Auto ID}. Only used when the file doesn't
+#'   already have the standard column.
+#' @param autoid.header_out Character vector, default \code{c("auto.kp")}, the
+#'   same length as \code{autoid.header_in} (otherwise the function stops).
+#'   Which program each \code{autoid.header_in} header comes from:
+#'   \code{"auto.kp"} (k-Pro/Kaleidoscope, merged into \code{$autoid.kp}) or
+#'   \code{"auto.sb"} (SonoBat, merged into \code{$autoid.sb}). Any other name
+#'   is treated as a different vetting program and added as its own output
+#'   column with exactly that name (after \code{$autoid.sb}); files without it
+#'   get \code{NA}. Its values are recoded like the other ID columns.
 #'
 #' @return Invisibly, a named list: \code{vetted.merged} (always), and
-#'   \code{vetted.merged_log.file} (only if \code{log.file = TRUE}) - or
+#'   \code{vetted.merged_log.file} (only if \code{log.file = TRUE} and at
+#'   least one file was skipped) - or
 #'   their snake_case equivalents if \code{snake_case = TRUE} (see that
 #'   parameter above). As a side effect, the same object(s) are also
 #'   assigned directly into the calling environment (same auto-assign
@@ -402,6 +431,73 @@
 #' \code{MONITORINGNIGHT} or \code{DATE-12} (any case); it is renamed to
 #' \code{$date.monitoringnight}.
 #'
+#' \strong{Follow-up, 2026-10-23, per Josh - log message and quieter
+#' recode warnings.} (1) With \code{log.file = TRUE}, if every file merged
+#' (nothing skipped) no empty log is created; the function prints
+#' \code{"All <n> files successfully merged, no log file created"}. (2)
+#' Blank values, \code{"NOISE"} and \code{"NoID"} in \code{$manid},
+#' \code{$autoid.kp} and \code{$autoid.sb} are no longer sent to
+#' \code{\link{batz.batusa_recode.names}} - they are not species, so they
+#' are kept exactly as they are without a \code{"WARNING: ... inputs did
+#' not match"} message. Any other unmatched value (e.g. SonoBat's
+#' \code{"Luso"}) is still reported.
+#'
+#' \strong{Follow-up, 2026-10-23 (later), per Josh - shared bat tables,
+#' regions, alternative headers.}
+#' \enumerate{
+#'   \item Bat names are recoded with the shared tables in
+#'     \code{R/batz.util_bat.reference.R}: \code{BAT Groupings} and
+#'     \code{NABATFrequency Classes} are checked first, then \code{bat.names}
+#'     (see \code{\link{batz.batusa_recode.names}}), using only records that
+#'     match \code{regions}. E.g. SonoBat's \code{Luso} is now recoded to
+#'     \code{LUSO} (little brown bat / Indiana bat) instead of being reported
+#'     as unmatched.
+#'   \item New inputs \code{autoid.header_in}/\code{autoid.header_out} - see
+#'     their descriptions above.
+#'   \item A header made only of the words Manual, Species, ID and
+#'     Identification, ending in ID or Identification and containing Manual or
+#'     Species (e.g. \code{Manual ID}, \code{Species ID}, \code{Species
+#'     Identification}) is read as \code{Species Manual ID}, if the file has no
+#'     \code{Species Manual ID} column. The first one found is used.
+#'   \item \strong{Behavior change:} a file no longer needs BOTH the k-Pro
+#'     (\code{WA|Kaleidoscope|Auto ID}) and SonoBat (\code{SppAccp}) columns -
+#'     at least one auto-ID column (k-Pro, SonoBat, or one named in
+#'     \code{autoid.header_out}) is enough; the missing one is filled with
+#'     \code{NA}. Without this, a non-BRI sheet with a single auto-ID column
+#'     would always be skipped. \code{Filename}, \code{MonitoringNight},
+#'     \code{Species Manual ID} and \code{Lat} are still required.
+#'   \item The column rename after merging is now done by name instead of by
+#'     position (same output for standard files).
+#'   \item \code{$manid.kp}/\code{$manid.sb} are unchanged; no
+#'     \code{$manid.<other>} column is made for an extra auto-ID column.
+#' }
+#'
+#' \strong{Follow-up, 2026-10-23 (later still), per Josh - other export
+#' layouts (e.g. a Kaleidoscope export of the Amboseli survey).}
+#' \enumerate{
+#'   \item \code{IN FILE} (or \code{File Name}, \code{File}) is read as
+#'     \code{Filename} when the file has no \code{Filename} column.
+#'   \item \code{Latitude} is read as \code{Lat}. A separate \code{Longitude}
+#'     (or \code{Long}, \code{Lon}) column is joined onto \code{Lat} as
+#'     \verb{<lat> <lon>}, then split into \code{$lat}/\code{$longitude} as for
+#'     the standard files. A row with either value blank keeps only what it
+#'     has.
+#'   \item \code{aru.serial} is accepted as well as \code{Serial} for
+#'     \code{$aru.serial}.
+#'   \item If a file has an \code{aru.name} or \code{site} column AND a serial
+#'     column, and the first part of a row's wav name is that row's serial
+#'     number (e.g. \code{656346_20230506_180008_000.wav}, serial
+#'     \code{656346}), \code{$aru.name} comes from the \code{aru.name}/
+#'     \code{site} column instead of the wav name. Otherwise it is read from
+#'     the wav name as before.
+#'   \item Dates are not converted: \code{MonitoringNight}/\code{DATE-12} is
+#'     \verb{m/d/yyyy} in both the BRI files and the Amboseli export, so
+#'     \code{$date.monitoringnight} is kept as it is.
+#'   \item \code{$aru.model} is still worked out from the wav-name layout, so
+#'     a non-Wildlife Acoustics recorder with the same naming (e.g. the
+#'     Amboseli \code{Chorus} units) shows as \code{"SM4"}.
+#' }
+#'
 #' @examples
 #' \dontrun{
 #' # bare call - creates `vetted.merged` (and `vetted.merged_log.file`, if
@@ -424,7 +520,39 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
                                                manid.kp = TRUE,
                                                manid.sb = TRUE,
                                                snake_case = FALSE,
-                                               strip.special = TRUE) {
+                                               strip.special = TRUE,
+                                               regions = c("ALL", "NABAT"),
+                                               autoid.header_in = c("autoid"),
+                                               autoid.header_out = c("auto.kp")) {
+
+  ## 2026-10-23, per Josh: alternative auto-ID headers (non-BRI vetting
+  ## sheets). autoid.header_in[i] is another name for autoid.header_out[i].
+  if (length(autoid.header_in) != length(autoid.header_out)) {
+    stop(paste0("the inputs \"autoid.header_in\" and \"autoid.header_out\" are of unequal lengths ",
+                "so they are mis-matched, make both have the same vector length:\n",
+                "autoid.header_in has a length of ", length(autoid.header_in), "\n",
+                "autoid.header_out has a length of ", length(autoid.header_out)), call. = FALSE)
+  }
+  autoid.header_out <- trimws(as.character(autoid.header_out))
+  ## "auto.kp"/"auto.sb" (or "autoid.kp"/"autoid.sb") are the standard k-Pro/
+  ## SonoBat columns; anything else is another vetting program and becomes
+  ## its own output column, named exactly as given.
+  autoid.target <- ifelse(tolower(autoid.header_out) %in% c("auto.kp", "autoid.kp"), "wa_kaleidoscope_auto_id",
+                   ifelse(tolower(autoid.header_out) %in% c("auto.sb", "autoid.sb"), "sppaccp",
+                          autoid.header_out))
+  autoid.in.std <- standardize.headers(autoid.header_in)
+  extra.autoid <- unique(autoid.target[!(autoid.target %in% c("wa_kaleidoscope_auto_id", "sppaccp"))])
+
+  ## 2026-10-23: a header made only of the words Manual / Species / ID /
+  ## Identification, ending in ID or Identification and containing Manual or
+  ## Species (e.g. "Manual ID", "Species ID", "Manual Species Identification")
+  ## is read as "Species Manual ID".
+  is.manual.id <- function(h) {
+    vapply(strsplit(h, "_", fixed = TRUE), function(tok) {
+      length(tok) >= 2 && all(tok %in% c("manual", "species", "id", "identification")) &&
+        tok[length(tok)] %in% c("id", "identification") && any(tok %in% c("manual", "species"))
+    }, logical(1))
+  }
 
   ## header standardization (per Josh, 2026-09-14 project preference):
   ## expected.headers is a literal, uninvented copy of the vetting
@@ -509,7 +637,47 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
       mn.alias <- intersect(c("date_monitoringnight", "monitoringnight", "date_12"), names(tmp))
       if (length(mn.alias) > 0) names(tmp)[names(tmp) == mn.alias[1]] <- "date.monitoringnight"
     }
-    missing.headers <- setdiff(expected.headers, names(tmp))
+    ## 2026-10-23 (later), per Josh - other export layouts (e.g. a
+    ## Kaleidoscope export with "IN FILE", separate LATITUDE/LONGITUDE):
+    ## "IN FILE"/"File Name"/"File" is read as Filename, "Latitude" as Lat,
+    ## and a separate Longitude/Long/Lon column is joined onto Lat as
+    ## "<lat> <lon>" (the format the standard files use, split again below).
+    if (!("filename" %in% names(tmp))) {
+      fa <- intersect(c("in_file", "file_name", "file"), names(tmp))
+      if (length(fa) > 0) names(tmp)[names(tmp) == fa[1]] <- "filename"
+    }
+    if (!("lat" %in% names(tmp)) && "latitude" %in% names(tmp)) {
+      names(tmp)[names(tmp) == "latitude"] <- "lat"
+    }
+    lon.col <- intersect(c("longitude", "long", "lon"), names(tmp))
+    if ("lat" %in% names(tmp) && length(lon.col) > 0) {
+      la <- trimws(ifelse(is.na(tmp$lat), "", as.character(tmp$lat)))
+      lo <- trimws(ifelse(is.na(tmp[[lon.col[1]]]), "", as.character(tmp[[lon.col[1]]])))
+      join <- nzchar(la) & nzchar(lo) & !grepl("\\s", la)
+      la[join] <- paste(la[join], lo[join])
+      tmp$lat <- la
+    }
+    ## "Species Manual ID" alternatives (2026-10-23) - first one found is used
+    if (!("species_manual_id" %in% names(tmp))) {
+      mid <- names(tmp)[is.manual.id(names(tmp))]
+      if (length(mid) > 0) names(tmp)[names(tmp) == mid[1]] <- "species_manual_id"
+    }
+    ## alternative auto-ID headers (2026-10-23) - only used when the file
+    ## doesn't already have the standard column
+    for (i in seq_along(autoid.in.std)) {
+      if (autoid.in.std[i] %in% names(tmp) && !(autoid.target[i] %in% names(tmp))) {
+        names(tmp)[names(tmp) == autoid.in.std[i]] <- autoid.target[i]
+      }
+    }
+    ## 2026-10-23: the k-Pro (wa_kaleidoscope_auto_id) and SonoBat (sppaccp)
+    ## columns are no longer both required - a file needs at least one auto-ID
+    ## column (k-Pro, SonoBat or one named in autoid.header_out); a missing one
+    ## is filled with NA.
+    auto.headers <- c("wa_kaleidoscope_auto_id", "sppaccp", extra.autoid)
+    missing.headers <- setdiff(setdiff(expected.headers, auto.headers[1:2]), names(tmp))
+    if (!any(auto.headers %in% names(tmp))) {
+      missing.headers <- c(missing.headers, paste(auto.headers, collapse = " or "))
+    }
     if (length(missing.headers) > 0) {
       add.log(f, "mismatched headers", paste(missing.headers, collapse = ", "), special.hdrs); next
     }
@@ -523,8 +691,24 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
     ## "serial" - kept here as a legacy input alias (renamed 2026-09-27, see
     ## @details, "Column identifiers renamed" above) while this function's
     ## own internal/output column is now $aru.serial.
-    aru.serial.vals <- if ("serial" %in% names(tmp)) as.character(tmp$serial) else
+    ## 2026-10-23 (later): "aru.serial" (standardized aru_serial) accepted too
+    ser.col <- intersect(c("aru_serial", "serial"), names(tmp))
+    aru.serial.vals <- if (length(ser.col) > 0) as.character(tmp[[ser.col[1]]]) else
       rep(NA_character_, nrow(tmp))
+    ## 2026-10-23 (later), per Josh: if the file has an aru.name or site column
+    ## AND a serial column, and the first part of the wav name is that row's
+    ## serial number (e.g. "656346_20230506_180008_000.wav", serial 656346),
+    ## the ARU name is taken from the aru.name/site column instead of the wav
+    ## name. Otherwise it is read from the wav name as before.
+    aru.name.vals <- rep(NA_character_, nrow(tmp))
+    name.col <- intersect(c("aru_name", "site"), names(tmp))
+    if (length(name.col) > 0 && length(ser.col) > 0) {
+      fn.aru <- parse.aru.filename(tmp$filename)$aru.name
+      nm.vals <- trimws(as.character(tmp[[name.col[1]]]))
+      use <- !is.na(fn.aru) & !is.na(aru.serial.vals) & trimws(fn.aru) == trimws(aru.serial.vals) &
+        !is.na(nm.vals) & nzchar(nm.vals)
+      aru.name.vals[use] <- nm.vals[use]
+    }
     ## $sunregion is OPTIONAL, not one of the required expected.headers - a
     ## file is never skipped for lacking it. If a file's own (standardized)
     ## headers happen to include it, copy those values straight through;
@@ -534,9 +718,13 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
     ## that trim would otherwise silently drop it.
     sunregion.vals <- if ("sunregion" %in% names(tmp)) as.character(tmp$sunregion) else
       rep(NA_character_, nrow(tmp))
-    tmp <- tmp[, expected.headers, drop = FALSE]
+    for (h in c(auto.headers)) if (!(h %in% names(tmp))) tmp[[h]] <- NA_character_
+    tmp <- tmp[, c(expected.headers, extra.autoid), drop = FALSE]
+    tmp[c("wa_kaleidoscope_auto_id", "sppaccp", extra.autoid)] <-
+      lapply(tmp[c("wa_kaleidoscope_auto_id", "sppaccp", extra.autoid)], as.character)
     tmp$aru.serial <- aru.serial.vals
     tmp$sunregion <- sunregion.vals
+    tmp$aru.name.file <- aru.name.vals
     vetted.merged <- rbind(vetted.merged, tmp)
   }
 
@@ -552,7 +740,8 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
 
     ## $filename -> $aru.name/$date/$time, SM4 or SM5 layout (2026-10-02)
     fn.parts <- parse.aru.filename(vetted.merged$filename)
-    vetted.merged$aru.name <- fn.parts$aru.name
+    vetted.merged$aru.name <- ifelse(is.na(vetted.merged$aru.name.file), fn.parts$aru.name,
+                                     vetted.merged$aru.name.file)
     vetted.merged$date     <- fn.parts$date
     vetted.merged$time     <- fn.parts$time
     aru.model.vals         <- fn.parts$aru.model
@@ -563,28 +752,44 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
     ## positional rename ($sunregion, appended right after $aru.serial back
     ## in the per-file loop above, keeps its own name here - no rename
     ## needed)
-    names(vetted.merged) <- c("filename", "date.monitoringnight", "manid", "autoid.kp",
-                               "autoid.sb", "lat", "aru.serial", "sunregion", "longitude",
-                               "aru.name", "date", "time")
+    ## 2026-10-23: renamed by name instead of position, so extra auto-ID
+    ## columns (autoid.header_out) can sit in between
+    rename.map <- c(species_manual_id = "manid", wa_kaleidoscope_auto_id = "autoid.kp",
+                    sppaccp = "autoid.sb", lon = "longitude")
+    hit <- names(vetted.merged) %in% names(rename.map)
+    names(vetted.merged)[hit] <- rename.map[names(vetted.merged)[hit]]
 
     ## reorder ($sunregion placed with the other detector-level columns,
     ## next to $aru.serial/$aru.name)
     vetted.merged$aru.model <- aru.model.vals
     vetted.merged <- vetted.merged[, c("filename", "date.monitoringnight", "aru.name", "aru.model",
                                         "aru.serial", "sunregion", "lat", "longitude",
-                                        "manid", "autoid.kp", "autoid.sb",
+                                        "manid", "autoid.kp", "autoid.sb", extra.autoid,
                                         "date", "time")]
 
     ## $call.datetime
     vetted.merged$call.datetime <- batz.datawrangler_call.datetime(
       date = vetted.merged$date, time = vetted.merged$time)
 
-    ## recode manid/autoid.kp/autoid.sb (batname.format.out = bat.names.out, default "code4")
-    vetted.merged$manid     <- batz.batusa_recode.names(vetted.merged$manid, batname.format.out = bat.names.out)
-    vetted.merged$autoid.kp <- batz.batusa_recode.names(vetted.merged$autoid.kp, batname.format.out = bat.names.out)
-    vetted.merged$autoid.sb <- batz.batusa_recode.names(vetted.merged$autoid.sb, batname.format.out = bat.names.out)
-
     is.empty <- function(x) is.na(x) | !nzchar(trimws(x))
+
+    ## recode manid/autoid.kp/autoid.sb (batname.format.out = bat.names.out, default "code4")
+    ## 2026-10-23, per Josh: blanks, "NOISE" and "NoID" are not species, so
+    ## they are left as they are and not sent to batz.batusa_recode.names()
+    ## (which listed them as "inputs did not match"). Any other value that
+    ## doesn't match is still reported.
+    recode.skip <- c("noise", "noid")
+    recode.ids <- function(x) {
+      x <- as.character(x)
+      send <- !is.empty(x) & !(tolower(trimws(x)) %in% recode.skip)
+      if (any(send)) x[send] <- batz.batusa_recode.names(x[send], batname.format.out = bat.names.out,
+                                                         regions = regions)
+      x
+    }
+    vetted.merged$manid     <- recode.ids(vetted.merged$manid)
+    vetted.merged$autoid.kp <- recode.ids(vetted.merged$autoid.kp)
+    vetted.merged$autoid.sb <- recode.ids(vetted.merged$autoid.sb)
+    for (h in extra.autoid) vetted.merged[[h]] <- recode.ids(vetted.merged[[h]])
 
     if (manid.kp) {
       vetted.merged$manid.kp <- vetted.merged$manid
@@ -609,10 +814,21 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
 
   result <- list(vetted.merged = vetted.merged)
 
-  if (log.file) {
-    vetted.merged_log.file <- if (length(log.rows) > 0) do.call(rbind, log.rows) else
-      data.frame(filepath = character(0), reason = character(0), headers.missing = character(0),
-                 aru.model = character(0), special.log.cols.empty())
+  ## 2026-10-23, per Josh: when no file was skipped there is nothing to log,
+  ## so no (empty) log is created - a one-line message is printed instead. A
+  ## log left over from an earlier call is removed so it isn't mistaken for
+  ## this run's.
+  if (log.file && length(log.rows) == 0) {
+    if (length(files) == 0) {
+      cat("No files matching load.pattern found, no log file created\n")
+    } else {
+      cat(sprintf("All %d files successfully merged, no log file created\n", length(files)))
+    }
+    if (exists("vetted.merged_log.file", envir = parent.frame(), inherits = FALSE)) {
+      rm("vetted.merged_log.file", envir = parent.frame())
+    }
+  } else if (log.file) {
+    vetted.merged_log.file <- do.call(rbind, log.rows)
     rownames(vetted.merged_log.file) <- NULL
     if (snake_case) {
       names(vetted.merged_log.file) <- standardize.headers(names(vetted.merged_log.file))
