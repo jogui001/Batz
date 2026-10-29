@@ -177,7 +177,7 @@ names(plot.data.group.synth)[names(plot.data.group.synth) == "aru.groupby"] <- "
 suntimes.synth <- data.frame(
   aru.name = "WTG-GOM102", date = "06/01/2026", date.monitoringnight = "06/02/2026",
   sunregion = "WTG", time.zone = "UTC", sunregion.type = "coordinates",
-  schedual1 = "civil", schedual2 = "civil",
+  schedule1 = "civil", schedule2 = "civil",
   sunset = "06/01/2026 20:00", sunset.unix = 0,
   sunrise = "06/01/2026 06:00", sunrise.unix = 0,
   sunrise.monitoringnight = "06/02/2026 06:00", sunrise.monitoringnight.unix = 0,
@@ -266,7 +266,7 @@ DATA.REQUIRED <- c("spp.id", "date", "obs")
 # check, so only this constant and the suntimes.synth fixture above
 # needed updating - no other behavior changed.
 SUNTIMES.REQUIRED <- c("aru.name", "date", "date.monitoringnight", "sunregion", "time.zone",
-                        "sunregion.type", "schedual1", "schedual2", "sunset",
+                        "sunregion.type", "schedule1", "schedule2", "sunset",
                         "sunset.unix", "sunrise", "sunrise.unix", "sunrise.monitoringnight",
                         "sunrise.monitoringnight.unix")
 # "plot.group" removed 2026-09-23 (per Josh, see the header comment above) -

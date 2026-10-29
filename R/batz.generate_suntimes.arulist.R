@@ -39,8 +39,8 @@
 #' \code{sunregion.long} -> \code{sunregion_long}, \code{sunregion.lat} ->
 #' \code{sunregion_lat}, \code{date.start} -> \code{date_start},
 #' \code{date.end} -> \code{date_end}, \code{time.zone} -> \code{time_zone}.
-#' \code{aru}, \code{long}, \code{lat}, \code{sunregion}, \code{schedual1},
-#' \code{schedual2} have no separators and are unaffected. This does NOT
+#' \code{aru}, \code{long}, \code{lat}, \code{sunregion}, \code{schedule1},
+#' \code{schedule2} have no separators and are unaffected. This does NOT
 #' touch this function's own INVENTED fields, which never came from the
 #' loaded file - \code{date.monitoringnight}, \code{suns}, \code{suns.unix}, \code{sunr},
 #' \code{sunr.unix}, \code{sunr.mon}, \code{sunr.mon.unix}, \code{calc.lat},
@@ -63,7 +63,7 @@
 #' sides - see below): \code{aru.name}, \code{long}, \code{lat},
 #' \code{sunregion}, \code{sunregion.longitude}, \code{sunregion.latitude},
 #' \code{date.start}, \code{date.end}, \code{time_zone},
-#' \code{sunregion_type}, \code{schedual1}, \code{schedual2} (a real file's
+#' \code{sunregion_type}, \code{schedule1}, \code{schedule2} (a real file's
 #' raw header can be spelled with either separator style - see below). If
 #' any are missing, the function stops immediately with \code{"inputfile
 #' is missing these headers"} followed by the list of missing header names
@@ -71,11 +71,12 @@
 #' is now REQUIRED - the previous behavior of defaulting to
 #' \code{"fixed.unique"} when the column was entirely absent no longer
 #' applies, since a missing \code{$sunregion_type} column now fails this
-#' header check before reaching that point. \code{$schedual1}/
-#' \code{$schedual2} are new, pass-through-only columns (not used in any
+#' header check before reaching that point. \code{$schedule1}/
+#' \code{$schedule2} are new, pass-through-only columns (not used in any
 #' calculation, just carried into the output - see below); note the
-#' spelling is Josh's own ("schedual", not "schedule"), kept exactly as
-#' given.
+#' spelling was Josh's own ("schedual", not "schedule") and was kept as
+#' given until 2026-10-28, when Josh had it corrected to \code{schedule1}/
+#' \code{schedule2} (the old spelling is still accepted - see below).
 #'
 #' \strong{Only \code{"fixed.unique"}/\code{"fixed.pooled"} rows get
 #' records generated (updated 2026-08-26, per Josh) - a real behavior
@@ -271,8 +272,8 @@
 #'     variable carries no user-visible benefit, so they were left as-is
 #'     to keep this change's footprint minimal.
 #'   \item \code{$sunregion}, \code{$date_start}, \code{$date_end},
-#'     \code{$time_zone}, \code{$sunregion_type}, \code{$schedual1},
-#'     \code{$schedual2} are NOT in Josh's rename list and are unchanged
+#'     \code{$time_zone}, \code{$sunregion_type}, \code{$schedule1},
+#'     \code{$schedule2} are NOT in Josh's rename list and are unchanged
 #'     (this specifically supersedes the "Header standardization" @details
 #'     paragraph above only for the \code{aru}/\code{long}/\code{lat}/
 #'     \code{sunregion_long}/\code{sunregion_lat} items it lists - every
@@ -385,7 +386,7 @@
 #' \code{date_end -> date.end} (the other entries - \code{longitude},
 #' \code{latitude}, \code{sunregion}, \code{sunregion_longitude},
 #' \code{sunregion_latitude}, \code{time_zone}, \code{sunregion_type},
-#' \code{schedual1}, \code{schedual2} - have no dots either way and are
+#' \code{schedule1}, \code{schedule2} - have no dots either way and are
 #' unchanged at THIS point in the history - see the next entry for the
 #' sunregion_longitude/sunregion_latitude follow-up later the same day).
 #' \code{$date.start}/\code{$date.end} are also renamed
@@ -540,8 +541,8 @@
 #'       \code{"fixed.pooled"} rows only: \code{$aru.name}, \code{$date},
 #'       \code{$date.monitoringnight}, \code{$sunregion}, \code{$sunregion.longitude},
 #'       \code{$sunregion.latitude}, \code{$date.start}, \code{$date.end},
-#'       \code{$time_zone}, \code{$sunregion_type}, \code{$schedual1},
-#'       \code{$schedual2}, \code{$latitude}, \code{$longitude}, \code{$sunset},
+#'       \code{$time_zone}, \code{$sunregion_type}, \code{$schedule1},
+#'       \code{$schedule2}, \code{$latitude}, \code{$longitude}, \code{$sunset},
 #'       \code{$sunset.unix}, \code{$sunrise}, \code{$sunrise.unix},
 #'       \code{$sunrise.monitoringnight}, \code{$sunrise.monitoringnight.unix}
 #'       (or their snake_case equivalents if \code{snake_case = TRUE} - see
@@ -579,6 +580,11 @@
 #' \code{×} -> \code{X}, curly quotes -> straight quotes); characters
 #' with no plain equivalent (e.g. \code{°}, \code{µ}, \code{™}) are still
 #' removed. Column names are cleaned the same way.
+#'
+#' \strong{Spelling correction, 2026-10-28, per Josh:} \code{schedual1}/
+#' \code{schedual2} are now \code{schedule1}/\code{schedule2} (required \code{*arulist.csv} headers and the \code{aru.suntimes} output columns). A file or
+#' data frame that still uses \code{schedual1}/\code{schedual2} works
+#' unchanged - \code{canonicalize.headers()} accepts the old spelling.
 #'
 #' @examples
 #' \dontrun{
@@ -759,7 +765,7 @@ batz.generate_suntimes.arulist <- function(dir.load = getwd(),
   ## ===========================================================================
   required.headers <- c("aru.name", "longitude", "latitude", "sunregion", "sunregion.longitude",
                          "sunregion.latitude", "date.start", "date.end", "time_zone",
-                         "sunregion.type", "schedual1", "schedual2")
+                         "sunregion.type", "schedule1", "schedule2")
   canon <- canonicalize.headers(aru.list, required.headers)
   if (length(canon$missing) > 0) {
     stop("inputfile is missing these headers: ", paste(canon$missing, collapse = ", "))
@@ -851,7 +857,7 @@ batz.generate_suntimes.arulist <- function(dir.load = getwd(),
       sunregion.longitude = row$sunregion.longitude, sunregion.latitude = row$sunregion.latitude,
       calc.lat = row$calc.lat, calc.long = row$calc.long,
       date.start = row$date.start, date.end = row$date.end,
-      schedual1 = row$schedual1, schedual2 = row$schedual2,
+      schedule1 = row$schedule1, schedule2 = row$schedule2,
       time_zone = row$time_zone, date = dates,
       stringsAsFactors = FALSE
     )
@@ -914,8 +920,8 @@ batz.generate_suntimes.arulist <- function(dir.load = getwd(),
     date.end             = aru.expand$date.end,
     time_zone            = aru.expand$time_zone,
     sunregion.type       = aru.expand$sunregion.type,
-    schedual1            = aru.expand$schedual1,
-    schedual2            = aru.expand$schedual2,
+    schedule1            = aru.expand$schedule1,
+    schedule2            = aru.expand$schedule2,
     latitude             = aru.expand$latitude,
     longitude            = aru.expand$longitude,
     stringsAsFactors = FALSE

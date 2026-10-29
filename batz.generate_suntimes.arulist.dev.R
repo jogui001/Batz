@@ -323,7 +323,7 @@ names(aru.list) <- standardize.headers(names(aru.list))
 ## ===========================================================================
 required.headers <- c("aru.name", "longitude", "latitude", "sunregion", "sunregion.longitude",
                        "sunregion.latitude", "date.start", "date.end", "time_zone",
-                       "sunregion.type", "schedual1", "schedual2")
+                       "sunregion.type", "schedule1", "schedule2")
 canon <- canonicalize.headers(aru.list, required.headers)
 if (length(canon$missing) > 0) {
   stop("inputfile is missing these headers: ", paste(canon$missing, collapse = ", "))
@@ -428,8 +428,8 @@ expand.one <- function(i) {
     calc.long      = row$calc.long,
     date.start     = row$date.start,
     date.end       = row$date.end,
-    schedual1      = row$schedual1,
-    schedual2      = row$schedual2,
+    schedule1      = row$schedule1,
+    schedule2      = row$schedule2,
     time_zone      = row$time_zone,
     date           = dates,
     stringsAsFactors = FALSE
@@ -508,8 +508,8 @@ aru.suntimes <- data.frame(
   date.end             = aru.expand$date.end,
   time_zone            = aru.expand$time_zone,
   sunregion.type       = aru.expand$sunregion.type,
-  schedual1            = aru.expand$schedual1,
-  schedual2            = aru.expand$schedual2,
+  schedule1            = aru.expand$schedule1,
+  schedule2            = aru.expand$schedule2,
   latitude             = aru.expand$latitude,
   longitude            = aru.expand$longitude,
   stringsAsFactors = FALSE
@@ -574,7 +574,7 @@ new.fixture <- data.frame(
   aru.name = "SITE1", longitude = -70.5, latitude = 44.5, sunregion = "SITE1",
   sunregion.longitude = -70.5, sunregion.latitude = 44.5,
   date.start = "7/1/2026", date.end = "7/2/2026", time.zone = "America/New_York",
-  sunregion.type = "fixed.unique", schedual1 = "A", schedual2 = "B",
+  sunregion.type = "fixed.unique", schedule1 = "A", schedule2 = "B",
   check.names = FALSE, stringsAsFactors = FALSE
 )
 write.csv(new.fixture, file.path(test.dir, "test_arulist.csv"), row.names = FALSE)
@@ -583,7 +583,7 @@ old.fixture <- data.frame(
   aru = "SITE1", long = -70.5, lat = 44.5, sunregion = "SITE1",
   sunregion.long = -70.5, sunregion.lat = 44.5,
   date.start = "7/1/2026", date.end = "7/2/2026", time.zone = "America/New_York",
-  sunregion.type = "fixed.unique", schedual1 = "A", schedual2 = "B",
+  sunregion.type = "fixed.unique", schedule1 = "A", schedule2 = "B",
   check.names = FALSE, stringsAsFactors = FALSE
 )
 old.test.dir <- file.path(tempdir(), "suntimes_round26_test_old")
@@ -711,3 +711,28 @@ cat("TEST 8 PASS: underscore-spelled file header (sunregion_type) satisfies",
     "dotted required.headers entry (sunregion.type), renamed to sunregion.type\n")
 
 cat("\nALL ROUND THIRTY TESTS PASSED\n")
+
+## ===========================================================================
+## SPELLING CORRECTION TEST (2026-10-28, per Josh) - schedual1/schedual2 are
+## now schedule1/schedule2; a file with the old spelling still loads
+## ===========================================================================
+cat("\n========================================\n")
+cat("SPELLING CORRECTION TEST (2026-10-28)\n")
+cat("========================================\n\n")
+
+## TEST 9: old "schedual1"/"schedual2" headers satisfy schedule1/schedule2
+df.old.spelling <- data.frame(schedual1 = "A", schedual2 = "B", stringsAsFactors = FALSE)
+canon.t9 <- canonicalize.headers(df.old.spelling, c("schedule1", "schedule2"))
+stopifnot(length(canon.t9$missing) == 0, identical(names(canon.t9$df), c("schedule1", "schedule2")))
+cat("TEST 9 PASS: schedual1/schedual2 accepted and renamed to schedule1/schedule2\n")
+
+## TEST 10: full run on an arulist saved with the old spelling
+old.spell.dir <- file.path(tempdir(), "suntimes_spelling_test")
+dir.create(old.spell.dir, showWarnings = FALSE)
+f.old <- new.fixture; names(f.old)[names(f.old) == "schedule1"] <- "schedual1"
+names(f.old)[names(f.old) == "schedule2"] <- "schedual2"
+write.csv(f.old, file.path(old.spell.dir, "test_arulist.csv"), row.names = FALSE)
+st.old <- batz.generate_suntimes.arulist(dir.load = old.spell.dir, write.output = FALSE)
+stopifnot(all(c("schedule1", "schedule2") %in% names(st.old$aru.suntimes)),
+          st.old$aru.suntimes$schedule1[1] == "A")
+cat("TEST 10 PASS: old-spelling arulist runs; output has schedule1/schedule2\n")

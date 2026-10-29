@@ -54,7 +54,7 @@ file was written (\code{YYYYMMDDHHMMSS}, e.g. \code{20260826114426}).
 \strong{Reordered and the \code{"sav"} prefix dropped (round
 twenty-two, 2026-09-24, per Josh) - see @details, "File naming (round
 twenty-two)"; the previous shape was \verb{<base>_<DATE1>to<DATE2>_
-sav<timestamp>_suntimes.csv}.} \code{""} (default) uses \code{"aru"}
+  sav<timestamp>_suntimes.csv}.} \code{""} (default) uses \code{"aru"}
 as \verb{<base>}. Any other value is used as \verb{<base>} instead -
 e.g. \code{project.name = "projectname"} produces something like
 \code{"projectname_suntimes_20250101to20250202_20260924113700.csv"}.
@@ -95,8 +95,8 @@ Invisibly, a list with:
 \code{"fixed.pooled"} rows only: \code{$aru.name}, \code{$date},
 \code{$date.monitoringnight}, \code{$sunregion}, \code{$sunregion.longitude},
 \code{$sunregion.latitude}, \code{$date.start}, \code{$date.end},
-\code{$time_zone}, \code{$sunregion_type}, \code{$schedual1},
-\code{$schedual2}, \code{$latitude}, \code{$longitude}, \code{$sunset},
+\code{$time_zone}, \code{$sunregion_type}, \code{$schedule1},
+\code{$schedule2}, \code{$latitude}, \code{$longitude}, \code{$sunset},
 \code{$sunset.unix}, \code{$sunrise}, \code{$sunrise.unix},
 \code{$sunrise.monitoringnight}, \code{$sunrise.monitoringnight.unix}
 (or their snake_case equivalents if \code{snake_case = TRUE} - see
@@ -169,8 +169,8 @@ underscore-separated: \code{sunregion.type} -> \code{sunregion_type},
 \code{sunregion.long} -> \code{sunregion_long}, \code{sunregion.lat} ->
 \code{sunregion_lat}, \code{date.start} -> \code{date_start},
 \code{date.end} -> \code{date_end}, \code{time.zone} -> \code{time_zone}.
-\code{aru}, \code{long}, \code{lat}, \code{sunregion}, \code{schedual1},
-\code{schedual2} have no separators and are unaffected. This does NOT
+\code{aru}, \code{long}, \code{lat}, \code{sunregion}, \code{schedule1},
+\code{schedule2} have no separators and are unaffected. This does NOT
 touch this function's own INVENTED fields, which never came from the
 loaded file - \code{date.monitoringnight}, \code{suns}, \code{suns.unix}, \code{sunr},
 \code{sunr.unix}, \code{sunr.mon}, \code{sunr.mon.unix}, \code{calc.lat},
@@ -194,7 +194,7 @@ helper, which treats \code{"."} and \code{"_"} as equivalent on both
 sides - see below): \code{aru.name}, \code{long}, \code{lat},
 \code{sunregion}, \code{sunregion.longitude}, \code{sunregion.latitude},
 \code{date.start}, \code{date.end}, \code{time_zone},
-\code{sunregion_type}, \code{schedual1}, \code{schedual2} (a real file's
+\code{sunregion_type}, \code{schedule1}, \code{schedule2} (a real file's
 raw header can be spelled with either separator style - see below). If
 any are missing, the function stops immediately with \code{"inputfile
 is missing these headers"} followed by the list of missing header names
@@ -202,11 +202,12 @@ is missing these headers"} followed by the list of missing header names
 is now REQUIRED - the previous behavior of defaulting to
 \code{"fixed.unique"} when the column was entirely absent no longer
 applies, since a missing \code{$sunregion_type} column now fails this
-header check before reaching that point. \code{$schedual1}/
-\code{$schedual2} are new, pass-through-only columns (not used in any
+header check before reaching that point. \code{$schedule1}/
+\code{$schedule2} are new, pass-through-only columns (not used in any
 calculation, just carried into the output - see below); note the
-spelling is Josh's own ("schedual", not "schedule"), kept exactly as
-given.
+spelling was Josh's own ("schedual", not "schedule") and was kept as
+given until 2026-10-28, when Josh had it corrected to \code{schedule1}/
+\code{schedule2} (the old spelling is still accepted - see below).
 
 \strong{Only \code{"fixed.unique"}/\code{"fixed.pooled"} rows get
 records generated (updated 2026-08-26, per Josh) - a real behavior
@@ -404,8 +405,8 @@ Josh's rename list didn't name them, and renaming a purely-internal
 variable carries no user-visible benefit, so they were left as-is
 to keep this change's footprint minimal.
 \item \code{$sunregion}, \code{$date_start}, \code{$date_end},
-\code{$time_zone}, \code{$sunregion_type}, \code{$schedual1},
-\code{$schedual2} are NOT in Josh's rename list and are unchanged
+\code{$time_zone}, \code{$sunregion_type}, \code{$schedule1},
+\code{$schedule2} are NOT in Josh's rename list and are unchanged
 (this specifically supersedes the "Header standardization" @details
 paragraph above only for the \code{aru}/\code{long}/\code{lat}/
 \code{sunregion_long}/\code{sunregion_lat} items it lists - every
@@ -520,7 +521,7 @@ updated: \code{aru_name -> aru.name}, \code{date_start -> date.start},
 \code{date_end -> date.end} (the other entries - \code{longitude},
 \code{latitude}, \code{sunregion}, \code{sunregion_longitude},
 \code{sunregion_latitude}, \code{time_zone}, \code{sunregion_type},
-\code{schedual1}, \code{schedual2} - have no dots either way and are
+\code{schedule1}, \code{schedule2} - have no dots either way and are
 unchanged at THIS point in the history - see the next entry for the
 sunregion_longitude/sunregion_latitude follow-up later the same day).
 \code{$date.start}/\code{$date.end} are also renamed
@@ -612,6 +613,11 @@ now simplified instead of dropped (\code{café} -> \code{cafe},
 \code{×} -> \code{X}, curly quotes -> straight quotes); characters
 with no plain equivalent (e.g. \code{°}, \code{µ}, \code{™}) are still
 removed. Column names are cleaned the same way.
+
+\strong{Spelling correction, 2026-10-28, per Josh:} \code{schedual1}/
+\code{schedual2} are now \code{schedule1}/\code{schedule2} (required \code{*arulist.csv} headers and the \code{aru.suntimes} output columns). A file or
+data frame that still uses \code{schedual1}/\code{schedual2} works
+unchanged - \code{canonicalize.headers()} accepts the old spelling.
 }
 \examples{
 \dontrun{

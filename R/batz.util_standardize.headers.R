@@ -91,6 +91,12 @@ standardize.headers <- function(x) {
 #' "Follow-up, 2026-09-28", for the first function switched over to it for
 #' this specific purpose.
 #'
+#' \strong{Spelling corrections, 2026-10-28, per Josh.} Headers listed in
+#' \code{headers.corrected()} (\code{schedual1} -> \code{schedule1},
+#' \code{schedual2} -> \code{schedule2}) are matched under either
+#' spelling: a column with the old spelling counts as the corrected header
+#' (and is renamed to it) when the corrected one isn't already there.
+#'
 #' @param df A data frame to canonicalize.
 #' @param required Character vector of header names, in the calling
 #'   function's own canonical style (e.g. dot-separated), that \code{df}
@@ -113,9 +119,28 @@ standardize.headers <- function(x) {
 #' @keywords internal
 canonicalize.headers <- function(df, required) {
   std.have <- standardize.headers(names(df))
+  ## 2026-10-28: an old (misspelled) header stands in for its corrected one
+  fix <- headers.corrected()
+  for (k in seq_len(nrow(fix))) {
+    std.new <- standardize.headers(fix$header.new[k])
+    j <- which(std.have == standardize.headers(fix$header.old[k]))
+    if (length(j) > 0 && !(std.new %in% std.have)) std.have[j[1]] <- std.new
+  }
   std.want <- standardize.headers(required)
   idx <- match(std.want, std.have)
   found <- !is.na(idx)
   names(df)[idx[found]] <- required[found]
   list(df = df, missing = required[!found])
+}
+
+#' Headers whose spelling was corrected (internal)
+#'
+#' Added 2026-10-28, per Josh. \code{$header.old} (still accepted by
+#' \code{canonicalize.headers()}) and \code{$header.new}.
+#' @keywords internal
+#' @noRd
+headers.corrected <- function() {
+  data.frame(header.old = c("schedual1", "schedual2"),
+             header.new = c("schedule1", "schedule2"),
+             stringsAsFactors = FALSE)
 }

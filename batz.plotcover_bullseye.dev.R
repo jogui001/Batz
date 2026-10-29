@@ -442,7 +442,7 @@ batz.plotcover_bullseye <- function(data, mic, aes.default, project.name = "new.
     ## Numbers drawn exactly on x = 180 (W) - the LEFT HORIZONTAL axis,
     ## the same ray as $mic.bull.height.label (default "(m)") - per Josh's
     ## thirteenth follow-up ("Make the labels for the scale occur along
-    ## the left horizonal axis"). Earlier (tenth follow-up) these were
+    ## the left horizontal axis"). Earlier (tenth follow-up) these were
     ## offset 15 degrees off that ray (to x = 165) to dodge the overlap
     ## bug above, back when the height label was the much longer
     ## "Microphone Height (m)"; per this follow-up they're back on the
@@ -1379,3 +1379,19 @@ stopifnot(identical(mic.bull.title.default, "Microphone Height and\nVertical Ori
 cat("(f) mic.bar title = 'Microphone Vertical Orientation'; mic.bull.title left unchanged (two panels no longer match, as flagged) - OK\n")
 
 cat("\n=== ALL TESTS COMPLETE ===\n")
+
+## ===========================================================================
+## 2026-10-28, per Josh: arrow.panel and panel.labels
+## ===========================================================================
+## (uses the same data/mic/aes objects as the tests above)
+if (exists("data") && exists("mic") && exists("aes.default")) {
+  r.arrow <- batz.plotcover_bullseye(data, mic, aes.default, project.name = "arrowtest",
+                                     dir.save = tempdir(),
+                                     sub.plots = c("mic.bar", "understory.bull", "canopy.bull"),
+                                     arrow.panel = "first", panel.labels = c("(a)", "(b)", "(c)"))
+  g <- r.arrow$ggplots[[1]]
+  n.seg <- vapply(g$patches$plots, function(p) sum(vapply(p$layers, function(l) inherits(l$geom, "GeomSegment"), logical(1))), numeric(1))
+  print(n.seg)   # understory panel has the arrow; canopy panel does not
+  try(batz.plotcover_bullseye(data, mic, aes.default, arrow.panel = "some"))      # stops
+  try(batz.plotcover_bullseye(data, mic, aes.default, panel.labels = c("(a)")))  # stops: one label per panel
+}

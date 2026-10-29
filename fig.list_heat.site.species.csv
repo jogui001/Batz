@@ -1,0 +1,2 @@
+"plot.type","plot.name","plot.species","plot.set","plot.group","group.labels","site.exclude","site.bold","date.start","date.end","xaxe.title","yaxe.title"
+"heat.site.species","otomops.OLMN.KA","Otomops harrisoni","OLMN;KA","community","OLMN=Kajiado;KA=NKRCP","KABC_06;KABC_07","OLMN3;KA07","","","Site","Time (20-min bins, 19:00-06:00)"

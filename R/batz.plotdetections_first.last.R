@@ -24,8 +24,8 @@
 #' @param suntimes A data frame of sunrise/sunset times, e.g. the output
 #'   of \code{batz.generate_suntimes.arulist()}. Must have \code{$aru.name},
 #'   \code{$date}, \code{$date.monitoringnight}, \code{$sunregion},
-#'   \code{$time.zone}, \code{$sunregion.type}, \code{$schedual1},
-#'   \code{$schedual2}, \code{$sunset}, \code{$sunset.unix},
+#'   \code{$time.zone}, \code{$sunregion.type}, \code{$schedule1},
+#'   \code{$schedule2}, \code{$sunset}, \code{$sunset.unix},
 #'   \code{$sunrise}, \code{$sunrise.unix}, \code{$sunrise.monitoringnight},
 #'   \code{$sunrise.monitoringnight.unix}. Renamed from
 #'   \code{$suns}/\code{$suns.unix}/\code{$sunr}/\code{$sunr.unix}/
@@ -1095,6 +1095,11 @@
 #' with a NOTE. Pools of a day or longer are plotted at their start date
 #' (\code{$date}).
 #'
+#' \strong{Spelling correction, 2026-10-28, per Josh:} \code{schedual1}/
+#' \code{schedual2} are now \code{schedule1}/\code{schedule2} in the required \code{suntimes} headers. A file or
+#' data frame that still uses \code{schedual1}/\code{schedual2} works
+#' unchanged - \code{canonicalize.headers()} accepts the old spelling.
+#'
 #' @examples
 #' \dontrun{
 #' # default dir.save = getwd() - saves into the current working directory,
@@ -1196,7 +1201,7 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
   DATA.REQUIRED <- c("spp.id", "date", "group", "observations.count",
                            "mins2.noon.min", "mins2.noon.max", "vetting.type")
   SUNTIMES.REQUIRED <- c("aru.name", "date", "date.monitoringnight", "sunregion", "time.zone",
-                             "sunregion.type", "schedual1", "schedual2", "sunset",
+                             "sunregion.type", "schedule1", "schedule2", "sunset",
                              "sunset.unix", "sunrise", "sunrise.unix", "sunrise.monitoringnight",
                              "sunrise.monitoringnight.unix")
   ## 2026-10-09, per Josh: $facet -> $facet.header, new $facet.plot,

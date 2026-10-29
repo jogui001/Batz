@@ -13,6 +13,9 @@ batz.plotcover_bullseye(
   dir.save = getwd(),
   sub.plots = c("canopy.bull", "mic.bar", "mic.bull", "understory.bull"),
   cover.arrows = TRUE,
+  arrow.panel = "first",
+  panel.labels = NULL,
+  title.size.adjust = 0,
   mean.cover = TRUE,
   quadrant.cover = TRUE,
   auto.scale = TRUE,
@@ -28,8 +31,8 @@ Josh's \code{bulleye_model_data.xlsx}, "cover" sheet). Column headers
 are run through \code{standardize.headers()} on receipt (see Details,
 "Header standardization"), after which it must have (in any original
 spelling that standardizes to): \code{aru.label}, \code{"Select the
-quadrant you are assessing"}, \code{"Canopy cover"}, \code{"Understory
-cover"}. One row per quadrant per \code{aru.label} - every
+  quadrant you are assessing"}, \code{"Canopy cover"}, \code{"Understory
+  cover"}. One row per quadrant per \code{aru.label} - every
 \code{aru.label} that will be plotted needs exactly the four quadrant
 values \code{"northeast"}/\code{"southeast"}/\code{"southwest"}/
 \code{"northwest"} (case/whitespace-insensitive).}
@@ -38,7 +41,7 @@ values \code{"northeast"}/\code{"southeast"}/\code{"southwest"}/
 \code{bulleye_model_data.xlsx}, "mic" sheet). Also header-standardized
 on receipt; must have (in any spelling that standardizes to):
 \code{aru.label}, \code{"Microphone Height"}, \code{"Horizontal
-Microphone Orientation"}, \code{"Vertical Microphone Orientation"}.
+  Microphone Orientation"}, \code{"Vertical Microphone Orientation"}.
 One row per \code{aru.label}.}
 
 \item{aes.default}{A data frame of default plot settings, one row per
@@ -52,7 +55,7 @@ Details, "Settings resolution (round nineteen)".}
 nineteenth follow-up (2026-09-16), this NO LONGER selects an
 \code{aes.default} override column - it is now used ONLY to build the
 first part of every saved file name: \code{"<project.name>_<ARU>_
-<timestamp>.png"}. See Details, "Settings resolution (round
+  <timestamp>.png"}. See Details, "Settings resolution (round
 nineteen)" for what replaced the old column-matching behavior.}
 
 \item{aes.style}{Character, default \code{"overide.value"}. Names which
@@ -69,7 +72,7 @@ name itself is now always \code{"<project.name>_<ARU>_<timestamp>.png"}
 \code{$output.filename.pattern} is DEPRECATED and no longer read.}
 
 \item{sub.plots}{Character vector, default \code{c("canopy.bull",
-"mic.bar", "mic.bull", "understory.bull")} (i.e. all four, in that
+  "mic.bar", "mic.bull", "understory.bull")} (i.e. all four, in that
 order) - which panels to draw, and in what left-to-right order.
 Every element must be one of \code{"canopy.bull"} (the Canopy cover
 bullseye), \code{"mic.bar"} (the Microphone Height bar + Vertical
@@ -85,6 +88,23 @@ Horizontal Microphone Orientation arrow is drawn on
 affect \code{"mic.bar"} or \code{"mic.bull"} - \code{"mic.bull"}'s
 own Vertical Microphone Orientation arrow is a required part of that
 panel and is always drawn (see Details, "mic.bull panel").}
+
+\item{arrow.panel}{Character, default \code{"first"}. Added 2026-10-28,
+per Josh. Which \code{"canopy.bull"}/\code{"understory.bull"} panels
+get the Horizontal Microphone Orientation arrow (when
+\code{cover.arrows = TRUE}): \code{"first"} = only the first of those
+panels in \code{sub.plots}; \code{"all"} = every one (the behavior
+before 2026-10-28).}
+
+\item{panel.labels}{Character vector or \code{NULL} (default). Added
+2026-10-28, per Josh. One label per \code{sub.plots} entry, e.g.
+\code{c("(a)", "(b)", "(c)")}, drawn at the bottom right of each panel
+(same font size as the panel titles). \code{NULL} draws none.}
+
+\item{title.size.adjust}{Number, default \code{0}. Added 2026-10-28,
+per Josh. Points added to the panel title font size after the usual
+sizing (and auto-shrink) - e.g. \code{-2} for titles two sizes smaller.
+The axis labels and \code{panel.labels} keep their usual size.}
 
 \item{mean.cover}{Logical, default \code{TRUE}. Whether the dashed
 mean-of-quadrants circle is drawn on
@@ -127,13 +147,13 @@ symbols (\code{é} -> \code{e}, \code{×} -> \code{X}) and removes other non-ASC
 at the very start, before any header check - see \code{@details}.
 This function reads no files itself; inputs loaded with a batz
 reader already get a UTF-8/Latin-1 fallback, so a stray \code{°}
-can't stop them loading, whatever this is set to.}
+  can't stop them loading, whatever this is set to.}
 
 \item{strip.special.plotopts}{Logical, default \code{FALSE}. Added
 2026-10-02, per Josh. Controls special characters in the settings
 table(s) - \code{aes.default} - separately from the data. \code{FALSE} (default)
 leaves them untouched, so plot text such as \code{"Temperature (°C)"}
-keeps its symbol; if a cell can't be read in this R session (e.g. a
+  keeps its symbol; if a cell can't be read in this R session (e.g. a
 Latin-1 \code{°} byte), the function stops with an error naming the
 table, the number of incompatible characters, and the first 5 rows per
 header (\code{+} if more). \code{TRUE} simplifies/removes special
@@ -685,7 +705,7 @@ height), with the plot area extending to \code{$mic.bull.radial.max}
 touches the outer edge) needs more room, the same pattern
 \code{build.mic.panel()}'s bar/icon Y axis already uses. Per
 the thirteenth follow-up ("Make the labels for the scale occur along
-the left horizonal axis, offset the label by enough space to fit the
+the left horizontal axis, offset the label by enough space to fit the
 label"), the 1/2/3/4 numeric scale labels are drawn exactly on angle
 180 (W) - the same ray as \code{$mic.bull.height.label} - with
 clearance provided RADIALLY instead of angularly: the plot's Y-axis
@@ -921,7 +941,7 @@ essentially eliminating the panel-width clipping (only 2 characters
 plus the parentheses); the 1/2/3/4 labels' 15-degree offset remained
 clear of it, with even more margin than before. Per Josh's thirteenth
 follow-up (2026-09-15, later still: "Make the labels for the scale
-occur along the left horizonal axis, offset the label by enough space
+occur along the left horizontal axis, offset the label by enough space
 to fit the label"), the 1/2/3/4 labels were moved off their 15-degree
 offset (angle 165) back onto the exact left horizontal axis (angle
 180, the same ray as \code{$mic.bull.height.label}), with clearance now
@@ -1155,6 +1175,13 @@ are governed by the new \code{strip.special.plotopts} (default
 \code{FALSE}), so symbols in plot labels are kept unless you ask
 otherwise. Accented letters are now simplified rather than dropped
 (\code{café} -> \code{cafe}).
+
+\strong{2026-10-28, per Josh.} The Horizontal Microphone Orientation
+arrow is drawn on the first canopy/understory bullseye only (new
+\code{arrow.panel = "first"}; \code{"all"} keeps the earlier behavior),
+and new \code{panel.labels} puts a label such as \code{"(a)"} at the
+bottom right of each panel. New \code{title.size.adjust} makes the panel
+titles larger or smaller (points) without changing the axis labels.
 }
 \examples{
 \dontrun{

@@ -26,7 +26,7 @@
 #' @param suntimes A data frame of sunrise/sunset times, e.g. the output of
 #'   \code{batz.generate_suntimes.arulist()}. Must have \code{$aru.name},
 #'   \code{$date}, \code{$date.monitoringnight}, \code{$sunregion}, \code{$time.zone},
-#'   \code{$sunregion.type}, \code{$schedual1}, \code{$schedual2},
+#'   \code{$sunregion.type}, \code{$schedule1}, \code{$schedule2},
 #'   \code{$sunset}, \code{$sunset.unix}, \code{$sunrise}, \code{$sunrise.unix},
 #'   \code{$sunrise.monitoringnight}, \code{$sunrise.monitoringnight.unix} -
 #'   identical contract to \code{\link{batz.plotdetections_first.last}}.
@@ -407,6 +407,11 @@
 #' otherwise. Accented letters are now simplified rather than dropped
 #' (\code{café} -> \code{cafe}).
 #'
+#' \strong{Spelling correction, 2026-10-28, per Josh:} \code{schedual1}/
+#' \code{schedual2} are now \code{schedule1}/\code{schedule2} in the required \code{suntimes} headers. A file or
+#' data frame that still uses \code{schedual1}/\code{schedual2} works
+#' unchanged - \code{canonicalize.headers()} accepts the old spelling.
+#'
 #' @examples
 #' \dontrun{
 #' result <- batz.plotsm4_heatmap(
@@ -468,7 +473,7 @@ batz.plotsm4_heatmap <- function(data, fig.list, suntimes,
   ## $sunrise.monitoringnight/$sunrise.monitoringnight.unix - NOT
   ## backward-compatible - see @details.
   SUNTIMES.REQUIRED <- c("aru.name", "date", "date.monitoringnight", "sunregion", "time.zone",
-                          "sunregion.type", "schedual1", "schedual2", "sunset",
+                          "sunregion.type", "schedule1", "schedule2", "sunset",
                           "sunset.unix", "sunrise", "sunrise.unix", "sunrise.monitoringnight",
                           "sunrise.monitoringnight.unix")
   ## Deliberately a smaller subset of fig.list.csv's full column set - see

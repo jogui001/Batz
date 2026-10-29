@@ -66,6 +66,12 @@ treat \code{"."} and \code{"_"} as equivalent} - see
 \code{\link{batz.generate_suntimes.arulist}}'s own \code{@details},
 "Follow-up, 2026-09-28", for the first function switched over to it for
 this specific purpose.
+
+\strong{Spelling corrections, 2026-10-28, per Josh.} Headers listed in
+\code{headers.corrected()} (\code{schedual1} -> \code{schedule1},
+\code{schedual2} -> \code{schedule2}) are matched under either
+spelling: a column with the old spelling counts as the corrected header
+(and is renamed to it) when the corrected one isn't already there.
 }
 \examples{
 \dontrun{

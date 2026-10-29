@@ -42,14 +42,14 @@ break values, only read when \code{$y.scale = "custom"}),
 \code{$ymax} (the top value plotted on the Y axis), and \code{$legend}
 (\code{TRUE}/\code{FALSE} - whether to show a legend distinguishing
 which \code{$plot.set} value each dodged bar is, when \code{$pool =
-FALSE} and more than one value is selected - see \strong{Follow-up,
+  FALSE} and more than one value is selected - see \strong{Follow-up,
 2026-08-29 (round 2)} in Details).}
 
 \item{suntimes}{A data frame of sunrise/sunset times, e.g. the output of
 \code{batz.generate_suntimes.arulist()}. Must have \code{$aru.name},
 \code{$date}, \code{$date.monitoringnight}, \code{$sunregion},
-\code{$time.zone}, \code{$sunregion.type}, \code{$schedual1},
-\code{$schedual2}, \code{$sunset}, \code{$sunset.unix},
+\code{$time.zone}, \code{$sunregion.type}, \code{$schedule1},
+\code{$schedule2}, \code{$sunset}, \code{$sunset.unix},
 \code{$sunrise}, \code{$sunrise.unix}, \code{$sunrise.monitoringnight},
 \code{$sunrise.monitoringnight.unix} - renamed from
 \code{$suns}/\code{$suns.unix}/\code{$sunr}/\code{$sunr.unix}/
@@ -97,13 +97,13 @@ symbols (\code{é} -> \code{e}, \code{×} -> \code{X}) and removes other non-ASC
 at the very start, before any header check - see \code{@details}.
 This function reads no files itself; inputs loaded with a batz
 reader already get a UTF-8/Latin-1 fallback, so a stray \code{°}
-can't stop them loading, whatever this is set to.}
+  can't stop them loading, whatever this is set to.}
 
 \item{strip.special.plotopts}{Logical, default \code{FALSE}. Added
 2026-10-02, per Josh. Controls special characters in the settings
 table(s) - \code{fig.list} and \code{aes.default} - separately from the data. \code{FALSE} (default)
 leaves them untouched, so plot text such as \code{"Temperature (°C)"}
-keeps its symbol; if a cell can't be read in this R session (e.g. a
+  keeps its symbol; if a cell can't be read in this R session (e.g. a
 Latin-1 \code{°} byte), the function stops with an error naming the
 table, the number of incompatible characters, and the first 5 rows per
 header (\code{+} if more). \code{TRUE} simplifies/removes special
@@ -928,6 +928,11 @@ comes from \code{\link{batz.generate_plotframe.bat}} with a
 one row per species/group/date before plotting (\code{$observations.count} summed),
 with a NOTE. Pools of a day or longer are plotted at their start date
 (\code{$date}).
+
+\strong{Spelling correction, 2026-10-28, per Josh:} \code{schedual1}/
+\code{schedual2} are now \code{schedule1}/\code{schedule2} in the required \code{suntimes} headers. A file or
+data frame that still uses \code{schedual1}/\code{schedual2} works
+unchanged - \code{canonicalize.headers()} accepts the old spelling.
 }
 \examples{
 \dontrun{

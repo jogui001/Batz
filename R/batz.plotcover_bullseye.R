@@ -74,6 +74,20 @@
 #'   affect \code{"mic.bar"} or \code{"mic.bull"} - \code{"mic.bull"}'s
 #'   own Vertical Microphone Orientation arrow is a required part of that
 #'   panel and is always drawn (see Details, "mic.bull panel").
+#' @param arrow.panel Character, default \code{"first"}. Added 2026-10-28,
+#'   per Josh. Which \code{"canopy.bull"}/\code{"understory.bull"} panels
+#'   get the Horizontal Microphone Orientation arrow (when
+#'   \code{cover.arrows = TRUE}): \code{"first"} = only the first of those
+#'   panels in \code{sub.plots}; \code{"all"} = every one (the behavior
+#'   before 2026-10-28).
+#' @param panel.labels Character vector or \code{NULL} (default). Added
+#'   2026-10-28, per Josh. One label per \code{sub.plots} entry, e.g.
+#'   \code{c("(a)", "(b)", "(c)")}, drawn at the bottom right of each panel
+#'   (same font size as the panel titles). \code{NULL} draws none.
+#' @param title.size.adjust Number, default \code{0}. Added 2026-10-28,
+#'   per Josh. Points added to the panel title font size after the usual
+#'   sizing (and auto-shrink) - e.g. \code{-2} for titles two sizes smaller.
+#'   The axis labels and \code{panel.labels} keep their usual size.
 #' @param mean.cover Logical, default \code{TRUE}. Whether the dashed
 #'   mean-of-quadrants circle is drawn on
 #'   \code{"canopy.bull"}/\code{"understory.bull"} panels. Does not
@@ -636,7 +650,7 @@
 #' touches the outer edge) needs more room, the same pattern
 #' \code{build.mic.panel()}'s bar/icon Y axis already uses. Per
 #' the thirteenth follow-up ("Make the labels for the scale occur along
-#' the left horizonal axis, offset the label by enough space to fit the
+#' the left horizontal axis, offset the label by enough space to fit the
 #' label"), the 1/2/3/4 numeric scale labels are drawn exactly on angle
 #' 180 (W) - the same ray as \code{$mic.bull.height.label} - with
 #' clearance provided RADIALLY instead of angularly: the plot's Y-axis
@@ -872,7 +886,7 @@
 #' plus the parentheses); the 1/2/3/4 labels' 15-degree offset remained
 #' clear of it, with even more margin than before. Per Josh's thirteenth
 #' follow-up (2026-09-15, later still: "Make the labels for the scale
-#' occur along the left horizonal axis, offset the label by enough space
+#' occur along the left horizontal axis, offset the label by enough space
 #' to fit the label"), the 1/2/3/4 labels were moved off their 15-degree
 #' offset (angle 165) back onto the exact left horizontal axis (angle
 #' 180, the same ray as \code{$mic.bull.height.label}), with clearance now
@@ -1104,6 +1118,13 @@
 #' otherwise. Accented letters are now simplified rather than dropped
 #' (\code{café} -> \code{cafe}).
 #'
+#' \strong{2026-10-28, per Josh.} The Horizontal Microphone Orientation
+#' arrow is drawn on the first canopy/understory bullseye only (new
+#' \code{arrow.panel = "first"}; \code{"all"} keeps the earlier behavior),
+#' and new \code{panel.labels} puts a label such as \code{"(a)"} at the
+#' bottom right of each panel. New \code{title.size.adjust} makes the panel
+#' titles larger or smaller (points) without changing the axis labels.
+#'
 #' @examples
 #' \dontrun{
 #' aes.default <- read.csv("plotopts_bullseye.csv", stringsAsFactors = FALSE)
@@ -1116,7 +1137,9 @@ batz.plotcover_bullseye <- function(data, mic, aes.default, project.name = "new.
                                      dir.save = getwd(),
                                      sub.plots = c("canopy.bull", "mic.bar",
                                                    "mic.bull", "understory.bull"),
-                                     cover.arrows = TRUE, mean.cover = TRUE,
+                                     cover.arrows = TRUE, arrow.panel = "first",
+                                     panel.labels = NULL, title.size.adjust = 0,
+                                     mean.cover = TRUE,
                                      quadrant.cover = TRUE,
                                      auto.scale = TRUE,
                                      subplot.size.height = 3,
@@ -1254,6 +1277,15 @@ batz.plotcover_bullseye <- function(data, mic, aes.default, project.name = "new.
     }
   }
   check.flag(cover.arrows, "cover.arrows")
+  if (!(is.character(arrow.panel) && length(arrow.panel) == 1 && arrow.panel %in% c("first", "all"))) {
+    stop('arrow.panel must be "first" or "all"')
+  }
+  if (!(is.numeric(title.size.adjust) && length(title.size.adjust) == 1 && is.finite(title.size.adjust))) {
+    stop("title.size.adjust must be a single number (points)")
+  }
+  if (!is.null(panel.labels) && length(panel.labels) != length(sub.plots)) {
+    stop("panel.labels must have one label per sub.plots entry (", length(sub.plots), ")")
+  }
   check.flag(mean.cover, "mean.cover")
   check.flag(quadrant.cover, "quadrant.cover")
   check.flag(auto.scale, "auto.scale")
@@ -1359,7 +1391,8 @@ batz.plotcover_bullseye <- function(data, mic, aes.default, project.name = "new.
   data$canopy.value <- vapply(data$canopy.cover, parse.cover.value, numeric(1))
   data$understory.value <- vapply(data$understory_cover, parse.cover.value, numeric(1))
 
-  build.panel <- function(quad.values, panel.title, horiz.orient, title.size.override = NULL, axis.text.size.override = NULL) {
+  build.panel <- function(quad.values, panel.title, horiz.orient, title.size.override = NULL, axis.text.size.override = NULL,
+                          draw.arrow = TRUE) {
     quad.df <- data.frame(
       quadrant = QUADRANT.ORDER,
       x = as.numeric(QUADRANT.ANGLE[QUADRANT.ORDER]),
@@ -1428,7 +1461,7 @@ batz.plotcover_bullseye <- function(data, mic, aes.default, project.name = "new.
       p <- p + ggplot2::geom_hline(yintercept = mean.val, color = mean.color,
                                     linewidth = mean.linewidth, linetype = "dashed")
     }
-    if (cover.arrows) {
+    if (cover.arrows && draw.arrow) {
       p <- p + ggplot2::geom_segment(ggplot2::aes(x = horiz.orient, y = 0, xend = horiz.orient, yend = radial.max),
                                       color = arrow.color, linewidth = arrow.linewidth,
                                       arrow = grid::arrow(length = grid::unit(arrow.head.cm, "cm"), type = "closed"),
@@ -1515,7 +1548,7 @@ batz.plotcover_bullseye <- function(data, mic, aes.default, project.name = "new.
   ## (default 4) - auto-stretched taller when the actual mic.height needs
   ## more room, the same pattern used by build.mic.panel()'s bar/icon Y
   ## axis below. Per Josh's thirteenth follow-up ("Make the labels for the
-  ## scale occur along the left horizonal axis, offset the label by
+  ## scale occur along the left horizontal axis, offset the label by
   ## enough space to fit the label"), the numeric scale labels are drawn
   ## exactly on angle 180 (W) - the same ray as $mic.bull.height.label
   ## (default "(m)", shortened from "Microphone Height (m)" via "Height
@@ -1525,7 +1558,7 @@ batz.plotcover_bullseye <- function(data, mic, aes.default, project.name = "new.
   ## renders right at that boundary) has room, rather than sitting on top
   ## of the outermost ring/number as it did (a real bug, fixed in the
   ## tenth follow-up by angularly offsetting the numbers instead - now
-  ## reverted per this follow-up's explicit "left horizonal axis"
+  ## reverted per this follow-up's explicit "left horizontal axis"
   ## request). With a white background (via geom_label()) "to make the
   ## label clearer" (per the ninth follow-up), unlike every other
   ## bullseye panel's plain geom_text() labels (see "Label styling and
@@ -1574,7 +1607,7 @@ batz.plotcover_bullseye <- function(data, mic, aes.default, project.name = "new.
     ## Numeric scale labels (1/2/3/4) drawn exactly on x = 180 (W) - the
     ## LEFT HORIZONTAL axis, the same ray as $mic.bull.height.label
     ## (default "(m)") - per Josh's thirteenth follow-up ("Make the labels
-    ## for the scale occur along the left horizonal axis"). Earlier
+    ## for the scale occur along the left horizontal axis"). Earlier
     ## (tenth follow-up) these were offset 15 degrees off that ray (to
     ## x = 165) to dodge a real overlap bug against the height-label axis
     ## text, back when that label was the much longer "Microphone Height
@@ -1931,13 +1964,26 @@ batz.plotcover_bullseye <- function(data, mic, aes.default, project.name = "new.
     ## built and combined below. Each now takes the resolved (possibly
     ## shrunk) title font size and the derived axis label size from just
     ## above, per Josh's seventeenth and eighteenth follow-ups.
+    ## 2026-10-28, per Josh: the direction arrow only on the first
+    ## canopy/understory bullseye (arrow.panel = "first")
+    bull.idx <- which(sub.plots %in% c("canopy.bull", "understory.bull"))
+    arrow.on <- seq_along(sub.plots) %in% (if (arrow.panel == "first") bull.idx[1] else bull.idx)
     panel.builders <- list(
-      canopy.bull = function(title.size, axis.size) build.panel(canopy.values, get.default("canopy.title"), horiz.orient, title.size, axis.size),
-      understory.bull = function(title.size, axis.size) build.panel(understory.values, get.default("understory.title"), horiz.orient, title.size, axis.size),
-      mic.bull = function(title.size, axis.size) build.mic.bullseye(mic.height, vert.orient, title.size, axis.size),
-      mic.bar = function(title.size, axis.size) build.mic.panel(mic.height, vert.orient, title.size, axis.size)
+      canopy.bull = function(title.size, axis.size, arrow = TRUE) build.panel(canopy.values, get.default("canopy.title"), horiz.orient, title.size, axis.size, arrow),
+      understory.bull = function(title.size, axis.size, arrow = TRUE) build.panel(understory.values, get.default("understory.title"), horiz.orient, title.size, axis.size, arrow),
+      mic.bull = function(title.size, axis.size, arrow = TRUE) build.mic.bullseye(mic.height, vert.orient, title.size, axis.size),
+      mic.bar = function(title.size, axis.size, arrow = TRUE) build.mic.panel(mic.height, vert.orient, title.size, axis.size)
     )
-    panels <- lapply(sub.plots, function(nm) panel.builders[[nm]](resolved.title.size, resolved.axis.text.size))
+    ## 2026-10-28, per Josh: title.size.adjust changes the titles only
+    panel.title.size <- max(4, resolved.title.size + title.size.adjust)
+    panels <- lapply(seq_along(sub.plots), function(k)
+      panel.builders[[sub.plots[k]]](panel.title.size, resolved.axis.text.size, arrow.on[k]))
+    ## 2026-10-28, per Josh: (a), (b), (c) ... at the bottom right of each panel
+    if (!is.null(panel.labels)) {
+      panels <- lapply(seq_along(panels), function(k)
+        panels[[k]] + ggplot2::labs(caption = panel.labels[k]) +
+          ggplot2::theme(plot.caption = ggplot2::element_text(hjust = 1, size = resolved.title.size)))
+    }
 
     ## Round twenty, per Josh ("scale the size of the mic.bar plot to be
     ## 2/3 the size of the canopy plots"): mic.bar's own column now gets a

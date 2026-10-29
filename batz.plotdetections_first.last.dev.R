@@ -169,8 +169,8 @@ suntimes.synth <- do.call(rbind, lapply(seq_along(test.dates), function(i) {
     sunregion                    = "WTG",
     time.zone                    = "UTC",
     sunregion.type               = "coordinates",
-    schedual1                    = "civil",
-    schedual2                    = "civil",
+    schedule1                    = "civil",
+    schedule2                    = "civil",
     sunset                       = format(as.POSIXct(paste(d, "20:00:00"), tz = "UTC"), "%m/%d/%Y %H:%M"),
     sunset.unix                  = 0,
     sunrise                      = format(as.POSIXct(paste(d, "06:00:00"), tz = "UTC"), "%m/%d/%Y %H:%M"),
@@ -238,7 +238,7 @@ DATA.REQUIRED <- c("spp.id", "date", "aru.groupby", "obs",
 # comment above): date.mon -> date.monitoringnight, and the whole suns/
 # sunr-family -> sunset/sunrise-family.
 SUNTIMES.REQUIRED <- c("aru.name", "date", "date.monitoringnight", "sunregion", "time.zone",
-                           "sunregion.type", "schedual1", "schedual2", "sunset",
+                           "sunregion.type", "schedule1", "schedule2", "sunset",
                            "sunset.unix", "sunrise", "sunrise.unix", "sunrise.monitoringnight",
                            "sunrise.monitoringnight.unix")
 FIG.LIST.REQUIRED <- c("plot.type", "plot.name", "facet", "facet.set", "MYSO",
