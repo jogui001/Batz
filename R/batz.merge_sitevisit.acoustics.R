@@ -29,6 +29,15 @@
 #' @param save.name Character, default \code{"mergedsurvey123.xlsx"}. Name of
 #'   the merged workbook (\code{.xlsx} is added if the name has no
 #'   \code{.xlsx} ending).
+#' @param header.combo Character, default \code{c("project.name", "aru.name")}.
+#'   Passed to \code{batz.datawrangler_consolidate.globalID()}: headers whose
+#'   unique combinations define a site (added 2026-10-30, per Josh).
+#' @param header.uniqueid Character, default \code{c("GlobalID")}. Passed to
+#'   \code{batz.datawrangler_consolidate.globalID()}: the unique-ID header.
+#' @param header.dates Character, default \code{c("date.habitat.assessment",
+#'   "date.deployment", "date")}. Passed to
+#'   \code{batz.datawrangler_consolidate.globalID()}: date headers used to find
+#'   each site's earliest record.
 #'
 #' @return Invisibly, a list: one data frame per form type (\code{$quad},
 #'   \code{$habitat}, \code{$service}, plus any tab added through
@@ -93,6 +102,28 @@
 #' Values are copied as they are; Survey123 codes are not changed to their
 #' Choices labels.
 #'
+#' \strong{Workbooks that can't be opened} (2026-10-30, per Josh). Each file
+#' is checked before it is read, and the run stops with a plain message:
+#' \itemize{
+#'   \item open in Excel (its \code{~$} lock file is in the folder, or the
+#'     file can't be read): "<file> is open in another program and cannot be
+#'     loaded. Close it and re-run code.";
+#'   \item 0 bytes (e.g. a OneDrive file that hasn't finished downloading);
+#'   \item password-protected (or an old \code{.xls} saved with an
+#'     \code{.xlsx} ending);
+#'   \item not a real \code{.xlsx} (damaged, or another file type renamed).
+#' }
+#' A workbook that passes these checks but still can't be unzipped gets the
+#' "open in another program" message plus a note that it may be damaged.
+#'
+#' \strong{Consolidated GlobalID} (2026-10-30, per Josh). After the merge,
+#' \code{batz.datawrangler_consolidate.globalID()} is run on the merged tabs
+#' with \code{header.combo}, \code{header.uniqueid} and \code{header.dates}:
+#' the GlobalID of each site's earliest record (across all tabs) is added to
+#' every record of that site as \code{$globalID_consolidate}, just after
+#' \code{$GlobalID}. A tab without all the \code{header.combo} headers (e.g.
+#' \code{quad}, which has no \code{project.name}) is left unchanged (NOTE).
+#'
 #' @examples
 #' \dontrun{
 #' m <- batz.merge_sitevisit.acoustics(
@@ -108,7 +139,10 @@ batz.merge_sitevisit.acoustics <- function(dir.load = getwd(),
                                            dir.sub = TRUE,
                                            form.list = NA,
                                            dir.save = getwd(),
-                                           save.name = "mergedsurvey123.xlsx") {
+                                           save.name = "mergedsurvey123.xlsx",
+                                           header.combo = c("project.name", "aru.name"),
+                                           header.uniqueid = c("GlobalID"),
+                                           header.dates = c("date.habitat.assessment", "date.deployment", "date")) {
 
   if (!requireNamespace("readxl", quietly = TRUE)) stop("The readxl package is needed: install.packages(\"readxl\")", call. = FALSE)
   if (!dir.exists(dir.load)) stop("dir.load not found: ", dir.load, call. = FALSE)
@@ -134,13 +168,50 @@ batz.merge_sitevisit.acoustics <- function(dir.load = getwd(),
     do.call(rbind, out)
   }
 
+  ## 2026-10-30, per Josh: a workbook that can't be opened gets a plain
+  ## message instead of readxl's "zip file ... cannot be opened"
+  xl.check <- function(f) {
+    nm <- basename(f)
+    lock <- file.path(dirname(f), c(paste0("~$", nm), paste0("~$", substring(nm, 3))))
+    if (any(file.exists(lock))) {
+      stop(nm, " is open in another program and cannot be loaded. Close it and re-run code.", call. = FALSE)
+    }
+    sz <- file.size(f)
+    if (is.na(sz) || sz == 0) {
+      stop(nm, " is empty (0 bytes) - if it is in OneDrive, it may not have finished downloading. ",
+           "Open the folder, wait for the file to sync, and re-run code.", call. = FALSE)
+    }
+    head4 <- tryCatch(readBin(f, "raw", 4), error = function(e) NULL)
+    if (is.null(head4)) {
+      stop(nm, " is open in another program and cannot be loaded. Close it and re-run code.", call. = FALSE)
+    }
+    if (grepl("\\.xlsx$", nm, ignore.case = TRUE) && !identical(head4[1:2], as.raw(c(0x50, 0x4b)))) {
+      if (identical(head4, as.raw(c(0xd0, 0xcf, 0x11, 0xe0)))) {
+        stop(nm, " is password-protected (or an old .xls saved as .xlsx) and cannot be loaded. ",
+             "Remove the password / save it as .xlsx in Excel and re-run code.", call. = FALSE)
+      }
+      stop(nm, " is not a readable .xlsx file (it may be damaged or another file type renamed .xlsx).", call. = FALSE)
+    }
+    invisible(TRUE)
+  }
+  xl.sheets <- function(f) {
+    xl.check(f)
+    tryCatch(readxl::excel_sheets(f), error = function(e) {
+      if (grepl("cannot be opened|zip file", conditionMessage(e))) {
+        stop(basename(f), " is open in another program and cannot be loaded. Close it and re-run code.",
+             "\n  (If it is not open, the file may be damaged - open it in Excel, save it, and re-run code.)", call. = FALSE)
+      }
+      stop(basename(f), " could not be read: ", conditionMessage(e), call. = FALSE)
+    })
+  }
+
   read.tab.list <- function(x) {
     if (is.null(x) || (length(x) == 1 && is.atomic(x) && is.na(x))) return(list())
     if (is.character(x)) {
       out <- list()
       for (f in x) {
         if (!file.exists(f)) stop("form.list file not found: ", f, call. = FALSE)
-        for (s in readxl::excel_sheets(f)) {
+        for (s in xl.sheets(f)) {
           out[[s]] <- as.data.frame(readxl::read_excel(f, s, col_types = "text", .name_repair = "minimal"),
                                     check.names = FALSE, stringsAsFactors = FALSE)
         }
@@ -233,7 +304,7 @@ batz.merge_sitevisit.acoustics <- function(dir.load = getwd(),
   log <- list()
   versions <- unique(hdr[, c("tab", "version")])
   for (f in files) {
-    for (s in readxl::excel_sheets(f)) {
+    for (s in xl.sheets(f)) {
       d <- as.data.frame(readxl::read_excel(f, s, .name_repair = "minimal"), check.names = FALSE, stringsAsFactors = FALSE)
       if (ncol(d) == 0) next
       src <- key(names(d))
@@ -320,6 +391,13 @@ batz.merge_sitevisit.acoustics <- function(dir.load = getwd(),
   log <- if (length(log) > 0) do.call(rbind, log) else
     data.frame(file = character(0), sheet = character(0), tab = character(0), form.version = character(0),
                rows = integer(0), headers.matched = integer(0), headers.not.used = character(0))
+
+  ## --- 5b. consolidated GlobalID (2026-10-30, per Josh) ---------------------
+  has.rows <- tabs[vapply(tabs, function(t) nrow(out[[t]]) > 0, logical(1))]
+  if (length(has.rows) > 0) {
+    out[has.rows] <- batz.datawrangler_consolidate.globalID(out[has.rows], header.combo = header.combo,
+                                                            header.uniqueid = header.uniqueid, header.dates = header.dates)
+  }
 
   ## --- 6. write -------------------------------------------------------------
   if (!grepl("\\.xlsx$", save.name, ignore.case = TRUE)) save.name <- paste0(sub("\\.[^.]*$", "", save.name), ".xlsx")

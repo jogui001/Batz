@@ -11,7 +11,10 @@ batz.merge_sitevisit.acoustics(
   dir.sub = TRUE,
   form.list = NA,
   dir.save = getwd(),
-  save.name = "mergedsurvey123.xlsx"
+  save.name = "mergedsurvey123.xlsx",
+  header.combo = c("project.name", "aru.name"),
+  header.uniqueid = c("GlobalID"),
+  header.dates = c("date.habitat.assessment", "date.deployment", "date")
 )
 }
 \arguments{
@@ -43,6 +46,18 @@ functions - Josh's spec had \code{dir.sav}).}
 \item{save.name}{Character, default \code{"mergedsurvey123.xlsx"}. Name of
 the merged workbook (\code{.xlsx} is added if the name has no
 \code{.xlsx} ending).}
+
+\item{header.combo}{Character, default \code{c("project.name", "aru.name")}.
+Passed to \code{batz.datawrangler_consolidate.globalID()}: headers whose
+unique combinations define a site (added 2026-10-30, per Josh).}
+
+\item{header.uniqueid}{Character, default \code{c("GlobalID")}. Passed to
+\code{batz.datawrangler_consolidate.globalID()}: the unique-ID header.}
+
+\item{header.dates}{Character, default \code{c("date.habitat.assessment",
+  "date.deployment", "date")}. Passed to
+\code{batz.datawrangler_consolidate.globalID()}: date headers used to find
+each site's earliest record.}
 }
 \value{
 Invisibly, a list: one data frame per form type (\code{$quad},
@@ -114,6 +129,28 @@ value is used, and \code{"other"} is replaced by the "specify" value.
 }
 Values are copied as they are; Survey123 codes are not changed to their
 Choices labels.
+
+\strong{Workbooks that can't be opened} (2026-10-30, per Josh). Each file
+is checked before it is read, and the run stops with a plain message:
+\itemize{
+\item open in Excel (its \code{~$} lock file is in the folder, or the
+file can't be read): "\if{html}{\out{<file>}} is open in another program and cannot be
+loaded. Close it and re-run code.";
+\item 0 bytes (e.g. a OneDrive file that hasn't finished downloading);
+\item password-protected (or an old \code{.xls} saved with an
+\code{.xlsx} ending);
+\item not a real \code{.xlsx} (damaged, or another file type renamed).
+}
+A workbook that passes these checks but still can't be unzipped gets the
+"open in another program" message plus a note that it may be damaged.
+
+\strong{Consolidated GlobalID} (2026-10-30, per Josh). After the merge,
+\code{batz.datawrangler_consolidate.globalID()} is run on the merged tabs
+with \code{header.combo}, \code{header.uniqueid} and \code{header.dates}:
+the GlobalID of each site's earliest record (across all tabs) is added to
+every record of that site as \code{$globalID_consolidate}, just after
+\code{$GlobalID}. A tab without all the \code{header.combo} headers (e.g.
+\code{quad}, which has no \code{project.name}) is left unchanged (NOTE).
 }
 \examples{
 \dontrun{

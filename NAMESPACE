@@ -3,6 +3,7 @@
 export(batz.batusa_list.species)
 export(batz.batusa_recode.names)
 export(batz.datawrangler_call.datetime)
+export(batz.datawrangler_consolidate.globalID)
 export(batz.datawrangler_format.vetted)
 export(batz.datawrangler_headers.acceptold)
 export(batz.datawrangler_load.files)

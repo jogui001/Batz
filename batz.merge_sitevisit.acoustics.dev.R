@@ -13,7 +13,8 @@ dir.data <- "C:/Users/josh.guilbert/OneDrive - Biodiversity Research Institute/D
 dir.out  <- file.path(tempdir(), "merge_sitevisit.test")
 
 ## ---- load the functions from the repo (no install needed) ------------------
-for (f in c("batz.util_survey123.reference.R", "batz.util_survey123.aruforms.R", "batz.merge_sitevisit.acoustics.R")) {
+for (f in c("batz.util_survey123.reference.R", "batz.util_survey123.aruforms.R", "batz.merge_sitevisit.acoustics.R",
+            "batz.datawrangler_consolidate.globalID.R")) {
   source(file.path(dir.repo, "R", f))
 }
 
@@ -56,3 +57,24 @@ stopifnot("mobile" %in% names(m2), nrow(m2$mobile) == 2, m2$mobile$route.name[1]
 ## ---- TEST 3: errors ---------------------------------------------------------
 try(batz.merge_sitevisit.acoustics(dir.data, load.pattern = "*nothing*.xlsx"))          # no files
 try(batz.merge_sitevisit.acoustics(d3, form.list = list(bad = data.frame(a = 1, b = 2)))) # bad tab
+
+## ---- TEST 4: workbooks that can't be opened (2026-10-30) --------------------
+## 4a: open the FY26 SiteMaintenance & Retrieval workbook in Excel, then run:
+try(batz.merge_sitevisit.acoustics(dir.data, dir.save = dir.out))   # "<file> is open in another program ..."
+## 4b-4d: simulated bad files
+d4 <- file.path(dir.out, "data4"); dir.create(d4, showWarnings = FALSE)
+bad <- file.path(d4, "x_deployments.xlsx")
+file.create(bad)                                  ; try(batz.merge_sitevisit.acoustics(d4, dir.save = d4)) # 0 bytes
+writeLines("hello", bad)                          ; try(batz.merge_sitevisit.acoustics(d4, dir.save = d4)) # not an .xlsx
+writeBin(as.raw(c(0xd0, 0xcf, 0x11, 0xe0)), bad) ; try(batz.merge_sitevisit.acoustics(d4, dir.save = d4)) # password / old .xls
+
+## ---- TEST 5: consolidated GlobalID (2026-10-30) -----------------------------
+stopifnot(names(m$habitat)[match("GlobalID", names(m$habitat)) + 1] == "globalID_consolidate",
+          "globalID_consolidate" %in% names(m$service),
+          !"globalID_consolidate" %in% names(m$quad))                       # quad has no project.name
+## one ID per site across habitat + service
+s.all <- rbind(m$habitat[, c("project.name", "aru.name", "globalID_consolidate")],
+               m$service[, c("project.name", "aru.name", "globalID_consolidate")])
+stopifnot(all(tapply(s.all$globalID_consolidate, paste(s.all$project.name, s.all$aru.name),
+                     function(v) length(unique(v)) == 1)))
+m5 <- batz.merge_sitevisit.acoustics(dir.data, dir.save = dir.out, header.combo = "aru.name")  # sites by aru.name only
