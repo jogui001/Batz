@@ -144,6 +144,19 @@ loaded. Close it and re-run code.";
 A workbook that passes these checks but still can't be unzipped gets the
 "open in another program" message plus a note that it may be damaged.
 
+\strong{Project name from the same file} (2026-10-30, per Josh). Every
+tab gets \code{$project.name} (added before \code{$aru.name} where a tab
+has none, e.g. \code{quad}). A record with no project name takes it from
+a record in another tab (sheet) of the same input file that shares, in
+this order: a GlobalID (any header containing "globalid", so a quadrant's
+\code{ParentGlobalID} finds its habitat record's \code{GlobalID}), a site
+(\code{site} / \code{site.name}), or an \code{aru.name}. When several
+project names match, the most common is used. Records with no match get
+\code{"unknown.check"}, and after processing the run prints
+"\if{html}{\out{<n>}} have no associated project name, the value  "unknown.check"".
+This happens before the consolidated GlobalID, so \code{quad} records are
+consolidated too.
+
 \strong{Consolidated GlobalID} (2026-10-30, per Josh). After the merge,
 \code{batz.datawrangler_consolidate.globalID()} is run on the merged tabs
 with \code{header.combo}, \code{header.uniqueid} and \code{header.dates}:
@@ -151,6 +164,7 @@ the GlobalID of each site's earliest record (across all tabs) is added to
 every record of that site as \code{$globalID_consolidate}, just after
 \code{$GlobalID}. A tab without all the \code{header.combo} headers (e.g.
 \code{quad}, which has no \code{project.name}) is left unchanged (NOTE).
+(Since the project-name step above, every tab has \code{project.name}.)
 }
 \examples{
 \dontrun{

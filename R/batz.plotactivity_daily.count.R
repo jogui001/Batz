@@ -86,6 +86,10 @@
 #'   names through \code{standardize.headers()} first. See Details, "A
 #'   near-no-op for most columns", for why this mostly only affects one
 #'   column here.
+#'   \strong{2026-10-30, per Josh:} snake_case now replaces every \code{"."}
+#'   with \code{"_"} and changes nothing else (\code{snake.headers()}), so
+#'   \code{"aru.name"} -> \code{"aru_name"} and \code{"GlobalID"} stays
+#'   \code{"GlobalID"} - matching \code{$name.snake} in the Batz reference db.
 #'
 #' @param strip.special Logical, default \code{TRUE}. If \code{TRUE},
 #'   simplifies accented letters and
@@ -749,7 +753,7 @@ batz.plotactivity_daily.count <- function(data,
     ## still used, unchanged, in the return value below). See @param
     ## snake_case and @details, "A near-no-op for most columns".
     csv.data <- data
-    if (snake_case) names(csv.data) <- standardize.headers(names(csv.data))
+    if (snake_case) names(csv.data) <- snake.headers(names(csv.data))
     utils::write.csv(csv.data, csv.name, row.names = FALSE)
     cat("Saved:", csv.name, "\n")
   }

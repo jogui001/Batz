@@ -63,12 +63,12 @@ Josh's explicit request.)}
 \item{alldetections}{Logical, default \code{TRUE}. See Details.}
 
 \item{trim.noise}{Logical, default \code{TRUE}. When \code{alldetections
-= TRUE}, exclude rows where the \code{spp.id} column is
+  = TRUE}, exclude rows where the \code{spp.id} column is
 \code{"noise"} (case-insensitive) from the \code{"All Detections"}
 summary.}
 
 \item{trim.noid}{Logical, default \code{FALSE}. When \code{alldetections
-= TRUE}, exclude rows where the \code{spp.id} column is
+  = TRUE}, exclude rows where the \code{spp.id} column is
 \code{"NoID"} (case-insensitive) from the \code{"All Detections"}
 summary. (Named \code{"trim.noid"} rather than the originally-specced
 \code{"trim.noID"}, to match the identically-purposed parameter
@@ -108,7 +108,11 @@ dot-separated output column names (\code{$spp.id}, \code{$date},
 column name through \code{standardize.headers()} instead (e.g.
 \code{$spp_id}, \code{$mins2_noon_min}) - for a caller who
 specifically wants a snake_case CSV/data frame out of this function,
-without having to convert it themselves afterward.}
+without having to convert it themselves afterward.
+\strong{2026-10-30, per Josh:} snake_case now replaces every \code{"."}
+with \code{"_"} and changes nothing else (\code{snake.headers()}), so
+\code{"aru.name"} -> \code{"aru_name"} and \code{"GlobalID"} stays
+\code{"GlobalID"} - matching \code{$name.snake} in the Batz reference db.}
 
 \item{strip.special}{Logical, default \code{TRUE}. If \code{TRUE}, simplifies accented
 letters (\code{é} -> \code{e}) and removes other non-ASCII special

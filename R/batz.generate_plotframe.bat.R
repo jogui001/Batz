@@ -567,6 +567,10 @@
 #'   \code{$spp_id}, \code{$mins2_noon_min}) - for a caller who
 #'   specifically wants a snake_case CSV/data frame out of this function,
 #'   without having to convert it themselves afterward.
+#'   \strong{2026-10-30, per Josh:} snake_case now replaces every \code{"."}
+#'   with \code{"_"} and changes nothing else (\code{snake.headers()}), so
+#'   \code{"aru.name"} -> \code{"aru_name"} and \code{"GlobalID"} stays
+#'   \code{"GlobalID"} - matching \code{$name.snake} in the Batz reference db.
 #' @param strip.special Logical, default \code{TRUE}. If \code{TRUE}, simplifies accented
 #'   letters (\code{é} -> \code{e}) and removes other non-ASCII special
 #'   characters (e.g. \code{°}, \code{µ}) from \code{data} and from every loaded \verb{*arulist.csv}
@@ -1092,7 +1096,7 @@ batz.generate_plotframe.bat <- function(data,
   if (!alldetections) {
     plfr.batsummary <- build.summary(data)
     plfr.batsummary$vetting.type <- spp.id
-    if (snake_case) names(plfr.batsummary) <- standardize.headers(names(plfr.batsummary))
+    if (snake_case) names(plfr.batsummary) <- snake.headers(names(plfr.batsummary))
     return(plfr.batsummary)
   }
 
@@ -1119,7 +1123,7 @@ batz.generate_plotframe.bat <- function(data,
                                             plfr.batsummary$spp.id), ]
   rownames(plfr.batsummary) <- NULL
 
-  if (snake_case) names(plfr.batsummary) <- standardize.headers(names(plfr.batsummary))
+  if (snake_case) names(plfr.batsummary) <- snake.headers(names(plfr.batsummary))
 
   plfr.batsummary
 }

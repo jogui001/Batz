@@ -56,7 +56,11 @@ column (headers matched with \code{canonicalize.headers()}). Default
 
 \item{snake_case}{Logical, default \code{FALSE}. \code{TRUE} converts
 the output column names with \code{standardize.headers()} (e.g.
-\code{$date_monitoringnight_sampled}).}
+\code{$date_monitoringnight_sampled}).
+\strong{2026-10-30, per Josh:} snake_case now replaces every \code{"."}
+with \code{"_"} and changes nothing else (\code{snake.headers()}), so
+\code{"aru.name"} -> \code{"aru_name"} and \code{"GlobalID"} stays
+\code{"GlobalID"} - matching \code{$name.snake} in the Batz reference db.}
 
 \item{strip.special}{Logical, default \code{TRUE}. Simplifies accented
 letters and removes other non-ASCII characters from \code{data} (this
@@ -65,11 +69,11 @@ function's local copy only) before matching, same as every other
 }
 \value{
 A data frame with columns \code{$year}, \code{$community},
-  \code{$species}, \code{$family}, \code{$observation_count}, \code{$sites_sampled},
-  \code{$sites_detected}, \code{$date.monitoringnight_sampled},
-  \code{$date.monitoringnight_detected}, \code{$project} (snake_case if
-  \code{snake_case = TRUE}), sorted by project, year (\code{"all"} last),
-  community and \code{species.list} order.
+\code{$species}, \code{$family}, \code{$observation_count}, \code{$sites_sampled},
+\code{$sites_detected}, \code{$date.monitoringnight_sampled},
+\code{$date.monitoringnight_detected}, \code{$project} (snake_case if
+\code{snake_case = TRUE}), sorted by project, year (\code{"all"} last),
+community and \code{species.list} order.
 }
 \description{
 Builds one row per year x community x species (per project) giving the
@@ -108,19 +112,19 @@ it first.
 
 \strong{Definitions} (each row = one \code{project}/\code{year}/\code{community}/\code{species}):
 \itemize{
-  \item \code{$observation_count} - number of records (rows) of that
-    species. Each row of the input is treated as one observation (one
-    recording file).
-  \item \code{$sites_sampled} - number of unique \code{$aru.name} in the
-    community, counting every record (including noise/NoID and species
-    not on \code{species.list}).
-  \item \code{$sites_detected} - number of unique \code{$aru.name} in the
-    community where the species was recorded.
-  \item \code{$date.monitoringnight_sampled} - for every \code{$aru.name}
-    in the community, its number of unique monitoring nights, summed
-    (i.e. the number of unique ARU-nights).
-  \item \code{$date.monitoringnight_detected} - the same, counting only
-    nights where that ARU recorded the species.
+\item \code{$observation_count} - number of records (rows) of that
+species. Each row of the input is treated as one observation (one
+recording file).
+\item \code{$sites_sampled} - number of unique \code{$aru.name} in the
+community, counting every record (including noise/NoID and species
+not on \code{species.list}).
+\item \code{$sites_detected} - number of unique \code{$aru.name} in the
+community where the species was recorded.
+\item \code{$date.monitoringnight_sampled} - for every \code{$aru.name}
+in the community, its number of unique monitoring nights, summed
+(i.e. the number of unique ARU-nights).
+\item \code{$date.monitoringnight_detected} - the same, counting only
+nights where that ARU recorded the species.
 }
 
 \strong{Sampling effort comes from the records themselves.} A night when

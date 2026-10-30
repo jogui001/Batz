@@ -359,6 +359,10 @@
 #'   \code{$date_monitoringnight}, \code{$aru_name}) - for a caller who specifically
 #'   wants a snake_case CSV/data frame out of this function, without having
 #'   to convert it themselves afterward.
+#'   \strong{2026-10-30, per Josh:} snake_case now replaces every \code{"."}
+#'   with \code{"_"} and changes nothing else (\code{snake.headers()}), so
+#'   \code{"aru.name"} -> \code{"aru_name"} and \code{"GlobalID"} stays
+#'   \code{"GlobalID"} - matching \code{$name.snake} in the Batz reference db.
 #' @param strip.special Logical, default \code{TRUE}. If \code{TRUE}, simplifies accented
 #'   letters (\code{é} -> \code{e}) and removes other non-ASCII special
 #'   characters (e.g. \code{°}, \code{µ}) from the data after loading - see \code{@details}. Files are
@@ -810,7 +814,7 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
   ## package-wide, 2026-09-22) - applied last, only to this function's own
   ## invented output column names, mirroring batz.generate_plotframe.bat()'s
   ## established pattern. See @param snake_case.
-  if (snake_case) names(vetted.merged) <- standardize.headers(names(vetted.merged))
+  if (snake_case) names(vetted.merged) <- snake.headers(names(vetted.merged))
 
   result <- list(vetted.merged = vetted.merged)
 
@@ -831,11 +835,11 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
     vetted.merged_log.file <- do.call(rbind, log.rows)
     rownames(vetted.merged_log.file) <- NULL
     if (snake_case) {
-      names(vetted.merged_log.file) <- standardize.headers(names(vetted.merged_log.file))
+      names(vetted.merged_log.file) <- snake.headers(names(vetted.merged_log.file))
       ## keep the log column's exact name (2026-09-30)
       special.cols <- c("strip.special", "Accented.letters.header", "removed.symbols.header",
                         "Accented.letters.data", "removed.symbols.data")
-      hit <- match(names(vetted.merged_log.file), standardize.headers(special.cols))
+      hit <- match(names(vetted.merged_log.file), snake.headers(special.cols))
       names(vetted.merged_log.file)[!is.na(hit)] <- special.cols[hit[!is.na(hit)]]
     }
     result$vetted.merged_log.file <- vetted.merged_log.file

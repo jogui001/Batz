@@ -116,6 +116,10 @@
 #' @param snake_case Logical, default \code{FALSE}. \code{TRUE} converts
 #'   the output column names with \code{standardize.headers()} (e.g.
 #'   \code{$date_monitoringnight_sampled}).
+#'   \strong{2026-10-30, per Josh:} snake_case now replaces every \code{"."}
+#'   with \code{"_"} and changes nothing else (\code{snake.headers()}), so
+#'   \code{"aru.name"} -> \code{"aru_name"} and \code{"GlobalID"} stays
+#'   \code{"GlobalID"} - matching \code{$name.snake} in the Batz reference db.
 #' @param strip.special Logical, default \code{TRUE}. Simplifies accented
 #'   letters and removes other non-ASCII characters from \code{data} (this
 #'   function's local copy only) before matching, same as every other
@@ -267,7 +271,7 @@ batz.generate_plotframe.bat.group <- function(data,
                    match(out$species, species.list)), , drop = FALSE]
   rownames(out) <- NULL
 
-  if (snake_case) names(out) <- standardize.headers(names(out))
+  if (snake_case) names(out) <- snake.headers(names(out))
 
   ## ---- write --------------------------------------------------------------
   if (write.output) {

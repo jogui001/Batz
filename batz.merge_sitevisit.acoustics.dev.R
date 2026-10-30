@@ -78,3 +78,15 @@ s.all <- rbind(m$habitat[, c("project.name", "aru.name", "globalID_consolidate")
 stopifnot(all(tapply(s.all$globalID_consolidate, paste(s.all$project.name, s.all$aru.name),
                      function(v) length(unique(v)) == 1)))
 m5 <- batz.merge_sitevisit.acoustics(dir.data, dir.save = dir.out, header.combo = "aru.name")  # sites by aru.name only
+
+## ---- TEST 6: project.name from the other tabs of the same file (2026-10-30) -
+q <- m$quad; h <- m$habitat
+stopifnot("project.name" %in% names(q),                                        # quad now has project.name
+          all(q$project.name == h$project.name[match(q$ParentGlobalID, h$GlobalID)], na.rm = TRUE))
+table(q$project.name, useNA = "ifany")
+## quad sheet with no habitat sheet in its file -> "unknown.check" + message
+f.ha <- list.files(dir.data, "HabitatAssessment.*xlsx$", full.names = TRUE, recursive = TRUE)[1]
+d6 <- file.path(dir.out, "data6"); dir.create(d6, showWarnings = FALSE)
+openxlsx::write.xlsx(list(q = readxl::read_excel(f.ha, 2)[1:6, ]), file.path(d6, "quadonly_deployments.xlsx"), overwrite = TRUE)
+m6 <- batz.merge_sitevisit.acoustics(d6, dir.save = d6)   # prints: 6 have no associated project name, the value  "unknown.check"
+stopifnot(all(m6$quad$project.name == "unknown.check"))

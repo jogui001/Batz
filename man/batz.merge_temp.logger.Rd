@@ -61,7 +61,7 @@ output CSV names when \code{write.output = TRUE}:
 \code{$date.time} in \code{templog.merged} (\code{<DATE1>to<DATE2>},
 \code{\%Y\%m\%d} each, or the literal \code{"nodata"} if none is
 available) and \code{<timestamp>} is \code{format(Sys.time(),
-"\%Y\%m\%d\%H\%M\%S")}. \code{""} (default) falls back to the literal
+  "\%Y\%m\%d\%H\%M\%S")}. \code{""} (default) falls back to the literal
 base token \code{"templog"} - a judgment call, please confirm this is
 the right default.}
 
@@ -78,7 +78,11 @@ exactly as always. \code{TRUE} runs every output column name through
 \code{standardize.headers()} instead (e.g. \code{$date.time} ->
 \code{$date_time}, \code{$temp.dry.c} -> \code{$temp_dry_c}) - for a
 caller who specifically wants a snake_case CSV/data frame out of this
-function, without having to convert it themselves afterward.}
+function, without having to convert it themselves afterward.
+\strong{2026-10-30, per Josh:} snake_case now replaces every \code{"."}
+with \code{"_"} and changes nothing else (\code{snake.headers()}), so
+\code{"aru.name"} -> \code{"aru_name"} and \code{"GlobalID"} stays
+\code{"GlobalID"} - matching \code{$name.snake} in the Batz reference db.}
 
 \item{strip.special}{Logical, default \code{TRUE}. If \code{TRUE}, simplifies accented
 letters (\code{é} -> \code{e}) and removes other non-ASCII special

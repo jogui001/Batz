@@ -116,6 +116,19 @@
 #' A workbook that passes these checks but still can't be unzipped gets the
 #' "open in another program" message plus a note that it may be damaged.
 #'
+#' \strong{Project name from the same file} (2026-10-30, per Josh). Every
+#' tab gets \code{$project.name} (added before \code{$aru.name} where a tab
+#' has none, e.g. \code{quad}). A record with no project name takes it from
+#' a record in another tab (sheet) of the same input file that shares, in
+#' this order: a GlobalID (any header containing "globalid", so a quadrant's
+#' \code{ParentGlobalID} finds its habitat record's \code{GlobalID}), a site
+#' (\code{site} / \code{site.name}), or an \code{aru.name}. When several
+#' project names match, the most common is used. Records with no match get
+#' \code{"unknown.check"}, and after processing the run prints
+#' "<n> have no associated project name, the value  "unknown.check"".
+#' This happens before the consolidated GlobalID, so \code{quad} records are
+#' consolidated too.
+#'
 #' \strong{Consolidated GlobalID} (2026-10-30, per Josh). After the merge,
 #' \code{batz.datawrangler_consolidate.globalID()} is run on the merged tabs
 #' with \code{header.combo}, \code{header.uniqueid} and \code{header.dates}:
@@ -123,6 +136,7 @@
 #' every record of that site as \code{$globalID_consolidate}, just after
 #' \code{$GlobalID}. A tab without all the \code{header.combo} headers (e.g.
 #' \code{quad}, which has no \code{project.name}) is left unchanged (NOTE).
+#' (Since the project-name step above, every tab has \code{project.name}.)
 #'
 #' @examples
 #' \dontrun{
@@ -290,6 +304,7 @@ batz.merge_sitevisit.acoustics <- function(dir.load = getwd(),
     df
   })
   parts <- lapply(setNames(tabs, tabs), function(t) list())
+  parts.file <- lapply(setNames(tabs, tabs), function(t) character(0))   # input file of each part (2026-10-30)
 
   ## --- 3. find the files ---------------------------------------------------
   all.f <- list.files(dir.load, recursive = isTRUE(dir.sub), full.names = TRUE)
@@ -367,10 +382,67 @@ batz.merge_sitevisit.acoustics <- function(dir.load = getwd(),
         new[[tg]] <- v
       }
       parts[[t]][[length(parts[[t]]) + 1]] <- new
+      parts.file[[t]] <- c(parts.file[[t]], f)
       log[[length(log) + 1]] <- data.frame(file = basename(f), sheet = s, tab = t, form.version = fv[1], rows = nrow(d),
                                            headers.matched = best$matched, headers.not.used = paste(unused, collapse = "; "),
                                            stringsAsFactors = FALSE)
     }
+  }
+
+  ## --- 4b. project.name from the other tabs of the same file (2026-10-30, per Josh)
+  ## Every tab gets $project.name. A record without one takes it from a record
+  ## in another tab of the same input file with the same GlobalID /
+  ## ParentGlobalID (any *globalid* header), else the same site (site /
+  ## site.name), else the same aru.name; if none is found: "unknown.check".
+  pj <- "project.name"
+  for (t in tabs) {
+    if (pj %in% names(out[[t]])) next
+    at <- match("aru.name", names(out[[t]]))
+    at <- if (is.na(at)) match("form.version", names(out[[t]])) else at - 1
+    add.pj <- function(x) {
+      x[[pj]] <- if (nrow(x) > 0) NA_character_ else character(0)
+      x[, append(setdiff(names(x), pj), pj, after = at), drop = FALSE]
+    }
+    out[[t]] <- add.pj(out[[t]])
+    parts[[t]] <- lapply(parts[[t]], add.pj)
+  }
+  gid.cols <- function(x) grep("globalid", names(x), ignore.case = TRUE, value = TRUE)
+  site.cols <- function(x) names(x)[key(names(x)) %in% c("site", "sitename")]
+  key.vals <- function(x, cols) {           # one character vector of values per row, over several columns
+    if (length(cols) == 0) return(rep(list(character(0)), nrow(x)))
+    m <- vapply(cols, function(cl) tolower(trimws(as.character(x[[cl]]))), character(nrow(x)))
+    m <- matrix(m, nrow = nrow(x))
+    lapply(seq_len(nrow(x)), function(r) { v <- m[r, ]; v[!is.na(v) & nzchar(v) & v != "na"] })
+  }
+  n.unknown <- 0
+  pieces <- do.call(rbind, lapply(tabs, function(t) if (length(parts[[t]]) > 0)
+    data.frame(tab = t, k = seq_along(parts[[t]]), file = parts.file[[t]], stringsAsFactors = FALSE)))
+  if (!is.null(pieces)) for (i in seq_len(nrow(pieces))) {
+    x <- parts[[pieces$tab[i]]][[pieces$k[i]]]
+    need <- which(is.blank(x[[pj]]))
+    if (length(need) == 0) next
+    others <- pieces[pieces$file == pieces$file[i] & !(pieces$tab == pieces$tab[i] & pieces$k == pieces$k[i]), , drop = FALSE]
+    donors <- lapply(seq_len(nrow(others)), function(j) parts[[others$tab[j]]][[others$k[j]]])
+    donors <- Filter(function(y) any(!is.blank(y[[pj]])), donors)
+    for (getcols in list(gid.cols, site.cols, function(y) intersect("aru.name", names(y)))) {
+      if (length(need) == 0 || length(donors) == 0) break
+      lookup <- do.call(rbind, lapply(donors, function(y) {
+        y <- y[!is.blank(y[[pj]]), , drop = FALSE]
+        kv <- key.vals(y, getcols(y))
+        if (length(unlist(kv)) == 0) return(NULL)
+        data.frame(val = unlist(kv), proj = rep(as.character(y[[pj]]), lengths(kv)), stringsAsFactors = FALSE)
+      }))
+      if (is.null(lookup)) next
+      kv <- key.vals(x[need, , drop = FALSE], getcols(x))
+      found <- vapply(kv, function(v) {
+        p <- lookup$proj[lookup$val %in% v]
+        if (length(p) == 0) NA_character_ else names(sort(table(p), decreasing = TRUE))[1]
+      }, character(1))
+      x[[pj]][need[!is.na(found)]] <- found[!is.na(found)]
+      need <- need[is.na(found)]
+    }
+    if (length(need) > 0) { x[[pj]][need] <- "unknown.check"; n.unknown <- n.unknown + length(need) }
+    parts[[pieces$tab[i]]][[pieces$k[i]]] <- x
   }
 
   ## --- 5. stack (a column whose type differs between files becomes text) ---
@@ -412,6 +484,7 @@ batz.merge_sitevisit.acoustics <- function(dir.load = getwd(),
   }
   for (t in tabs) cat(t, ": ", nrow(out[[t]]), " row(s)\n", sep = "")
   cat("Saved:", path, "\n")
+  if (n.unknown > 0) cat(n.unknown, ' have no associated project name, the value  "unknown.check"\n', sep = "")
 
   invisible(c(out, list(log = log, headers.db = db, file = path)))
 }

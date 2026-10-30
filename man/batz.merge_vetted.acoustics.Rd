@@ -45,7 +45,7 @@ creates \code{vetted.merged_log.file} (one row per SKIPPED file, with
 characters were removed)). If no file was skipped, no log is created
 (and any \code{vetted.merged_log.file} left from an earlier call is
 removed); instead \code{"All <n> files successfully merged, no log
-file created"} is printed. The log is kept in R only - it is not
+  file created"} is printed. The log is kept in R only - it is not
 written to disk.}
 
 \item{bat.names.out}{Character, default \code{"code4"}. The
@@ -80,7 +80,11 @@ output column names (\code{$date.monitoringnight}, \code{$aru.name},
 output column name through \code{standardize.headers()} instead (e.g.
 \code{$date_monitoringnight}, \code{$aru_name}) - for a caller who specifically
 wants a snake_case CSV/data frame out of this function, without having
-to convert it themselves afterward.}
+to convert it themselves afterward.
+\strong{2026-10-30, per Josh:} snake_case now replaces every \code{"."}
+with \code{"_"} and changes nothing else (\code{snake.headers()}), so
+\code{"aru.name"} -> \code{"aru_name"} and \code{"GlobalID"} stays
+\code{"GlobalID"} - matching \code{$name.snake} in the Batz reference db.}
 
 \item{strip.special}{Logical, default \code{TRUE}. If \code{TRUE}, simplifies accented
 letters (\code{é} -> \code{e}) and removes other non-ASCII special
@@ -486,71 +490,58 @@ not match"} message. Any other unmatched value (e.g. SonoBat's
 \strong{Follow-up, 2026-10-23 (later), per Josh - shared bat tables,
 regions, alternative headers.}
 \enumerate{
-  \item Bat names are recoded with the shared tables in
-    \code{R/batz.util_bat.reference.R}: \code{BAT Groupings} and
-    \code{NABATFrequency Classes} are checked first, then \code{bat.names}
-    (see \code{\link{batz.batusa_recode.names}}), using only records that
-    match \code{regions}. E.g. SonoBat's \code{Luso} is now recoded to
-    \code{LUSO} (little brown bat / Indiana bat) instead of being reported
-    as unmatched.
-  \item New inputs \code{autoid.header_in}/\code{autoid.header_out} - see
-    their descriptions above.
-  \item A header made only of the words Manual, Species, ID and
-    Identification, ending in ID or Identification and containing Manual or
-    Species (e.g. \code{Manual ID}, \code{Species ID}, \code{Species
+\item Bat names are recoded with the shared tables in
+\code{R/batz.util_bat.reference.R}: \code{BAT Groupings} and
+\code{NABATFrequency Classes} are checked first, then \code{bat.names}
+(see \code{\link{batz.batusa_recode.names}}), using only records that
+match \code{regions}. E.g. SonoBat's \code{Luso} is now recoded to
+\code{LUSO} (little brown bat / Indiana bat) instead of being reported
+as unmatched.
+\item New inputs \code{autoid.header_in}/\code{autoid.header_out} - see
+their descriptions above.
+\item A header made only of the words Manual, Species, ID and
+Identification, ending in ID or Identification and containing Manual or
+Species (e.g. \code{Manual ID}, \code{Species ID}, \code{Species
     Identification}) is read as \code{Species Manual ID}, if the file has no
-    \code{Species Manual ID} column. The first one found is used.
-  \item \strong{Behavior change:} a file no longer needs BOTH the k-Pro
-    (\code{WA|Kaleidoscope|Auto ID}) and SonoBat (\code{SppAccp}) columns -
-    at least one auto-ID column (k-Pro, SonoBat, or one named in
-    \code{autoid.header_out}) is enough; the missing one is filled with
-    \code{NA}. Without this, a non-BRI sheet with a single auto-ID column
-    would always be skipped. \code{Filename}, \code{MonitoringNight},
-    \code{Species Manual ID} and \code{Lat} are still required.
-  \item The column rename after merging is now done by name instead of by
-    position (same output for standard files).
-  \item \code{$manid.kp}/\code{$manid.sb} are unchanged; no
-    \code{$manid.<other>} column is made for an extra auto-ID column.
+\code{Species Manual ID} column. The first one found is used.
+\item \strong{Behavior change:} a file no longer needs BOTH the k-Pro
+(\code{WA|Kaleidoscope|Auto ID}) and SonoBat (\code{SppAccp}) columns -
+at least one auto-ID column (k-Pro, SonoBat, or one named in
+\code{autoid.header_out}) is enough; the missing one is filled with
+\code{NA}. Without this, a non-BRI sheet with a single auto-ID column
+would always be skipped. \code{Filename}, \code{MonitoringNight},
+\code{Species Manual ID} and \code{Lat} are still required.
+\item The column rename after merging is now done by name instead of by
+position (same output for standard files).
+\item \code{$manid.kp}/\code{$manid.sb} are unchanged; no
+\code{$manid.<other>} column is made for an extra auto-ID column.
 }
 
 \strong{Follow-up, 2026-10-23 (later still), per Josh - other export
 layouts (e.g. a Kaleidoscope export of the Amboseli survey).}
 \enumerate{
-  \item \code{IN FILE} (or \code{File Name}, \code{File}) is read as
-    \code{Filename} when the file has no \code{Filename} column.
-  \item \code{Latitude} is read as \code{Lat}. A separate \code{Longitude}
-    (or \code{Long}, \code{Lon}) column is joined onto \code{Lat} as
-    \verb{<lat> <lon>}, then split into \code{$lat}/\code{$longitude} as for
-    the standard files. A row with either value blank keeps only what it
-    has.
-  \item \code{aru.serial} is accepted as well as \code{Serial} for
-    \code{$aru.serial}.
-  \item If a file has an \code{aru.name} or \code{site} column AND a serial
-    column, and the first part of a row's wav name is that row's serial
-    number (e.g. \code{656346_20230506_180008_000.wav}, serial
-    \code{656346}), \code{$aru.name} comes from the \code{aru.name}/
-    \code{site} column instead of the wav name. Otherwise it is read from
-    the wav name as before.
-  \item Dates are not converted: \code{MonitoringNight}/\code{DATE-12} is
-    \verb{m/d/yyyy} in both the BRI files and the Amboseli export, so
-    \code{$date.monitoringnight} is kept as it is.
-  \item \code{$aru.model} is still worked out from the wav-name layout, so
-    a non-Wildlife Acoustics recorder with the same naming (e.g. the
-    Amboseli \code{Chorus} units) shows as \code{"SM4"}.
+\item \code{IN FILE} (or \code{File Name}, \code{File}) is read as
+\code{Filename} when the file has no \code{Filename} column.
+\item \code{Latitude} is read as \code{Lat}. A separate \code{Longitude}
+(or \code{Long}, \code{Lon}) column is joined onto \code{Lat} as
+\verb{<lat> <lon>}, then split into \code{$lat}/\code{$longitude} as for
+the standard files. A row with either value blank keeps only what it
+has.
+\item \code{aru.serial} is accepted as well as \code{Serial} for
+\code{$aru.serial}.
+\item If a file has an \code{aru.name} or \code{site} column AND a serial
+column, and the first part of a row's wav name is that row's serial
+number (e.g. \code{656346_20230506_180008_000.wav}, serial
+\code{656346}), \code{$aru.name} comes from the \code{aru.name}/
+\code{site} column instead of the wav name. Otherwise it is read from
+the wav name as before.
+\item Dates are not converted: \code{MonitoringNight}/\code{DATE-12} is
+\verb{m/d/yyyy} in both the BRI files and the Amboseli export, so
+\code{$date.monitoringnight} is kept as it is.
+\item \code{$aru.model} is still worked out from the wav-name layout, so
+a non-Wildlife Acoustics recorder with the same naming (e.g. the
+Amboseli \code{Chorus} units) shows as \code{"SM4"}.
 }
-
-\strong{Follow-up, 2026-10-23, per Josh - recorder model from the file
-(\code{aru.types}).} \code{$aru.model} now first looks for a recorder
-model in the file's own columns, using the \code{aru.types} tab of the
-master reference workbook (\code{aru.ref.types()}): the headers in
-\code{$header} (\code{model}, \code{MODEL}, \code{aru.model},
-\code{aru.type}) are searched, and a value equal to one of
-\code{$recorder.type} (e.g. \code{Chorus}, \code{AudioMoth}, \code{SM4} -
-case, spaces, \code{-} and \code{_} ignored) is used, spelled as in the
-table. A value not in the list (e.g. \code{Song Meter SM4BAT-FS}) is not
-used. Rows without a match fall back to the wav-name layout
-(\code{"SM4"}/\code{"SM5"}) as before. The log's \code{$aru.model} uses the
-same rule. This replaces point 6 of the previous follow-up.
 }
 \examples{
 \dontrun{

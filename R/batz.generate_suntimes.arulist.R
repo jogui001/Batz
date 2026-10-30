@@ -529,6 +529,10 @@
 #'   \code{$aru_name}) - for a caller who specifically wants a snake_case
 #'   CSV/data frame out of this function, without having to convert it
 #'   themselves afterward.
+#'   \strong{2026-10-30, per Josh:} snake_case now replaces every \code{"."}
+#'   with \code{"_"} and changes nothing else (\code{snake.headers()}), so
+#'   \code{"aru.name"} -> \code{"aru_name"} and \code{"GlobalID"} stays
+#'   \code{"GlobalID"} - matching \code{$name.snake} in the Batz reference db.
 #' @param strip.special Logical, default \code{TRUE}. If \code{TRUE}, simplifies accented
 #'   letters (\code{é} -> \code{e}) and removes other non-ASCII special
 #'   characters (e.g. \code{°}, \code{µ}) from each \verb{*arulist.csv} after loading - see
@@ -976,7 +980,7 @@ batz.generate_suntimes.arulist <- function(dir.load = getwd(),
     ## references this function's own dot-separated $sunset.unix/
     ## $sunrise.unix/$sunrise.monitoringnight.unix names regardless of this
     ## parameter).
-    if (snake_case) names(aru.suntimes.out) <- standardize.headers(names(aru.suntimes.out))
+    if (snake_case) names(aru.suntimes.out) <- snake.headers(names(aru.suntimes.out))
 
     write.csv(aru.suntimes.out, file.path(dir.save, out.file), row.names = FALSE)
   }
@@ -985,7 +989,7 @@ batz.generate_suntimes.arulist <- function(dir.load = getwd(),
   ## the very last step before it's returned (kept separate from the
   ## write.output copy above, since that copy is also rounded/renamed on
   ## its own timeline) - see @details, "Follow-up, 2026-09-22".
-  if (snake_case) names(aru.suntimes) <- standardize.headers(names(aru.suntimes))
+  if (snake_case) names(aru.suntimes) <- snake.headers(names(aru.suntimes))
 
   invisible(list(aru.suntimes = aru.suntimes, efficiency = efficiency))
 }

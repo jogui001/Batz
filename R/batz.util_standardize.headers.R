@@ -144,3 +144,26 @@ headers.corrected <- function() {
              header.new = c("schedule1", "schedule2"),
              stringsAsFactors = FALSE)
 }
+
+#' Convert Batz (dot-style) header names to snake_case (internal helper)
+#'
+#' Added 2026-10-30, per Josh: \code{$name.snake} in the Batz reference db
+#' (tab \code{Header.names}) is \code{$name.standard} with every \code{"."}
+#' replaced by \code{"_"} - nothing else changes (case, existing
+#' underscores and other characters are kept). Used by every \code{batz}
+#' function's \code{snake_case = TRUE} output option.
+#' \code{standardize.headers()} is still used to MATCH incoming raw headers
+#' (it also lowercases and turns spaces/punctuation into \code{"_"}), but
+#' no longer to name output columns.
+#'
+#' @param x Character vector of header names.
+#' @return \code{x} with every \code{"."} replaced by \code{"_"}.
+#' @examples
+#' \dontrun{
+#' snake.headers(c("aru.name", "date.monitoringnight", "GlobalID", "microphone.orientation_vertical"))
+#' # -> "aru_name" "date_monitoringnight" "GlobalID" "microphone_orientation_vertical"
+#' }
+#' @keywords internal
+snake.headers <- function(x) {
+  gsub(".", "_", as.character(x), fixed = TRUE)
+}

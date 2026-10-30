@@ -72,6 +72,10 @@
 #'   $aru_serial}) - for a caller who specifically wants a snake_case
 #'   CSV/xlsx/data frame out of this function, without having to convert it
 #'   themselves afterward.
+#'   \strong{2026-10-30, per Josh:} snake_case now replaces every \code{"."}
+#'   with \code{"_"} and changes nothing else (\code{snake.headers()}), so
+#'   \code{"aru.name"} -> \code{"aru_name"} and \code{"GlobalID"} stays
+#'   \code{"GlobalID"} - matching \code{$name.snake} in the Batz reference db.
 #' @param strip.special Logical, default \code{TRUE}. If \code{TRUE},
 #'   simplifies accented letters and
 #'   symbols (\code{é} -> \code{e}, \code{×} -> \code{X}) and removes other non-ASCII special characters (e.g. \code{°}, \code{µ},
@@ -815,12 +819,12 @@ batz.merge_vetted.acoustics2 <- function(dir.load = getwd(),
   ## already used in batz.generate_plotframe.bat(). FALSE (default) keeps
   ## this function's normal dot-separated names exactly as always.
   if (snake_case) {
-    names(data.merged) <- standardize.headers(names(data.merged))
-    names(log.file.df) <- standardize.headers(names(log.file.df))
+    names(data.merged) <- snake.headers(names(data.merged))
+    names(log.file.df) <- snake.headers(names(log.file.df))
     ## keep the log column's exact name (2026-09-30)
     special.cols <- c("strip.special", "Accented.letters.header", "removed.symbols.header",
                       "Accented.letters.data", "removed.symbols.data")
-    hit <- match(names(log.file.df), standardize.headers(special.cols))
+    hit <- match(names(log.file.df), snake.headers(special.cols))
     names(log.file.df)[!is.na(hit)] <- special.cols[hit[!is.na(hit)]]
   }
 

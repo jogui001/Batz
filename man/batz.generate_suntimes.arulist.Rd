@@ -80,7 +80,11 @@ becomes \code{$date_monitoringnight}, \code{$sunrise.monitoringnight.unix}
 becomes \code{$sunrise_monitoringnight_unix}, \code{$aru.name} becomes
 \code{$aru_name}) - for a caller who specifically wants a snake_case
 CSV/data frame out of this function, without having to convert it
-themselves afterward.}
+themselves afterward.
+\strong{2026-10-30, per Josh:} snake_case now replaces every \code{"."}
+with \code{"_"} and changes nothing else (\code{snake.headers()}), so
+\code{"aru.name"} -> \code{"aru_name"} and \code{"GlobalID"} stays
+\code{"GlobalID"} - matching \code{$name.snake} in the Batz reference db.}
 
 \item{strip.special}{Logical, default \code{TRUE}. If \code{TRUE}, simplifies accented
 letters (\code{é} -> \code{e}) and removes other non-ASCII special

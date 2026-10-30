@@ -68,6 +68,10 @@
 #'   every output header to snake_case with \code{standardize.headers()}
 #'   (\code{"date-12"} -> \code{"date_12"}, \code{"aru.name"} ->
 #'   \code{"aru_name"}).
+#'   \strong{2026-10-30, per Josh:} snake_case now replaces every \code{"."}
+#'   with \code{"_"} and changes nothing else (\code{snake.headers()}), so
+#'   \code{"aru.name"} -> \code{"aru_name"} and \code{"GlobalID"} stays
+#'   \code{"GlobalID"} - matching \code{$name.snake} in the Batz reference db.
 #' @param strip.special Logical, default \code{TRUE}. Simplifies accented
 #'   letters and removes other non-ASCII characters (headers and values),
 #'   same as every other \code{batz} function.
@@ -296,7 +300,7 @@ batz.datawrangler_format.vetted <- function(data,
 
   ## ---- output ----------------------------------------------------------------------
   rownames(data) <- NULL
-  if (isTRUE(snake_case)) names(data) <- standardize.headers(names(data))
+  if (isTRUE(snake_case)) names(data) <- snake.headers(names(data))
 
   if (isTRUE(write.output)) {
     d.col <- find.col(data, c("date-12", "date.monitoringnight"))

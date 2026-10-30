@@ -100,7 +100,11 @@ name. \code{""} uses \code{project} if given, otherwise \code{"vetted"}.}
 \item{snake_case}{Logical, default \code{FALSE}. \code{TRUE} converts
 every output header to snake_case with \code{standardize.headers()}
 (\code{"date-12"} -> \code{"date_12"}, \code{"aru.name"} ->
-\code{"aru_name"}).}
+\code{"aru_name"}).
+\strong{2026-10-30, per Josh:} snake_case now replaces every \code{"."}
+with \code{"_"} and changes nothing else (\code{snake.headers()}), so
+\code{"aru.name"} -> \code{"aru_name"} and \code{"GlobalID"} stays
+\code{"GlobalID"} - matching \code{$name.snake} in the Batz reference db.}
 
 \item{strip.special}{Logical, default \code{TRUE}. Simplifies accented
 letters and removes other non-ASCII characters (headers and values),
@@ -108,11 +112,11 @@ same as every other \code{batz} function.}
 }
 \value{
 The tidied data frame. Columns are those of \code{data}, renamed
-  as above, plus \code{$community} and \code{$project} when added
-  (placed straight after \code{$species}, as in the hand-cleaned files;
-  at the end if there is no \code{$species}). A one-row-per-step summary is attached as
-  \code{attr(result, "format.log")} with columns \code{$step},
-  \code{$rows.changed}, \code{$note}.
+as above, plus \code{$community} and \code{$project} when added
+(placed straight after \code{$species}, as in the hand-cleaned files;
+at the end if there is no \code{$species}). A one-row-per-step summary is attached as
+\code{attr(result, "format.log")} with columns \code{$step},
+\code{$rows.changed}, \code{$note}.
 }
 \description{
 Applies the clean-up steps done by hand on the Amboseli/NKRCP vetted

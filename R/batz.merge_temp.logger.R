@@ -256,6 +256,10 @@
 #'   \code{$date_time}, \code{$temp.dry.c} -> \code{$temp_dry_c}) - for a
 #'   caller who specifically wants a snake_case CSV/data frame out of this
 #'   function, without having to convert it themselves afterward.
+#'   \strong{2026-10-30, per Josh:} snake_case now replaces every \code{"."}
+#'   with \code{"_"} and changes nothing else (\code{snake.headers()}), so
+#'   \code{"aru.name"} -> \code{"aru_name"} and \code{"GlobalID"} stays
+#'   \code{"GlobalID"} - matching \code{$name.snake} in the Batz reference db.
 #' @param strip.special Logical, default \code{TRUE}. If \code{TRUE}, simplifies accented
 #'   letters (\code{é} -> \code{e}) and removes other non-ASCII special
 #'   characters (e.g. \code{°}, \code{µ}) from the data after loading - see \code{@details}. Files are
@@ -816,12 +820,12 @@ batz.merge_temp.logger <- function(dir.load = getwd(),
   ## copies/rounds/writes templog.merged - so the written CSV(s) and the
   ## invisibly-returned list agree on column naming.
   if (snake_case) {
-    names(templog.merged) <- standardize.headers(names(templog.merged))
-    names(templog.notes)  <- standardize.headers(names(templog.notes))
+    names(templog.merged) <- snake.headers(names(templog.merged))
+    names(templog.notes)  <- snake.headers(names(templog.notes))
     ## keep the log column's exact name (2026-09-30)
     special.cols <- c("strip.special", "Accented.letters.header", "removed.symbols.header",
                       "Accented.letters.data", "removed.symbols.data")
-    hit <- match(names(templog.notes), standardize.headers(special.cols))
+    hit <- match(names(templog.notes), snake.headers(special.cols))
     names(templog.notes)[!is.na(hit)] <- special.cols[hit[!is.na(hit)]]
   }
 
