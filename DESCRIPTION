@@ -10,7 +10,9 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 Config/roxygen2/version: 8.1.1
 Imports:
-    openxlsx
+    officer,
+    openxlsx,
+    xml2
 Suggests:
     colorspace,
     RColorBrewer,

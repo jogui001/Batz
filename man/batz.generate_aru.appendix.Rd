@@ -38,7 +38,13 @@ by tab name - \code{deploy} (also \code{deployment}, \code{habitat}),
 \code{quad} (also \code{quadrant}) and \code{service} (also
 \code{survice}, \code{servicing}) - or, failing that, by which tab's
 headers best match each form's Survey123 headers. Other tabs (e.g.
-\code{repeat_photo_1}) are ignored.}
+\code{repeat_photo_1}) are ignored. \strong{2026-10-30, per Josh:} may
+also be a folder. The \code{.xlsx} in it (sub-folders searched,
+\code{Archive} folders skipped) with the most form tabs is used - the
+newest if several tie (NOTE) - e.g. the workbook written by
+\code{batz.merge_sitevisit.acoustics()}. When \code{photo.dir} is
+\code{NULL} and the folder holds photos, the folder is also used as
+\code{photo.dir}.}
 
 \item{client, client.contact, project.label, project.code, project.manager}{Character, default \code{""}. Used for the report header only when the
 data has no column of that name (Batz spelling, any case/separator) with
@@ -123,7 +129,9 @@ ignoring case and punctuation. The view is read from the file name:
 \code{East}, \code{South}, \code{West}. Files with a \code{New} part
 (\code{..._55-NW1_New_Detector_Setup_...}) are used only when there is no
 other photo of that view. \code{NULL}: the photo cells read
-\code{"No photo folder given (photo.dir)"}.}
+\code{"No photo folder given (photo.dir)"}.
+\strong{2026-10-30:} when \code{data} is a folder that holds photos,
+\code{NULL} uses that folder (and its sub-folders).}
 
 \item{sm4.data}{Data frame or the path to a merged SM4 log \code{.csv}
 (e.g. \code{mergedsm4.csv}), default \code{NULL}. Added 2026-10-28. Needs

@@ -15,7 +15,13 @@
 #'   \code{quad} (also \code{quadrant}) and \code{service} (also
 #'   \code{survice}, \code{servicing}) - or, failing that, by which tab's
 #'   headers best match each form's Survey123 headers. Other tabs (e.g.
-#'   \code{repeat_photo_1}) are ignored.
+#'   \code{repeat_photo_1}) are ignored. \strong{2026-10-30, per Josh:} may
+#'   also be a folder. The \code{.xlsx} in it (sub-folders searched,
+#'   \code{Archive} folders skipped) with the most form tabs is used - the
+#'   newest if several tie (NOTE) - e.g. the workbook written by
+#'   \code{batz.merge_sitevisit.acoustics()}. When \code{photo.dir} is
+#'   \code{NULL} and the folder holds photos, the folder is also used as
+#'   \code{photo.dir}.
 #' @param client,client.contact,project.label,project.code,project.manager
 #'   Character, default \code{""}. Used for the report header only when the
 #'   data has no column of that name (Batz spelling, any case/separator) with
@@ -85,6 +91,8 @@
 #'   (\code{..._55-NW1_New_Detector_Setup_...}) are used only when there is no
 #'   other photo of that view. \code{NULL}: the photo cells read
 #'   \code{"No photo folder given (photo.dir)"}.
+#'   \strong{2026-10-30:} when \code{data} is a folder that holds photos,
+#'   \code{NULL} uses that folder (and its sub-folders).
 #' @param photo.width Numeric, default \code{3}. Added 2026-10-28. Photo width
 #'   in inches (height kept in proportion, at most 3.5 in).
 #' @param sm4.data Data frame or the path to a merged SM4 log \code{.csv}
@@ -446,6 +454,38 @@ batz.generate_aru.appendix <- function(data,
   key <- function(x) tolower(gsub("[^A-Za-z0-9]+", "", as.character(x)))
 
   ## --- 1. load the forms ----------------------------------------------------
+  ## 2026-10-30, per Josh: `data` may be a folder - the site-forms workbook is
+  ## found in it (and, when photo.dir = NULL, the photos are searched for in it)
+  if (is.character(data) && length(data) == 1 && dir.exists(data)) {
+    data.dir <- data
+    xl <- list.files(data.dir, pattern = "\\.xlsx$", recursive = TRUE, full.names = TRUE, ignore.case = TRUE)
+    xl <- xl[!grepl("^~\\$", basename(xl)) & !grepl("(^|/)archive(/|$)", tolower(dirname(xl)))]
+    if (length(xl) == 0) stop("No .xlsx workbook found in ", data.dir, call. = FALSE)
+    if (!requireNamespace("readxl", quietly = TRUE)) stop("Reading an .xlsx needs the 'readxl' package.", call. = FALSE)
+    form.rx <- "quad|deploy|habitat|serv|survice"
+    n.forms <- vapply(xl, function(f) {
+      s <- tryCatch(readxl::excel_sheets(f), error = function(e) character(0))
+      sum(grepl(form.rx, s, ignore.case = TRUE))
+    }, numeric(1))
+    xl <- xl[n.forms == max(n.forms)]
+    if (max(n.forms) < 2 && length(xl) > 1)
+      stop("Found ", length(xl), " .xlsx files in ", data.dir, " but none has the site-form tabs (quad, habitat/deploy, service). ",
+           "Merge the Survey123 exports first with batz.merge_sitevisit.acoustics(), or pass `data` = the workbook path.", call. = FALSE)
+    if (length(xl) > 1) {
+      xl <- xl[order(file.mtime(xl), decreasing = TRUE)]
+      cat("NOTE: ", length(xl), " workbooks with site-form tabs in the data folder - using the newest: ", basename(xl[1]),
+          " (others: ", paste(basename(xl[-1]), collapse = ", "), ")\n", sep = "")
+    }
+    data <- xl[1]
+    cat("Data: ", data, "\n", sep = "")
+    if (is.null(photo.dir)) {
+      img <- list.files(data.dir, pattern = "\\.(jpe?g|png|heic|heif|tiff?)$", recursive = TRUE, ignore.case = TRUE)
+      if (length(img) > 0) {
+        photo.dir <- data.dir
+        cat("Photos: photo.dir = NULL, so the data folder is searched for photos (", length(img), " found)\n", sep = "")
+      }
+    }
+  }
   if (is.character(data) && length(data) == 1) {
     if (!requireNamespace("readxl", quietly = TRUE)) stop("Reading an .xlsx needs the 'readxl' package.", call. = FALSE)
     if (!file.exists(data)) stop("File not found: ", data, call. = FALSE)
