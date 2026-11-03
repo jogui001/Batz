@@ -31,3 +31,8 @@ batz.generate_weatherstation.list(sw, station.max = 2)        # NOTE: latitude .
 try(batz.generate_weatherstation.list(test.data[, 1:2]))                   # missing $site.longitude
 try(batz.generate_weatherstation.list(test.data, interval = c(-5, 10)))     # bad interval
 try(batz.generate_weatherstation.list(test.data, api.key = ""))             # no key
+
+## ---- TEST 5: station name + data types (2026-11-03) -------------------------
+t5 <- batz.generate_weatherstation.list(test.data, station.max = 5)
+t5[, c("site", "station.name", "station.type", "station.datatypes")]
+batz.generate_weatherstation.list(test.data, station.max = 5, datatypes = FALSE)   # skip the extra look-ups

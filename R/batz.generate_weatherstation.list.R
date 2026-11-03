@@ -21,6 +21,9 @@
 #'   \code{Sys.setenv(WU_API_KEY = "<key>")}.
 #' @param query.max Numeric, default \code{60}. Most API look-ups per site and
 #'   station type (see Details).
+#' @param datatypes Logical, default \code{TRUE}. Added 2026-11-03, per Josh.
+#'   Look up which kinds of data each listed station records
+#'   (\code{$station.datatypes}, see Details) - one extra look-up per station.
 #'
 #' @return Invisibly, a data frame with one row per station (closest first):
 #'   \code{$site}, \code{$site.latitude}, \code{$site.longitude},
@@ -29,8 +32,9 @@
 #'   \code{$station.distance} (km), \code{$station.latitude},
 #'   \code{$station.longitude}, plus \code{$station.id}, \code{$station.name}
 #'   and \code{$station.type}. An interval with no new stations gets one row
-#'   with blank station columns, so every interval's total is shown. The first
-#'   eight columns are printed.
+#'   with blank station columns, so every interval's total is shown.
+#'   \strong{2026-11-03:} \code{$station.name} and \code{$station.datatypes}
+#'   (a "; "-separated list) are printed after the first eight columns.
 #'
 #' @details
 #' \strong{How stations are found.} The weather.com "location near" service
@@ -46,6 +50,17 @@
 #' and prints a NOTE giving the distance up to which the list is complete;
 #' totals for intervals beyond it are minimums. Raise \code{query.max}, lower
 #' \code{interval}, or use \code{station.max} instead.
+#'
+#' \strong{Data types (2026-11-03, per Josh).} \code{$station.datatypes} lists
+#' what the station recorded, using the wunderground.com table headers:
+#' Temperature, Dew Point, Humidity, Wind (direction), Wind Speed, Wind Gust,
+#' Pressure, Precip., UV, Solar, Condition, Visibility. A personal weather
+#' station is checked from its current observation: a sensor it doesn't have
+#' comes back blank (a reading of 0, e.g. no rain, still counts). An airport is
+#' checked over yesterday's observations: a value counts when it was recorded
+#' at least once, so Wind Gust or Precip. can be missing after a calm, dry day.
+#' A station with nothing to report gets \code{"not reporting"}. Each station
+#' is looked up once, even when it is listed for several sites.
 #'
 #' \strong{Coordinates.} A NOTE is printed for a site whose latitude is south
 #' of -60 (Antarctica) - usually latitude and longitude swapped.
@@ -66,7 +81,8 @@ batz.generate_weatherstation.list <- function(data,
                                               station.max = Inf,
                                               station.type = c("pws", "airport"),
                                               api.key = Sys.getenv("WU_API_KEY"),
-                                              query.max = 60) {
+                                              query.max = 60,
+                                              datatypes = TRUE) {
   FN <- "batz.generate_weatherstation.list"
   if (!requireNamespace("jsonlite", quietly = TRUE)) stop(FN, ' needs the jsonlite package: install.packages("jsonlite")', call. = FALSE)
   if (!is.data.frame(data)) stop(FN, ": data must be a data frame with $site, $site.latitude, $site.longitude.", call. = FALSE)
@@ -115,7 +131,7 @@ batz.generate_weatherstation.list <- function(data,
       s <- st[st$interval == k, , drop = FALSE]
       tot <- sum(st$station.distance <= k)
       if (nrow(s) == 0) s <- data.frame(station.id = NA, station.name = NA, station.type = NA, station.latitude = NA,
-                                        station.longitude = NA, station.distance = NA, interval = k)
+                                        station.longitude = NA, station.distance = NA, interval = k, station.country = NA)
       s$station.total <- tot
       rows[[length(rows) + 1]] <- s
     }
@@ -125,11 +141,25 @@ batz.generate_weatherstation.list <- function(data,
                            station.distance = round(s$station.distance, 2),
                            station.latitude = s$station.latitude, station.longitude = s$station.longitude,
                            station.id = s$station.id, station.name = s$station.name, station.type = s$station.type,
+                           station.country = s$station.country,
                            stringsAsFactors = FALSE)
   }
   out <- do.call(rbind, out)
   rownames(out) <- NULL
-  print(out[, 1:8], row.names = FALSE)
+
+  ## what each listed station records (2026-11-03, per Josh) - once per station
+  out$station.datatypes <- NA_character_
+  if (isTRUE(datatypes)) {
+    ids <- unique(out[!is.na(out$station.id), c("station.id", "station.type", "station.country")])
+    cat(sprintf("Checking the data types of %d station(s)...\n", nrow(ids)))
+    for (j in seq_len(nrow(ids))) {
+      if (j > 1) Sys.sleep(2)
+      dt <- wu.datatypes(ids$station.id[j], ids$station.type[j], ids$station.country[j], api.key)
+      out$station.datatypes[out$station.id %in% ids$station.id[j]] <- dt
+    }
+  }
+  out$station.country <- NULL
+  print(out[, c(1:8, match(c("station.name", "station.datatypes"), names(out)))], row.names = FALSE)
   invisible(out)
 }
 
@@ -155,6 +185,7 @@ wu.near <- function(lat, lon, product, api.key) {
   data.frame(station.id = if (product == "pws") loc$stationId else loc$icaoCode,
              station.name = if (product == "pws") loc$stationName else loc$airportName,
              station.type = product,
+             station.country = if (!is.null(loc$countryCode)) loc$countryCode else "US",
              station.latitude = as.numeric(loc$latitude), station.longitude = as.numeric(loc$longitude),
              stringsAsFactors = FALSE)
 }
@@ -206,4 +237,38 @@ wu.cover <- function(lat, lon, product, r.max, station.max, api.key, query.max, 
     kids <- data.frame(x = c$x + c(-h, h, -h, h), y = c$y + c(-h, -h, h, h), h = h, asked = FALSE)
     cells <- rbind(kids, cells[-1, , drop = FALSE])
   }
+}
+
+#' Which kinds of data a station records (internal)
+#'
+#' PWS: from its current observation (a missing sensor comes back NULL).
+#' Airport: any value over yesterday's observations. Returns a "; "-separated
+#' list of wunderground.com table headers, or "not reporting".
+#' @noRd
+wu.datatypes <- function(id, type, country, api.key,
+                         get = function(url) tryCatch(jsonlite::fromJSON(url), error = function(e) NULL)) {
+  has <- function(x) !is.null(x) && any(!is.na(x) & nzchar(as.character(x)))
+  if (identical(type, "pws")) {
+    j <- get(sprintf("https://api.weather.com/v2/pws/observations/current?stationId=%s&format=json&units=e&numericPrecision=decimal&apiKey=%s",
+                     utils::URLencode(id, reserved = TRUE), api.key))
+    o <- j$observations
+    if (is.null(o) || NROW(o) == 0) return("not reporting")
+    im <- if (is.data.frame(o$imperial)) o$imperial else as.data.frame(o$imperial)
+    keep <- c("Temperature" = has(im$temp), "Dew Point" = has(im$dewpt), "Humidity" = has(o$humidity),
+              "Wind" = has(o$winddir), "Wind Speed" = has(im$windSpeed), "Wind Gust" = has(im$windGust),
+              "Pressure" = has(im$pressure), "Precip." = has(im$precipRate) || has(im$precipTotal),
+              "UV" = has(o$uv), "Solar" = has(o$solarRadiation))
+  } else {
+    day <- format(Sys.Date() - 1, "%Y%m%d")
+    j <- get(sprintf("https://api.weather.com/v1/location/%s:9:%s/observations/historical.json?apiKey=%s&units=e&startDate=%s&endDate=%s",
+                     id, if (is.na(country) || !nzchar(country)) "US" else country, api.key, day, day))
+    o <- j$observations
+    if (is.null(o) || NROW(o) == 0) return("not reporting")
+    keep <- c("Temperature" = has(o$temp), "Dew Point" = has(o$dewPt), "Humidity" = has(o$rh),
+              "Wind" = has(o$wdir_cardinal) || has(o$wdir), "Wind Speed" = has(o$wspd), "Wind Gust" = has(o$gust),
+              "Pressure" = has(o$pressure), "Precip." = has(o$precip_hrly) || has(o$precip_total),
+              "UV" = has(o$uv_index), "Condition" = has(o$wx_phrase), "Visibility" = has(o$vis))
+  }
+  if (!any(keep)) return("not reporting")
+  paste(names(keep)[keep], collapse = "; ")
 }

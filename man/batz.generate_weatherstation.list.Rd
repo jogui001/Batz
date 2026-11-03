@@ -10,7 +10,8 @@ batz.generate_weatherstation.list(
   station.max = Inf,
   station.type = c("pws", "airport"),
   api.key = Sys.getenv("WU_API_KEY"),
-  query.max = 60
+  query.max = 60,
+  datatypes = TRUE
 )
 }
 \arguments{
@@ -34,6 +35,10 @@ to GitHub: set it once per session with
 
 \item{query.max}{Numeric, default \code{60}. Most API look-ups per site and
 station type (see Details).}
+
+\item{datatypes}{Logical, default \code{TRUE}. Added 2026-11-03, per Josh.
+Look up which kinds of data each listed station records
+(\code{$station.datatypes}, see Details) - one extra look-up per station.}
 }
 \value{
 Invisibly, a data frame with one row per station (closest first):
@@ -43,8 +48,9 @@ Invisibly, a data frame with one row per station (closest first):
 \code{$station.distance} (km), \code{$station.latitude},
 \code{$station.longitude}, plus \code{$station.id}, \code{$station.name}
 and \code{$station.type}. An interval with no new stations gets one row
-with blank station columns, so every interval's total is shown. The first
-eight columns are printed.
+with blank station columns, so every interval's total is shown.
+\strong{2026-11-03:} \code{$station.name} and \code{$station.datatypes}
+(a "; "-separated list) are printed after the first eight columns.
 }
 \description{
 For each site (latitude/longitude), finds the Weather Underground
@@ -67,6 +73,17 @@ spaced 2 seconds apart (the API allows about 30 per minute).
 and prints a NOTE giving the distance up to which the list is complete;
 totals for intervals beyond it are minimums. Raise \code{query.max}, lower
 \code{interval}, or use \code{station.max} instead.
+
+\strong{Data types (2026-11-03, per Josh).} \code{$station.datatypes} lists
+what the station recorded, using the wunderground.com table headers:
+Temperature, Dew Point, Humidity, Wind (direction), Wind Speed, Wind Gust,
+Pressure, Precip., UV, Solar, Condition, Visibility. A personal weather
+station is checked from its current observation: a sensor it doesn't have
+comes back blank (a reading of 0, e.g. no rain, still counts). An airport is
+checked over yesterday's observations: a value counts when it was recorded
+at least once, so Wind Gust or Precip. can be missing after a calm, dry day.
+A station with nothing to report gets \code{"not reporting"}. Each station
+is looked up once, even when it is listed for several sites.
 
 \strong{Coordinates.} A NOTE is printed for a site whose latitude is south
 of -60 (Antarctica) - usually latitude and longitude swapped.
