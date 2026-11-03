@@ -16,8 +16,8 @@ test.data <- data.frame(site = c("bri", "cumberland"),
                         site.longitude = c(-70.28145797545827, -70.32403651749544))
 
 ## ---- TEST 1: counts at each interval (km) -----------------------------------
-t1 <- batz.generate_weatherstation.list(test.data, interval = c(5, 10, 15, 25, 50, 100))
-aggregate(station.total ~ site + interval, t1, max)          # one total per site and interval
+t1 <- batz.generate_weatherstation.list(test.data, distance.max = c(5, 10, 15, 25, 50, 100), station.max = Inf)
+aggregate(station.total ~ site + distance.max, t1, max)      # one total per site and distance
 
 ## ---- TEST 2: the 25 nearest stations per site -------------------------------
 t2 <- batz.generate_weatherstation.list(test.data, station.max = 25)
@@ -29,10 +29,19 @@ batz.generate_weatherstation.list(sw, station.max = 2)        # NOTE: latitude .
 
 ## ---- TEST 4: errors ---------------------------------------------------------
 try(batz.generate_weatherstation.list(test.data[, 1:2]))                   # missing $site.longitude
-try(batz.generate_weatherstation.list(test.data, interval = c(-5, 10)))     # bad interval
+try(batz.generate_weatherstation.list(test.data, distance.max = -5))         # bad distance.max
 try(batz.generate_weatherstation.list(test.data, api.key = ""))             # no key
 
 ## ---- TEST 5: station name + data types (2026-11-03) -------------------------
 t5 <- batz.generate_weatherstation.list(test.data, station.max = 5)
 t5[, c("site", "station.name", "station.type", "station.datatypes")]
-batz.generate_weatherstation.list(test.data, station.max = 5, datatypes = FALSE)   # skip the extra look-ups
+
+## ---- TEST 6: station name / code / area (2026-11-04) ------------------------
+t6 <- batz.generate_weatherstation.list(test.data)              # station.max now defaults to 10
+t6[, c("site", "station.name", "station.code", "station.area")]  # e.g. Ocean Avenue Station | FB28 - KMEPORTL81 | Portland
+
+## ---- TEST 7: distance.max / sample.interval_min (2026-11-04) ----------------
+t7 <- batz.generate_weatherstation.list(test.data)                         # 50 km, 10 stations, records at least hourly
+t7[, c("site", "station.code", "station.distance", "sample.interval")]
+t7b <- batz.generate_weatherstation.list(test.data, sample.interval_min = 10)  # only stations recording every <= 10 min
+stopifnot(all(t7b$sample.interval <= 10, na.rm = TRUE))
