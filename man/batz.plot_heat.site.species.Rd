@@ -86,13 +86,13 @@ as is and stops with a readable error if a cell can't be read.}
 }
 \value{
 Invisibly, a list with \code{plots} and \code{ggplots}, one
-  element per plot made (named by \code{$plot.name}). Each
-  \code{plots} element has \code{$cells} - one row per site x time bin:
-  \code{$group}, \code{$aru.name}, \code{$bin}, \code{$bin.start},
-  \code{$bin.end}, \code{$passes}, \code{$nights}, \code{$value},
-  \code{$value.class} - and \code{$sites} - one row per site:
-  \code{$group}, \code{$aru.name}, \code{$nights}, \code{$passes} -
-  plus \code{$file} (the saved PNG name) and \code{$settings}.
+element per plot made (named by \code{$plot.name}). Each
+\code{plots} element has \code{$cells} - one row per site x time bin:
+\code{$group}, \code{$aru.name}, \code{$bin}, \code{$bin.start},
+\code{$bin.end}, \code{$passes}, \code{$nights}, \code{$value},
+\code{$value.class} - and \code{$sites} - one row per site:
+\code{$group}, \code{$aru.name}, \code{$nights}, \code{$passes} -
+plus \code{$file} (the saved PNG name) and \code{$settings}.
 }
 \description{
 Draws a site-by-time-of-night heat map for one bat species (or several
@@ -116,31 +116,31 @@ style as the other \code{batz} plot functions (\code{fig.list} +
 
 \strong{fig.list columns.}
 \itemize{
-  \item \code{$plot.type} - must be \code{"heat.site.species"}; other
-    rows are skipped with a NOTE, so one shared \code{fig.list.csv}
-    can hold rows for several plot functions.
-  \item \code{$plot.name} - used in the saved file name.
-  \item \code{$plot.species} - species to plot, matched to
-    \code{data[[spp.id]]} ignoring case and outer spaces. Several
-    species are pooled into one plot. Also the plot title.
-  \item \code{$plot.group} (optional) - column of \code{data} that groups
-    sites into blocks (e.g. \code{"community"}). Blank or absent = one
-    block of sites, no headings.
-  \item \code{$plot.set} - which sites to include: values of
-    \code{$plot.group} when it is given (e.g. \code{"OLMN;KA"} = every
-    site in those communities), otherwise \code{$aru.name} values.
-    Blank = every site. Blocks are drawn in \code{$plot.set} order.
-  \item \code{$group.labels} (optional) - headings for the blocks, as
-    \code{"value=label"} pairs, e.g. \code{"OLMN=Kajiado;KA=NKRCP"}. A
-    block without a label uses its own value.
-  \item \code{$site.exclude} (optional) - sites (\code{$aru.name}) to
-    leave out, e.g. \code{"KABC_06;KABC_07"}.
-  \item \code{$site.bold} (optional) - sites whose x-axis name is drawn
-    in \code{$site.bold.face} (default bold), e.g. \code{"OLMN3;KA07"}.
-  \item \code{$date.start} / \code{$date.end} - monitoring nights to
-    include (\code{m/d/Y}, \code{Y-m-d} or \code{m/d/y}). Blank = no
-    limit on that side.
-  \item \code{$xaxe.title} / \code{$yaxe.title} - axis titles.
+\item \code{$plot.type} - must be \code{"heat.site.species"}; other
+rows are skipped with a NOTE, so one shared \code{fig.list.csv}
+can hold rows for several plot functions.
+\item \code{$plot.name} - used in the saved file name.
+\item \code{$plot.species} - species to plot, matched to
+\code{data[[spp.id]]} ignoring case and outer spaces. Several
+species are pooled into one plot. Also the plot title.
+\item \code{$plot.group} (optional) - column of \code{data} that groups
+sites into blocks (e.g. \code{"community"}). Blank or absent = one
+block of sites, no headings.
+\item \code{$plot.set} - which sites to include: values of
+\code{$plot.group} when it is given (e.g. \code{"OLMN;KA"} = every
+site in those communities), otherwise \code{$aru.name} values.
+Blank = every site. Blocks are drawn in \code{$plot.set} order.
+\item \code{$group.labels} (optional) - headings for the blocks, as
+\code{"value=label"} pairs, e.g. \code{"OLMN=Kajiado;KA=NKRCP"}. A
+block without a label uses its own value.
+\item \code{$site.exclude} (optional) - sites (\code{$aru.name}) to
+leave out, e.g. \code{"KABC_06;KABC_07"}.
+\item \code{$site.bold} (optional) - sites whose x-axis name is drawn
+in \code{$site.bold.face} (default bold), e.g. \code{"OLMN3;KA07"}.
+\item \code{$date.start} / \code{$date.end} - monitoring nights to
+include (\code{m/d/Y}, \code{Y-m-d} or \code{m/d/y}). Blank = no
+limit on that side.
+\item \code{$xaxe.title} / \code{$yaxe.title} - axis titles.
 }
 
 \strong{Time bins.} Each record's clock time is placed in a
@@ -164,7 +164,7 @@ none were detected.
 \strong{Color classes.} \code{bin.breaks} (default \code{10;50;100;150})
 are the upper edges of the classes after 0: 0, (0,10], (10,50],
 (50,100], (100,150], >150, labelled 0, 1-10, 11-50, 51-100, 101-150,
->150. A fractional mean (e.g. 0.33 with three nights) falls in 1-10.
+\code{>150}. A fractional mean (e.g. 0.33 with three nights) falls in 1-10.
 Every class is shown in the legend even when no cell uses it.
 \code{bin.colors} needs one color per class (\code{bin.breaks} + 2);
 if the count is wrong a NOTE is printed and a white + viridis set is
@@ -177,8 +177,10 @@ KA01, KA02 ...).
 \strong{File name.} \code{"<project.name>_<plot.name>_<daterange>_<timestamp>.png"},
 \code{<daterange>} = first and last monitoring night plotted
 (\code{YYYYMMDDtoYYYYMMDD}), \code{<timestamp>} = \code{YYYYMMDDHHMMSS}
-- the same pattern as \code{\link{batz.plotsm4_heatmap}}. Each saved name
+\itemize{
+\item the same pattern as \code{\link{batz.plotsm4_heatmap}}. Each saved name
 is printed.
+}
 }
 \examples{
 \dontrun{

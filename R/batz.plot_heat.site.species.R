@@ -131,7 +131,7 @@
 #' \strong{Color classes.} \code{bin.breaks} (default \code{10;50;100;150})
 #' are the upper edges of the classes after 0: 0, (0,10], (10,50],
 #' (50,100], (100,150], >150, labelled 0, 1-10, 11-50, 51-100, 101-150,
-#' >150. A fractional mean (e.g. 0.33 with three nights) falls in 1-10.
+#' \code{>150}. A fractional mean (e.g. 0.33 with three nights) falls in 1-10.
 #' Every class is shown in the legend even when no cell uses it.
 #' \code{bin.colors} needs one color per class (\code{bin.breaks} + 2);
 #' if the count is wrong a NOTE is printed and a white + viridis set is
