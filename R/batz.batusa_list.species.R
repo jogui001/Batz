@@ -35,19 +35,19 @@
 #'   hibernation.strat suffix; \code{"common"} - common name only;
 #'   \code{"latin"} - latin name only.
 #' @param bat.code Character, default \code{"code4"}. Which code populates
-#'   the separate \code{"Species Code"} column: \code{"code4"},
+#'   the separate \code{"species.code"} column: \code{"code4"},
 #'   \code{"code6"}, or \code{"none"} (omits the column entirely).
 #' @param table.type Character, default \code{"state"}. The output table's
 #'   shape:
 #'   \code{"state"} (matches \code{"batlist model1.csv"}) - one row per
 #'   (state, species) PRESENT pair (a species absent from a given state
-#'   simply has no row for that state). Columns, in order: \code{"State"},
-#'   \code{"common.name"}, \code{"Species Code"} (if \code{bat.code !=
-#'   "none"}), \code{"listing.status_federal"}, \code{"State"} (again - see
-#'   Details), \code{"Phonic Group"} (if \code{phonic.group = TRUE}).
+#'   simply has no row for that state). Columns, in order: \code{"state"},
+#'   \code{"common.name"}, \code{"species.code"} (if \code{bat.code !=
+#'   "none"}), \code{"listing.status_federal"}, \code{"state"} (again - see
+#'   Details), \code{"phonic.group"} (if \code{phonic.group = TRUE}).
 #'   \code{"matrix"} (matches \code{"batlist model2.csv"}) - one row per
 #'   requested/implied species, columns \code{"common.name"}, \code{"Species
-#'   Code"}, \code{"Phonic Group"}, \code{"listing.status_federal"}, then one column per
+#'   Code"}, \code{"phonic.group"}, \code{"listing.status_federal"}, then one column per
 #'   requested/implied state (named per \code{statename.format.out}), each cell
 #'   per \code{symbol_presence.absence} (see Details).
 #' @param symbol_presence.absence Character vector of length 2, default
@@ -56,7 +56,7 @@
 #'   2). A LISTED species' cell/column shows its listing status instead of
 #'   symbol 1 - see Details.
 #' @param phonic.group Logical, default \code{TRUE}. Adds a
-#'   \code{"Phonic Group"} column (one row per species, in both
+#'   \code{"phonic.group"} column (one row per species, in both
 #'   \code{table.type} layouts).
 #' @param species.extirpated Logical, default \code{TRUE}. When \code{TRUE},
 #'   would append \code{"#"} to a status value for any state a species has
@@ -82,7 +82,7 @@
 #'   named columns already used elsewhere in this package.
 #'
 #' @details
-#' \strong{Header standardization (per Josh, 2026-09-14 project preference) - does not apply to this function, flagged not silently skipped.} The project-wide preference is that headers coming from a loaded file or an externally-supplied data frame are run through the shared package helper \code{standardize.headers()} (trim whitespace, collapse non-alphanumeric runs to underscores, lowercase). This function has no raw-header step for that preference to attach to: \code{data} is flattened and every element is matched as a VALUE (a species identifier or a state/territory identifier), never as a header - unlike \code{\link{batz.batusa_recode.names}}, this function does not even pass a data frame's column names through to its output (the flattening step, \code{unlist(lapply(data, as.character))}, discards them entirely). The two embedded reference tables' own column names (\code{nabat}'s \code{$latin}/\code{$common}/\code{$code4}/\code{$code6}/\code{$fedstatus}/etc., \code{states}'s \code{$official.name}/\code{$short.name}/\code{$code2}/etc.) are this function's fixed, already-established internal schema - not raw headers copied fresh from a file for this rollout - so neither is run through \code{standardize.headers()}, the same treatment already given to every other \code{batz} function's own output-schema column names. The OUTPUT column headers this function produces (\code{"common.name"}, \code{"Species Code"}, \code{"State"}, \code{"listing.status_federal"}, \code{"Phonic Group"}, and each requested state's own label in \code{table.type = "matrix"}) are also left untouched by \code{standardize.headers()} - they are a deliberate, spec-driven exception already documented below (matching Josh's own \code{"batlist model1.csv"}/\code{"batlist model2.csv"} template headers literally, including a duplicate \code{"State"} header), and running them through \code{standardize.headers()} would break that literal match.
+#' \strong{Header standardization (per Josh, 2026-09-14 project preference) - does not apply to this function, flagged not silently skipped.} The project-wide preference is that headers coming from a loaded file or an externally-supplied data frame are run through the shared package helper \code{standardize.headers()} (trim whitespace, collapse non-alphanumeric runs to underscores, lowercase). This function has no raw-header step for that preference to attach to: \code{data} is flattened and every element is matched as a VALUE (a species identifier or a state/territory identifier), never as a header - unlike \code{\link{batz.batusa_recode.names}}, this function does not even pass a data frame's column names through to its output (the flattening step, \code{unlist(lapply(data, as.character))}, discards them entirely). The two embedded reference tables' own column names (\code{nabat}'s \code{$latin}/\code{$common}/\code{$code4}/\code{$code6}/\code{$fedstatus}/etc., \code{states}'s \code{$official.name}/\code{$short.name}/\code{$code2}/etc.) are this function's fixed, already-established internal schema - not raw headers copied fresh from a file for this rollout - so neither is run through \code{standardize.headers()}, the same treatment already given to every other \code{batz} function's own output-schema column names. The OUTPUT column headers this function produces (\code{"common.name"}, \code{"species.code"}, \code{"State"}, \code{"listing.status_federal"}, \code{"phonic.group"}, and each requested state's own label in \code{table.type = "matrix"}) are also left untouched by \code{standardize.headers()} - they are a deliberate, spec-driven exception already documented below (matching Josh's own \code{"batlist model1.csv"}/\code{"batlist model2.csv"} template headers literally, including a duplicate \code{"State"} header), and running them through \code{standardize.headers()} would break that literal match.
 #'
 #' (Renamed 2026-08-29, per Josh: \code{presence.absence} ->
 #' \code{symbol_presence.absence}; \code{statename.format} ->
@@ -307,6 +307,12 @@
 #' batz.batusa_list.species(c("epfu", "mylu", "OH", "VT"), table.type = "matrix")
 #' }
 #'
+#' \strong{Lower-case headers (2026-11-04, per Josh, Batz_reference_db
+#' Header.names).} Output headers are lower case with "." for spaces:
+#' \code{"State"} -> \code{"state"} (both state columns), \code{"Species Code"}
+#' -> \code{"species.code"}, \code{"Phonic Group"} -> \code{"phonic.group"}; the
+#' embedded \code{states} table column \code{USFWS.Region} -> \code{usfws.region}.
+#'
 #' @export
 batz.batusa_list.species <- function(data,
                                       grammar.dash = TRUE,
@@ -410,7 +416,7 @@ batz.batusa_list.species <- function(data,
 "State", "State", "State", "State", "State", "State", "State",
 "State", "State", "State", "State", "State", "State", "State",
 "Federal District", "Territory", "Territory", "Territory", "Territory",
-"Territory"), USFWS.Region = c("4", "7", "2", "4", "8", "6",
+"Territory"), usfws.region = c("4", "7", "2", "4", "8", "6",
 "5", "5", "4", "4", "1", "1", "3", "3", "3", "6", "4", "4", "5",
 "5", "5", "3", "3", "4", "3", "6", "6", "8", "5", "5", "2", "5",
 "4", "6", "3", "2", "1", "5", "5", "4", "6", "4", "2", "6", "5",
@@ -571,8 +577,8 @@ batz.batusa_list.species <- function(data,
   if (table.type == "matrix") {
 
     out <- data.frame("common.name" = species.labels, check.names = FALSE, stringsAsFactors = FALSE)
-    if (!is.null(code.col)) out[["Species Code"]] <- nabat[species.idx, code.col]
-    if (phonic.group) out[["Phonic Group"]] <- nabat[species.idx, "phonic.group"]
+    if (!is.null(code.col)) out[["species.code"]] <- nabat[species.idx, code.col]
+    if (phonic.group) out[["phonic.group"]] <- nabat[species.idx, "phonic.group"]
     out[["listing.status_federal"]] <- federal.codes
 
     for (k in seq_along(state.idx)) {
@@ -620,11 +626,11 @@ batz.batusa_list.species <- function(data,
     }
 
     out <- do.call(rbind.data.frame, c(rows, stringsAsFactors = FALSE))
-    col.names <- c("State", "common.name")
-    if (!is.null(code.col)) col.names <- c(col.names, "Species Code")
-    col.names <- c(col.names, "listing.status_federal", "State")
-    if (phonic.group) col.names <- c(col.names, "Phonic Group")
-    names(out) <- col.names   # set directly so the duplicate "State" header survives literally
+    col.names <- c("state", "common.name")
+    if (!is.null(code.col)) col.names <- c(col.names, "species.code")
+    col.names <- c(col.names, "listing.status_federal", "state")
+    if (phonic.group) col.names <- c(col.names, "phonic.group")
+    names(out) <- col.names   # set directly so the duplicate "state" header survives literally
     out
   }
 }

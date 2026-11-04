@@ -18,8 +18,8 @@
 #'     \code{NoID}, ...). \code{$Label} holds the spellings found in vetting
 #'     files.}
 #'   \item{\code{bat.ref.filter.regions(df, regions)}}{keeps the rows whose
-#'     \code{$Region} matches any of \code{regions} (rows marked \code{All}
-#'     are always kept). A \code{$Region} cell may list several regions
+#'     \code{$region} matches any of \code{regions} (rows marked \code{All}
+#'     are always kept). A \code{$region} cell may list several regions
 #'     separated by \code{;} or \code{,}; the row is kept if any of them
 #'     matches. Case and quotes are ignored.}
 #'   \item{\code{aru.ref.types()}}{tab \code{aru.types} (added 2026-10-23):
@@ -33,7 +33,7 @@
 #' @keywords internal
 #' @noRd
 bat.ref.names <- function() {
-structure(list(Region = c("NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", 
+structure(list(region = c("NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", 
 "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", 
 "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", 
 "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", 
@@ -169,7 +169,7 @@ structure(list(Region = c("NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", 
 #' @keywords internal
 #' @noRd
 bat.ref.groups <- function() {
-structure(list(Region = c("NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", 
+structure(list(region = c("NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", 
 "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", 
 "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", 
 "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", 
@@ -222,9 +222,9 @@ structure(list(Region = c("NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", 
 #' @keywords internal
 #' @noRd
 bat.ref.freqclasses <- function() {
-structure(list(Region = c("NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", 
+structure(list(region = c("NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", 
 "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "All"
-), Definition = c("Various species with pulses that have a minim um frequency of approximately 15-25 kHz", 
+), definition = c("Various species with pulses that have a minim um frequency of approximately 15-25 kHz", 
 "Various species with pulses that have a minimum frequency of approximately 35-45 kHz", "Various species of Myotis with pulses that have a minimum frequency of approximately 35-45 kHz", 
 "Myotis volans or other species of Myotis with pulses that have a minimum frequency of approximately 35-45 kHz.", 
 "Various species with pulses that have a minimum frequency of approximately 50 kHz.", "Various species with pulses having a minimum frequency higher than ~30 kHz", 
@@ -234,7 +234,7 @@ structure(list(Region = c("NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", 
 "Noise", "Not a bat", "Bat, but no grouping or user-defined category applies", "Various species with pulses having a minimum frequency lower than ~20 kHz.", 
 "Had no species-specific characteristics as it was social in nature", "More than one bat in a recording", 
 "The call has fewer than five good-quality pulses above 35KHz", "The call has fewer than five good-quality pulses below 35KHz", 
-"All ultrasonic calls that are bats including fragments and unidentified species"), Label = c("25k", 
+"All ultrasonic calls that are bats including fragments and unidentified species"), label = c("25k", 
 "40k", "40kMyo", "40kmyomyvo", "50k", "HighF/HiF", "HighF", "HiF", "Hilo", "LowF/LoF", "LoF", "LowF", 
 "NOISE", "NOTBAT", "NoID", "lt20k", "Social", "2BAT", "HiFrag", "LoFrag", "All detections"), scientific_name = c("Unidentifiable Species 35-45 kHz", 
 "Unidentifiable Species 35-45 kHz", "Unidentifiable Myotis Species", "Myotis volans or other Myotis spp.", 
@@ -275,7 +275,7 @@ bat.ref.split.regions <- function(x) {
 #' @noRd
 bat.ref.filter.regions <- function(df, regions = c("ALL", "NABAT")) {
   want <- unique(c(bat.ref.split.regions(regions), "all"))
-  keep <- vapply(df$Region, function(r) any(bat.ref.split.regions(r) %in% want), logical(1))
+  keep <- vapply(df$region, function(r) any(bat.ref.split.regions(r) %in% want), logical(1))
   df[keep, , drop = FALSE]
 }
 

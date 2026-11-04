@@ -230,7 +230,7 @@
 #'     \code{$roosting.habitat_bats}, \code{$water.resources_site},
 #'     \code{$water.resources_distance.to.microphone},
 #'     \code{$water.resources_type.nearestbody}, tree species, understory
-#'     species, \code{$vegetation.tree_estimated.DBH},
+#'     species, \code{$vegetation.tree_estimated.dbh},
 #'     \code{$vegetation.tree_estimated.agerange},
 #'     \code{$vegetation.understory_clutter},
 #'     \code{$vegetation.understory_clutter.distance}, \code{$landcover}
@@ -257,7 +257,7 @@
 #'     cache - and an empty converted file counts as unreadable.)
 #'   \item \strong{Figure 4}: \code{batz.plotcover_bullseye()} for the site,
 #'     from the quadrant form (\code{$quadrant}, \code{$canopy.cover},
-#'     \code{$Understory.cover}) and the deployment microphone height and
+#'     \code{$understory.cover}) and the deployment microphone height and
 #'     orientations. When \code{icon.dir} in the settings table is not
 #'     found, the icons in \code{inst/img} are used.
 #'   \item \strong{Figure 5}: \code{batz.plotsm4_heatmap()} for the site,
@@ -388,6 +388,13 @@
 #' if it is installed (uses Word on Windows), otherwise with LibreOffice
 #' (\code{soffice}) if found. If neither is available the PDF is skipped with
 #' a warning.
+#'
+#' \strong{Lower-case headers (2026-11-04, per Josh, Batz_reference_db Header.names).}
+#' Survey123 Batz headers are now lower case (e.g. \code{globalid},
+#' \code{parentglobalid}, \code{understory.cover},
+#' \code{vegetation.tree_tree1.species}, \code{vegetation.tree_estimated.dbh}).
+#' Workbooks with the old capitalisation are still read: headers are matched
+#' ignoring case.
 #'
 #' @examples
 #' \dontrun{
@@ -588,9 +595,9 @@ batz.generate_aru.appendix <- function(data,
       df[key(df$project.name) == key(project.name), , drop = FALSE]
     }
     aru.habitat <- keep.proj(aru.habitat); aru.service <- keep.proj(aru.service)
-    if (!is.null(aru.quad) && !is.null(aru.habitat) && all(c("ParentGlobalID") %in% names(aru.quad)) &&
-        "GlobalID" %in% names(aru.habitat)) {
-      aru.quad <- aru.quad[aru.quad$ParentGlobalID %in% aru.habitat$GlobalID, , drop = FALSE]
+    if (!is.null(aru.quad) && !is.null(aru.habitat) && all(c("parentglobalid") %in% names(aru.quad)) &&
+        "globalid" %in% names(aru.habitat)) {
+      aru.quad <- aru.quad[aru.quad$parentglobalid %in% aru.habitat$globalid, , drop = FALSE]
     }
     proj.label.file <- project.name
   } else {
@@ -765,7 +772,7 @@ batz.generate_aru.appendix <- function(data,
   ## every species name in the project's deployment and quadrant forms
   species.cols <- c("vegetation.tree_dominant.species", "vegetation.tree_all.species",
                     "vegetation.understory_dominant.species", "vegetation.understory_all.species",
-                    "vegetation.tree_Tree1.species", "vegetation.tree_Tree2.species", "vegetation.tree_Tree3.species",
+                    "vegetation.tree_tree1.species", "vegetation.tree_tree2.species", "vegetation.tree_tree3.species",
                     "vegetation.sapling_species1", "vegetation.sapling_species2", "vegetation.sapling_species3")
   species.vocab <- split.species(c(
     unlist(lapply(intersect(species.cols, names(aru.habitat)), function(cl) aru.habitat[[cl]])),
@@ -803,8 +810,8 @@ batz.generate_aru.appendix <- function(data,
       water.resources_type       = label(col(h, "water.resources_type.nearestbody"), "water_type"),
       tree.species.dominant      = species.list(col(h, "vegetation.tree_dominant.species")),
       tree.species.all           = species.list(col(h, "vegetation.tree_dominant.species"), col(h, "vegetation.tree_all.species"),
-                                                quad = list(qcol(qd, "vegetation.tree_Tree1.species"), qcol(qd, "vegetation.tree_Tree2.species"),
-                                                            qcol(qd, "vegetation.tree_Tree3.species"))),
+                                                quad = list(qcol(qd, "vegetation.tree_tree1.species"), qcol(qd, "vegetation.tree_tree2.species"),
+                                                            qcol(qd, "vegetation.tree_tree3.species"))),
       ## the form's dominant understory species; when blank, the quadrant
       ## sapling species (most often recorded first)
       understory.species.dominant = or.else(species.list(col(h, "vegetation.understory_dominant.species")),
@@ -813,7 +820,7 @@ batz.generate_aru.appendix <- function(data,
       understory.species.all     = species.list(col(h, "vegetation.understory_dominant.species"), col(h, "vegetation.understory_all.species"),
                                                 quad = list(qcol(qd, "vegetation.sapling_species1"), qcol(qd, "vegetation.sapling_species2"),
                                                             qcol(qd, "vegetation.sapling_species3"))),
-      tree.dbh.stand             = label(col(h, "vegetation.tree_estimated.DBH"), "dbh_stand"),
+      tree.dbh.stand             = label(col(h, "vegetation.tree_estimated.dbh"), "dbh_stand"),
       tree.stand.age             = label(col(h, "vegetation.tree_estimated.agerange"), "age_stand"),
       understory.clutter         = label(col(h, "vegetation.understory_clutter"), "understory"),
       understory.clutter.distance = clean(col(h, "vegetation.understory_clutter.distance")),
@@ -920,8 +927,8 @@ batz.generate_aru.appendix <- function(data,
     ## one Habitat Assessment table per deployment (habitat) record
     habitat.rows[[s]] <- if (!is.null(hab) && nrow(hab) > 0) {
       lapply(seq_len(nrow(hab)), function(i) {
-        qd.i <- if (!is.null(qd) && "ParentGlobalID" %in% names(qd) && "GlobalID" %in% names(hab)) {
-          q2 <- qd[qd$ParentGlobalID %in% hab$GlobalID[i], , drop = FALSE]; if (nrow(q2) > 0) q2 else qd
+        qd.i <- if (!is.null(qd) && "parentglobalid" %in% names(qd) && "globalid" %in% names(hab)) {
+          q2 <- qd[qd$parentglobalid %in% hab$globalid[i], , drop = FALSE]; if (nrow(q2) > 0) q2 else qd
         } else qd
         habitat.values(hab[i, , drop = FALSE], qd.i)
       })
@@ -1182,9 +1189,9 @@ batz.generate_aru.appendix <- function(data,
     }
   }
   if (!is.null(aru.quad) && !is.null(aru.habitat) && !is.null(aes.bull) &&
-      all(c("aru.name", "quadrant", "canopy.cover", "Understory.cover") %in% names(aru.quad))) {
+      all(c("aru.name", "quadrant", "canopy.cover", "understory.cover") %in% names(aru.quad))) {
     cover <- data.frame(aru.label = clean(aru.quad$aru.name), quadrant = clean(aru.quad$quadrant),
-                        canopy = clean(aru.quad$canopy.cover), understory = clean(aru.quad$Understory.cover),
+                        canopy = clean(aru.quad$canopy.cover), understory = clean(aru.quad$understory.cover),
                         stringsAsFactors = FALSE)
     names(cover) <- c("aru.label", "Select the quadrant you are assessing", "Canopy cover", "Understory cover")
     for (s in sites) {

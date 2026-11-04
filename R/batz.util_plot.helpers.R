@@ -101,7 +101,7 @@ plotutil_facet_preset_aliases <- c("new england" = "NE")
 #' Old fig.list headers -> current ones (internal)
 #'
 #' \code{$facet} -> \code{$facet.header}, \code{$Alldect} ->
-#' \code{$all.dectections}; a missing \code{$facet.plot} is added as TRUE
+#' \code{$all.detections} (and \code{$all.dectections}, 2026-11-04); a missing \code{$facet.plot} is added as TRUE
 #' (the old behaviour - one faceted plot). Old \code{$facet.panel},
 #' \code{$facpan} and \code{$plot.order} columns are ignored. Prints a
 #' WARNING for each change.
@@ -119,7 +119,8 @@ plotutil_figlist_legacy <- function(fig.list, fn.name) {
     }
   }
   rename.old("facet", "facet.header")
-  rename.old("alldect", "all.dectections")
+  rename.old("alldect", "all.detections")
+  rename.old("all_dectections", "all.detections")  # spelling fix 2026-11-04, per Josh
   if (!("facet_plot" %in% std)) {
     fig.list$facet.plot <- rep(TRUE, nrow(fig.list))
     cat(sprintf("WARNING: %s - fig.list has no $facet.plot column - every row is drawn as one faceted plot (facet.plot = TRUE).\n", fn.name))

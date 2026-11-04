@@ -35,8 +35,8 @@
 #' or \code{"TRUE ; <header>; ..."} (standardized header names).
 #' \strong{2026-10-02:} accented letters are now simplified (not dropped),
 #' and four count columns follow \code{$strip.special}:
-#' \code{$Accented.letters.header}, \code{$removed.symbols.header},
-#' \code{$Accented.letters.data}, \code{$removed.symbols.data} (unique
+#' \code{$accented.letters.header}, \code{$removed.symbols.header},
+#' \code{$accented.letters.data}, \code{$removed.symbols.data} (unique
 #' values simplified / removed; \code{NA} when \code{strip.special =
 #' FALSE} or the file couldn't be read).
 #'

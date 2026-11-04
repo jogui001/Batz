@@ -24,8 +24,8 @@ per-night detection windows. Must have \code{$spp.id}, \code{$date},
 
 \item{fig.list}{A data frame listing the plot(s) to generate - one
 row per plot. Must have \code{$plot.type}, \code{$plot.name},
-\code{$facet.header}, \code{$facet.plot}, \code{$facet.set}, \code{$MYSO},
-\code{$all.dectections}, \code{$40khzmyo}, \code{$facet.label},
+\code{$facet.header}, \code{$facet.plot}, \code{$facet.set}, \code{$myso},
+\code{$all.detections}, \code{$40khzmyo}, \code{$facet.label},
 \code{$plot.set}, \code{$date.format}, \code{$date.start},
 \code{$date.end}, \code{$xaxe.interval}, \code{$xaxe.title}. Column
 names must be unique (see Details for a real duplicate-header bug this
@@ -122,7 +122,7 @@ Dawn/Dusk/Midnight reference lines. One plot is produced per row of
 list separated by \code{";"} - species in any format, plus
 \code{"AllDet"} and preset names, e.g. \code{"AllDet;epfu;labo;lano"}
 or \code{"AllDet;NE"}. The order written is the facet order.
-\code{$all.dectections = TRUE} adds All detections as the first facet
+\code{$all.detections = TRUE} adds All detections as the first facet
 when \code{$facet.set} doesn't list it. Blank = \code{"NE"}.
 Presets are in \code{plotutil_facet_presets} (batz.util_plot.helpers.R).
 \item \code{$facet.panel}, \code{$facpan} and \code{$plot.order} are
@@ -207,7 +207,7 @@ function would be built iteratively.} This covers: header validation
 (including a duplicate-column-name check), settings resolution
 (\code{aru.metadata.db} row > \code{project.name} column >
 \code{$default.value}), the \code{$spp.plot}/\code{$facpan}
-New-England-special-case + \code{$MYSO}/\code{$all.dectections}/\code{$40khzmyo}
+New-England-special-case + \code{$myso}/\code{$all.detections}/\code{$40khzmyo}
 panel-building logic, facet labeling via
 \code{batz.batusa_recode.names()}, and the crossbar/reference-line plot
 itself. NOT yet implemented (deferred to a later iteration): any
@@ -325,7 +325,7 @@ crossbar fill legend no longer shows an "All detections" key (it's
 the obvious default, not worth a legend entry); it shows a
 "40kHzMyo" key (black, per \code{crossbar.40khzmyo.fill}'s own
 default) only when a 40kHzMyo crossbar is actually present in that
-specific plot's data - not merely because \code{$40khzmyo}/\code{$MYSO}
+specific plot's data - not merely because \code{$40khzmyo}/\code{$myso}
 flags are set, since a plot's species list can include 40kHzMyo as an
 option without any night actually triggering it.
 
@@ -1124,6 +1124,14 @@ with a NOTE. Pools of a day or longer are plotted at their start date
 \code{schedual2} are now \code{schedule1}/\code{schedule2} in the required \code{suntimes} headers. A file or
 data frame that still uses \code{schedual1}/\code{schedual2} works
 unchanged - \code{canonicalize.headers()} accepts the old spelling.
+
+\strong{Lower-case headers (2026-11-04, per Josh, Batz_reference_db Header.names).}
+fig.list column \code{$myso} (was \code{$MYSO}; the old header is still
+accepted). plotopts parameters are matched ignoring case.
+
+\strong{Spelling fix (2026-11-04, per Josh).} fig.list column
+\code{$all.detections} (was \code{$all.dectections}; the old header and
+\code{$Alldect} are still accepted, with a WARNING).
 }
 \examples{
 \dontrun{

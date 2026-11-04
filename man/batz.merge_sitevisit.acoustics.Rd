@@ -13,7 +13,7 @@ batz.merge_sitevisit.acoustics(
   dir.save = getwd(),
   save.name = "mergedsurvey123.xlsx",
   header.combo = c("project.name", "aru.name"),
-  header.uniqueid = c("GlobalID"),
+  header.uniqueid = c("globalid"),
   header.dates = c("date.habitat.assessment", "date.deployment", "date")
 )
 }
@@ -51,7 +51,7 @@ the merged workbook (\code{.xlsx} is added if the name has no
 Passed to \code{batz.datawrangler_consolidate.globalID()}: headers whose
 unique combinations define a site (added 2026-10-30, per Josh).}
 
-\item{header.uniqueid}{Character, default \code{c("GlobalID")}. Passed to
+\item{header.uniqueid}{Character, default \code{c("globalid")}. Passed to
 \code{batz.datawrangler_consolidate.globalID()}: the unique-ID header.}
 
 \item{header.dates}{Character, default \code{c("date.habitat.assessment",
@@ -80,7 +80,7 @@ per form type (\code{quad}, \code{habitat}, \code{service}). Built
 \strong{Internal database.} \code{Survey123.aruforms_headers.choices} (a
 list of data frames, one per tab) holds Josh's \code{Survey123_aruforms all headers.xlsx}: for tabs
 \code{quad}, \code{habitat}, \code{service}, the Batz header
-(\code{Batz.headers}), the tab-qualified header (\code{aru.<tab>_Batz.headers},
+(\code{batz.headers}), the tab-qualified header (\code{aru.<tab>_batz.headers},
 e.g. \code{aru.quad$aru.name}, since some tabs share a header that different
 functions such as \code{batz.generate_aru.appendix()} use at different
 times) and one column per form version (e.g. \code{forest_2026},
@@ -95,10 +95,10 @@ Batz headers may use the earlier spellings \code{measurment.units} /
 database for this run: tabs \code{quad}, \code{habitat}, \code{service} and
 \code{Choices} add their versions / choices to the existing ones, and any
 other tab becomes a new form type (and a new tab in the output). Every
-header tab needs at least three columns: \code{Batz.headers},
-\code{aru.<tabname>_Batz.headers} (any column whose name starts with
-\code{aru.} and contains \code{_Batz.headers}; it is renamed to
-\code{aru.<tabname>_Batz.headers}) and one or more form-version
+header tab needs at least three columns: \code{batz.headers},
+\code{aru.<tabname>_batz.headers} (any column whose name starts with
+\code{aru.} and contains \code{_batz.headers}; it is renamed to
+\code{aru.<tabname>_batz.headers}) and one or more form-version
 columns. The tab name comes from the sheet / list-element name, else from
 the \code{aru.<tab>$} prefix of the tab-qualified headers. A \code{Choices}
 tab needs \code{list_name}, \code{name} and \code{label}. The package's own
@@ -161,10 +161,27 @@ consolidated too.
 \code{batz.datawrangler_consolidate.globalID()} is run on the merged tabs
 with \code{header.combo}, \code{header.uniqueid} and \code{header.dates}:
 the GlobalID of each site's earliest record (across all tabs) is added to
-every record of that site as \code{$globalID_consolidate}, just after
-\code{$GlobalID}. A tab without all the \code{header.combo} headers (e.g.
+every record of that site as \code{$globalid_consolidate}, just after
+\code{$globalid}. A tab without all the \code{header.combo} headers (e.g.
 \code{quad}, which has no \code{project.name}) is left unchanged (NOTE).
 (Since the project-name step above, every tab has \code{project.name}.)
+
+\strong{Lower-case headers (2026-11-04, per Josh, Batz_reference_db Header.names).}
+Output Batz headers are lower case (e.g. \code{objectid}, \code{globalid},
+\code{parentglobalid}, \code{globalid_consolidate},
+\code{vegetation.tree_tree1.dbh}); \code{header.uniqueid} defaults to
+globalid; \code{form.list} columns are \code{batz.headers} /
+\code{aru.<tab>_batz.headers} (the old \code{Batz.headers} spellings are
+still accepted).
+
+\strong{Survey123 field names (2026-11-04, per Josh).} Batz headers for the
+Survey123 fields that had no Batz name: \code{tree.1/2/3.average.dbh} ->
+\code{vegetation.tree_tree1/2/3.dbh_average};
+\code{identify.the.species.of.the.3.saplings.closest.to.the.center.mic.point.} ->
+\code{vegetation.sapling_species};
+\code{select.any.equipment.that.needs.to.be.replaced.} -> \code{equipment.replace};
+\code{specify.other.equipment.} -> \code{equipment.replace_other};
+\code{specify.other.action.performed} -> \code{action.performed_other}.
 }
 \examples{
 \dontrun{

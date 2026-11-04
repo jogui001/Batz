@@ -31,7 +31,7 @@ requested in \code{head.out}. An unrecognized header is an error.}
 
 \item{dir.load}{Character. Directory to search for the base reference
 database file (\code{load.pattern}) and, when \code{reference.data !=
-"default"}, for supplemental files (\code{pattern}). Default
+  "default"}, for supplemental files (\code{pattern}). Default
 \code{getwd()}.}
 
 \item{load.pattern}{Character, default
@@ -49,7 +49,7 @@ applicable, for \code{pattern}.}
 (a vector is fine) file name(s)/glob pattern(s) identifying
 supplemental reference CSVs to search for in \code{dir.load} (and its
 subdirectories, if \code{dir.sub = TRUE}) when \code{reference.data !=
-"default"}. Ignored entirely when \code{reference.data = "default"}.}
+  "default"}. Ignored entirely when \code{reference.data = "default"}.}
 
 \item{reference.data}{Character, default \code{"default"}. One of:
 \code{"default"} - use only the base reference table loaded via
@@ -394,13 +394,17 @@ symbols are now simplified instead of dropped (\code{café} ->
 curly quotes -> straight quotes); characters with no plain equivalent
 (e.g. \code{°}, \code{µ}, \code{™}) are still removed. Column names
 are cleaned the same way. The log gets four new columns right after
-\code{$strip.special}: \code{$Accented.letters.header} and
+\code{$strip.special}: \code{$accented.letters.header} and
 \code{$removed.symbols.header} (number of unique column names with a
-character simplified / removed), and \code{$Accented.letters.data} and
+character simplified / removed), and \code{$accented.letters.data} and
 \code{$removed.symbols.data} (number of unique data values with a
 character simplified / removed - \code{café} in 500 rows counts once;
 \code{café} and \code{French café} count twice). They are \code{NA}
 when \code{strip.special = FALSE}.
+
+\strong{Lower-case headers (2026-11-04, per Josh, Batz_reference_db Header.names).}
+The strip.special log columns are \code{$accented.letters.header} /
+\code{$accented.letters.data} (were Accented.letters.*).
 }
 \examples{
 \dontrun{

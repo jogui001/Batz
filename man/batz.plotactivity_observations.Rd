@@ -27,7 +27,7 @@ column) when \code{fig.list} doesn't specify one.}
 
 \item{fig.list}{A data frame listing the plot(s) to generate - one row
 per plot. Must have \code{$plot.type}, \code{$plot.name}, \code{$facet.header},
-\code{$facet.plot}, \code{$facet.set}, \code{$MYSO}, \code{$all.dectections},
+\code{$facet.plot}, \code{$facet.set}, \code{$myso}, \code{$all.detections},
 \code{$40khzmyo}, \code{$facet.label}, \code{$plot.set}, \code{$pool},
 \code{$date.format}, \code{$date.start}, \code{$date.end},
 \code{$xaxe.interval}. Column names must be unique. \code{$plot.group}
@@ -35,7 +35,7 @@ is OPTIONAL (see Details, "Follow-up, 2026-09-23") - when blank or not
 present at all, defaults to the column \code{$group}. Five further
 columns are read PER-ROW if present but are entirely optional (each
 falls back to \code{aes.default} when blank or the column doesn't
-exist at all - see Details): \code{$Yaxe.trans} (\code{"none"}/
+exist at all - see Details): \code{$yaxe.trans} (\code{"none"}/
 \code{"log"}/\code{"log10"}), \code{$y.scale} (\code{"regular"}/
 \code{"rounded"}/\code{"custom"}), \code{$y.custom} (semicolon-separated
 break values, only read when \code{$y.scale = "custom"}),
@@ -133,7 +133,7 @@ this value was chosen and how to change it).
 list separated by \code{";"} - species in any format, plus
 \code{"AllDet"} and preset names, e.g. \code{"AllDet;epfu;labo;lano"}
 or \code{"AllDet;NE"}. The order written is the facet order.
-\code{$all.dectections = TRUE} adds All detections as the first facet
+\code{$all.detections = TRUE} adds All detections as the first facet
 when \code{$facet.set} doesn't list it. Blank = \code{"NE"}.
 Presets are in \code{plotutil_facet_presets} (batz.util_plot.helpers.R).
 \item \code{$facet.panel}, \code{$facpan} and \code{$plot.order} are
@@ -224,7 +224,7 @@ it for a count-based Y axis instead of a time-of-night Y axis.} Carried
 over UNCHANGED from that function: header/duplicate-column validation,
 settings resolution (\code{fig.list} row > \code{project.name} column >
 \code{$default.value}), the New-England-special-case \code{$facpan} list,
-\code{$MYSO}/\code{$all.dectections}/\code{$40khzmyo} panel-building logic,
+\code{$myso}/\code{$all.detections}/\code{$40khzmyo} panel-building logic,
 facet labeling and canonicalization via
 \code{batz.batusa_recode.names()}, \code{$plot.order} panel ordering, the
 \code{job.key}/\code{job.label} list-keying fix (rows sharing
@@ -253,7 +253,7 @@ error) any row belonging to another function, exactly like
 \code{batz.plotdetections_first.last()} already does for
 \code{"bat.detection"}. \strong{Josh's real \code{fig.list.csv} does not
 yet have a row with this \code{$plot.type} value} - add one (with
-\code{$Yaxe.trans}/\code{$y.scale}/\code{$y.custom}/\code{$ymax} filled
+\code{$yaxe.trans}/\code{$y.scale}/\code{$y.custom}/\code{$ymax} filled
 in as needed - those four columns already exist as blank headers in the
 delivered file) before calling this function against real data. If a
 different \code{$plot.type} string is wanted instead, it only needs to be
@@ -449,7 +449,7 @@ look identical; \code{"single"} was chosen since it's the reading that
 matches "keep the bar sizes constant" literally.
 
 \strong{Y-axis resolution - the newest, most detailed part of this
-function - implements Josh's spec as follows:} \code{$Yaxe.trans}
+function - implements Josh's spec as follows:} \code{$yaxe.trans}
 (\code{"none"} default / \code{"log"} / \code{"log10"}) picks a transform
 applied to \code{$observations.count} before it's used as a bar's plotted height;
 \strong{\code{"log"}/\code{"log10"} are implemented as \code{log1p(observations.count)}/
@@ -466,17 +466,17 @@ through \code{log1p()} (successive gaps of about 1.10, 1.10, 1.06, 1.07,
 actually used, not a coincidence. \code{$loglabels} (\code{FALSE}
 default) then controls whether each break is LABELED with the real
 \code{$observations.count}-scale number (\code{FALSE}) or the transformed value itself
-(\code{TRUE}) - it only has any effect when \code{$Yaxe.trans} isn't
+(\code{TRUE}) - it only has any effect when \code{$yaxe.trans} isn't
 \code{"none"}, per Josh's spec.
 
 \code{$y.scale} picks which values become breaks: \code{"regular"}
 places them at 5 points evenly spaced along the AXIS itself - i.e. evenly
-spaced in whatever space \code{$Yaxe.trans} plots in, then converted back
+spaced in whatever space \code{$yaxe.trans} plots in, then converted back
 to a raw count for the label (see the BUGFIX entry below for why this
 matters); \code{"rounded"} places them at those same five axis positions
 but rounds each resulting raw value to the nearest whole number
 afterward (matters once the exact value isn't a whole number already,
-e.g. \code{$ymax = 230} with \code{$Yaxe.trans = "none"} gives a raw 25\%
+e.g. \code{$ymax = 230} with \code{$yaxe.trans = "none"} gives a raw 25\%
 point of \code{57.5}, which \code{"rounded"} shows as \code{58});
 \code{"custom"} ignores that computation entirely and uses whatever
 numbers are in \code{$y.custom} instead (semicolon-separated, e.g.
@@ -495,13 +495,13 @@ axis positions don't land on whole numbers.
 The attached file scale jumps from the bottom of the Y axis to almost
 the top. It should be evenly spaced along the y axes"): a real bug in
 how \code{"regular"}/\code{"rounded"} computed break VALUES, found from
-Josh's own real render with \code{$Yaxe.trans = "log10"},
+Josh's own real render with \code{$yaxe.trans = "log10"},
 \code{$y.scale = "regular"}, \code{$ymax = 230}.} The first version of
 this function computed \code{"regular"}/\code{"rounded"} breaks as 5
 values evenly spaced across the RAW count range (\code{0}, 25\%, 50\%,
 75\%, 100\% of \code{$ymax} - i.e. \code{0, 57.5, 115, 172.5, 230}), then
-transformed only their AXIS POSITIONS through \code{$Yaxe.trans}. That's
-fine when \code{$Yaxe.trans = "none"} (position and value are the same
+transformed only their AXIS POSITIONS through \code{$yaxe.trans}. That's
+fine when \code{$yaxe.trans = "none"} (position and value are the same
 thing), but once a log-family transform is applied, evenly-spaced RAW
 values do NOT produce evenly-spaced POSITIONS - quite the opposite:
 \code{log10(1) = 0} but \code{log10(58.5) = 1.77}, already most of the
@@ -511,10 +511,10 @@ way to \code{log10(231) = 2.36}, so the break from \code{0} to
 sliver at the top - exactly what Josh described. \strong{Fixed} by
 computing \code{"regular"}/\code{"rounded"} breaks the other way around:
 5 points evenly spaced along the TRANSFORMED axis itself (from
-\code{$Yaxe.trans} applied to \code{0} to \code{$Yaxe.trans} applied to
+\code{$yaxe.trans} applied to \code{0} to \code{$yaxe.trans} applied to
 \code{$ymax}), converted back to a raw count afterward for the label.
 This guarantees genuinely even spacing on the rendered axis regardless
-of \code{$Yaxe.trans}, and is a no-op change for \code{$Yaxe.trans =
+of \code{$yaxe.trans}, and is a no-op change for \code{$yaxe.trans =
 "none"} (where the transform is the identity function, so "evenly spaced
 in raw units" and "evenly spaced on the axis" were already the same
 thing) - only \code{"log"}/\code{"log10"} renders differently now.
@@ -524,7 +524,7 @@ nicely-spaced log axis on their own, without needing hand-picked
 \code{"custom"} is still there for full manual control, e.g. round
 numbers instead of whatever the automatic 0/25/50/75/100\% axis points
 happen to compute to. Verified by rendering Josh's own real
-\code{fig.list} row (\code{$Yaxe.trans = "log10"}, \code{$y.scale =
+\code{fig.list} row (\code{$yaxe.trans = "log10"}, \code{$y.scale =
 "regular"}, \code{$ymax = 230}) before and after: before, the break
 positions computed to 0\%/74.8\%/87.3\%/94.7\%/100\% of the axis height
 (all but the first crowded into the top quarter); after, they compute to
@@ -789,14 +789,14 @@ column either still skips with the expected \code{NOTE}, rather than
 erroring.
 
 \strong{Follow-up, 2026-09-23, per Josh's bug report ("I do not get the
-log values instead 0 57.5 115 172.5 230" when \code{$Yaxe.trans} was set
+log values instead 0 57.5 115 172.5 230" when \code{$yaxe.trans} was set
 to \code{"log10"} in \code{fig.list}):} investigated and found that
 \code{0, 57.5, 115, 172.5, 230} is exactly this function's own documented
-PRE-2026-08-28-bugfix output for \code{$Yaxe.trans = "log10"}/
+PRE-2026-08-28-bugfix output for \code{$yaxe.trans = "log10"}/
 \code{$y.scale = "regular"}/\code{$ymax = 230} (see the \strong{BUGFIX,
 2026-08-28} entry above) - the current code, run directly against Josh's
 real \code{fig.list.csv} row for this exact scenario, already resolves
-\code{$Yaxe.trans} from \code{fig.list} first (per \code{get.setting()}'s
+\code{$yaxe.trans} from \code{fig.list} first (per \code{get.setting()}'s
 documented precedence, unchanged) and produces the correct log-spaced
 breaks (\code{0, 3, 14, 58, 230}) - so the most likely explanation is
 that whatever Josh ran this against was a stale copy of this file (from
@@ -812,7 +812,7 @@ though: \code{get.setting()}/the \code{$plot.group} resolver both look up
 a \code{fig.list} column by an EXACT name match (\code{param \%in\%
 names(job)}), same as \code{FIG.LIST.REQUIRED}'s own columns - but unlike
 those required columns, the OPTIONAL per-row settings (\code{$plot.group},
-\code{$Yaxe.trans}, \code{$loglabels}, \code{$y.scale}, \code{$y.custom},
+\code{$yaxe.trans}, \code{$loglabels}, \code{$y.scale}, \code{$y.custom},
 \code{$ymax}, \code{$legend}, \code{$plot.order}, \code{$facpan}) were
 never run through \code{canonicalize.headers()}, so a column arriving as
 e.g. \code{"Yaxe.trans "} (a trailing space) or \code{"Y_Scale"}
@@ -933,6 +933,15 @@ with a NOTE. Pools of a day or longer are plotted at their start date
 \code{schedual2} are now \code{schedule1}/\code{schedule2} in the required \code{suntimes} headers. A file or
 data frame that still uses \code{schedual1}/\code{schedual2} works
 unchanged - \code{canonicalize.headers()} accepts the old spelling.
+
+\strong{Lower-case headers (2026-11-04, per Josh, Batz_reference_db Header.names).}
+fig.list columns \code{$myso} and \code{$yaxe.trans} (were \code{$MYSO} /
+\code{$Yaxe.trans}; old headers still accepted). plotopts parameters are
+matched ignoring case, so an older plotopts file with Yaxe.trans still works.
+
+\strong{Spelling fix (2026-11-04, per Josh).} fig.list column
+\code{$all.detections} (was \code{$all.dectections}; the old header and
+\code{$Alldect} are still accepted, with a WARNING).
 }
 \examples{
 \dontrun{

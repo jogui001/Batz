@@ -12,8 +12,8 @@
 #'   \code{$mins2.noon.max}, \code{$vetting.type}.
 #' @param fig.list A data frame listing the plot(s) to generate - one
 #'   row per plot. Must have \code{$plot.type}, \code{$plot.name},
-#'   \code{$facet.header}, \code{$facet.plot}, \code{$facet.set}, \code{$MYSO},
-#'   \code{$all.dectections}, \code{$40khzmyo}, \code{$facet.label},
+#'   \code{$facet.header}, \code{$facet.plot}, \code{$facet.set}, \code{$myso},
+#'   \code{$all.detections}, \code{$40khzmyo}, \code{$facet.label},
 #'   \code{$plot.set}, \code{$date.format}, \code{$date.start},
 #'   \code{$date.end}, \code{$xaxe.interval}, \code{$xaxe.title}. Column
 #'   names must be unique (see Details for a real duplicate-header bug this
@@ -95,7 +95,7 @@
 #'     list separated by \code{";"} - species in any format, plus
 #'     \code{"AllDet"} and preset names, e.g. \code{"AllDet;epfu;labo;lano"}
 #'     or \code{"AllDet;NE"}. The order written is the facet order.
-#'     \code{$all.dectections = TRUE} adds All detections as the first facet
+#'     \code{$all.detections = TRUE} adds All detections as the first facet
 #'     when \code{$facet.set} doesn't list it. Blank = \code{"NE"}.
 #'     Presets are in \code{plotutil_facet_presets} (batz.util_plot.helpers.R).
 #'   \item \code{$facet.panel}, \code{$facpan} and \code{$plot.order} are
@@ -180,7 +180,7 @@
 #' (including a duplicate-column-name check), settings resolution
 #' (\code{aru.metadata.db} row > \code{project.name} column >
 #' \code{$default.value}), the \code{$spp.plot}/\code{$facpan}
-#' New-England-special-case + \code{$MYSO}/\code{$all.dectections}/\code{$40khzmyo}
+#' New-England-special-case + \code{$myso}/\code{$all.detections}/\code{$40khzmyo}
 #' panel-building logic, facet labeling via
 #' \code{batz.batusa_recode.names()}, and the crossbar/reference-line plot
 #' itself. NOT yet implemented (deferred to a later iteration): any
@@ -296,7 +296,7 @@
 #' the obvious default, not worth a legend entry); it shows a
 #' "40kHzMyo" key (black, per \code{crossbar.40khzmyo.fill}'s own
 #' default) only when a 40kHzMyo crossbar is actually present in that
-#' specific plot's data - not merely because \code{$40khzmyo}/\code{$MYSO}
+#' specific plot's data - not merely because \code{$40khzmyo}/\code{$myso}
 #' flags are set, since a plot's species list can include 40kHzMyo as an
 #' option without any night actually triggering it.
 #'
@@ -1100,6 +1100,14 @@
 #' data frame that still uses \code{schedual1}/\code{schedual2} works
 #' unchanged - \code{canonicalize.headers()} accepts the old spelling.
 #'
+#' \strong{Lower-case headers (2026-11-04, per Josh, Batz_reference_db Header.names).}
+#' fig.list column \code{$myso} (was \code{$MYSO}; the old header is still
+#' accepted). plotopts parameters are matched ignoring case.
+#'
+#' \strong{Spelling fix (2026-11-04, per Josh).} fig.list column
+#' \code{$all.detections} (was \code{$all.dectections}; the old header and
+#' \code{$Alldect} are still accepted, with a WARNING).
+#'
 #' @examples
 #' \dontrun{
 #' # default dir.save = getwd() - saves into the current working directory,
@@ -1206,8 +1214,8 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
                              "sunrise.monitoringnight.unix")
   ## 2026-10-09, per Josh: $facet -> $facet.header, new $facet.plot,
   ## $facet.panel dropped (old files still load - see plotutil_figlist_legacy())
-  FIG.LIST.REQUIRED <- c("plot.type", "plot.name", "facet.header", "facet.plot", "facet.set", "MYSO",
-                                 "all.dectections", "40khzmyo", "facet.label",
+  FIG.LIST.REQUIRED <- c("plot.type", "plot.name", "facet.header", "facet.plot", "facet.set", "myso",
+                                 "all.detections", "40khzmyo", "facet.label",
                                  "plot.set", "date.format", "date.start", "date.end",
                                  "xaxe.interval", "xaxe.title")
   AES.DEFAULT.REQUIRED <- c("category", "parameter", "default.value")
@@ -1387,7 +1395,7 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
   ## no longer has any role in settings resolution, only in the saved file
   ## name (see the main loop below).
   get.default <- function(param) {
-    row.idx <- which(aes.default$parameter == param)
+    row.idx <- which(tolower(trimws(aes.default$parameter)) == tolower(param))   # 2026-11-04: case-insensitive (Yaxe.trans -> yaxe.trans)
     if (length(row.idx) == 0) return(NA_character_)
     val <- as.character(aes.default$default.value[row.idx[1]])
     if (aes.style %in% names(aes.default)) {
@@ -1462,18 +1470,18 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
 
     ## 2026-10-09, per Josh: $facet.set = a preset (e.g. "NE") or an
     ## ordered list ("AllDet;epfu;labo"); the order written is the facet
-    ## order. $all.dectections = TRUE adds "All detections" as the FIRST
+    ## order. $all.detections = TRUE adds "All detections" as the FIRST
     ## facet if $facet.set doesn't list it; a 40kHzMyo facet of its own
     ## goes last if not listed.
     facpan <- plotutil_resolve_facet_set(job$facet.set, job.label, "batz.plotdetections_first.last")
-    alldect.flag <- isTRUE(as.logical(job$all.dectections)) || "All detections" %in% facpan
+    alldect.flag <- isTRUE(as.logical(job$all.detections)) || "All detections" %in% facpan
     khz.flag <- isTRUE(as.logical(job[["40khzmyo"]])) || "40khzmyo" %in% facpan
     if (alldect.flag && !("All detections" %in% facpan)) facpan <- c("All detections", facpan)
     if (alldect.flag) facpan <- setdiff(facpan, "40khzmyo")   # drawn inside the All detections facet
     if (khz.flag && !alldect.flag && !("40khzmyo" %in% facpan)) facpan <- c(facpan, "40khzmyo")
 
     spp.plot <- facpan
-    myso.flag <- isTRUE(as.logical(job$MYSO))
+    myso.flag <- isTRUE(as.logical(job$myso))
     if (myso.flag) spp.plot <- c(spp.plot, "Indiana Bat")
     if (khz.flag) spp.plot <- c(spp.plot, "40khzmyo")
 

@@ -502,9 +502,9 @@
 #' curly quotes -> straight quotes); characters with no plain equivalent
 #' (e.g. \code{°}, \code{µ}, \code{™}) are still removed. Column names
 #' are cleaned the same way. The log gets four new columns right after
-#' \code{$strip.special}: \code{$Accented.letters.header} and
+#' \code{$strip.special}: \code{$accented.letters.header} and
 #' \code{$removed.symbols.header} (number of unique column names with a
-#' character simplified / removed), and \code{$Accented.letters.data} and
+#' character simplified / removed), and \code{$accented.letters.data} and
 #' \code{$removed.symbols.data} (number of unique data values with a
 #' character simplified / removed - \code{café} in 500 rows counts once;
 #' \code{café} and \code{French café} count twice). They are \code{NA}
@@ -514,6 +514,10 @@
 #' \code{$aru.name}/\code{$date}/\code{$time} are also read from SM5 file
 #' names (\verb{<ARU>_<MIC>_<YYYYMMDD>_<HHMMSS>_<...>}); the microphone
 #' part is not kept. SM4 names give the same result as before.
+#'
+#' \strong{Lower-case headers (2026-11-04, per Josh, Batz_reference_db Header.names).}
+#' The strip.special log columns are \code{$accented.letters.header} /
+#' \code{$accented.letters.data} (were Accented.letters.*).
 #'
 #' @examples
 #' \dontrun{
@@ -822,8 +826,8 @@ batz.merge_vetted.acoustics2 <- function(dir.load = getwd(),
     names(data.merged) <- snake.headers(names(data.merged))
     names(log.file.df) <- snake.headers(names(log.file.df))
     ## keep the log column's exact name (2026-09-30)
-    special.cols <- c("strip.special", "Accented.letters.header", "removed.symbols.header",
-                      "Accented.letters.data", "removed.symbols.data")
+    special.cols <- c("strip.special", "accented.letters.header", "removed.symbols.header",
+                      "accented.letters.data", "removed.symbols.data")
     hit <- match(names(log.file.df), snake.headers(special.cols))
     names(log.file.df)[!is.na(hit)] <- special.cols[hit[!is.na(hit)]]
   }

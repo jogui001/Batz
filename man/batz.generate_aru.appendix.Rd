@@ -281,7 +281,7 @@ text), \code{$site.description_basic}, \code{$targeted.feature},
 \code{$roosting.habitat_bats}, \code{$water.resources_site},
 \code{$water.resources_distance.to.microphone},
 \code{$water.resources_type.nearestbody}, tree species, understory
-species, \code{$vegetation.tree_estimated.DBH},
+species, \code{$vegetation.tree_estimated.dbh},
 \code{$vegetation.tree_estimated.agerange},
 \code{$vegetation.understory_clutter},
 \code{$vegetation.understory_clutter.distance}, \code{$landcover}
@@ -308,7 +308,7 @@ once more - a full set of 12 MP phone photos had filled ImageMagick's
 cache - and an empty converted file counts as unreadable.)
 \item \strong{Figure 4}: \code{batz.plotcover_bullseye()} for the site,
 from the quadrant form (\code{$quadrant}, \code{$canopy.cover},
-\code{$Understory.cover}) and the deployment microphone height and
+\code{$understory.cover}) and the deployment microphone height and
 orientations. When \code{icon.dir} in the settings table is not
 found, the icons in \code{inst/img} are used.
 \item \strong{Figure 5}: \code{batz.plotsm4_heatmap()} for the site,
@@ -439,6 +439,13 @@ accepted because the Survey123 form itself uses it.
 if it is installed (uses Word on Windows), otherwise with LibreOffice
 (\code{soffice}) if found. If neither is available the PDF is skipped with
 a warning.
+
+\strong{Lower-case headers (2026-11-04, per Josh, Batz_reference_db Header.names).}
+Survey123 Batz headers are now lower case (e.g. \code{globalid},
+\code{parentglobalid}, \code{understory.cover},
+\code{vegetation.tree_tree1.species}, \code{vegetation.tree_estimated.dbh}).
+Workbooks with the old capitalisation are still read: headers are matched
+ignoring case.
 }
 \examples{
 \dontrun{

@@ -352,8 +352,8 @@ batz.batusa_list.species <- function(data,
   if (table.type == "matrix") {
 
     out <- data.frame("common.name" = species.labels, check.names = FALSE, stringsAsFactors = FALSE)
-    if (!is.null(code.col)) out[["Species Code"]] <- nabat[species.idx, code.col]
-    if (phonic.group) out[["Phonic Group"]] <- nabat[species.idx, "phonic.group"]
+    if (!is.null(code.col)) out[["species.code"]] <- nabat[species.idx, code.col]
+    if (phonic.group) out[["phonic.group"]] <- nabat[species.idx, "phonic.group"]
     out[["listing.status_federal"]] <- federal.codes
 
     for (k in seq_along(state.idx)) {
@@ -403,10 +403,10 @@ batz.batusa_list.species <- function(data,
     }
 
     out <- do.call(rbind.data.frame, c(rows, stringsAsFactors = FALSE))
-    col.names <- c("State", "common.name")
-    if (!is.null(code.col)) col.names <- c(col.names, "Species Code")
-    col.names <- c(col.names, "listing.status_federal", "State")
-    if (phonic.group) col.names <- c(col.names, "Phonic Group")
+    col.names <- c("state", "common.name")
+    if (!is.null(code.col)) col.names <- c(col.names, "species.code")
+    col.names <- c(col.names, "listing.status_federal", "state")
+    if (phonic.group) col.names <- c(col.names, "phonic.group")
     names(out) <- col.names   # set directly (not via data.frame()) so the duplicate "State" header survives literally
     out
   }
@@ -488,7 +488,7 @@ cat("\n=== ROUND TWENTY-EIGHT TEST 1: 'listing.status_federal' replaces 'Federal
 r28.state <- batz.batusa_list.species(c("epfu", "mylu"), table.type = "state")
 stopifnot("listing.status_federal" %in% names(r28.state))
 stopifnot(!("Federal" %in% names(r28.state)))
-stopifnot(sum(names(r28.state) == "State") == 2)  # duplicate "State" header still intact
+stopifnot(sum(names(r28.state) == "state") == 2)  # duplicate "State" header still intact
 cat("PASSED\n")
 
 cat("\n=== ROUND TWENTY-EIGHT TEST 2: same rename, table.type = 'matrix' ===\n")
@@ -527,7 +527,7 @@ cat("\n=== ROUND THIRTY TEST 1: 'common.name' replaces 'Bat Species',\n",
 r30.state <- batz.batusa_list.species(c("epfu", "mylu"), table.type = "state")
 stopifnot("common.name" %in% names(r30.state))
 stopifnot(!("Bat Species" %in% names(r30.state)))
-stopifnot(sum(names(r30.state) == "State") == 2)  # duplicate "State" header still intact
+stopifnot(sum(names(r30.state) == "state") == 2)  # duplicate "State" header still intact
 cat("PASSED\n")
 
 cat("\n=== ROUND THIRTY TEST 2: same rename, table.type = 'matrix' ===\n")

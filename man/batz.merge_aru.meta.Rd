@@ -182,13 +182,17 @@ symbols are now simplified instead of dropped (\code{café} ->
 curly quotes -> straight quotes); characters with no plain equivalent
 (e.g. \code{°}, \code{µ}, \code{™}) are still removed. Column names
 are cleaned the same way. The log gets four new columns right after
-\code{$strip.special}: \code{$Accented.letters.header} and
+\code{$strip.special}: \code{$accented.letters.header} and
 \code{$removed.symbols.header} (number of unique column names with a
-character simplified / removed), and \code{$Accented.letters.data} and
+character simplified / removed), and \code{$accented.letters.data} and
 \code{$removed.symbols.data} (number of unique data values with a
 character simplified / removed - \code{café} in 500 rows counts once;
 \code{café} and \code{French café} count twice). They are \code{NA}
 when \code{strip.special = FALSE}.
+
+\strong{Lower-case headers (2026-11-04, per Josh, Batz_reference_db Header.names).}
+The strip.special log columns are \code{$accented.letters.header} /
+\code{$accented.letters.data} (were Accented.letters.*).
 }
 \section{Known open items (not yet resolved - see project notes)}{
 

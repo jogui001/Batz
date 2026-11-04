@@ -1395,3 +1395,12 @@ if (exists("data") && exists("mic") && exists("aes.default")) {
   try(batz.plotcover_bullseye(data, mic, aes.default, arrow.panel = "some"))      # stops
   try(batz.plotcover_bullseye(data, mic, aes.default, panel.labels = c("(a)")))  # stops: one label per panel
 }
+
+## ---------------------------------------------------------------------------
+## 2026-11-04, per Josh: batz.plotcover_bullseye() is now exported.
+## After pak::pak("jogui001/Batz") and library(Batz) it can be called directly:
+##   "batz.plotcover_bullseye" %in% getNamespaceExports("Batz")   # TRUE
+##   ?batz.plotcover_bullseye
+## ---------------------------------------------------------------------------
+if (requireNamespace("Batz", quietly = TRUE))
+  cat("batz.plotcover_bullseye exported:", "batz.plotcover_bullseye" %in% getNamespaceExports("Batz"), "\n")

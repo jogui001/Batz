@@ -3,7 +3,7 @@
 # Keep this file OUTSIDE the package's R/ folder.
 #
 # Gives every record of a site (project.name + aru.name) the GlobalID of that
-# site's earliest record, as $globalID_consolidate.
+# site's earliest record, as $globalid_consolidate.
 # Needs: readxl (only when reading .xlsx files).
 # =============================================================================
 
@@ -21,26 +21,26 @@ for (f in c("batz.util_survey123.reference.R", "batz.util_survey123.aruforms.R",
 ## ---- TEST 1: small data frame ----------------------------------------------
 x <- data.frame(project.name = c("P", "p ", "P", "P", NA),
                 aru.name     = c("A", "A", "A", "B", "B"),
-                GlobalID     = c("g1", "g2", "g3", "g4", "g5"),
+                globalid     = c("g1", "g2", "g3", "g4", "g5"),
                 date         = c("2026-07-10", "07/02/2026", NA, NA, "2026-01-01"))
 y <- batz.datawrangler_consolidate.globalID(x)
 print(y)
-stopifnot(identical(y$globalID_consolidate, c("g2", "g2", "g2", "g4", "g5")),  # earliest = g2; case/space ignored
-          names(y)[4] == "globalID_consolidate")                               # placed after GlobalID
+stopifnot(identical(y$globalid_consolidate, c("g2", "g2", "g2", "g4", "g5")),  # earliest = g2; case/space ignored
+          names(y)[4] == "globalid_consolidate")                               # placed after globalid
 
 ## ---- TEST 2: the merged FY26 workbook (habitat + service together) ---------
 m <- batz.merge_sitevisit.acoustics(dir.load = dir.data, dir.save = dir.out)   # already adds the column
 z <- batz.datawrangler_consolidate.globalID(m$file)                             # same thing, from the file
 a <- rbind(data.frame(tab = "habitat", site = paste(z$habitat$project.name, z$habitat$aru.name),
-                      date = as.Date(z$habitat$date.habitat.assessment), id = z$habitat$GlobalID,
-                      cons = z$habitat$globalID_consolidate),
+                      date = as.Date(z$habitat$date.habitat.assessment), id = z$habitat$globalid,
+                      cons = z$habitat$globalid_consolidate),
            data.frame(tab = "service", site = paste(z$service$project.name, z$service$aru.name),
-                      date = as.Date(z$service$date), id = z$service$GlobalID,
-                      cons = z$service$globalID_consolidate))
+                      date = as.Date(z$service$date), id = z$service$globalid,
+                      cons = z$service$globalid_consolidate))
 a <- a[order(a$site, a$date), ]
 stopifnot(all(tapply(seq_len(nrow(a)), a$site, function(i) all(a$cons[i] == a$id[i][1]))))
 head(a, 10)
-identical(m$service$globalID_consolidate, z$service$globalID_consolidate)
+identical(m$service$globalid_consolidate, z$service$globalid_consolidate)
 
 ## ---- TEST 3: csv input, other headers ---------------------------------------
 write.csv(x, file.path(dir.out, "x.csv"), row.names = FALSE)

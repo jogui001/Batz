@@ -43,9 +43,9 @@
 #'     becomes the number \code{42.036373}. Returns \code{list(df, headers,
 #'     counts)}: \code{headers} names the data columns that changed (by
 #'     their cleaned names); \code{counts} is a named integer vector -
-#'     \code{Accented.letters.header}/\code{removed.symbols.header} = number
+#'     \code{accented.letters.header}/\code{removed.symbols.header} = number
 #'     of unique column names that had a character simplified / removed,
-#'     \code{Accented.letters.data}/\code{removed.symbols.data} = number of
+#'     \code{accented.letters.data}/\code{removed.symbols.data} = number of
 #'     unique data values (across all columns) that had a character
 #'     simplified / removed. "Unique" means \code{café} in 500 rows counts
 #'     once, while \code{café} and \code{French café} count twice. A value
@@ -56,8 +56,8 @@
 #'     \code{"TRUE NONE"}; or \code{"TRUE ; <header1>; <header2>"}.}
 #'   \item{\code{special.log.cols(strip.special, headers, counts)}}{One-row
 #'     data frame of the five log columns: \code{strip.special},
-#'     \code{Accented.letters.header}, \code{removed.symbols.header},
-#'     \code{Accented.letters.data}, \code{removed.symbols.data}.
+#'     \code{accented.letters.header}, \code{removed.symbols.header},
+#'     \code{accented.letters.data}, \code{removed.symbols.data}.
 #'     \code{special.log.cols.empty()} is the zero-row version.
 #'     \code{special.counts.add(a, b)} sums two count vectors (for log rows
 #'     that cover several files).}
@@ -241,17 +241,17 @@ special.simplify <- function(x) {
 #' @keywords internal
 #' @noRd
 special.strip <- function(df, strip.special = TRUE) {
-  na.counts <- c(Accented.letters.header = NA_integer_, removed.symbols.header = NA_integer_,
-                 Accented.letters.data = NA_integer_, removed.symbols.data = NA_integer_)
+  na.counts <- c(accented.letters.header = NA_integer_, removed.symbols.header = NA_integer_,
+                 accented.letters.data = NA_integer_, removed.symbols.data = NA_integer_)
   if (!isTRUE(strip.special) || !is.data.frame(df)) {
     return(list(df = df, headers = character(0), counts = na.counts))
   }
-  counts <- c(Accented.letters.header = 0L, removed.symbols.header = 0L,
-              Accented.letters.data = 0L, removed.symbols.data = 0L)
+  counts <- c(accented.letters.header = 0L, removed.symbols.header = 0L,
+              accented.letters.data = 0L, removed.symbols.data = 0L)
   if (ncol(df) == 0) return(list(df = df, headers = character(0), counts = counts))
   ## headers
   h <- special.simplify(names(df))
-  counts[["Accented.letters.header"]] <- length(unique(names(df)[h$simplified]))
+  counts[["accented.letters.header"]] <- length(unique(names(df)[h$simplified]))
   counts[["removed.symbols.header"]]  <- length(unique(names(df)[h$removed]))
   if (any(h$simplified | h$removed)) names(df) <- h$x
   ## data
@@ -268,7 +268,7 @@ special.strip <- function(df, strip.special = TRUE) {
     df[[i]] <- utils::type.convert(s$x, as.is = !was.factor)
     hits <- c(hits, names(df)[i])
   }
-  counts[["Accented.letters.data"]] <- length(unique(simp.vals))
+  counts[["accented.letters.data"]] <- length(unique(simp.vals))
   counts[["removed.symbols.data"]]  <- length(unique(rem.vals))
   list(df = df, headers = unique(hits), counts = counts)
 }
@@ -297,13 +297,13 @@ special.counts.add <- function(a, b) {
 #' @noRd
 special.log.cols <- function(strip.special, headers = character(0), counts = NULL) {
   if (is.null(counts) || !isTRUE(strip.special)) {
-    counts <- c(Accented.letters.header = NA_integer_, removed.symbols.header = NA_integer_,
-                Accented.letters.data = NA_integer_, removed.symbols.data = NA_integer_)
+    counts <- c(accented.letters.header = NA_integer_, removed.symbols.header = NA_integer_,
+                accented.letters.data = NA_integer_, removed.symbols.data = NA_integer_)
   }
   data.frame(strip.special = special.label(strip.special, headers),
-             Accented.letters.header = as.integer(counts[["Accented.letters.header"]]),
+             accented.letters.header = as.integer(counts[["accented.letters.header"]]),
              removed.symbols.header  = as.integer(counts[["removed.symbols.header"]]),
-             Accented.letters.data   = as.integer(counts[["Accented.letters.data"]]),
+             accented.letters.data   = as.integer(counts[["accented.letters.data"]]),
              removed.symbols.data    = as.integer(counts[["removed.symbols.data"]]),
              stringsAsFactors = FALSE)
 }

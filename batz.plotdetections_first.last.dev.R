@@ -69,6 +69,8 @@
 # no further change here - this script's `suntimes.synth`/`SUNTIMES.REQUIRED`
 # already used `aru.name` (see the 2026-09-26 follow-up above).
 # =============================================================================
+## 2026-11-04, per Josh: fig.list column $all.dectections is now $all.detections
+## (spelling fix; the old header is still accepted with a WARNING).
 
 source("batz.batusa_recode.names.R")
 
@@ -187,7 +189,7 @@ aru.metadata.db.synth <- data.frame(
   facet           = "sppid",
   facet.set       = "NE",
   MYSO            = FALSE,
-  all.dectections = TRUE,
+  all.detections = TRUE,
   facet.panel     = "",
   "40khzmyo"      = TRUE,
   facet.label     = "common",
@@ -242,7 +244,7 @@ SUNTIMES.REQUIRED <- c("aru.name", "date", "date.monitoringnight", "sunregion", 
                            "sunset.unix", "sunrise", "sunrise.unix", "sunrise.monitoringnight",
                            "sunrise.monitoringnight.unix")
 FIG.LIST.REQUIRED <- c("plot.type", "plot.name", "facet", "facet.set", "MYSO",
-                               "all.dectections", "facet.panel", "40khzmyo", "facet.label",
+                               "all.detections", "facet.panel", "40khzmyo", "facet.label",
                                "plot.set", "date.format", "date.start", "date.end",
                                "xaxe.interval", "xaxe.title")
 AES.DEFAULT.REQUIRED <- c("category", "parameter", "default.value")
@@ -403,7 +405,7 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
     myso.flag <- isTRUE(as.logical(job$MYSO))
     if (myso.flag) spp.plot <- c(spp.plot, "Indiana Bat")
 
-    alldect.flag <- isTRUE(as.logical(job$all.dectections))
+    alldect.flag <- isTRUE(as.logical(job$all.detections))
     if (alldect.flag) {
       spp.plot <- c(spp.plot, "All detections")
       facpan   <- c(facpan, "All detections")
@@ -687,7 +689,7 @@ if (length(result3$plots) > 0) {
 cat("\n\n########## TEST 4: MYSO/40khzmyo-without-Alldect flag handling ##########\n")
 aru.metadata.db.test4 <- aru.metadata.db.synth
 aru.metadata.db.test4$MYSO <- TRUE
-aru.metadata.db.test4$all.dectections <- FALSE
+aru.metadata.db.test4$all.detections <- FALSE
 result4 <- batz.plotdetections_first.last(
   data = plot.data.synth,
   fig.list = aru.metadata.db.test4,

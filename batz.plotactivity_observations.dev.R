@@ -98,6 +98,8 @@
 # WTG-GOM102 comments) are unrelated identifiers/prose and were left
 # untouched.
 # =============================================================================
+## 2026-11-04, per Josh: fig.list column $all.dectections is now $all.detections
+## (spelling fix; the old header is still accepted with a WARNING).
 
 source("batz.batusa_recode.names.R")
 source("batz.util_standardize.headers.R")
@@ -190,7 +192,7 @@ aru.metadata.db.synth <- data.frame(
   facet          = "sppid",
   facet.set      = "NE",
   MYSO           = FALSE,
-  all.dectections = TRUE,
+  all.detections = TRUE,
   facet.panel    = "",
   "40khzmyo"     = TRUE,
   facet.label    = "common_name",
@@ -275,7 +277,7 @@ SUNTIMES.REQUIRED <- c("aru.name", "date", "date.monitoringnight", "sunregion", 
 # renamed 2026-09-27 (per Josh's reference-workbook "Change.to" column - see
 # the header comment above).
 FIG.LIST.REQUIRED <- c("plot.type", "plot.name", "facet", "facet.set", "MYSO",
-                        "all.dectections", "facet.panel", "40khzmyo", "facet.label",
+                        "all.detections", "facet.panel", "40khzmyo", "facet.label",
                         "plot.set", "pool", "date.format",
                         "date.start", "date.end", "xaxe.interval")
 # Follow-up, 2026-09-23 (per Josh's bug report - see the header comment
@@ -452,7 +454,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     spp.plot <- facpan
     myso.flag <- isTRUE(as.logical(job$MYSO))
     if (myso.flag) spp.plot <- c(spp.plot, "Indiana Bat")
-    alldect.flag <- isTRUE(as.logical(job$all.dectections))
+    alldect.flag <- isTRUE(as.logical(job$all.detections))
     if (alldect.flag) { spp.plot <- c(spp.plot, "All detections"); facpan <- c(facpan, "All detections") }
     khz.flag <- isTRUE(as.logical(job[["40khzmyo"]]))
     if (khz.flag) { spp.plot <- c(spp.plot, "40khzmyo"); if (!alldect.flag) facpan <- c(facpan, "40khzmyo") }

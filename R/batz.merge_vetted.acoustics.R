@@ -373,8 +373,8 @@
 #'   \code{$manid}/\code{$autoid.kp}/\code{$autoid.sb} (and any extra auto-ID
 #'   column) are recoded, only the records of the \code{BAT Groupings},
 #'   \code{NABATFrequency Classes} and \code{bat.names} tables whose
-#'   \code{$Region} matches one of these are used; records marked \code{All}
-#'   are always used. A \code{$Region} cell may list several regions separated
+#'   \code{$region} matches one of these are used; records marked \code{All}
+#'   are always used. A \code{$region} cell may list several regions separated
 #'   by \code{;} or \code{,} (e.g. \code{NABAT; CA, SouthAmerica}) - the record
 #'   is used if any of them matches. Case and quotes are ignored.
 #' @param autoid.header_in Character vector, default \code{c("autoid")}. Added
@@ -414,9 +414,9 @@
 #' curly quotes -> straight quotes); characters with no plain equivalent
 #' (e.g. \code{°}, \code{µ}, \code{™}) are still removed. Column names
 #' are cleaned the same way. The log gets four new columns right after
-#' \code{$strip.special}: \code{$Accented.letters.header} and
+#' \code{$strip.special}: \code{$accented.letters.header} and
 #' \code{$removed.symbols.header} (number of unique column names with a
-#' character simplified / removed), and \code{$Accented.letters.data} and
+#' character simplified / removed), and \code{$accented.letters.data} and
 #' \code{$removed.symbols.data} (number of unique data values with a
 #' character simplified / removed - \code{café} in 500 rows counts once;
 #' \code{café} and \code{French café} count twice). They are \code{NA}
@@ -501,6 +501,22 @@
 #'     a non-Wildlife Acoustics recorder with the same naming (e.g. the
 #'     Amboseli \code{Chorus} units) shows as \code{"SM4"}.
 #' }
+#'
+#' \strong{Lower-case headers (2026-11-04, per Josh, Batz_reference_db Header.names).}
+#' A \code{$species.code} input column is read as the manual species ID when
+#' there is no Species Manual ID column (Header.names \code{$Change.to}:
+#' \code{species_manual_id} -> \code{species.code}); the output column is still
+#' \code{$manid}. The strip.special log columns are
+#' \code{$accented.letters.header} / \code{$accented.letters.data} (were
+#' capitalised).
+#'
+#' \strong{Manual ID kept separate (2026-11-04, later, per Josh).} The
+#' \code{$species.code} -> manual-ID reading above is removed. \code{$manid} is
+#' the species a reviewer assigned to a file in the vetting sheet (from
+#' Species Manual ID); \code{$species.code} is the species code in
+#' \code{\link{batz.batusa_list.species}}. They share the same set of codes but are
+#' separate categories, so a \code{$species.code} column in a vetting file is
+#' not used as \code{$manid}.
 #'
 #' @examples
 #' \dontrun{
@@ -664,6 +680,9 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
     ## "Species Manual ID" alternatives (2026-10-23) - first one found is used
     if (!("species_manual_id" %in% names(tmp))) {
       mid <- names(tmp)[is.manual.id(names(tmp))]
+      ## 2026-11-04 (later), per Josh: $species.code is NOT read as the manual ID -
+      ## $manid (reviewer's ID from the vetting sheet) and $species.code
+      ## (batz.batusa_list.species() code) are separate categories.
       if (length(mid) > 0) names(tmp)[names(tmp) == mid[1]] <- "species_manual_id"
     }
     ## alternative auto-ID headers (2026-10-23) - only used when the file
@@ -837,8 +856,8 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
     if (snake_case) {
       names(vetted.merged_log.file) <- snake.headers(names(vetted.merged_log.file))
       ## keep the log column's exact name (2026-09-30)
-      special.cols <- c("strip.special", "Accented.letters.header", "removed.symbols.header",
-                        "Accented.letters.data", "removed.symbols.data")
+      special.cols <- c("strip.special", "accented.letters.header", "removed.symbols.header",
+                        "accented.letters.data", "removed.symbols.data")
       hit <- match(names(vetted.merged_log.file), snake.headers(special.cols))
       names(vetted.merged_log.file)[!is.na(hit)] <- special.cols[hit[!is.na(hit)]]
     }

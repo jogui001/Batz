@@ -5,8 +5,8 @@
 #' combination of the \code{header.combo} headers (e.g. \code{project.name} +
 #' \code{aru.name}), picks the earliest record of that combination by the
 #' \code{header.dates} headers, and copies that record's unique ID
-#' (\code{header.uniqueid}, e.g. \code{GlobalID}) to every record of the
-#' combination under the new header \code{$globalID_consolidate}. Built
+#' (\code{header.uniqueid}, e.g. \code{globalid}) to every record of the
+#' combination under the new header \code{$globalid_consolidate}. Built
 #' 2026-10-30, per Josh.
 #'
 #' @param data A data frame, a list of data frames (e.g. the output of
@@ -16,7 +16,7 @@
 #'   earliest record is found across every table given.
 #' @param header.combo Character, default \code{c("project.name", "aru.name")}.
 #'   Headers whose unique combinations define a site.
-#' @param header.uniqueid Character, default \code{c("GlobalID")}. Header
+#' @param header.uniqueid Character, default \code{c("globalid")} (was \code{"GlobalID"} before 2026-11-04). Header
 #'   holding each record's unique ID. When more than one is given, the first
 #'   one found in a table is used.
 #' @param header.dates Character, default \code{c("date.habitat.assessment",
@@ -26,7 +26,7 @@
 #'
 #' @return The same shape as \code{data} - a data frame, or a list of data
 #'   frames (one per table / sheet when files are read; list elements that are
-#'   not data frames are returned unchanged) - with \code{$globalID_consolidate}
+#'   not data frames are returned unchanged) - with \code{$globalid_consolidate}
 #'   added just after the unique-ID column of every table that has the
 #'   \code{header.combo} and \code{header.uniqueid} headers.
 #'
@@ -44,16 +44,22 @@
 #'     Records with no date are only chosen when no record of the combination
 #'     has one. Ties go to the record read first (table order, then row order);
 #'     a NOTE lists combinations where tied records have different IDs.
-#'   \item That record's ID is written to \code{$globalID_consolidate} for
+#'   \item That record's ID is written to \code{$globalid_consolidate} for
 #'     every record of the combination. Records with a blank
 #'     \code{header.combo} value keep their own ID (NOTE).
 #' }
+#'
+#' \strong{Lower-case headers (2026-11-04, per Josh, Batz_reference_db Header.names).}
+#' The new column is \code{$globalid_consolidate} (was
+#' \code{$globalID_consolidate}); \code{header.uniqueid} defaults to globalid;
+#' \code{header.combo}, \code{header.uniqueid} and \code{header.dates} are
+#' matched ignoring case, so a \code{GlobalID} column still works.
 #'
 #' @examples
 #' \dontrun{
 #' m <- batz.merge_sitevisit.acoustics(dir.load = "C:/data/Survey123")
 #' m2 <- batz.datawrangler_consolidate.globalID(m[c("habitat", "service")])
-#' table(m2$service$globalID_consolidate)
+#' table(m2$service$globalid_consolidate)
 #'
 #' x <- batz.datawrangler_consolidate.globalID("C:/data/mergedsurvey123.xlsx")
 #' }
@@ -61,10 +67,10 @@
 #' @export
 batz.datawrangler_consolidate.globalID <- function(data,
                                                    header.combo = c("project.name", "aru.name"),
-                                                   header.uniqueid = c("GlobalID"),
+                                                   header.uniqueid = c("globalid"),
                                                    header.dates = c("date.habitat.assessment", "date.deployment", "date")) {
 
-  new.header <- "globalID_consolidate"
+  new.header <- "globalid_consolidate"
   if (!is.character(header.combo) || length(header.combo) == 0) stop("header.combo must be a character vector of header names", call. = FALSE)
   if (!is.character(header.uniqueid) || length(header.uniqueid) == 0) stop("header.uniqueid must be a character vector of header names", call. = FALSE)
   if (!is.character(header.dates)) stop("header.dates must be a character vector of header names", call. = FALSE)
@@ -133,6 +139,12 @@ batz.datawrangler_consolidate.globalID <- function(data,
   for (i in seq_along(tabs)) {
     d <- tabs[[i]]
     if (!is.data.frame(d) || nrow(d) == 0) next
+    ## 2026-11-04: headers matched ignoring case (GlobalID = globalid); the
+    ## table's columns are named as given in header.combo / header.uniqueid / header.dates
+    for (h in c(header.combo, header.uniqueid, header.dates)) {
+      j <- which(tolower(names(d)) == tolower(h))
+      if (!(h %in% names(d)) && length(j) > 0) names(d)[j[1]] <- h
+    }
     miss <- setdiff(header.combo, names(d))
     idc <- intersect(header.uniqueid, names(d))[1]
     if (length(miss) > 0 || is.na(idc)) {
@@ -190,7 +202,7 @@ batz.datawrangler_consolidate.globalID <- function(data,
     d <- tabs[[i]]
     v <- r$new[r$tab == tn]
     d[[new.header]] <- NULL
-    pos <- match(id.col[[tn]], names(d))
+    pos <- match(tolower(id.col[[tn]]), tolower(names(d)))
     d <- cbind(d[seq_len(pos)], stats::setNames(data.frame(v, stringsAsFactors = FALSE), new.header),
                d[setdiff(seq_along(d), seq_len(pos))])
     tabs[[i]] <- d

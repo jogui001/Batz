@@ -1182,6 +1182,10 @@ arrow is drawn on the first canopy/understory bullseye only (new
 and new \code{panel.labels} puts a label such as \code{"(a)"} at the
 bottom right of each panel. New \code{title.size.adjust} makes the panel
 titles larger or smaller (points) without changing the axis labels.
+
+\strong{Exported (2026-11-04, per Josh).} \code{batz.plotcover_bullseye()} is now
+exported, so it can be called directly after \code{library(Batz)}; it is
+still also used inside \code{batz.generate_aru.appendix()}.
 }
 \examples{
 \dontrun{

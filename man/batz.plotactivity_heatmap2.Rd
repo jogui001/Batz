@@ -50,7 +50,7 @@ divide evenly into 24 hours.}
 scale".}
 
 \item{bin.colors}{Character, default \code{c("white", "#FFFF80",
-"#FFFF00", "#FFAA00", "#FF5500", "#FF0000")}. Colours (separated by
+  "#FFFF00", "#FFAA00", "#FF5500", "#FF0000")}. Colours (separated by
 \code{";"} in fig.list/plotopts) or one palette name - see Details.}
 
 \item{bin.scale}{Character, \code{"discrete"} (default) or
@@ -164,14 +164,14 @@ optional - only the one a palette comes from has to be installed.
 plot functions. Required columns: \code{$plot.type}
 (\code{"activity.heatmap"}; other rows are skipped), \code{$plot.name},
 \code{$facet.header} (\code{"sppid"}), \code{$facet.plot},
-\code{$facet.set}, \code{$all.dectections}, \code{$40khzmyo},
+\code{$facet.set}, \code{$all.detections}, \code{$40khzmyo},
 \code{$facet.label}, \code{$plot.set}, \code{$date.start},
 \code{$date.end}. Optional: any setting named above (e.g.
 \code{$bin.scale}, \code{$bin.colors}, \code{$time.start}), plus
 \code{$date.format}, \code{$xaxe.interval}, \code{$xaxe.title},
 \code{$yaxe.title}. \code{$facet.set} is a preset (\code{"NE"}) or an
 ordered list (\code{"AllDet;lano;labo"}); the order written is the
-facet order. \code{$all.dectections = TRUE} adds All detections as the
+facet order. \code{$all.detections = TRUE} adds All detections as the
 first facet. A 40kHzMyo facet (\code{$40khzmyo = TRUE}) is drawn as its
 own facet - a heatmap can't overlay it. All detections uses the
 \code{"All Detections"} rows of \code{data}; if there are none, every
@@ -203,5 +203,9 @@ plotopts <- read.csv("plotopts_heatmap2.csv", check.names = FALSE)
 batz.plotactivity_heatmap2(plfr, fig.list = heat2.figlist,
   aes.default = plotopts, dir.save = "C:/path/to/figures")
 }
+
+\strong{Spelling fix (2026-11-04, per Josh).} fig.list column
+\code{$all.detections} (was \code{$all.dectections}; the old header and
+\code{$Alldect} are still accepted, with a WARNING).
 
 }

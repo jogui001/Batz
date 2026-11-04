@@ -17,7 +17,7 @@
 #'   \code{$date.format}, \code{$date.start}, \code{$date.end},
 #'   \code{$xaxe.interval}, \code{$xaxe.title}, \code{$yaxe.title}. Unlike
 #'   this package's other plotting functions, no species/facet-related
-#'   columns (\code{$facet}/\code{$MYSO}/\code{$Alldect}/\code{$40khzmyo}/
+#'   columns (\code{$facet}/\code{$myso}/\code{$Alldect}/\code{$40khzmyo}/
 #'   \code{$facet.label}/\code{$plot.group}/\code{$pool}/\code{$legend}) are
 #'   read at all - a device-operational-time heatmap has no per-species
 #'   dimension, so this function's own \code{FIG.LIST.REQUIRED} is
@@ -101,7 +101,7 @@
 #' \strong{What's different from \code{batz.plotdetections_first.last()},
 #' and why:} there is no species dimension here at all - every plot is one
 #' single panel (no \code{facet_wrap()}), and \code{fig.list}'s species/
-#' faceting columns (\code{$facet}/\code{$facet.set}/\code{$MYSO}/
+#' faceting columns (\code{$facet}/\code{$facet.set}/\code{$myso}/
 #' \code{$Alldect}/\code{$facet.panel}/\code{$40khzmyo}/\code{$facet.label}/
 #' \code{$plot.group}/\code{$pool}/\code{$legend}) are simply never read -
 #' \code{FIG.LIST.REQUIRED} is a deliberately smaller subset of
@@ -412,6 +412,9 @@
 #' data frame that still uses \code{schedual1}/\code{schedual2} works
 #' unchanged - \code{canonicalize.headers()} accepts the old spelling.
 #'
+#' \strong{Lower-case headers (2026-11-04, per Josh, Batz_reference_db Header.names).}
+#' plotopts parameters are matched ignoring case.
+#'
 #' @examples
 #' \dontrun{
 #' result <- batz.plotsm4_heatmap(
@@ -568,7 +571,7 @@ batz.plotsm4_heatmap <- function(data, fig.list, suntimes,
   }
 
   get.default <- function(param) {
-    row.idx <- which(aes.default$parameter == param)
+    row.idx <- which(tolower(trimws(aes.default$parameter)) == tolower(param))   # 2026-11-04: case-insensitive (Yaxe.trans -> yaxe.trans)
     if (length(row.idx) == 0) return(NA_character_)
     val <- as.character(aes.default$default.value[row.idx[1]])
     if (aes.style %in% names(aes.default)) {

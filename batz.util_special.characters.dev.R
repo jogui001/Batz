@@ -54,6 +54,8 @@
 # Uses Josh's plotopts_callobs.csv / plotopts_first.last.csv /
 # plotopts_dailycount.csv. Results: all checks passed, 0 failures.
 # =============================================================================
+## 2026-11-04, per Josh: fig.list column $all.dectections is now $all.detections
+## (spelling fix; the old header is still accepted with a WARNING).
 
 
 
@@ -461,7 +463,7 @@ sun <- data.frame(aru.name = "A1", date = c("2026-06-01","2026-06-02","2026-06-0
   sunrise = paste(c("2026-06-01","2026-06-02","2026-06-03"), "05:10:00"), sunrise.unix = 0,
   sunrise.monitoringnight = paste(c("2026-06-02","2026-06-03","2026-06-04"), "05:10:00"), sunrise.monitoringnight.unix = 0, stringsAsFactors = FALSE)
 fig <- function(type, label) data.frame(plot.type = type, plot.name = "T", facet = "sppid", facet.set = "",
-  MYSO = FALSE, all.dectections = TRUE, facet.panel = "", `40khzmyo` = FALSE, facet.label = label, plot.set = "A1",
+  MYSO = FALSE, all.detections = TRUE, facet.panel = "", `40khzmyo` = FALSE, facet.label = label, plot.set = "A1",
   pool = FALSE, date.format = "%m/%d", date.start = "2026-06-01", date.end = "2026-06-03", xaxe.interval = 3, xaxe.title = "Night",
   facpan = "Big brown bat;Little brown bat;Eastern red bat", check.names = FALSE, stringsAsFactors = FALSE)
 OUT <- mk("plots7")

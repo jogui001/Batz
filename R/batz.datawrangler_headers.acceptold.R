@@ -144,9 +144,9 @@
 #' curly quotes -> straight quotes); characters with no plain equivalent
 #' (e.g. \code{°}, \code{µ}, \code{™}) are still removed. Column names
 #' are cleaned the same way. The log gets four new columns right after
-#' \code{$strip.special}: \code{$Accented.letters.header} and
+#' \code{$strip.special}: \code{$accented.letters.header} and
 #' \code{$removed.symbols.header} (number of unique column names with a
-#' character simplified / removed), and \code{$Accented.letters.data} and
+#' character simplified / removed), and \code{$accented.letters.data} and
 #' \code{$removed.symbols.data} (number of unique data values with a
 #' character simplified / removed - \code{café} in 500 rows counts once;
 #' \code{café} and \code{French café} count twice). They are \code{NA}
@@ -155,12 +155,16 @@
 #' @seealso \code{\link{batz.generate_headers.acceptold}}, whose reference
 #'   table this function consults.
 #'
+#' \strong{Lower-case headers (2026-11-04, per Josh, Batz_reference_db Header.names).}
+#' The strip.special log columns are \code{$accented.letters.header} /
+#' \code{$accented.letters.data} (were Accented.letters.*).
+#'
 #' @examples
 #' \dontrun{
 #' # clean, unambiguous rename (no conflict, so log.file=TRUE logs nothing)
 #' d <- data.frame(ARU.serial = "SM4-01", Alldect = 12)
 #' d2 <- batz.datawrangler_headers.acceptold(d, function.name = "batz.example")
-#' names(d2)  # "aru.serial" "all.dectections"
+#' names(d2)  # "aru.serial" "all.detections"
 #'
 #' # a header flagged pending review in the reference table
 #' d <- data.frame(project_code = "SITE1")

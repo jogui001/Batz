@@ -536,3 +536,18 @@ print(res13$vetted.merged_log.file)
 cat("\n")
 
 cat("\nAll dev-script tests completed.\n")
+
+## ---------------------------------------------------------------------------
+## 2026-11-04 (later), per Josh: $manid and $species.code are separate.
+## $manid = species a reviewer assigned in the vetting sheet (Species Manual ID);
+## $species.code = species code from batz.batusa_list.species(). A vetting file
+## whose only ID column is "Species Code" is NOT read as the manual ID.
+## ---------------------------------------------------------------------------
+dir.sep <- file.path(tempdir(), "manid_separate"); dir.create(dir.sep, showWarnings = FALSE)
+v <- read.csv(list.files(dir.load, pattern = "\\.csv$", full.names = TRUE)[1], check.names = FALSE, stringsAsFactors = FALSE)
+names(v)[grepl("manual", names(v), ignore.case = TRUE)][1] -> mcol
+names(v)[names(v) == mcol] <- "Species Code"
+write.csv(v, file.path(dir.sep, "speciescode_only_FinalVetted.csv"), row.names = FALSE)
+res.sep <- batz.merge_vetted.acoustics(dir.load = dir.sep)
+cat("rows merged from a file with Species Code but no Species Manual ID (expect 0):",
+    NROW(res.sep$vetted.merged), "\n")

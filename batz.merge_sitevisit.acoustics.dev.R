@@ -40,10 +40,10 @@ openxlsx::getSheetNames(m$file)                                     # quad, habi
 
 ## ---- TEST 2: form.list adds a form version and a new tab -------------------
 h <- Survey123.aruforms_headers.choices$habitat
-newver <- data.frame(`aru.habitat_Batz.headers` = h$`aru.habitat_Batz.headers`, Batz.headers = h$Batz.headers,
+newver <- data.frame(`aru.habitat_batz.headers` = h$`aru.habitat_batz.headers`, batz.headers = h$batz.headers,
                      coastal_2027 = paste0(h$inland_2026, " (2027)"), check.names = FALSE)
-newtab <- data.frame(`aru.mobile_Batz.headers` = c("aru.mobile$aru.name", "aru.mobile$date", "aru.mobile$route"),
-                     Batz.headers = c("aru.name", "date", "route.name"), mobile_2027 = c("Site", "Date", "Route"),
+newtab <- data.frame(`aru.mobile_batz.headers` = c("aru.mobile$aru.name", "aru.mobile$date", "aru.mobile$route"),
+                     batz.headers = c("aru.name", "date", "route.name"), mobile_2027 = c("Site", "Date", "Route"),
                      check.names = FALSE)
 d3 <- file.path(dir.out, "data3"); dir.create(d3, recursive = TRUE, showWarnings = FALSE)
 openxlsx::write.xlsx(list(mob = data.frame(Site = c("A1", "A2"), Date = "2027-07-01", Route = "R1")),
@@ -69,20 +69,20 @@ writeLines("hello", bad)                          ; try(batz.merge_sitevisit.aco
 writeBin(as.raw(c(0xd0, 0xcf, 0x11, 0xe0)), bad) ; try(batz.merge_sitevisit.acoustics(d4, dir.save = d4)) # password / old .xls
 
 ## ---- TEST 5: consolidated GlobalID (2026-10-30) -----------------------------
-stopifnot(names(m$habitat)[match("GlobalID", names(m$habitat)) + 1] == "globalID_consolidate",
-          "globalID_consolidate" %in% names(m$service),
-          !"globalID_consolidate" %in% names(m$quad))                       # quad has no project.name
+stopifnot(names(m$habitat)[match("globalid", names(m$habitat)) + 1] == "globalid_consolidate",
+          "globalid_consolidate" %in% names(m$service),
+          "globalid_consolidate" %in% names(m$quad))                        # quad gets project.name from its habitat record (2026-10-30)
 ## one ID per site across habitat + service
-s.all <- rbind(m$habitat[, c("project.name", "aru.name", "globalID_consolidate")],
-               m$service[, c("project.name", "aru.name", "globalID_consolidate")])
-stopifnot(all(tapply(s.all$globalID_consolidate, paste(s.all$project.name, s.all$aru.name),
+s.all <- rbind(m$habitat[, c("project.name", "aru.name", "globalid_consolidate")],
+               m$service[, c("project.name", "aru.name", "globalid_consolidate")])
+stopifnot(all(tapply(s.all$globalid_consolidate, paste(s.all$project.name, s.all$aru.name),
                      function(v) length(unique(v)) == 1)))
 m5 <- batz.merge_sitevisit.acoustics(dir.data, dir.save = dir.out, header.combo = "aru.name")  # sites by aru.name only
 
 ## ---- TEST 6: project.name from the other tabs of the same file (2026-10-30) -
 q <- m$quad; h <- m$habitat
 stopifnot("project.name" %in% names(q),                                        # quad now has project.name
-          all(q$project.name == h$project.name[match(q$ParentGlobalID, h$GlobalID)], na.rm = TRUE))
+          all(q$project.name == h$project.name[match(q$parentglobalid, h$globalid)], na.rm = TRUE))
 table(q$project.name, useNA = "ifany")
 ## quad sheet with no habitat sheet in its file -> "unknown.check" + message
 f.ha <- list.files(dir.data, "HabitatAssessment.*xlsx$", full.names = TRUE, recursive = TRUE)[1]

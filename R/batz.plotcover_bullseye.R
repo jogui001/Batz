@@ -1125,6 +1125,11 @@
 #' bottom right of each panel. New \code{title.size.adjust} makes the panel
 #' titles larger or smaller (points) without changing the axis labels.
 #'
+#' \strong{Exported (2026-11-04, per Josh).} \code{batz.plotcover_bullseye()} is now
+#' exported, so it can be called directly after \code{library(Batz)}; it is
+#' still also used inside \code{batz.generate_aru.appendix()}.
+#'
+#' @export
 #' @examples
 #' \dontrun{
 #' aes.default <- read.csv("plotopts_bullseye.csv", stringsAsFactors = FALSE)
@@ -1343,7 +1348,7 @@ batz.plotcover_bullseye <- function(data, mic, aes.default, project.name = "new.
   ## no longer has any role in settings resolution, only in the saved file
   ## name (see the main loop below).
   get.default <- function(param) {
-    row.idx <- which(aes.default$parameter == param)
+    row.idx <- which(tolower(trimws(aes.default$parameter)) == tolower(param))   # 2026-11-04: case-insensitive (Yaxe.trans -> yaxe.trans)
     if (length(row.idx) == 0) return(NA_character_)
     val <- as.character(aes.default$default.value[row.idx[1]])
     if (aes.style %in% names(aes.default)) {

@@ -75,8 +75,8 @@
 #' @param regions Character vector, default \code{c("ALL", "NABAT")}. Added
 #'   2026-10-23. Only records of the \code{BAT Groupings},
 #'   \code{NABATFrequency Classes} and \code{bat.names} tables whose
-#'   \code{$Region} matches one of these are used (records marked \code{All}
-#'   are always used). A \code{$Region} cell may list several regions
+#'   \code{$region} matches one of these are used (records marked \code{All}
+#'   are always used). A \code{$region} cell may list several regions
 #'   separated by \code{;} or \code{,}; the record is used if any matches.
 #'
 #' @return A vector (if \code{data} is a vector) or data frame (if
@@ -346,7 +346,7 @@
 #'   \item The bat table is no longer embedded here: it is the shared
 #'     \code{bat.names} table (\code{bat.ref.names()},
 #'     \code{R/batz.util_bat.reference.R}), taken from Josh's edited
-#'     \code{Batz reference tables_20261023.xlsx}. It gains \code{$Region}
+#'     \code{Batz reference tables_20261023.xlsx}. It gains \code{$region}
 #'     (\code{NABAT} for species, \code{All} for category labels) and
 #'     \code{$family} (bat family, blank for category labels), so both are also
 #'     valid \code{batname.format.out} values. \code{"Multiple"}'s
@@ -368,6 +368,10 @@
 #'     record matches, a NOTE is printed and only the \code{All} records are
 #'     used.
 #' }
+#'
+#' \strong{Lower-case headers (2026-11-04, per Josh, Batz_reference_db Header.names).}
+#' The bat reference tables' \code{Region}, \code{Definition} and \code{Label}
+#' columns are now \code{region}, \code{definition} and \code{label}.
 #'
 #' @examples
 #' \dontrun{
@@ -415,11 +419,11 @@ batz.batusa_recode.names <- function(data, batname.format.out = "common_name", g
   # that used to live here was moved to the shared bat.ref.names()
   # (R/batz.util_bat.reference.R), which every bat function now uses. The
   # "BAT Groupings" and "NABATFrequency Classes" tables are checked FIRST
-  # (see recode.vec below), then the bat.names table. Only rows whose $Region
+  # (see recode.vec below), then the bat.names table. Only rows whose $region
   # matches `regions` (rows marked "All" always) are used.
   # ---------------------------------------------------------------------------
   nabat.names <- bat.ref.filter.regions(bat.ref.names(), regions)
-  if (!any(tolower(nabat.names$Region) != "all")) {
+  if (!any(tolower(nabat.names$region) != "all")) {
     cat(sprintf("NOTE: no bat.names records match regions = %s - only the \"All\" records are used.\n",
                 paste(regions, collapse = ", ")))
   }
@@ -427,7 +431,7 @@ batz.batusa_recode.names <- function(data, batname.format.out = "common_name", g
     groups = list(df = bat.ref.filter.regions(bat.ref.groups(), regions),
                   cols = c("code4", "code6", "common_name", "scientific_name")),
     freq   = list(df = bat.ref.filter.regions(bat.ref.freqclasses(), regions),
-                  cols = c("Label", "code4", "code6", "common_name", "scientific_name"))
+                  cols = c("label", "code4", "code6", "common_name", "scientific_name"))
   )
 
   # ---------------------------------------------------------------------------
@@ -481,7 +485,7 @@ batz.batusa_recode.names <- function(data, batname.format.out = "common_name", g
       cn <- df$common_name; sn <- df$scientific_name
       return(ifelse(is.na(sn) | !nzchar(sn) | tolower(sn) == tolower(cn), cn, sprintf("%s (%s)", cn, sn)))
     }
-    if (fmt %in% names(df) && fmt != "Region") return(as.character(df[[fmt]]))
+    if (fmt %in% names(df) && fmt != "region") return(as.character(df[[fmt]]))
     rep("", nrow(df))
   }
 

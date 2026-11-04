@@ -32,7 +32,7 @@
 #' @param header.combo Character, default \code{c("project.name", "aru.name")}.
 #'   Passed to \code{batz.datawrangler_consolidate.globalID()}: headers whose
 #'   unique combinations define a site (added 2026-10-30, per Josh).
-#' @param header.uniqueid Character, default \code{c("GlobalID")}. Passed to
+#' @param header.uniqueid Character, default \code{c("globalid")}. Passed to
 #'   \code{batz.datawrangler_consolidate.globalID()}: the unique-ID header.
 #' @param header.dates Character, default \code{c("date.habitat.assessment",
 #'   "date.deployment", "date")}. Passed to
@@ -52,7 +52,7 @@
 #' \strong{Internal database.} \code{Survey123.aruforms_headers.choices} (a
 #' list of data frames, one per tab) holds Josh's \code{Survey123_aruforms all headers.xlsx}: for tabs
 #' \code{quad}, \code{habitat}, \code{service}, the Batz header
-#' (\code{Batz.headers}), the tab-qualified header (\code{aru.<tab>_Batz.headers},
+#' (\code{batz.headers}), the tab-qualified header (\code{aru.<tab>_batz.headers},
 #' e.g. \code{aru.quad$aru.name}, since some tabs share a header that different
 #' functions such as \code{batz.generate_aru.appendix()} use at different
 #' times) and one column per form version (e.g. \code{forest_2026},
@@ -67,10 +67,10 @@
 #' database for this run: tabs \code{quad}, \code{habitat}, \code{service} and
 #' \code{Choices} add their versions / choices to the existing ones, and any
 #' other tab becomes a new form type (and a new tab in the output). Every
-#' header tab needs at least three columns: \code{Batz.headers},
-#' \code{aru.<tabname>_Batz.headers} (any column whose name starts with
-#' \code{aru.} and contains \code{_Batz.headers}; it is renamed to
-#' \code{aru.<tabname>_Batz.headers}) and one or more form-version
+#' header tab needs at least three columns: \code{batz.headers},
+#' \code{aru.<tabname>_batz.headers} (any column whose name starts with
+#' \code{aru.} and contains \code{_batz.headers}; it is renamed to
+#' \code{aru.<tabname>_batz.headers}) and one or more form-version
 #' columns. The tab name comes from the sheet / list-element name, else from
 #' the \code{aru.<tab>$} prefix of the tab-qualified headers. A \code{Choices}
 #' tab needs \code{list_name}, \code{name} and \code{label}. The package's own
@@ -133,10 +133,27 @@
 #' \code{batz.datawrangler_consolidate.globalID()} is run on the merged tabs
 #' with \code{header.combo}, \code{header.uniqueid} and \code{header.dates}:
 #' the GlobalID of each site's earliest record (across all tabs) is added to
-#' every record of that site as \code{$globalID_consolidate}, just after
-#' \code{$GlobalID}. A tab without all the \code{header.combo} headers (e.g.
+#' every record of that site as \code{$globalid_consolidate}, just after
+#' \code{$globalid}. A tab without all the \code{header.combo} headers (e.g.
 #' \code{quad}, which has no \code{project.name}) is left unchanged (NOTE).
 #' (Since the project-name step above, every tab has \code{project.name}.)
+#'
+#' \strong{Lower-case headers (2026-11-04, per Josh, Batz_reference_db Header.names).}
+#' Output Batz headers are lower case (e.g. \code{objectid}, \code{globalid},
+#' \code{parentglobalid}, \code{globalid_consolidate},
+#' \code{vegetation.tree_tree1.dbh}); \code{header.uniqueid} defaults to
+#' globalid; \code{form.list} columns are \code{batz.headers} /
+#' \code{aru.<tab>_batz.headers} (the old \code{Batz.headers} spellings are
+#' still accepted).
+#'
+#' \strong{Survey123 field names (2026-11-04, per Josh).} Batz headers for the
+#' Survey123 fields that had no Batz name: \code{tree.1/2/3.average.dbh} ->
+#' \code{vegetation.tree_tree1/2/3.dbh_average};
+#' \code{identify.the.species.of.the.3.saplings.closest.to.the.center.mic.point.} ->
+#' \code{vegetation.sapling_species};
+#' \code{select.any.equipment.that.needs.to.be.replaced.} -> \code{equipment.replace};
+#' \code{specify.other.equipment.} -> \code{equipment.replace_other};
+#' \code{specify.other.action.performed} -> \code{action.performed_other}.
 #'
 #' @examples
 #' \dontrun{
@@ -155,7 +172,7 @@ batz.merge_sitevisit.acoustics <- function(dir.load = getwd(),
                                            dir.save = getwd(),
                                            save.name = "mergedsurvey123.xlsx",
                                            header.combo = c("project.name", "aru.name"),
-                                           header.uniqueid = c("GlobalID"),
+                                           header.uniqueid = c("globalid"),
                                            header.dates = c("date.habitat.assessment", "date.deployment", "date")) {
 
   if (!requireNamespace("readxl", quietly = TRUE)) stop("The readxl package is needed: install.packages(\"readxl\")", call. = FALSE)
@@ -172,7 +189,7 @@ batz.merge_sitevisit.acoustics <- function(dir.load = getwd(),
   to.long <- function(db) {
     out <- list()
     for (t in setdiff(names(db), "Choices")) {
-      d <- db[[t]]; th <- tab.col(d); bh <- which(names(d) == "Batz.headers")[1]
+      d <- db[[t]]; th <- tab.col(d); bh <- which(tolower(names(d)) == "batz.headers")[1]
       for (v in setdiff(seq_along(d), c(th, bh))) {
         out[[length(out) + 1]] <- data.frame(tab = t, row = seq_len(nrow(d)), batz.header = trimws(d[[bh]]),
                                              version = names(d)[v], survey123.header = trimws(d[[v]]),
@@ -253,7 +270,7 @@ batz.merge_sitevisit.acoustics <- function(dir.load = getwd(),
     th <- tab.col(d)
     bh <- which(tolower(names(d)) == "batz.headers")[1]
     if (ncol(d) < 3 || is.na(th) || is.na(bh)) {
-      stop("form.list tab '", nm, "' needs at least three columns: Batz.headers, aru.<tabname>_Batz.headers ",
+      stop("form.list tab '", nm, "' needs at least three columns: batz.headers, aru.<tabname>_batz.headers ",
            "and one or more form-version columns.", call. = FALSE)
     }
     if (!nzchar(nm)) {                        # tab name from aru.<tab>$...
@@ -263,7 +280,7 @@ batz.merge_sitevisit.acoustics <- function(dir.load = getwd(),
     }
     d[] <- lapply(d, function(v) trimws(as.character(v)))
     d <- d[!is.blank(d[[bh]]), , drop = FALSE]
-    names(d)[th] <- paste0("aru.", nm, "_Batz.headers"); names(d)[bh] <- "Batz.headers"
+    names(d)[th] <- paste0("aru.", nm, "_batz.headers"); names(d)[bh] <- "batz.headers"
     vers <- names(d)[-c(th, bh)]
     if (!(nm %in% names(db))) {
       db[[nm]] <- d[, c(th, bh, setdiff(seq_along(d), c(th, bh))), drop = FALSE]
@@ -272,7 +289,7 @@ batz.merge_sitevisit.acoustics <- function(dir.load = getwd(),
       ## pair has come up, for headers listed twice); a version already in
       ## the database is replaced
       old <- db[[nm]]; names(old)[tab.col(old)] <- names(d)[th]
-      kc <- c(names(d)[th], "Batz.headers")
+      kc <- c(names(d)[th], "batz.headers")
       old$.k <- paste(old[[kc[1]]], old[[kc[2]]], stats::ave(seq_len(nrow(old)), old[[kc[1]]], old[[kc[2]]], FUN = seq_along))
       d$.k   <- paste(d[[kc[1]]], d[[kc[2]]], stats::ave(seq_len(nrow(d)), d[[kc[1]]], d[[kc[2]]], FUN = seq_along))
       old <- old[, setdiff(names(old), vers), drop = FALSE]
@@ -328,10 +345,10 @@ batz.merge_sitevisit.acoustics <- function(dir.load = getwd(),
       sys.keys <- c("objectid", "globalid", "parentglobalid", "creationdate", "creator", "editdate", "editor", "x", "y")
       score.src <- setdiff(unique(src[nzchar(src)]), sys.keys)
       ## score every version, plus each tab's own Batz headers
-      cand <- rbind(versions, data.frame(tab = tabs, version = "Batz.headers", stringsAsFactors = FALSE))
+      cand <- rbind(versions, data.frame(tab = tabs, version = "batz.headers", stringsAsFactors = FALSE))
       cand$matched <- vapply(seq_len(nrow(cand)), function(k) {
         h <- hdr[hdr$tab == cand$tab[k], , drop = FALSE]
-        ref <- if (cand$version[k] == "Batz.headers") c(h$batz.header, renamed$header.old[renamed$header.new %in% h$batz.header]) else
+        ref <- if (cand$version[k] == "batz.headers") c(h$batz.header, renamed$header.old[renamed$header.new %in% h$batz.header]) else
           h$survey123.header[h$version == cand$version[k]]
         sum(score.src %in% key(ref[!is.blank(ref)]))
       }, numeric(1))
@@ -345,12 +362,12 @@ batz.merge_sitevisit.acoustics <- function(dir.load = getwd(),
       }
       t <- best$tab
       h <- hdr[hdr$tab == t, , drop = FALSE]
-      if (best$version == "Batz.headers") {
+      if (best$version == "batz.headers") {
         map <- data.frame(from = h$batz.header, to = h$batz.header, stringsAsFactors = FALSE)
         old <- renamed[renamed$header.new %in% h$batz.header, , drop = FALSE]
         map <- unique(rbind(map, data.frame(from = old$header.old, to = old$header.new, stringsAsFactors = FALSE)))
         ## an already-standardized sheet keeps its own form.version if it has one
-        fv <- if ("form.version" %in% names(d)) as.character(d$form.version) else "Batz.headers"
+        fv <- if ("form.version" %in% names(d)) as.character(d$form.version) else "batz.headers"
       } else {
         h <- h[h$version == best$version & !is.blank(h$survey123.header), , drop = FALSE]
         map <- data.frame(from = h$survey123.header, to = h$batz.header, stringsAsFactors = FALSE)

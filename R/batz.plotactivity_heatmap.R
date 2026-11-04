@@ -313,6 +313,9 @@
 #' there is no \code{$strip.special} log column. Inputs without special
 #' characters behave exactly as before.
 #'
+#' \strong{Lower-case headers (2026-11-04, per Josh, Batz_reference_db Header.names).}
+#' plotopts parameters are matched ignoring case.
+#'
 #' @examples
 #' \dontrun{
 #' daily.result <- batz.plotactivity_daily.count(
@@ -420,7 +423,7 @@ batz.plotactivity_heatmap <- function(data,
   n.bins <- 1440 / bin.minutes
 
   get.default <- function(param) {
-    row.idx <- which(aes.default$parameter == param)
+    row.idx <- which(tolower(trimws(aes.default$parameter)) == tolower(param))   # 2026-11-04: case-insensitive (Yaxe.trans -> yaxe.trans)
     if (length(row.idx) == 0) return(NA_character_)
     val <- as.character(aes.default$default.value[row.idx[1]])
     if (aes.style %in% names(aes.default)) {

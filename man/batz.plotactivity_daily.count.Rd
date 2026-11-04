@@ -500,4 +500,7 @@ The call time is now also read from SM5 file names
 (\verb{<ARU>_<MIC>_<YYYYMMDD>_<HHMMSS>_<...>}) as well as SM4 ones
 (\verb{<ARU>_<YYYYMMDD>_<HHMMSS>_<...>}); SM4 names give the same result
 as before.
+
+\strong{Lower-case headers (2026-11-04, per Josh, Batz_reference_db Header.names).}
+plotopts parameters are matched ignoring case.
 }
