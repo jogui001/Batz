@@ -47,5 +47,15 @@ w5 <- batz.generate_weatherstation.data(test.data[1, ], station.max = 2, distanc
                                         date.start = "2026-07-01", date.end = "2026-07-02")
 w5$weatherstation.list[, c("site", "station.code", "sample.interval")]     # measured over the dates, <= 10
 
+## ---- TEST 6: units (2026-11-04) ----------------------------------------------
+## metric = Weather Underground's metric units (C, km/h, hPa, mm, km)
+for (u in list("metric", "imperial", "both", c("metric", "imperial"))) {
+  w6 <- batz.generate_weatherstation.data(test.data[1, ], station.max = 1, units = u,
+                                          date.start = "2026-07-01", date.end = "2026-07-01")
+  cat("\nunits =", paste(u, collapse = ", "), "\n"); print(names(w6$weatherstation.data)[-(1:8)])
+}
+## "both": temperature.c, temperature.f, dewpoint.c, dewpoint.f, humidity.percent, ...
+## c("metric", "imperial"): every metric column, then the imperial ones
+
 ## ---- save ------------------------------------------------------------------
 # write.csv(w1$weatherstation.data, "weatherstation.data.csv", row.names = FALSE)

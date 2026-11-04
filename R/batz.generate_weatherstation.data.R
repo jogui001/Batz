@@ -19,6 +19,17 @@
 #'   counts when it adds data the stations already picked don't have - an hour
 #'   (station local time) with no value yet for one of the \code{weather.type}s - even if it doesn't
 #'   record every type. Use it to fill gaps from several stations.
+#' @param units Character, default \code{"metric"}. Added 2026-11-04, per Josh.
+#'   Weather Underground gives imperial units; metric columns are converted to
+#'   the units Weather Underground itself uses for metric (°C, km/h, hPa, mm,
+#'   km). \code{"metric"}: metric columns only. \code{"imperial"}: imperial
+#'   only. \code{"both"}: each metric column with its imperial column next to
+#'   it. \code{c("metric", "imperial")}: all the metric columns, then all the
+#'   imperial ones (in the order given). Columns whose unit doesn't change
+#'   (humidity, wind direction, UV, solar, condition) appear once. Column names
+#'   are \code{name.standard_suggested.metric} /
+#'   \code{name.standard_suggested.imperial} from Josh's
+#'   \code{wunderground_headers_20261104.csv} (see Value).
 #' @param date.start,date.end Character \code{"YYYY-MM-DD"} (or Date). First and
 #'   last day downloaded (station local time).
 #'
@@ -30,9 +41,25 @@
 #'   observations: \code{$site}, \code{$station.name}, \code{$station.code},
 #'   \code{$station.area}, \code{$station.latitude}, \code{$station.longitude},
 #'   then \code{$date.time} (station local time), \code{$date.time_utc} and one
-#'   column per wunderground.com header: Temperature (°F), Dew Point (°F),
-#'   Humidity (\%), Wind (degrees), Wind Speed (mph), Wind Gust (mph), Pressure
-#'   (inHg), Precip. (in), UV, Solar (W/m²), Condition, Visibility (mi).
+#'   column per weather type (2026-11-04, named for \code{units}):
+#'   \tabular{lll}{
+#'   weather.type \tab metric \tab imperial \cr
+#'   Temperature \tab \code{temperature.c} (°C) \tab \code{temperature.f} (°F) \cr
+#'   Dew Point \tab \code{dewpoint.c} (°C) \tab \code{dewpoint.f} (°F) \cr
+#'   Humidity \tab \code{humidity.percent} \tab (same) \cr
+#'   Wind \tab \code{wind.direction.degrees} \tab (same) \cr
+#'   Wind Speed \tab \code{wind.speed.kmh} (km/h) \tab \code{wind.speed.mph} (mph) \cr
+#'   Wind Gust \tab \code{wind.gust.kmh} (km/h) \tab \code{wind.gust.mph} (mph) \cr
+#'   Pressure \tab \code{pressure.hpa} (hPa = mbar) \tab \code{pressure.inhg} (inHg) \cr
+#'   Precip. \tab \code{precipitation.mm} (mm) \tab \code{precipitation.in} (in) \cr
+#'   UV \tab \code{uv.index} \tab (same) \cr
+#'   Solar \tab \code{solar.radiation.wm2} (W/m2) \tab (same) \cr
+#'   Condition \tab \code{condition} \tab (same) \cr
+#'   Visibility \tab \code{visibility.km} (km) \tab \code{visibility.mi} (mi)
+#'   }
+#'   Visibility isn't in \code{wunderground_headers_20261104.csv}; its names
+#'   follow the same pattern. \code{weather.type} still uses the
+#'   wunderground.com names (first column).
 #'
 #' @details
 #' \strong{Which stations count.} Stations are tried nearest first. A quick
@@ -76,12 +103,16 @@ batz.generate_weatherstation.data <- function(data,
                                               api.key = Sys.getenv("WU_API_KEY"),
                                               query.max = 60,
                                               sample.interval_min = 60,
+                                              units = c("metric", "imperial", "both"),
                                               weather.type = c("Temperature", "Dew Point", "Humidity", "Wind", "Wind Speed",
                                                                "Wind Gust", "Pressure", "Precip.", "UV", "Solar"),
                                               weather.patched = FALSE,
                                               date.start = NULL,
                                               date.end = NULL) {
   FN <- "batz.generate_weatherstation.data"
+  if (missing(units)) units <- "metric"
+  units <- unique(match.arg(units, c("metric", "imperial", "both"), several.ok = TRUE))
+  if ("both" %in% units) units <- "both"
   chk <- wu.check.inputs(data, distance.max, station.max, station.type, api.key, FN, sample.interval_min)
   types.all <- c("Temperature", "Dew Point", "Humidity", "Wind", "Wind Speed", "Wind Gust", "Pressure",
                  "Precip.", "UV", "Solar", "Condition", "Visibility")
@@ -161,6 +192,7 @@ batz.generate_weatherstation.data <- function(data,
   }
   wl <- do.call(rbind, lists); rownames(wl) <- NULL
   wd <- if (length(obs) > 0) do.call(rbind, obs) else data.frame()
+  wd <- wu.units(wd, units)
   rownames(wd) <- NULL
   print(wl[, setdiff(names(wl), c("station.type", "station.id"))], row.names = FALSE)
   cat(sprintf("weatherstation.data: %d observation(s) from %d station(s).\n", nrow(wd), length(unique(wd$station.code))))
@@ -212,4 +244,49 @@ wu.download <- function(id, type, country, tz, d0, d1, api.key) {
       check.names = FALSE, stringsAsFactors = FALSE)
   }
   if (length(parts) > 0) do.call(rbind, parts) else NULL
+}
+
+#' Name the weather columns for the units, converting to metric (internal)
+#'
+#' Names from Josh's wunderground_headers_20261104.csv
+#' ($name.standard_suggested.metric / .imperial). Data arrive imperial;
+#' metric = the units Weather Underground uses for metric (°C, km/h, hPa, mm, km).
+#' Columns with no unit change (humidity, wind direction, UV, solar, condition)
+#' appear once.
+#' @noRd
+wu.units <- function(d, units) {
+  if (nrow(d) == 0) return(d)
+  num <- function(x) suppressWarnings(as.numeric(x))
+  same <- function(x) x
+  f2c <- function(x) round((num(x) - 32) * 5 / 9, 2)
+  k <- function(f, r) function(x) round(num(x) * f, r)
+  map <- list(
+    list(wu = "Temperature", metric = "temperature.c",          imperial = "temperature.f",          conv = f2c),
+    list(wu = "Dew Point",   metric = "dewpoint.c",             imperial = "dewpoint.f",             conv = f2c),
+    list(wu = "Humidity",    metric = "humidity.percent",       imperial = "humidity.percent",       conv = same),
+    list(wu = "Wind",        metric = "wind.direction.degrees", imperial = "wind.direction.degrees", conv = same),
+    list(wu = "Wind Speed",  metric = "wind.speed.kmh",         imperial = "wind.speed.mph",         conv = k(1.609344, 2)),
+    list(wu = "Wind Gust",   metric = "wind.gust.kmh",          imperial = "wind.gust.mph",          conv = k(1.609344, 2)),
+    list(wu = "Pressure",    metric = "pressure.hpa",           imperial = "pressure.inhg",          conv = k(33.8639, 1)),
+    list(wu = "Precip.",     metric = "precipitation.mm",       imperial = "precipitation.in",       conv = k(25.4, 2)),
+    list(wu = "UV",          metric = "uv.index",               imperial = "uv.index",               conv = same),
+    list(wu = "Solar",       metric = "solar.radiation.wm2",    imperial = "solar.radiation.wm2",    conv = same),
+    list(wu = "Condition",   metric = "condition",              imperial = "condition",              conv = same),
+    list(wu = "Visibility",  metric = "visibility.km",          imperial = "visibility.mi",          conv = k(1.609344, 2)))
+  base <- d[, setdiff(names(d), vapply(map, `[[`, "", "wu")), drop = FALSE]
+  col <- function(m, u) {                                   # one weather column, in unit u
+    v <- d[[m$wu]]
+    stats::setNames(data.frame(if (u == "metric") m$conv(v) else v, stringsAsFactors = FALSE), m[[u]])
+  }
+  pieces <- list()
+  if (identical(units, "both")) {                           # metric, imperial next to it
+    for (m in map) { pieces[[length(pieces) + 1]] <- col(m, "metric")
+                     if (m$imperial != m$metric) pieces[[length(pieces) + 1]] <- col(m, "imperial") }
+  } else {                                                  # one block per unit, in the order given
+    for (u in units) for (m in map) {
+      if (u != units[1] && m$imperial == m$metric) next     # unit-free columns only once
+      pieces[[length(pieces) + 1]] <- col(m, u)
+    }
+  }
+  cbind(base, do.call(cbind, pieces))
 }

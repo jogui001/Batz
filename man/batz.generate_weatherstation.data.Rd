@@ -12,6 +12,7 @@ batz.generate_weatherstation.data(
   api.key = Sys.getenv("WU_API_KEY"),
   query.max = 60,
   sample.interval_min = 60,
+  units = c("metric", "imperial", "both"),
   weather.type = c("Temperature", "Dew Point", "Humidity", "Wind", "Wind Speed",
     "Wind Gust", "Pressure", "Precip.", "UV", "Solar"),
   weather.patched = FALSE,
@@ -49,6 +50,18 @@ per Josh. The longest average time, in minutes, between a station's
 records: a station that records less often (or whose recording rate can't
 be read, e.g. not reporting) is not used and not counted (see Details).}
 
+\item{units}{Character, default \code{"metric"}. Added 2026-11-04, per Josh.
+Weather Underground gives imperial units; metric columns are converted to
+the units Weather Underground itself uses for metric (°C, km/h, hPa, mm,
+km). \code{"metric"}: metric columns only. \code{"imperial"}: imperial
+only. \code{"both"}: each metric column with its imperial column next to
+it. \code{c("metric", "imperial")}: all the metric columns, then all the
+imperial ones (in the order given). Columns whose unit doesn't change
+(humidity, wind direction, UV, solar, condition) appear once. Column names
+are \code{name.standard_suggested.metric} /
+\code{name.standard_suggested.imperial} from Josh's
+\code{wunderground_headers_20261104.csv} (see Value).}
+
 \item{weather.type}{Character, default \code{c("Temperature", "Dew Point",
   "Humidity", "Wind", "Wind Speed", "Wind Gust", "Pressure", "Precip.",
   "UV", "Solar")}. The kinds of data required (wunderground.com table
@@ -73,9 +86,25 @@ downloaded dates), and \code{$weatherstation.data} - their
 observations: \code{$site}, \code{$station.name}, \code{$station.code},
 \code{$station.area}, \code{$station.latitude}, \code{$station.longitude},
 then \code{$date.time} (station local time), \code{$date.time_utc} and one
-column per wunderground.com header: Temperature (°F), Dew Point (°F),
-Humidity (\\%), Wind (degrees), Wind Speed (mph), Wind Gust (mph), Pressure
-(inHg), Precip. (in), UV, Solar (W/m²), Condition, Visibility (mi).
+column per weather type (2026-11-04, named for \code{units}):
+\tabular{lll}{
+weather.type \tab metric \tab imperial \cr
+Temperature \tab \code{temperature.c} (°C) \tab \code{temperature.f} (°F) \cr
+Dew Point \tab \code{dewpoint.c} (°C) \tab \code{dewpoint.f} (°F) \cr
+Humidity \tab \code{humidity.percent} \tab (same) \cr
+Wind \tab \code{wind.direction.degrees} \tab (same) \cr
+Wind Speed \tab \code{wind.speed.kmh} (km/h) \tab \code{wind.speed.mph} (mph) \cr
+Wind Gust \tab \code{wind.gust.kmh} (km/h) \tab \code{wind.gust.mph} (mph) \cr
+Pressure \tab \code{pressure.hpa} (hPa = mbar) \tab \code{pressure.inhg} (inHg) \cr
+Precip. \tab \code{precipitation.mm} (mm) \tab \code{precipitation.in} (in) \cr
+UV \tab \code{uv.index} \tab (same) \cr
+Solar \tab \code{solar.radiation.wm2} (W/m2) \tab (same) \cr
+Condition \tab \code{condition} \tab (same) \cr
+Visibility \tab \code{visibility.km} (km) \tab \code{visibility.mi} (mi)
+}
+Visibility isn't in \code{wunderground_headers_20261104.csv}; its names
+follow the same pattern. \code{weather.type} still uses the
+wunderground.com names (first column).
 }
 \description{
 For each site, picks the nearest Weather Underground stations that record
