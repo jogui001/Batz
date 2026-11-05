@@ -88,7 +88,8 @@ downloaded dates), and \code{$weatherstation.data} - their
 observations: \code{$site}, \code{$station.name}, \code{$station.code},
 \code{$station.area}, \code{$station.latitude}, \code{$station.longitude},
 then \code{$date.time} (station local time), \code{$date.time_utc} and one
-column per weather type (all 12 types, named for \code{units}):
+column per weather type (all 12 types, named for \code{units}), with the
+precipitation since the previous record after the precipitation column:
 \tabular{lll}{
 weather.type \tab metric \tab imperial \cr
 Temperature \tab \code{temperature.c} (°C) \tab \code{temperature.f} (°F) \cr
@@ -99,6 +100,7 @@ Wind Speed \tab \code{wind.speed.kmh} (km/h) \tab \code{wind.speed.mph} (mph) \c
 Wind Gust \tab \code{wind.gust.kmh} (km/h) \tab \code{wind.gust.mph} (mph) \cr
 Pressure \tab \code{pressure.hpa} (hPa = mbar) \tab \code{pressure.inhg} (inHg) \cr
 Precip. \tab \code{precipitation.mm} (mm) \tab \code{precipitation.in} (in) \cr
+(from Precip.) \tab \code{precipitation.mm_interval} (mm) \tab \code{precipitation.in_interval} (in) \cr
 UV \tab \code{uv.index} \tab (same) \cr
 Solar \tab \code{solar.radiation.wm2} (W/m2) \tab (same) \cr
 Condition \tab \code{condition} \tab (same) \cr
@@ -141,7 +143,14 @@ station per day - for a PWS, Temperature/Dew Point/Humidity/Wind
 (direction)/Wind Speed are the period averages, Wind Gust/UV/Solar the
 period highs, Pressure the period high and Precip. the day's running total.
 Airports: every reported observation (usually hourly), one call per station
-per 31 days; Precip. is the hourly amount. Every API call is spaced 2
+per 31 days; Precip. is the hourly amount.
+
+\strong{Precipitation per record.} \code{$precipitation.mm_interval} (and
+\code{$precipitation.in_interval}) is the precipitation since the
+station's previous record. For a personal weather station it is the
+running total minus the previous record's total on the same local date
+(the first record of a date keeps its total; a drop in the total gives 0).
+For an airport it is the reported hourly amount. Every API call is spaced 2
 seconds apart, so a month for 10 stations takes about 10 minutes per site;
 a station listed for several sites is downloaded once.
 }

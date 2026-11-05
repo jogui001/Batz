@@ -43,7 +43,8 @@
 #'   observations: \code{$site}, \code{$station.name}, \code{$station.code},
 #'   \code{$station.area}, \code{$station.latitude}, \code{$station.longitude},
 #'   then \code{$date.time} (station local time), \code{$date.time_utc} and one
-#'   column per weather type (all 12 types, named for \code{units}):
+#'   column per weather type (all 12 types, named for \code{units}), with the
+#'   precipitation since the previous record after the precipitation column:
 #'   \tabular{lll}{
 #'   weather.type \tab metric \tab imperial \cr
 #'   Temperature \tab \code{temperature.c} (°C) \tab \code{temperature.f} (°F) \cr
@@ -54,6 +55,7 @@
 #'   Wind Gust \tab \code{wind.gust.kmh} (km/h) \tab \code{wind.gust.mph} (mph) \cr
 #'   Pressure \tab \code{pressure.hpa} (hPa = mbar) \tab \code{pressure.inhg} (inHg) \cr
 #'   Precip. \tab \code{precipitation.mm} (mm) \tab \code{precipitation.in} (in) \cr
+#'   (from Precip.) \tab \code{precipitation.mm_interval} (mm) \tab \code{precipitation.in_interval} (in) \cr
 #'   UV \tab \code{uv.index} \tab (same) \cr
 #'   Solar \tab \code{solar.radiation.wm2} (W/m2) \tab (same) \cr
 #'   Condition \tab \code{condition} \tab (same) \cr
@@ -88,7 +90,14 @@
 #' (direction)/Wind Speed are the period averages, Wind Gust/UV/Solar the
 #' period highs, Pressure the period high and Precip. the day's running total.
 #' Airports: every reported observation (usually hourly), one call per station
-#' per 31 days; Precip. is the hourly amount. Every API call is spaced 2
+#' per 31 days; Precip. is the hourly amount.
+#'
+#' \strong{Precipitation per record.} \code{$precipitation.mm_interval} (and
+#' \code{$precipitation.in_interval}) is the precipitation since the
+#' station's previous record. For a personal weather station it is the
+#' running total minus the previous record's total on the same local date
+#' (the first record of a date keeps its total; a drop in the total gives 0).
+#' For an airport it is the reported hourly amount. Every API call is spaced 2
 #' seconds apart, so a month for 10 stations takes about 10 minutes per site;
 #' a station listed for several sites is downloaded once.
 #'
@@ -189,6 +198,7 @@ batz.generate_weatherstation.data <- function(data,
         covered <- c(covered, new)
       }
       picked <- c(picked, k)
+      d <- wu.precip.interval(d, s$station.type)
       obs[[length(obs) + 1]] <- data.frame(site = site, station.name = s$station.name, station.code = s$station.code,
                                            station.area = s$station.area, station.latitude = s$station.latitude,
                                            station.longitude = s$station.longitude, d, check.names = FALSE,
@@ -280,6 +290,7 @@ wu.units <- function(d, units) {
     list(wu = "Wind Gust",   metric = "wind.gust.kmh",          imperial = "wind.gust.mph",          conv = k(1.609344, 2)),
     list(wu = "Pressure",    metric = "pressure.hpa",           imperial = "pressure.inhg",          conv = k(33.8639, 1)),
     list(wu = "Precip.",     metric = "precipitation.mm",       imperial = "precipitation.in",       conv = k(25.4, 2)),
+    list(wu = "Precip. interval", metric = "precipitation.mm_interval", imperial = "precipitation.in_interval", conv = k(25.4, 2)),
     list(wu = "UV",          metric = "uv.index",               imperial = "uv.index",               conv = same),
     list(wu = "Solar",       metric = "solar.radiation.wm2",    imperial = "solar.radiation.wm2",    conv = same),
     list(wu = "Condition",   metric = "condition",              imperial = "condition",              conv = same),
@@ -300,4 +311,40 @@ wu.units <- function(d, units) {
     }
   }
   cbind(base, do.call(cbind, pieces))
+}
+
+#' Precipitation since the previous record (internal)
+#'
+#' Adds \code{"Precip. interval"} next to \code{"Precip."} (inches, as
+#' downloaded). For a personal weather station \code{"Precip."} is the day's
+#' running total, so the interval is the total minus the previous record's
+#' total on the same local date (the first record of a date keeps its total;
+#' a drop in the total gives 0). For an airport \code{"Precip."} is already
+#' the amount for the reporting period and is copied. Records are taken in
+#' time order; a missing total gives a missing interval.
+#' @param d One station's downloaded records (\code{wu.download()} output).
+#' @param type \code{"pws"} or \code{"airport"}.
+#' @return \code{d} with the new column.
+#' @keywords internal
+#' @noRd
+wu.precip.interval <- function(d, type) {
+  if (is.null(d) || nrow(d) == 0 || !"Precip." %in% names(d)) return(d)
+  p <- suppressWarnings(as.numeric(d[["Precip."]]))
+  if (identical(type, "pws")) {
+    o <- order(d$date.time); out <- rep(NA_real_, length(p))
+    day <- substr(d$date.time[o], 1, 10); po <- p[o]
+    for (dd in unique(day)) {
+      i <- which(day == dd); prev <- NA_real_
+      for (j in i) {
+        if (is.na(po[j])) next
+        out[o[j]] <- if (is.na(prev)) po[j] else max(0, po[j] - prev)
+        prev <- po[j]
+      }
+    }
+    out <- round(out, 4)
+  } else out <- p
+  pos <- match("Precip.", names(d))
+  d <- cbind(d[seq_len(pos)], `Precip. interval` = out, d[-seq_len(pos)])
+  names(d)[pos + 1] <- "Precip. interval"
+  d
 }

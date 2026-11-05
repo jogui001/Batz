@@ -57,5 +57,21 @@ for (u in list("metric", "imperial", "both", c("metric", "imperial"))) {
 ## "both": temperature.c, temperature.f, dewpoint.c, dewpoint.f, humidity.percent, ...
 ## c("metric", "imperial"): every metric column, then the imperial ones
 
+## ---- TEST 7: precipitation since the previous record (2026-11-05) -------------
+## PWS: $precipitation.mm is the day's running total; $precipitation.mm_interval
+## is the amount since the previous record (resets at local midnight).
+## Airport: the interval column is the reported hourly amount.
+w7 <- batz.generate_weatherstation.data(test.data[1, ], station.max = 1,
+                                        date.start = "2026-06-26", date.end = "2026-06-27")
+p7 <- w7$weatherstation.data[, c("station.code", "date.time", "precipitation.mm", "precipitation.mm_interval")]
+print(head(p7[p7$precipitation.mm_interval > 0 & !is.na(p7$precipitation.mm_interval), ], 10))
+## check: per station and day, the intervals add up to the day's last running total
+p7$day <- substr(p7$date.time, 1, 10)
+chk <- do.call(rbind, lapply(split(p7, list(p7$station.code, p7$day), drop = TRUE), function(x)
+  data.frame(station.code = x$station.code[1], day = x$day[1],
+             last.total = round(utils::tail(x$precipitation.mm[!is.na(x$precipitation.mm)], 1), 2),
+             sum.interval = round(sum(x$precipitation.mm_interval, na.rm = TRUE), 2))))
+print(chk)                                    # last.total and sum.interval should match
+
 ## ---- save ------------------------------------------------------------------
 # write.csv(w1$weatherstation.data, "weatherstation.data.csv", row.names = FALSE)

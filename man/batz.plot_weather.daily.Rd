@@ -2,7 +2,7 @@
 % Please edit documentation in R/batz.plot_weather.daily.R
 \name{batz.plot_weather.daily}
 \alias{batz.plot_weather.daily}
-\title{Nightly weather plot: temperature, wind speed and precipitation}
+\title{Nightly weather plot: temperature, wind and precipitation}
 \usage{
 batz.plot_weather.daily(
   data,
@@ -13,6 +13,7 @@ batz.plot_weather.daily(
   stack.y2 = c("Wind", "Precipitation"),
   wind.ms = 4,
   temperature = 10,
+  wind.type = c("speed", "gust"),
   wind.ms_buffer = 10,
   temperature.c_buffer = 10,
   nights.auto = TRUE,
@@ -43,8 +44,11 @@ as a CSV). Required columns: \code{$date.time} (local time),
 \code{$station.latitude}, \code{$station.longitude}, a temperature
 column (\code{$temperature.c}, or \code{$temperature.f}), a wind speed
 column (\code{$wind.speed.ms}, \code{$wind.speed.kmh} or
-\code{$wind.speed.mph}) and a precipitation column
-(\code{$precipitation.mm} or \code{$precipitation.in}). Stations are told
+\code{$wind.speed.mph}; for \code{wind.type = "gust"},
+\code{$wind.gust.ms}, \code{$wind.gust.kmh} or \code{$wind.gust.mph}) and a precipitation column
+(\code{$precipitation.mm_interval}, \code{$precipitation.in_interval},
+\code{$precipitation.mm} or \code{$precipitation.in}, used in that
+order). Stations are told
 apart by \code{$station.code} (or \code{$station.name}, or the
 coordinates); \code{$site} and \code{$station.code} are used in the file
 name when present. Headers are matched ignoring case and "." / "_" /
@@ -82,6 +86,12 @@ used to choose nights.}
 (degrees C). Blank (\code{""}) means no temperature cut-off, as for
 \code{wind.ms}. With both blank, \code{nights.auto = TRUE} keeps every
 night.}
+
+\item{wind.type}{\code{"speed"} (default) or \code{"gust"}. Which wind
+reading is used for the wind line, the \code{wind.ms} cut-off, the
+wind buffer and \code{$wind.max}: \code{"speed"} uses the wind speed
+column, \code{"gust"} uses the wind gust column. The wind axis title
+says which one is drawn.}
 
 \item{wind.ms_buffer}{Numeric, default \code{10}. Minutes in the
 monitoring window that wind may be at or above \code{wind.ms} before the
@@ -150,7 +160,9 @@ zero precipitation as a blue line along 0. When both zero wind and zero
 precipitation are shown, zero wind is drawn just above the
 zero-precipitation line so both can be seen.}
 
-\item{precip.cumulative}{Logical, default \code{TRUE}. TRUE when
+\item{precip.cumulative}{Logical, default \code{TRUE}. Not used when
+\code{data} has \code{$precipitation.mm_interval} (or
+\code{$precipitation.in_interval}), which is drawn as is. TRUE when
 precipitation is a running total for the day (as Weather Underground
 station history is): each reading becomes the amount since the reading
 before it (the first reading of a day keeps its value). FALSE uses the
@@ -171,7 +183,8 @@ height is 1.9 inches per row of panels plus 1 inch.}
 Invisibly, a list: \code{$plots} (named list, one entry per
 station, each a list of ggplot objects, one per PNG), \code{$data} (the
 plotted readings, with \code{$night}, \code{$hours} from
-\code{time.start_xaxis} and the values as drawn), \code{$nights} (one
+\code{time.start_xaxis}, the wind values in m/s as \code{$wind.speed.ms}
+or \code{$wind.gust.ms} (by \code{wind.type}) and the values as drawn), \code{$nights} (one
 row per station and night: \code{$station}, \code{$aru.name},
 \code{$night}, \code{$monitoring.start}, \code{$monitoring.end},
 \code{$readings}, \code{$temperature.min}, \code{$wind.max},
@@ -181,7 +194,8 @@ station) and \code{$files}.
 }
 \description{
 Draws one panel per night for each weather station in \code{data}, with
-temperature (red line), wind speed (dark red line) and precipitation
+temperature (red line), wind speed or gust (brown line, see
+\code{wind.type}) and precipitation
 (blue bars) on the primary and secondary Y axes as set by \code{stack.y}
 and \code{stack.y2}. Horizontal black lines mark the cut-offs
 (\code{temperature} and \code{wind.ms}) and two dashed vertical lines mark

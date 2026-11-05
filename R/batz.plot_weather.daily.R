@@ -1,7 +1,8 @@
-#' Nightly weather plot: temperature, wind speed and precipitation
+#' Nightly weather plot: temperature, wind and precipitation
 #'
 #' Draws one panel per night for each weather station in \code{data}, with
-#' temperature (red line), wind speed (dark red line) and precipitation
+#' temperature (red line), wind speed or gust (brown line, see
+#' \code{wind.type}) and precipitation
 #' (blue bars) on the primary and secondary Y axes as set by \code{stack.y}
 #' and \code{stack.y2}. Horizontal black lines mark the cut-offs
 #' (\code{temperature} and \code{wind.ms}) and two dashed vertical lines mark
@@ -17,8 +18,11 @@
 #'   \code{$station.latitude}, \code{$station.longitude}, a temperature
 #'   column (\code{$temperature.c}, or \code{$temperature.f}), a wind speed
 #'   column (\code{$wind.speed.ms}, \code{$wind.speed.kmh} or
-#'   \code{$wind.speed.mph}) and a precipitation column
-#'   (\code{$precipitation.mm} or \code{$precipitation.in}). Stations are told
+#'   \code{$wind.speed.mph}; for \code{wind.type = "gust"},
+#'   \code{$wind.gust.ms}, \code{$wind.gust.kmh} or \code{$wind.gust.mph}) and a precipitation column
+#'   (\code{$precipitation.mm_interval}, \code{$precipitation.in_interval},
+#'   \code{$precipitation.mm} or \code{$precipitation.in}, used in that
+#'   order). Stations are told
 #'   apart by \code{$station.code} (or \code{$station.name}, or the
 #'   coordinates); \code{$site} and \code{$station.code} are used in the file
 #'   name when present. Headers are matched ignoring case and "." / "_" /
@@ -50,6 +54,11 @@
 #'   (degrees C). Blank (\code{""}) means no temperature cut-off, as for
 #'   \code{wind.ms}. With both blank, \code{nights.auto = TRUE} keeps every
 #'   night.
+#' @param wind.type \code{"speed"} (default) or \code{"gust"}. Which wind
+#'   reading is used for the wind line, the \code{wind.ms} cut-off, the
+#'   wind buffer and \code{$wind.max}: \code{"speed"} uses the wind speed
+#'   column, \code{"gust"} uses the wind gust column. The wind axis title
+#'   says which one is drawn.
 #' @param wind.ms_buffer Numeric, default \code{10}. Minutes in the
 #'   monitoring window that wind may be at or above \code{wind.ms} before the
 #'   night no longer counts. Blank = 0.
@@ -103,7 +112,9 @@
 #'   zero precipitation as a blue line along 0. When both zero wind and zero
 #'   precipitation are shown, zero wind is drawn just above the
 #'   zero-precipitation line so both can be seen.
-#' @param precip.cumulative Logical, default \code{TRUE}. TRUE when
+#' @param precip.cumulative Logical, default \code{TRUE}. Not used when
+#'   \code{data} has \code{$precipitation.mm_interval} (or
+#'   \code{$precipitation.in_interval}), which is drawn as is. TRUE when
 #'   precipitation is a running total for the day (as Weather Underground
 #'   station history is): each reading becomes the amount since the reading
 #'   before it (the first reading of a day keeps its value). FALSE uses the
@@ -173,7 +184,8 @@
 #' @return Invisibly, a list: \code{$plots} (named list, one entry per
 #'   station, each a list of ggplot objects, one per PNG), \code{$data} (the
 #'   plotted readings, with \code{$night}, \code{$hours} from
-#'   \code{time.start_xaxis} and the values as drawn), \code{$nights} (one
+#'   \code{time.start_xaxis}, the wind values in m/s as \code{$wind.speed.ms}
+#'   or \code{$wind.gust.ms} (by \code{wind.type}) and the values as drawn), \code{$nights} (one
 #'   row per station and night: \code{$station}, \code{$aru.name},
 #'   \code{$night}, \code{$monitoring.start}, \code{$monitoring.end},
 #'   \code{$readings}, \code{$temperature.min}, \code{$wind.max},
@@ -199,7 +211,7 @@
 #' @export
 batz.plot_weather.daily <- function(data, suntimes = NULL, date.start = NULL, date.end = NULL,
                                     stack.y = c("Temperature"), stack.y2 = c("Wind", "Precipitation"),
-                                    wind.ms = 4, temperature = 10,
+                                    wind.ms = 4, temperature = 10, wind.type = c("speed", "gust"),
                                     wind.ms_buffer = 10, temperature.c_buffer = 10,
                                     nights.auto = TRUE, nights.manual = "",
                                     panels = 8, scale.auto = TRUE,
@@ -229,6 +241,9 @@ batz.plot_weather.daily <- function(data, suntimes = NULL, date.start = NULL, da
     v
   }
   wind.absent <- absent.opt(wind.absent, "wind.absent")
+  wind.type <- tolower(trimws(as.character(wind.type)[1]))
+  if (!wind.type %in% c("speed", "gust")) stop(FN, ': wind.type must be "speed" or "gust".', call. = FALSE)
+  wind.col <- if (wind.type == "gust") "wind.gust.ms" else "wind.speed.ms"   # header of the wind values in $data
   precipitation.absent <- absent.opt(precipitation.absent, "precipitation.absent")
   t.buf <- if (blank(temperature.c_buffer)) 0 else num(temperature.c_buffer)[1]
 
@@ -296,18 +311,24 @@ batz.plot_weather.daily <- function(data, suntimes = NULL, date.start = NULL, da
   ## ---- data columns --------------------------------------------------------
   col <- list(dt = pick(data, "date.time"), lat = pick(data, "station.latitude"), lon = pick(data, "station.longitude"),
               tc = pick(data, "temperature.c"), tf = pick(data, "temperature.f"),
-              wms = pick(data, c("wind.speed.ms", "wind.speed.m.s")), wkmh = pick(data, "wind.speed.kmh"), wmph = pick(data, "wind.speed.mph"),
+              wms = pick(data, paste0("wind.", wind.type, c(".ms", ".m.s"))), wkmh = pick(data, paste0("wind.", wind.type, ".kmh")),
+              wmph = pick(data, paste0("wind.", wind.type, ".mph")),
               pmm = pick(data, "precipitation.mm"), pin = pick(data, "precipitation.in"),
+              pmmi = pick(data, "precipitation.mm_interval"), pini = pick(data, "precipitation.in_interval"),
               code = pick(data, "station.code"), name = pick(data, "station.name"), site = pick(data, "site"))
   miss <- c(if (is.na(col$dt)) "$date.time", if (is.na(col$lat)) "$station.latitude", if (is.na(col$lon)) "$station.longitude",
             if (is.na(col$tc) && is.na(col$tf)) "$temperature.c (or $temperature.f)",
-            if (all(is.na(c(col$wms, col$wkmh, col$wmph)))) "$wind.speed.ms (or $wind.speed.kmh / $wind.speed.mph)",
-            if (is.na(col$pmm) && is.na(col$pin)) "$precipitation.mm (or $precipitation.in)")
+            if (all(is.na(c(col$wms, col$wkmh, col$wmph))))
+              sprintf("$wind.%1$s.ms (or $wind.%1$s.kmh / $wind.%1$s.mph) for wind.type = \"%1$s\"", wind.type),
+            if (all(is.na(c(col$pmm, col$pin, col$pmmi, col$pini)))) "$precipitation.mm (or $precipitation.mm_interval / $precipitation.in)")
   if (length(miss)) stop(FN, ": data is missing ", paste(miss, collapse = ", "), call. = FALSE)
   w <- data.frame(dt.text = as.character(data[[col$dt]]), lat = num(data[[col$lat]]), lon = num(data[[col$lon]]), stringsAsFactors = FALSE)
   w$temperature.c <- if (!is.na(col$tc)) num(data[[col$tc]]) else (num(data[[col$tf]]) - 32) * 5 / 9
-  w$wind.speed.ms <- if (!is.na(col$wms)) num(data[[col$wms]]) else if (!is.na(col$wkmh)) num(data[[col$wkmh]]) / 3.6 else num(data[[col$wmph]]) * 0.44704
-  w$precipitation.raw <- if (!is.na(col$pmm)) num(data[[col$pmm]]) else num(data[[col$pin]]) * 25.4
+  w$wind.ms <- if (!is.na(col$wms)) num(data[[col$wms]]) else if (!is.na(col$wkmh)) num(data[[col$wkmh]]) / 3.6 else num(data[[col$wmph]]) * 0.44704
+  ## precipitation since the previous record: used as is when the data has it, otherwise worked out below
+  p.interval <- !is.na(col$pmmi) || !is.na(col$pini)
+  w$precipitation.raw <- if (!is.na(col$pmmi)) num(data[[col$pmmi]]) else if (!is.na(col$pini)) num(data[[col$pini]]) * 25.4 else
+    if (!is.na(col$pmm)) num(data[[col$pmm]]) else num(data[[col$pin]]) * 25.4
   w$site <- if (!is.na(col$site)) as.character(data[[col$site]]) else ""
   w$station.name <- if (!is.na(col$name)) as.character(data[[col$name]]) else ""
   w$station.code <- if (!is.na(col$code)) as.character(data[[col$code]]) else ""
@@ -380,7 +401,7 @@ batz.plot_weather.daily <- function(data, suntimes = NULL, date.start = NULL, da
     ws$t <- parse.dt(ws$dt.text, tz)
     if (any(is.na(ws$t))) cat(sprintf("NOTE: %s - station %s: %d row(s) with an unreadable $date.time dropped.\n", FN, lab, sum(is.na(ws$t))))
     ws <- ws[!is.na(ws$t), , drop = FALSE]; ws <- ws[order(ws$t), , drop = FALSE]
-    if (isTRUE(precip.cumulative)) {
+    if (isTRUE(precip.cumulative) && !p.interval) {
       ws$precipitation.mm <- stats::ave(ws$precipitation.raw, format(ws$t, "%Y-%m-%d"), FUN = function(p) {
         ok <- !is.na(p); if (any(ok)) p[ok] <- pmax(0, c(p[ok][1], diff(p[ok]))); p })
     } else ws$precipitation.mm <- ws$precipitation.raw
@@ -413,7 +434,7 @@ batz.plot_weather.daily <- function(data, suntimes = NULL, date.start = NULL, da
       w1 <- if (!is.na(t.end$dur)) w0 + t.end$dur * 60 else if (!is.null(t.end$sun)) sun.time(n, t.end$sun$ref) + t.end$sun$offset * 60 else at.clock(n, t.end$clock)
       if (!is.na(w0) && !is.na(w1) && w1 <= w0) w1 <- w1 + 86400
       inw <- !is.na(w0) & !is.na(w1) & ws$t >= w0 & ws$t <= w1
-      tv <- ws$temperature.c[inw]; wv <- ws$wind.speed.ms[inw]
+      tv <- ws$temperature.c[inw]; wv <- ws$wind.ms[inw]
       ## minutes each reading stands for: time to the next reading (the last uses the usual interval), at most 30 min
       tt <- ws$t[inw]
       dur <- if (length(tt)) { d <- c(as.numeric(diff(tt), units = "mins"), NA); med <- stats::median(d, na.rm = TRUE)
@@ -442,7 +463,7 @@ batz.plot_weather.daily <- function(data, suntimes = NULL, date.start = NULL, da
     win$plotted <- keep
     if (na.mode != "FALSE") {
       crit <- c(if (!is.na(temperature)) sprintf("temperature above %s C (up to %s min outside)", temperature, t.buf),
-                if (!is.na(wind.ms)) sprintf("wind below %s m/s (up to %s min outside)", wind.ms, w.buf))
+                if (!is.na(wind.ms)) sprintf("wind %s below %s m/s (up to %s min outside)", wind.type, wind.ms, w.buf))
       if (!length(crit)) cat(sprintf("NOTE: %s - station %s: no cut-offs (temperature and wind.ms blank) - every night passes nights.auto.\n", FN, lab))
       else cat(sprintf("NOTE: %s - station %s: %d of %d night(s) have %s for the whole monitoring window: %s\n",
                        FN, lab, sum(win$pass.auto), nrow(win), paste(crit, collapse = " and "),
@@ -461,7 +482,7 @@ batz.plot_weather.daily <- function(data, suntimes = NULL, date.start = NULL, da
     split.axes <- has["Temperature"] && has["Wind"] && axis.of("Temperature") != axis.of("Wind")
     ## scale.auto: the cut-offs are lined up (temp.range min level with wind.range min, temperature level with wind.ms)
     aligned <- split.axes && isTRUE(scale.auto) && !is.na(temperature) && !is.na(wind.ms)
-    tr <- as.numeric(temp.range); wr <- as.numeric(wind.range)
+    tr <- as.numeric(temp.range); wr <- as.numeric(wind.range); tr.in <- tr; wr.in <- wr
     if (aligned) {
       if (temperature <= tr[1]) stop(FN, ": temperature (", temperature, ") must be above the bottom of temp.range (", tr[1], ").", call. = FALSE)
       if (wind.ms <= wr[1]) stop(FN, ": wind.ms (", wind.ms, ") must be above the bottom of wind.range (", wr[1], ").", call. = FALSE)
@@ -473,9 +494,10 @@ batz.plot_weather.daily <- function(data, suntimes = NULL, date.start = NULL, da
         step <- if (need <= 10) 1 else if (need <= 20) 2 else 5
         wr <- c(wr[1], wr[1] + step * ceiling(need / step - 1e-9))
         tr <- c(tr[1], tr[1] + k * (wr[2] - wr[1]))
-        if (wind.given && temp.given) cat(sprintf("NOTE: %s - temp.range is kept and wind.range is changed so %s C lines up with %s m/s.\n", FN, temperature, wind.ms))
+        if (wind.given && temp.given && any(abs(wr - wr.in) > 1e-9))
+          cat(sprintf("NOTE: %s - temp.range is kept and wind.range is changed so %s C lines up with %s m/s.\n", FN, temperature, wind.ms))
       }
-      if (temp.given || wind.given)
+      if (any(abs(c(tr, wr) - c(tr.in, wr.in)) > 1e-9))
         cat(sprintf("NOTE: %s - axes: temperature %s to %s C, wind and precipitation %s to %s (%s C level with %s m/s).\n", FN,
                     format(round(tr[1], 2)), format(round(tr[2], 2)), format(round(wr[1], 2)), format(round(wr[2], 2)), temperature, wind.ms))
     }
@@ -499,7 +521,7 @@ batz.plot_weather.daily <- function(data, suntimes = NULL, date.start = NULL, da
 
     ## values as drawn (in primary-axis units)
     ws$temp.plot <- if (has["Temperature"]) to.y(clampv(ws$temperature.c, axis.of("Temperature")), axis.of("Temperature")) else NA
-    ws$wind.plot <- if (has["Wind"]) to.y(clampv(ws$wind.speed.ms, axis.of("Wind")), axis.of("Wind")) else NA
+    ws$wind.plot <- if (has["Wind"]) to.y(clampv(ws$wind.ms, axis.of("Wind")), axis.of("Wind")) else NA
     p <- ws$precipitation.mm; p[!is.na(p) & p <= 0] <- NA
     ws$precip.plot <- if (has["Precipitation"]) to.y(clampv(pmin(p, pr[2]), axis.of("Precipitation")), axis.of("Precipitation")) else NA
     ws$night.label <- format(ws$night)
@@ -509,7 +531,7 @@ batz.plot_weather.daily <- function(data, suntimes = NULL, date.start = NULL, da
 
     ## zero wind / zero precipitation ("absent")
     z.p <- if (has["Precipitation"]) to.y(clampv(0, axis.of("Precipitation")), axis.of("Precipitation")) else NA
-    w0 <- !is.na(ws$wind.speed.ms) & ws$wind.speed.ms <= 0
+    w0 <- !is.na(ws$wind.ms) & ws$wind.ms <= 0
     if (has["Wind"] && wind.absent == "hide") ws$wind.plot[w0] <- NA
     ws$precip.zero <- if (has["Precipitation"] && precipitation.absent == "show")
       ifelse(!is.na(ws$precipitation.mm) & ws$precipitation.mm <= 0, z.p, NA) else NA
@@ -534,7 +556,7 @@ batz.plot_weather.daily <- function(data, suntimes = NULL, date.start = NULL, da
     if (!is.null(cut.lines)) cut.lines <- cut.lines[!duplicated(round(cut.lines$y, 9)), , drop = FALSE]
 
     ## axis titles and breaks
-    unit.lab <- c(Temperature = "Temperature (°C)", Wind = "Wind speed (m/s)", Precipitation = "Precipitation (mm)")
+    unit.lab <- c(Temperature = "Temperature (°C)", Wind = if (wind.type == "gust") "Wind gust (m/s)" else "Wind speed (m/s)", Precipitation = "Precipitation (mm)")
     title.of <- function(v) { l <- unit.lab[v]; if (length(l) > 1) l[-1] <- paste0(tolower(substr(l[-1], 1, 1)), substring(l[-1], 2)); paste(l, collapse = " and ") }
     brks <- function(r) { b <- pretty(r, n = 6); b[b >= r[1] - 1e-9 & b <= r[2] + 1e-9] }
     xb <- seq(0, span, by = time.interval / 60)
@@ -590,8 +612,9 @@ batz.plot_weather.daily <- function(data, suntimes = NULL, date.start = NULL, da
         cat("Saved:", f, "\n"); files <- c(files, f)
       }
     }
-    all.data[[s]] <- ws[c("site", "station.name", "station.code", "night", "t", "hours", "temperature.c", "wind.speed.ms",
+    all.data[[s]] <- ws[c("site", "station.name", "station.code", "night", "t", "hours", "temperature.c", "wind.ms",
                           "precipitation.mm", "temp.plot", "wind.plot", "precip.plot")]
+    names(all.data[[s]])[names(all.data[[s]]) == "wind.ms"] <- wind.col
   }
   out.data <- if (length(all.data)) do.call(rbind, all.data) else data.frame()
   if (nrow(out.data)) { names(out.data)[names(out.data) == "t"] <- "date.time"; out.data$date.time <- format(out.data$date.time, "%Y-%m-%d %H:%M:%S") }

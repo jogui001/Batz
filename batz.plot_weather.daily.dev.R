@@ -79,3 +79,12 @@ for (wa in c("show", "hide")) for (pa in c("show", "hide")) {
   cat("wind.absent =", wa, " precipitation.absent =", pa, " ->", basename(r10$files[1]), "\n")
 }
 # both "show": the blue zero-precipitation line runs along 0 and zero wind is drawn just above it
+
+## 11. wind.type: "speed" (default) uses the wind speed column, "gust" the wind gust column
+r11s <- batz.plot_weather.daily(weather, suntimes, wind.type = "speed", project.name = "wind-speed", dir.save = dir.out)
+r11g <- batz.plot_weather.daily(weather, suntimes, wind.type = "gust",  project.name = "wind-gust",  dir.save = dir.out)
+print(cbind(r11s$nights[, c("station", "night")],
+            speed.max = round(r11s$nights$wind.max, 2), speed.pass = r11s$nights$pass.auto,
+            gust.max  = round(r11g$nights$wind.max, 2), gust.pass  = r11g$nights$pass.auto))
+stopifnot("wind.speed.ms" %in% names(r11s$data), "wind.gust.ms" %in% names(r11g$data))   # $data header follows wind.type
+# the right-hand axis title reads "Wind gust (m/s) and precipitation (mm)" on the gust plots
