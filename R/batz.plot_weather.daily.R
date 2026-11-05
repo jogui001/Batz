@@ -94,6 +94,15 @@
 #'   limits.
 #' @param wind.range Numeric, default \code{c(0, 10)}. Wind axis limits. Its
 #'   maximum is also the maximum drawn precipitation.
+#' @param wind.absent \code{"show"} (default) or \code{"hide"}. \code{"show"}
+#'   draws readings with zero wind (the wind line runs along 0);
+#'   \code{"hide"} leaves them out, so the wind line is broken where there is
+#'   no wind (a lone reading between breaks is drawn as a dot).
+#' @param precipitation.absent \code{"hide"} (default) or \code{"show"}.
+#'   \code{"hide"} draws no bar for zero precipitation; \code{"show"} draws
+#'   zero precipitation as a blue line along 0. When both zero wind and zero
+#'   precipitation are shown, zero wind is drawn just above the
+#'   zero-precipitation line so both can be seen.
 #' @param precip.cumulative Logical, default \code{TRUE}. TRUE when
 #'   precipitation is a running total for the day (as Weather Underground
 #'   station history is): each reading becomes the amount since the reading
@@ -131,8 +140,10 @@
 #' }
 #'
 #' \strong{Values outside the axes} are drawn at the axis limit, so both
-#' lines can always be seen. Precipitation of 0 (or missing) is not drawn;
-#' precipitation above the maximum is drawn at the maximum. Where readings
+#' lines can always be seen. Zero wind and zero precipitation are drawn or
+#' left out as set by \code{wind.absent} and \code{precipitation.absent};
+#' missing values are never drawn. Precipitation above the maximum is drawn
+#' at the maximum. Where readings
 #' are missing for more than 30 minutes (or three reading intervals, if
 #' longer) the lines are broken.
 #'
@@ -195,6 +206,7 @@ batz.plot_weather.daily <- function(data, suntimes = NULL, date.start = NULL, da
                                     time.start_monitoring = "-30 Sunset", time.end_monitoring = "5 hours",
                                     time.start_xaxis = "18:00", time.end_xaxis = "08:00", time.interval = 120,
                                     temp.range = c(0, 25), wind.range = c(0, 10),
+                                    wind.absent = c("show", "hide"), precipitation.absent = c("hide", "show"),
                                     precip.cumulative = TRUE, facet.ncol = 2,
                                     project.name = "", dir.save = getwd(), plot.width = 9) {
   FN <- "batz.plot_weather.daily"
@@ -211,6 +223,13 @@ batz.plot_weather.daily <- function(data, suntimes = NULL, date.start = NULL, da
   temperature <- if (blank(temperature)) NA_real_ else num(temperature)[1]
   wind.ms <- if (blank(wind.ms)) NA_real_ else num(wind.ms)[1]
   w.buf <- if (blank(wind.ms_buffer)) 0 else num(wind.ms_buffer)[1]
+  absent.opt <- function(x, nm) {
+    v <- tolower(trimws(as.character(x)[1]))
+    if (!v %in% c("show", "hide")) stop(FN, ": ", nm, ' must be "show" or "hide".', call. = FALSE)
+    v
+  }
+  wind.absent <- absent.opt(wind.absent, "wind.absent")
+  precipitation.absent <- absent.opt(precipitation.absent, "precipitation.absent")
   t.buf <- if (blank(temperature.c_buffer)) 0 else num(temperature.c_buffer)[1]
 
   ## ---- stacks ---------------------------------------------------------------
@@ -488,6 +507,19 @@ batz.plot_weather.daily <- function(data, suntimes = NULL, date.start = NULL, da
     ws <- ws[order(ws$night, ws$hours), , drop = FALSE]
     ws$grp <- paste(ws$night.label, stats::ave(ws$hours, ws$night.label, FUN = function(h) cumsum(c(TRUE, diff(h) > max(3 * bar.w, 0.5)))))
 
+    ## zero wind / zero precipitation ("absent")
+    z.p <- if (has["Precipitation"]) to.y(clampv(0, axis.of("Precipitation")), axis.of("Precipitation")) else NA
+    w0 <- !is.na(ws$wind.speed.ms) & ws$wind.speed.ms <= 0
+    if (has["Wind"] && wind.absent == "hide") ws$wind.plot[w0] <- NA
+    ws$precip.zero <- if (has["Precipitation"] && precipitation.absent == "show")
+      ifelse(!is.na(ws$precipitation.mm) & ws$precipitation.mm <= 0, z.p, NA) else NA
+    if (has["Wind"] && has["Precipitation"] && wind.absent == "show" && precipitation.absent == "show") {
+      lift <- 0.015 * diff(ry)                     # zero wind drawn just above the zero-precipitation line
+      low <- !is.na(ws$wind.plot) & ws$wind.plot >= z.p - 1e-9 & ws$wind.plot < z.p + lift
+      ws$wind.plot[low] <- z.p + lift
+    }
+    ws$wgrp <- paste(ws$grp, stats::ave(as.numeric(is.na(ws$wind.plot)), ws$grp, FUN = cumsum))
+
     ## cut-off lines
     cut.lines <- NULL
     cuts <- c(Temperature = temperature, Wind = wind.ms); cuts <- cuts[!is.na(cuts) & names(cuts) %in% c(sy, sy2)]
@@ -519,6 +551,7 @@ batz.plot_weather.daily <- function(data, suntimes = NULL, date.start = NULL, da
       d <- ws[ws$night.label %in% nn, , drop = FALSE]
       d$night.label <- factor(d$night.label, levels = nn)
       pd <- d[!is.na(d$precip.plot), , drop = FALSE]
+      pz <- d[!is.na(d$precip.zero), , drop = FALSE]
       v <- vl[vl$night.label %in% nn, , drop = FALSE]; v$night.label <- factor(v$night.label, levels = nn)
       g <- ggplot2::ggplot(d, ggplot2::aes(x = hours))
       if (!is.null(cut.lines)) for (i in seq_len(nrow(cut.lines)))
@@ -527,7 +560,15 @@ batz.plot_weather.daily <- function(data, suntimes = NULL, date.start = NULL, da
         g <- g + ggplot2::geom_rect(data = pd, ggplot2::aes(xmin = hours - bar.w / 2, xmax = hours + bar.w / 2,
                                                             ymin = to.y(clampv(0, axis.of("Precipitation")), axis.of("Precipitation")),
                                                             ymax = precip.plot), fill = "blue", colour = NA, inherit.aes = FALSE)
-      if (has["Wind"]) g <- g + ggplot2::geom_line(ggplot2::aes(y = wind.plot, group = grp), colour = "brown", linewidth = 0.5, na.rm = TRUE)
+      if (nrow(pz))
+        g <- g + ggplot2::geom_segment(data = pz, ggplot2::aes(x = hours - bar.w / 2, xend = hours + bar.w / 2, y = precip.zero, yend = precip.zero),
+                                       colour = "blue", linewidth = 0.6, inherit.aes = FALSE)
+      if (has["Wind"]) {
+        dw <- d[!is.na(d$wind.plot), , drop = FALSE]
+        one <- dw$wgrp %in% names(which(table(dw$wgrp) == 1))   # a lone reading between gaps is drawn as a dot
+        if (any(!one)) g <- g + ggplot2::geom_line(data = dw[!one, , drop = FALSE], ggplot2::aes(y = wind.plot, group = wgrp), colour = "brown", linewidth = 0.5)
+        if (any(one)) g <- g + ggplot2::geom_point(data = dw[one, , drop = FALSE], ggplot2::aes(y = wind.plot), colour = "brown", size = 0.6)
+      }
       if (has["Temperature"]) g <- g + ggplot2::geom_line(ggplot2::aes(y = temp.plot, group = grp), colour = "red", linewidth = 0.6, na.rm = TRUE)
       g <- g + ggplot2::geom_vline(data = v, ggplot2::aes(xintercept = x), linetype = "dashed", linewidth = 0.6) +
         ggplot2::facet_wrap(~night.label, ncol = facet.ncol, drop = TRUE) +

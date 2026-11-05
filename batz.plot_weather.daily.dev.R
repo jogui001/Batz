@@ -69,3 +69,13 @@ r9a <- batz.plot_weather.daily(weather, suntimes, temperature = 18, temperature.
 r9b <- batz.plot_weather.daily(weather, suntimes, temperature = 18, temperature.c_buffer = 120, dir.save = dir.out)
 print(r9a$nights[, c("station", "night", "minutes.temperature.out", "pass.auto")])
 cat("nights passing: buffer 0 =", sum(r9a$nights$pass.auto), " buffer 120 =", sum(r9b$nights$pass.auto), "\n")
+
+## 10. Zero wind / zero precipitation: show or hide
+for (wa in c("show", "hide")) for (pa in c("show", "hide")) {
+  r10 <- batz.plot_weather.daily(weather, suntimes, nights.auto = FALSE,
+                                 nights.manual = c("2026-06-25", "2026-06-30", "2026-07-02", "2026-07-03"),
+                                 wind.absent = wa, precipitation.absent = pa,
+                                 project.name = paste0("wind-", wa, "_precip-", pa), dir.save = dir.out)
+  cat("wind.absent =", wa, " precipitation.absent =", pa, " ->", basename(r10$files[1]), "\n")
+}
+# both "show": the blue zero-precipitation line runs along 0 and zero wind is drawn just above it

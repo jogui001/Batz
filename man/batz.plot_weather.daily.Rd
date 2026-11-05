@@ -26,6 +26,8 @@ batz.plot_weather.daily(
   time.interval = 120,
   temp.range = c(0, 25),
   wind.range = c(0, 10),
+  wind.absent = c("show", "hide"),
+  precipitation.absent = c("hide", "show"),
   precip.cumulative = TRUE,
   facet.ncol = 2,
   project.name = "",
@@ -137,6 +139,17 @@ limits.}
 \item{wind.range}{Numeric, default \code{c(0, 10)}. Wind axis limits. Its
 maximum is also the maximum drawn precipitation.}
 
+\item{wind.absent}{\code{"show"} (default) or \code{"hide"}. \code{"show"}
+draws readings with zero wind (the wind line runs along 0);
+\code{"hide"} leaves them out, so the wind line is broken where there is
+no wind (a lone reading between breaks is drawn as a dot).}
+
+\item{precipitation.absent}{\code{"hide"} (default) or \code{"show"}.
+\code{"hide"} draws no bar for zero precipitation; \code{"show"} draws
+zero precipitation as a blue line along 0. When both zero wind and zero
+precipitation are shown, zero wind is drawn just above the
+zero-precipitation line so both can be seen.}
+
 \item{precip.cumulative}{Logical, default \code{TRUE}. TRUE when
 precipitation is a running total for the day (as Weather Underground
 station history is): each reading becomes the amount since the reading
@@ -201,8 +214,10 @@ then \code{stack.y2}) is solid and the other dotted.
 }
 
 \strong{Values outside the axes} are drawn at the axis limit, so both
-lines can always be seen. Precipitation of 0 (or missing) is not drawn;
-precipitation above the maximum is drawn at the maximum. Where readings
+lines can always be seen. Zero wind and zero precipitation are drawn or
+left out as set by \code{wind.absent} and \code{precipitation.absent};
+missing values are never drawn. Precipitation above the maximum is drawn
+at the maximum. Where readings
 are missing for more than 30 minutes (or three reading intervals, if
 longer) the lines are broken.
 
