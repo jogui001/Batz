@@ -665,3 +665,13 @@ cat("\n\n=== empty directory (no matching files) ===\n")
 empty.dir <- tempfile(); dir.create(empty.dir)
 res4 <- batz.generate_arumeta.eventlog(empty.dir, log.file = TRUE)
 cat("aru.eventlog rows:", nrow(aru.eventlog), " filelog rows:", nrow(aru.eventlog.filelog), "\n")
+
+## ---------------------------------------------------------------------------
+## $date.time: a date with no time gets 12:00:00 (2026-11-04)
+## Check on any real run: no $date.time value should end in a space.
+## ---------------------------------------------------------------------------
+if (exists("res") && is.list(res) && !is.null(res$aru.eventlog)) {
+  dt <- res$aru.eventlog$date.time
+  cat("date.time values ending in a space (expect 0):", sum(grepl(" $", dt), na.rm = TRUE), "\n")
+  cat("date.time values set to 12:00:00 (no time given):", sum(grepl("12:00:00$", dt), na.rm = TRUE), "\n")
+}

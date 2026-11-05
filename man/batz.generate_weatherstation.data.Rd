@@ -25,14 +25,13 @@ batz.generate_weatherstation.data(
 \code{$site.latitude}, \code{$site.longitude} (decimal degrees). Headers
 are matched ignoring case and "." / "_" / spaces.}
 
-\item{distance.max}{Numeric, default \code{50} (2026-11-04, per Josh; was
-\code{interval = c(5, 10, 15, 25, 50, 100)}). How far from the site to
+\item{distance.max}{Numeric, default \code{50}. How far from the site to
 look, in km. Several distances (e.g. \code{c(5, 10, 25, 50)}) also count
-the stations within each one, as \code{interval} did.}
+the stations within each one.}
 
-\item{station.max}{Numeric, default \code{10} (2026-11-04, per Josh; was
-\code{Inf}). Stop once this many stations (nearest first) are listed for
-a site. \code{Inf} lists every station out to \code{max(distance.max)}.}
+\item{station.max}{Numeric, default \code{10}. Stop once this many stations
+(nearest first) are listed for a site. \code{Inf} lists every station out
+to \code{max(distance.max)}.}
 
 \item{station.type}{Character, default \code{c("pws", "airport")}. Which
 Weather Underground station types to include.}
@@ -45,37 +44,40 @@ to GitHub: set it once per session with
 \item{query.max}{Numeric, default \code{60}. Most station-search look-ups per
 site and station type (see Details).}
 
-\item{sample.interval_min}{Numeric, default \code{60}. Added 2026-11-04,
-per Josh. The longest average time, in minutes, between a station's
-records: a station that records less often (or whose recording rate can't
-be read, e.g. not reporting) is not used and not counted (see Details).}
+\item{sample.interval_min}{Numeric, default \code{60}. The longest average
+time, in minutes, between a station's records: a station that records less
+often (or whose recording rate can't be read, e.g. not reporting) is not
+used and not counted (see Details).}
 
-\item{units}{Character, default \code{"metric"}. Added 2026-11-04, per Josh.
-Weather Underground gives imperial units; metric columns are converted to
-the units Weather Underground itself uses for metric (°C, km/h, hPa, mm,
-km). \code{"metric"}: metric columns only. \code{"imperial"}: imperial
-only. \code{"both"}: each metric column with its imperial column next to
-it. \code{c("metric", "imperial")}: all the metric columns, then all the
+\item{units}{Character, default \code{"metric"} (when not given). Weather
+Underground gives imperial units; metric columns are converted to the
+units Weather Underground itself uses for metric (°C, km/h, hPa, mm, km).
+\code{"metric"}: metric columns only. \code{"imperial"}: imperial only.
+\code{"both"}: each metric column with its imperial column next to it.
+\code{c("metric", "imperial")}: all the metric columns, then all the
 imperial ones (in the order given). Columns whose unit doesn't change
 (humidity, wind direction, UV, solar, condition) appear once. Column names
-are \code{name.standard_suggested.metric} /
-\code{name.standard_suggested.imperial} from Josh's
+follow \code{name.standard_suggested.metric} /
+\code{name.standard_suggested.imperial} in
 \code{wunderground_headers_20261104.csv} (see Value).}
 
 \item{weather.type}{Character, default \code{c("Temperature", "Dew Point",
   "Humidity", "Wind", "Wind Speed", "Wind Gust", "Pressure", "Precip.",
   "UV", "Solar")}. The kinds of data required (wunderground.com table
-headers; \code{"Condition"} and \code{"Visibility"} - airports only - may
-also be used). A station that doesn't record all of them over the dates
-is not counted (unless \code{weather.patched = TRUE}).}
+headers, matched ignoring case; \code{"Condition"} and
+\code{"Visibility"} - airports only - may also be used). A station that
+doesn't record all of them over the dates is not counted (unless
+\code{weather.patched = TRUE}). An unknown type stops the function.}
 
 \item{weather.patched}{Logical, default \code{FALSE}. \code{TRUE}: a station
 counts when it adds data the stations already picked don't have - an hour
-(station local time) with no value yet for one of the \code{weather.type}s - even if it doesn't
-record every type. Use it to fill gaps from several stations.}
+(station local time) with no value yet for one of the
+\code{weather.type}s - even if it doesn't record every type. Use it to fill
+gaps from several stations.}
 
-\item{date.start, date.end}{Character \code{"YYYY-MM-DD"} (or Date). First and
-last day downloaded (station local time).}
+\item{date.start, date.end}{Character \code{"YYYY-MM-DD"} (or Date), default
+\code{NULL} (both are required). First and last day downloaded (station
+local time).}
 }
 \value{
 Invisibly, a list of two data frames:
@@ -86,7 +88,7 @@ downloaded dates), and \code{$weatherstation.data} - their
 observations: \code{$site}, \code{$station.name}, \code{$station.code},
 \code{$station.area}, \code{$station.latitude}, \code{$station.longitude},
 then \code{$date.time} (station local time), \code{$date.time_utc} and one
-column per weather type (2026-11-04, named for \code{units}):
+column per weather type (all 12 types, named for \code{units}):
 \tabular{lll}{
 weather.type \tab metric \tab imperial \cr
 Temperature \tab \code{temperature.c} (°C) \tab \code{temperature.f} (°F) \cr
@@ -103,8 +105,9 @@ Condition \tab \code{condition} \tab (same) \cr
 Visibility \tab \code{visibility.km} (km) \tab \code{visibility.mi} (mi)
 }
 Visibility isn't in \code{wunderground_headers_20261104.csv}; its names
-follow the same pattern. \code{weather.type} still uses the
-wunderground.com names (first column).
+follow the same pattern. \code{weather.type} uses the wunderground.com
+names (first column). The list is printed (without \code{$station.type}
+and \code{$station.id}), with the number of observations.
 }
 \description{
 For each site, picks the nearest Weather Underground stations that record
@@ -112,30 +115,35 @@ every \code{weather.type} (or, with \code{weather.patched = TRUE}, that add
 data the stations already picked are missing) at least every
 \code{sample.interval_min} minutes, up to \code{station.max} stations
 within \code{distance.max} km, and downloads their observations
-from \code{date.start} to \code{date.end}. Built 2026-11-04, per Josh
-(replaces the paused \code{wunderground_download.R} script).
+from \code{date.start} to \code{date.end}.
 }
 \details{
 \strong{Which stations count.} Stations are tried nearest first. A quick
 check of the station's current data types (see
 \code{batz.generate_weatherstation.list()}) skips one that clearly lacks a
-\code{weather.type} or records less often than \code{sample.interval_min};
-the rest are downloaded and checked over the requested dates: a type counts
+\code{weather.type} (with \code{weather.patched = TRUE}: lacks all of them),
+is not reporting, or records less often than \code{sample.interval_min}.
+The rest are downloaded and checked over the requested dates: a type counts
 when it has at least one value, and the average minutes between records
 over the dates (\code{$sample.interval}) must be at most
-\code{sample.interval_min} (2026-11-04, per Josh). Each skipped station is
-listed in a NOTE with the reason. Airports have no Solar (and seldom UV), so
-with the default \code{weather.type} only personal weather stations
-qualify.
+\code{sample.interval_min}. Each skipped station is listed in a NOTE with
+the reason, and a NOTE is printed when fewer than \code{station.max}
+stations were found. Airports have no Solar (and seldom UV), so with the
+default \code{weather.type} only personal weather stations qualify.
+
+\strong{Patching.} With \code{weather.patched = TRUE}, a station is picked
+only if it adds at least one new (hour, type) pair. Once every hour of the
+dates has every \code{weather.type}, no more stations are tried.
 
 \strong{What is downloaded.} Personal weather stations: every observation
 (usually 5-minute) from the wunderground.com history, one API call per
-station per day - for a PWS, Temperature/Dew Point/Humidity/Wind Speed are
-the period averages, Wind Gust/UV/Solar the period highs, Pressure the
-period high and Precip. the day's running total. Airports: every reported
-observation (usually hourly), one call per station per 31 days. Every API
-call is spaced 2 seconds apart, so a month for 10 stations takes about 10
-minutes per site; a station listed for several sites is downloaded once.
+station per day - for a PWS, Temperature/Dew Point/Humidity/Wind
+(direction)/Wind Speed are the period averages, Wind Gust/UV/Solar the
+period highs, Pressure the period high and Precip. the day's running total.
+Airports: every reported observation (usually hourly), one call per station
+per 31 days; Precip. is the hourly amount. Every API call is spaced 2
+seconds apart, so a month for 10 stations takes about 10 minutes per site;
+a station listed for several sites is downloaded once.
 }
 \examples{
 \dontrun{
@@ -149,4 +157,7 @@ w$weatherstation.list
 head(w$weatherstation.data)
 }
 
+}
+\seealso{
+\code{\link{batz.generate_weatherstation.list}}
 }

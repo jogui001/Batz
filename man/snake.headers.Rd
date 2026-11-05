@@ -13,14 +13,13 @@ snake.headers(x)
 \code{x} with every \code{"."} replaced by \code{"_"}.
 }
 \description{
-Added 2026-10-30, per Josh: \code{$name.snake} in the Batz reference db
-(tab \code{Header.names}) is \code{$name.standard} with every \code{"."}
-replaced by \code{"_"} - nothing else changes (case, existing
-underscores and other characters are kept). Used by every \code{batz}
-function's \code{snake_case = TRUE} output option.
-\code{standardize.headers()} is still used to MATCH incoming raw headers
-(it also lowercases and turns spaces/punctuation into \code{"_"}), but
-no longer to name output columns.
+Replaces every \code{"."} in a header name with \code{"_"}. Nothing else
+changes: case, existing underscores and other characters are kept. This is
+how \code{$name.snake} in the Batz reference tables (tab
+\code{Header.names}) is derived from \code{$name.standard}, and it is used
+for the \code{snake_case = TRUE} output option of \code{batz} functions.
+To match raw incoming headers use \code{\link{standardize.headers}}
+instead (it also lower-cases and replaces spaces and punctuation).
 }
 \examples{
 \dontrun{

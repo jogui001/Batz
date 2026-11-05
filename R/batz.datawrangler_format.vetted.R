@@ -1,44 +1,43 @@
 #' Tidy a vetted acoustic detection file before it goes into other batz functions
 #'
-#' Applies the clean-up steps done by hand on the Amboseli/NKRCP vetted
-#' files: lower-case headers, rename the site and manual-ID columns to
-#' \code{$aru.name} and \code{$species}, recode ARU names, add a
-#' \code{$community} column (taken from the letters at the start of each
-#' ARU name) and a \code{$project} column, and force the sign of the
-#' latitude/longitude (e.g. all latitudes south of the equator). Each step
-#' can be switched off. Returns the tidied data frame and, by default,
-#' writes it to a CSV.
+#' Applies the usual clean-up steps for vetted detection files: lower-case
+#' headers, rename the site and manual-ID columns to \code{$aru.name} and
+#' \code{$species}, recode ARU names, add a \code{$community} column (taken
+#' from the letters at the start of each ARU name) and a \code{$project}
+#' column, and force the sign of the latitude/longitude (e.g. all latitudes
+#' south of the equator). Each step can be switched off. Returns the tidied
+#' data frame and, by default, writes it to a CSV.
 #'
 #' @param data Data frame of vetted detections, one row per recording.
 #' @param headers.lower Logical, default \code{TRUE}. Lower-case every
-#'   header (spaces and punctuation are kept, e.g. \code{"DATE-12"} ->
-#'   \code{"date-12"}, \code{"IN FILE"} -> \code{"in file"}).
+#'   header (spaces and punctuation are kept, e.g. \code{"DATE-12"} becomes
+#'   \code{"date-12"}, \code{"IN FILE"} becomes \code{"in file"}).
 #' @param headers.rename Named character vector, default
 #'   \code{c("site" = "aru.name", "manual id" = "species")}: old header =
 #'   new header. Old headers are matched ignoring case, spaces and
 #'   punctuation (\code{"MANUAL ID"}, \code{"Manual_ID"} and
 #'   \code{"manual.id"} all match \code{"manual id"}). A rename is skipped,
 #'   with a NOTE, when the new header already exists. \code{NULL} = no
-#'   renaming.
-#' @param aru.recode Optional data frame for recoding ARU names: column 1 =
-#'   name in the file, column 2 = new name (read by position, like
-#'   \code{\link{batz.datawrangler_rename}}). Matching ignores case and
-#'   outer spaces. Default \code{NULL} = no recoding.
+#'   renaming. Duplicate headers after renaming stop the function.
+#' @param aru.recode Data frame, default \code{NULL} (no recoding). Recodes
+#'   ARU names: column 1 = name in the file, column 2 = new name (read by
+#'   position, like \code{\link{batz.datawrangler_rename}}). Matching ignores
+#'   case and outer spaces.
 #' @param community.add Logical, default \code{TRUE}. Fill \code{$community}
 #'   from \code{$aru.name} (see \code{community.pattern},
 #'   \code{community.suffix.drop}, \code{community.recode}).
 #' @param community.pattern Character, default \code{"^[A-Za-z]+"}. Regular
 #'   expression for the part of \code{$aru.name} that is the community
 #'   code - by default the letters before the first digit or other
-#'   character (\code{"OLMN3"} -> \code{"OLMN"}, \code{"ES902"} ->
+#'   character (\code{"OLMN3"} gives \code{"OLMN"}, \code{"ES902"} gives
 #'   \code{"ES"}).
 #' @param community.suffix.drop Character vector, default \code{"BC"}.
-#'   Endings removed from the community code, so base-camp ARUs join their
-#'   community (\code{"KABC_06"} -> \code{"KABC"} -> \code{"KA"}). Use
-#'   \code{character(0)} to keep them separate.
-#' @param community.recode Optional data frame, column 1 = community code as
-#'   derived, column 2 = community to use (by position). Applied after
-#'   \code{community.suffix.drop}. Default \code{NULL}.
+#'   Endings removed from the community code (case ignored), so base-camp
+#'   ARUs join their community (\code{"KABC_06"} gives \code{"KABC"}, then
+#'   \code{"KA"}). Use \code{character(0)} to keep them separate.
+#' @param community.recode Data frame, default \code{NULL}. Column 1 =
+#'   community code as derived, column 2 = community to use (by position,
+#'   case ignored). Applied after \code{community.suffix.drop}.
 #' @param community.overwrite Logical, default \code{FALSE}. \code{FALSE}
 #'   only fills blank \code{$community} values (or creates the column);
 #'   \code{TRUE} replaces every value.
@@ -49,58 +48,56 @@
 #'   makes every latitude negative, \code{"north"} positive, \code{"asis"}
 #'   leaves them. The column is found as \code{$latitude} or \code{$lat}.
 #' @param longitude.sign Character, default \code{"asis"}. \code{"west"}
-#'   makes every longitude negative, \code{"east"} positive. Found as
-#'   \code{$longitude}, \code{$long} or \code{$lon}.
+#'   makes every longitude negative, \code{"east"} positive, \code{"asis"}
+#'   leaves them. Found as \code{$longitude}, \code{$long} or \code{$lon}.
 #' @param duplicates.remove Logical, default \code{FALSE}. \code{TRUE}
 #'   drops exact duplicate rows (reported). Off by default so the tidied
 #'   file keeps every record; \code{\link{batz.generate_plotframe.bat.group}}
 #'   and \code{\link{batz.plot_heat.site.species}} remove duplicates
 #'   themselves.
-#' @param dir.save Directory the CSV is written to. Default \code{getwd()}.
+#' @param dir.save Character, default \code{getwd()}. Folder the CSV is
+#'   written to (created if needed).
 #' @param write.output Logical, default \code{TRUE}. Write the result as
 #'   \verb{<project.name>_vetted.format_<DATE1>to<DATE2>_<timestamp>.csv}
-#'   (dates = first/last value of \code{$date-12}/\code{$date.monitoringnight}
-#'   when one of them exists, otherwise \code{nodata}; timestamp =
-#'   \code{YYYYMMDDHHMMSS}). The saved name is printed.
+#'   (dates = earliest/latest value of \code{$date-12} or, failing that,
+#'   \code{$date.monitoringnight}, read as \code{m/d/Y}, \code{Y-m-d},
+#'   \code{m/d/y} or \code{Y/m/d}; \code{nodata} when there is no such
+#'   column or the dates can't be read; timestamp = \code{YYYYMMDDHHMMSS}).
+#'   The saved name is printed.
 #' @param project.name Character, default \code{""}: start of the file
 #'   name. \code{""} uses \code{project} if given, otherwise \code{"vetted"}.
-#' @param snake_case Logical, default \code{FALSE}. \code{TRUE} converts
-#'   every output header to snake_case with \code{standardize.headers()}
-#'   (\code{"date-12"} -> \code{"date_12"}, \code{"aru.name"} ->
-#'   \code{"aru_name"}).
-#'   \strong{2026-10-30, per Josh:} snake_case now replaces every \code{"."}
-#'   with \code{"_"} and changes nothing else (\code{snake.headers()}), so
-#'   \code{"aru.name"} -> \code{"aru_name"} and \code{"GlobalID"} stays
-#'   \code{"GlobalID"} - matching \code{$name.snake} in the Batz reference db.
+#' @param snake_case Logical, default \code{FALSE}. \code{TRUE} replaces every
+#'   \code{"."} in the output headers with \code{"_"} and changes nothing else
+#'   (\code{snake.headers()}), so \code{"aru.name"} becomes \code{"aru_name"}
+#'   and \code{"date-12"} stays \code{"date-12"}.
 #' @param strip.special Logical, default \code{TRUE}. Simplifies accented
-#'   letters and removes other non-ASCII characters (headers and values),
-#'   same as every other \code{batz} function.
+#'   letters and removes other non-ASCII characters (headers and values).
 #'
 #' @return The tidied data frame. Columns are those of \code{data}, renamed
-#'   as above, plus \code{$community} and \code{$project} when added
-#'   (placed straight after \code{$species}, as in the hand-cleaned files;
-#'   at the end if there is no \code{$species}). A one-row-per-step summary is attached as
-#'   \code{attr(result, "format.log")} with columns \code{$step},
-#'   \code{$rows.changed}, \code{$note}.
+#'   as above, plus \code{$community} (placed straight after \code{$species})
+#'   and \code{$project} (straight after \code{$community}, else
+#'   \code{$species}) when added; at the end if there is no such column. A
+#'   one-row-per-step summary is attached as \code{attr(result,
+#'   "format.log")} with columns \code{$step}, \code{$rows.changed},
+#'   \code{$note}; each entry is also printed. With \code{write.output =
+#'   TRUE} the data frame is also saved as a CSV (without the log).
 #'
 #' @details
-#' \strong{Added 2026-10-21, per Josh}, to turn the 2026-10-14 hand
-#' clean-up of \code{Complete_Acoustic_Amboseli_Bat_Survey_SKvetted.csv}
-#' into a reusable function. The rules were taken from the cleaned files
-#' themselves (\code{South_North_combined_vetted_1.csv}): every
-#' \code{$community} is the letters at the start of \code{$aru.name}, with
-#' the base-camp \code{"BC"} ending removed (\code{ILBC_08} -> \code{IL},
-#' \code{KABC_06} -> \code{KA}, \code{MEBC_09} -> \code{ME},
-#' \code{WGBC_07} -> \code{WG}); South-project latitudes are negative,
-#' North-project latitudes positive. The original Basecamp ARU names
-#' before recoding are not in those files, so the recode table is an input
-#' (\code{aru.recode}) rather than built in.
-#'
 #' Steps run in this order: special characters, lower-case headers,
 #' header renames, duplicate removal, ARU recode, community, project,
 #' latitude/longitude sign, snake_case, write. A step that needs a column
 #' the data doesn't have (e.g. \code{$aru.name} for the community step) is
 #' skipped with a NOTE rather than stopping the run.
+#'
+#' \strong{Community.} By default every \code{$community} is the letters at
+#' the start of \code{$aru.name}, with the base-camp \code{"BC"} ending
+#' removed (\code{ILBC_08} gives \code{IL}, \code{KABC_06} gives \code{KA}).
+#' Records whose \code{$aru.name} doesn't match \code{community.pattern} get
+#' no community (NOTE). Base-camp ARU names that need recoding first (e.g.
+#' \code{"Basecamp 6"}) are handled with \code{aru.recode}.
+#'
+#' \strong{Coordinates.} Only the sign is changed. Non-numeric values in the
+#' latitude/longitude column become \code{NA} (the count is in the log).
 #'
 #' @examples
 #' \dontrun{

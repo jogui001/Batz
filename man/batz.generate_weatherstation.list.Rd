@@ -19,14 +19,13 @@ batz.generate_weatherstation.list(
 \code{$site.latitude}, \code{$site.longitude} (decimal degrees). Headers
 are matched ignoring case and "." / "_" / spaces.}
 
-\item{distance.max}{Numeric, default \code{50} (2026-11-04, per Josh; was
-\code{interval = c(5, 10, 15, 25, 50, 100)}). How far from the site to
+\item{distance.max}{Numeric, default \code{50}. How far from the site to
 look, in km. Several distances (e.g. \code{c(5, 10, 25, 50)}) also count
-the stations within each one, as \code{interval} did.}
+the stations within each one.}
 
-\item{station.max}{Numeric, default \code{10} (2026-11-04, per Josh; was
-\code{Inf}). Stop once this many stations (nearest first) are listed for
-a site. \code{Inf} lists every station out to \code{max(distance.max)}.}
+\item{station.max}{Numeric, default \code{10}. Stop once this many stations
+(nearest first) are listed for a site. \code{Inf} lists every station out
+to \code{max(distance.max)}.}
 
 \item{station.type}{Character, default \code{c("pws", "airport")}. Which
 Weather Underground station types to include.}
@@ -39,21 +38,20 @@ to GitHub: set it once per session with
 \item{query.max}{Numeric, default \code{60}. Most station-search look-ups per
 site and station type (see Details).}
 
-\item{sample.interval_min}{Numeric, default \code{60}. Added 2026-11-04,
-per Josh. The longest average time, in minutes, between a station's
-records: a station that records less often (or whose recording rate can't
-be read, e.g. not reporting) is not used and not counted (see Details).}
+\item{sample.interval_min}{Numeric, default \code{60}. The longest average
+time, in minutes, between a station's records: a station that records less
+often (or whose recording rate can't be read, e.g. not reporting) is not
+used and not counted (see Details).}
 }
 \value{
 Invisibly, a data frame with one row per station (closest first):
 \code{$site}, \code{$site.latitude}, \code{$site.longitude},
 \code{$distance.max} (the smallest \code{distance.max} the station falls
-within - was \code{$interval} before 2026-11-04),
-\code{$station.total} (number of stations within that distance),
-\code{$station.distance} (km), \code{$station.latitude},
+within), \code{$station.total} (number of stations within that distance),
+\code{$station.distance} (km, 2 decimals), \code{$station.latitude},
 \code{$station.longitude}, \code{$station.name}, \code{$station.code},
 \code{$station.area}, \code{$sample.interval} (average minutes between
-records, 2026-11-04), \code{$station.datatypes}, \code{$station.type},
+records), \code{$station.datatypes}, \code{$station.type},
 \code{$station.id}. A distance with no new stations gets one row with
 blank station columns, so every distance's total is shown. All but
 \code{$station.type} and \code{$station.id} are printed.
@@ -65,18 +63,16 @@ stations (PWS) and airports - within \code{distance.max} km, up to
 \code{station.max} stations that record at least every
 \code{sample.interval_min} minutes, and prints one row per station. No weather
 data is downloaded (see \code{\link{batz.generate_weatherstation.data}}).
-Built 2026-11-03, per Josh.
 }
 \details{
-\strong{Station names (2026-11-04, per Josh).} For a PWS,
-\code{$station.name} is the name its owner gave it (e.g. "Ocean Avenue
-Station"), \code{$station.code} is its hardware/software and ID as on the
-wunderground.com dashboard (e.g. "FB28 - KMEPORTL81"), and
-\code{$station.area} is the place it is in (e.g. "Portland" - this was
-\code{$station.name} before 2026-11-04). For an airport,
-\code{$station.name} is the airport name, \code{$station.code} its ICAO code
-(e.g. "KPWM") and \code{$station.area} is blank. A PWS that isn't currently
-reporting has no name or hardware to read: \code{$station.code} is its ID.
+\strong{Station names.} For a PWS, \code{$station.name} is the name its
+owner gave it (e.g. "Ocean Avenue Station"), \code{$station.code} is its
+hardware/software and ID as on the wunderground.com dashboard (e.g. "FB28 -
+KMEPORTL81"), and \code{$station.area} is the place it is in (e.g.
+"Portland"). For an airport, \code{$station.name} is the airport name,
+\code{$station.code} its ICAO code (e.g. "KPWM") and \code{$station.area} is
+blank. A PWS that isn't currently reporting has no name or hardware to read:
+\code{$station.code} is its ID.
 
 \strong{How stations are found.} The weather.com "location near" service
 returns only the 10 stations nearest a point. So the area around each site
@@ -91,30 +87,28 @@ seconds apart (the API allows about 30 per minute).
 and prints a NOTE giving the distance up to which the list is complete;
 totals for distances beyond it are minimums.
 
-\strong{Data types (2026-11-03, per Josh).} \code{$station.datatypes} lists
-what the station recorded, using the wunderground.com table headers:
-Temperature, Dew Point, Humidity, Wind (direction), Wind Speed, Wind Gust,
-Pressure, Precip., UV, Solar, Condition, Visibility. A PWS is checked from
-its current observation: a sensor it doesn't have comes back blank (a
-reading of 0, e.g. no rain, still counts). An airport is checked over
-yesterday's observations: a value counts when it was recorded at least
-once. A station with nothing to report gets \code{"not reporting"}. Each
-station is looked up once, even when it is listed for several sites. The
-\code{datatypes} argument (2026-11-03) was removed 2026-11-04: the same
-look-up now also gives the station name and code.
+\strong{Data types.} \code{$station.datatypes} lists what the station
+recorded, using the wunderground.com table headers: Temperature, Dew Point,
+Humidity, Wind (direction), Wind Speed, Wind Gust, Pressure, Precip., UV,
+Solar, Condition, Visibility. A PWS is checked from its current
+observation: a sensor it doesn't have comes back blank (a reading of 0, e.g.
+no rain, still counts). An airport is checked over yesterday's
+observations: a value counts when it was recorded at least once. A station
+with nothing to report gets \code{"not reporting"}. Each station is looked
+up once, even when it is listed for several sites.
 
-\strong{Recording rate (2026-11-04, per Josh).} \code{$sample.interval} is
-the average number of minutes between a station's records (time from the
-first to the last record, divided by the number of gaps), so gaps when the
-station was off raise it. Here it is read from the station's last 24 hours
-of records (a PWS) or yesterday's observations (an airport). Stations are
-tried nearest first, and one with \code{$sample.interval} above
-\code{sample.interval_min} is skipped (NOTE). Most PWS record every 5
-minutes; airports about hourly (a little more often when the weather
-changes).
+\strong{Recording rate.} \code{$sample.interval} is the average number of
+minutes between a station's records (time from the first to the last
+record, divided by the number of gaps), so gaps when the station was off
+raise it. It is read from the station's last 24 hours of records (a PWS) or
+yesterday's observations (an airport). Stations are tried nearest first, and
+one with \code{$sample.interval} above \code{sample.interval_min} (or unknown)
+is skipped and listed in a NOTE. Most PWS record every 5 minutes; airports
+about hourly (a little more often when the weather changes).
 
 \strong{Coordinates.} A NOTE is printed for a site whose latitude is south
-of -60 (Antarctica) - usually latitude and longitude swapped.
+of -60 (Antarctica) - usually latitude and longitude swapped. Unreadable or
+out-of-range coordinates stop the function.
 }
 \examples{
 \dontrun{
@@ -126,4 +120,7 @@ batz.generate_weatherstation.list(test.data, distance.max = c(5, 10, 15, 25, 50)
 batz.generate_weatherstation.list(test.data, station.max = 25)
 }
 
+}
+\seealso{
+\code{\link{batz.generate_weatherstation.data}}
 }

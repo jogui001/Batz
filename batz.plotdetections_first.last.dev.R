@@ -955,3 +955,32 @@ if (requireNamespace("ggplot2", quietly = TRUE)) {
 }
 
 cat("\n\n########## ALL TESTS COMPLETED ##########\n")
+
+## ---------------------------------------------------------------------------
+## $myso = TRUE: Indiana bat facet, or MYLU + MYSO pooled as LUSO (2026-11-04)
+## Uses the installed Batz package (library(Batz)) and synthetic data.
+## ---------------------------------------------------------------------------
+dates <- seq(as.Date("2026-07-01"), as.Date("2026-07-05"), by = "day")
+mk <- function(spp) do.call(rbind, lapply(spp, function(s) data.frame(spp.id = s, date = format(dates), group = "A1",
+  observations.count = 3, mins2.noon.min = 500, mins2.noon.max = 900, vetting.type = "bat.detection")))
+st <- data.frame(aru.name = "A1", date = format(dates), date.monitoringnight = format(dates), sunregion = "x",
+  time.zone = "America/New_York", sunregion.type = "fixed.unique", schedule1 = "", schedule2 = "", sunset = "20:20",
+  sunset.unix = 0, sunrise = "05:10", sunrise.unix = 0, sunrise.monitoringnight = "05:11", sunrise.monitoringnight.unix = 0)
+fl.luso <- function(type, facet.set) data.frame(plot.type = type, plot.name = paste("luso", facet.set), facet.header = "sppid",
+  facet.plot = TRUE, facet.set = facet.set, myso = TRUE, all.detections = FALSE, `40khzmyo` = FALSE, facet.label = "code4",
+  plot.set = "A1", pool = FALSE, date.format = "%b-%d", date.start = "2026-07-01", date.end = "2026-07-05",
+  xaxe.interval = "1 day", xaxe.title = "Date", check.names = FALSE)
+facets.of <- function(r) unique(as.character(r$ggplots[[1]]$data$facet.panel.value))
+aes.fl <- read.csv("plotopts_first.last.csv", stringsAsFactors = FALSE, check.names = FALSE)
+r.luso <- batz.plotdetections_first.last(mk(c("MYLU", "MYSO", "EPFU")), fl.luso("bat.detection", "MYLU;EPFU"), st, aes.fl, dir.save = tempdir())
+cat("MYLU present -> facets (expect LUSO, epfu):", facets.of(r.luso), "\n")
+r.myso <- batz.plotdetections_first.last(mk(c("MYSO", "EPFU")), fl.luso("bat.detection", "EPFU"), st, aes.fl, dir.save = tempdir())
+cat("no MYLU -> facets (expect epfu, myso):", facets.of(r.myso), "\n")
+
+## ---------------------------------------------------------------------------
+## plotopts names matched ignoring case/spaces; project.name starts the file name (2026-11-04)
+## ---------------------------------------------------------------------------
+aes.case <- aes.fl; aes.case$parameter <- paste0(" ", toupper(aes.case$parameter), " ")
+dir.pn <- file.path(tempdir(), "project_name_test"); dir.create(dir.pn, showWarnings = FALSE)
+r.pn <- batz.plotdetections_first.last(mk("EPFU"), fl.luso("bat.detection", "EPFU"), st, aes.case, project.name = "SevenIslands", dir.save = dir.pn)
+cat("saved (expect SevenIslands_...png):", list.files(dir.pn), "\n")

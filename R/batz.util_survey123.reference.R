@@ -1,26 +1,25 @@
 #' Survey123 reference tables (internal)
 #'
-#' Added 2026-10-27, per Josh, for \code{\link{batz.generate_aru.appendix}}.
-#' Taken from Josh's \code{Header conversion and outputs.xlsx}; the master
-#' copy is the \code{survey123.headers} / \code{survey123.choices} tabs of the
-#' Batz reference tables workbook in MAMM-Batz Package/8reference tables.
+#' Header and choice tables for the Survey123 ARU forms, used by
+#' \code{\link{batz.generate_aru.appendix}} (and \code{survey123.ref.renamed()}
+#' also by \code{\link{batz.merge_sitevisit.acoustics}}). The master copy is
+#' the \code{survey123.headers} / \code{survey123.choices} tabs of the Batz
+#' reference tables workbook.
 #' \describe{
 #'   \item{\code{survey123.ref.headers()}}{tabs \code{quad}, \code{deploy},
 #'     \code{service}: \code{$tab}, \code{$batz.header} (the Batz column
-#'     name) and \code{$survey123.header} (the Survey123 export header).
-#'     Leading/trailing spaces were trimmed (e.g. \code{"quadrant "}).}
+#'     name, lower case with "." for spaces, e.g. \code{globalid}) and
+#'     \code{$survey123.header} (the Survey123 export header, as the form
+#'     writes it).}
 #'   \item{\code{survey123.ref.choices()}}{tab \code{Choices}:
 #'     \code{$list.name}, \code{$name} (the stored code) and \code{$label}
-#'     (what the form shows). Exact duplicate list.name/name rows removed.}
-#'   \item{\code{survey123.ref.renamed()}}{added 2026-10-28, per Josh (2026-10-29:
-#'     plus \code{measurment.units} and \code{microphone.callibration_value}): Batz
-#'     headers whose spelling was corrected - \code{$header.old} (the earlier
-#'     spelling, still accepted on load) and \code{$header.new}.}
+#'     (what the form shows); no duplicate \code{list.name}/\code{name} rows.}
+#'   \item{\code{survey123.ref.renamed()}}{Batz headers whose spelling was
+#'     corrected: \code{$header.old} (misspelled header, still accepted on
+#'     load, e.g. \code{measurment.units}) and \code{$header.new} (the
+#'     header it is read as, e.g. \code{measurement.units}).}
 #' }
 #'
-#' \strong{Lower-case headers (2026-11-04, per Josh, Batz_reference_db Header.names).}
-#' \code{$batz.header} values are lower case with "." for spaces (e.g. \code{GlobalID} ->
-#' \code{globalid}); the Survey123 headers are unchanged.
 #' @keywords internal
 #' @noRd
 survey123.ref.headers <- function() {
@@ -247,12 +246,3 @@ survey123.ref.renamed <- function() {
     stringsAsFactors = FALSE)
 }
 
-#'
-#' \strong{Survey123 field names (2026-11-04, per Josh).} Batz headers for the
-#' Survey123 fields that had no Batz name: \code{tree.1/2/3.average.dbh} ->
-#' \code{vegetation.tree_tree1/2/3.dbh_average};
-#' \code{identify.the.species.of.the.3.saplings.closest.to.the.center.mic.point.} ->
-#' \code{vegetation.sapling_species};
-#' \code{select.any.equipment.that.needs.to.be.replaced.} -> \code{equipment.replace};
-#' \code{specify.other.equipment.} -> \code{equipment.replace_other};
-#' \code{specify.other.action.performed} -> \code{action.performed_other}.

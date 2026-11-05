@@ -16,185 +16,123 @@ batz.datawrangler_load.files(
 )
 }
 \arguments{
-\item{dir.load}{Character. Directory to search. Defaults to the current
-working directory (\code{getwd()}).}
+\item{dir.load}{Character. Directory to search. Default \code{getwd()}.}
 
-\item{dir.sub}{Logical, default \code{FALSE}. If \code{TRUE}, also
-searches every subdirectory of \code{dir.load}.}
+\item{dir.sub}{Logical, default \code{FALSE}. If \code{TRUE}, also searches
+every subdirectory of \code{dir.load}.}
 
 \item{duplicates.remove}{Logical, default \code{TRUE}. If \code{TRUE},
-exact duplicate rows are removed from WITHIN each individual data frame
-(including separately within each sheet of a multi-sheet \code{.xlsx}
-list) - never across two different top-level objects. Runs as a final
-pass after all files are loaded/merged, so it also catches duplicates
-that only appear once two files have been merged together.}
+exact duplicate rows are removed within each data frame (and within each
+sheet of a multi-sheet list), never across objects. Runs after all files
+are loaded and merged, so it also catches duplicates created by merging.}
 
-\item{log.file}{Logical, default \code{FALSE}. If \code{TRUE}, an
-additional object named \code{log.file} is created (see \code{Value}
-below), with one row per file the scan encountered: \code{$filename},
-\code{$status} (\code{"success"}/\code{"failed"}), \code{$action}
-(\code{"loaded"}/\code{"merged"}/\code{"skipped"}), \code{$reason} (see
-\code{Details}), \code{$objectname} (the object the file ended up in,
-or \code{NA} if it wasn't loaded at all), and \code{$strip.special}
-(last column): \code{"FALSE"} (not selected), \code{"TRUE NONE"}
-(nothing found), or \code{"TRUE ; <header>; ..."} (the headers where
-characters were removed in that file - across all its sheets for a
-multi-sheet \code{.xlsx}).}
+\item{log.file}{Logical, default \code{FALSE}. If \code{TRUE}, a
+\code{log.file} data frame with one row per file found is also created
+(see Value).}
 
-\item{header.match}{Logical, default \code{FALSE}. If \code{TRUE}, every
-file - not just ones sharing a file name with something already loaded
-\itemize{
-\item has its column-name set compared against every already-loaded plain
-data frame (in the order those were created); if one matches 100\%
-(same columns, order doesn't matter), the new file is merged into THAT
-object instead of becoming its own. Only ever applies to plain
-single-sheet data frames - a multi-sheet \code{.xlsx}-derived list is
-never compared, as source or as target.
-}}
+\item{header.match}{Logical, default \code{FALSE}. If \code{TRUE}, a file
+not already merged by name is compared with every loaded data frame, in
+the order they were created; if one has exactly the same column names
+(order does not matter), the file is merged into it. Multi-sheet lists
+are never compared, as source or as target.}
 
-\item{duplicates.skip}{Logical, default \code{FALSE}. Governs what
-happens when a file's name already matches an object already loaded
-(only possible when \code{dir.sub = TRUE} and the duplicate lives in a
-different folder). \code{TRUE}: the duplicate is skipped outright -
-nothing is checked or merged. \code{FALSE} (default): merge it into the
-existing object if the columns match; if they don't, it falls through to
-the \code{header.match} check (if enabled) before finally becoming its
-own separate object.}
+\item{duplicates.skip}{Logical, default \code{FALSE}. Controls a file whose
+base name matches an object already loaded (a file in another folder
+with \code{dir.sub = TRUE}, or a \code{.csv} and \code{.xlsx} with the
+same name). \code{TRUE}: the file is skipped. \code{FALSE}: it is merged
+into the existing object if the columns match; otherwise it goes to the
+\code{header.match} check, and then becomes its own object.}
 
-\item{objects.max}{Integer, default \code{25}. The maximum number of
-top-level objects (not merges, and not raw files/sheets) the function
-will create in one call. Once that many exist, no further BRAND-NEW
-objects are created - but merges (by name or by \code{header.match})
-into already-existing objects keep happening regardless, since they
-don't add to the count.}
+\item{objects.max}{Integer, default \code{25}. Maximum number of new
+objects created in one call. When reached, further files that would
+become new objects are skipped; merges into existing objects still
+happen.}
 
-\item{strip.special}{Logical, default \code{TRUE}. If \code{TRUE},
-simplifies accented letters and
-symbols (\code{é} -> \code{e}, \code{×} -> \code{X}) and removes other non-ASCII special characters (e.g. \code{°}, \code{µ},
-\code{™}) from the data after loading - see
-\code{@details}. Files are always read with a UTF-8/Latin-1 fallback,
-so a stray \code{°} can't stop them loading, whatever this is set to.}
+\item{strip.special}{Logical, default \code{TRUE}. If \code{TRUE}, each
+file or sheet is cleaned right after reading: accented letters and common
+symbols are simplified (accented letters to plain letters, the multiplication sign to \code{X},
+curly quotes to straight quotes) and other non-ASCII characters (e.g.
+degree, micro and trademark signs) are removed, in column names and text
+columns. Files are always read with a UTF-8 / Latin-1 fallback, whatever
+this is set to.}
 }
 \value{
-Invisibly, a named list of everything that was loaded (data
-frames and/or lists-of-sheets, one element per input file/merged group,
-plus \code{log.file} if requested). In addition to being returned,
-every element of that list is also assigned as its own object - under
-its own name - directly into the environment the function was called
-from, so calling \code{batz.datawrangler_load.files(...)} on its own
-(with no assignment) loads everything right into your workspace,
-including \code{log.file} itself if \code{log.file = TRUE}. You can
-still do \code{result <- batz.datawrangler_load.files(...)} and access
-things as \code{result$my.file} if you'd rather work with the list. If
-a file's name isn't a syntactically "plain" R name (it has spaces,
-starts with a digit, etc.), the object is still created exactly as
-named - just access it with backticks or \code{get()}.
+Invisibly, a named list with one element per object created (data
+frames, or lists of data frames for multi-sheet workbooks), plus
+\code{log.file} when requested. Every element is also assigned into the
+calling environment under its own name, so a bare call loads everything
+into the workspace. Names that are not plain R names (spaces, a leading
+digit, a \code{[folder]} suffix) need backticks or \code{get()}.
+
+Merged objects have all columns as character; unmerged objects keep the
+column types from reading. No files are written.
+
+\code{log.file} columns:
+\describe{
+\item{\code{$filename}}{File name (no path).}
+\item{\code{$status}}{\code{"success"} or \code{"failed"}.}
+\item{\code{$action}}{\code{"loaded"}, \code{"merged"} or \code{"skipped"}.}
+\item{\code{$reason}}{Why (see Details).}
+\item{\code{$objectname}}{Object the file ended up in, or \code{NA}.}
+\item{\code{$strip.special}}{\code{"FALSE"} (not selected),
+\code{"TRUE NONE"} (nothing changed), or \code{"TRUE ; <header>; ..."}
+(standardized headers of the text columns where characters changed,
+across all sheets of the file).}
+\item{\code{$accented.letters.header}, \code{$removed.symbols.header}}{
+Number of unique column names with a character simplified / removed.}
+\item{\code{$accented.letters.data}, \code{$removed.symbols.data}}{
+Number of unique data values with a character simplified / removed
+(the same value in 500 rows counts once). The four count columns are
+\code{NA} when \code{strip.special = FALSE}.}
+}
 }
 \description{
-Scans a directory (and, optionally, its subdirectories) for \code{.csv}
-and \code{.xlsx} files and loads each one into R as its own standalone
-object, named the same as the file (extension stripped). A \code{.csv},
-or an \code{.xlsx} workbook with only one sheet, becomes a data frame. An
-\code{.xlsx} workbook with more than one sheet becomes a list (one data
-frame per sheet, named by sheet name).
+Scans a directory (optionally with its subdirectories) for \code{.csv} and
+\code{.xlsx} files and loads each one as its own object, named after the
+file without its extension. A \code{.csv}, or an \code{.xlsx} with one
+sheet, becomes a data frame; an \code{.xlsx} with several sheets becomes a
+list of data frames named by sheet. Files can also be combined into one
+data frame by a duplicate file name (\code{duplicates.skip}) or by an
+identical set of column names (\code{header.match}).
 }
 \details{
-Two independent mechanisms can combine files into one data frame instead
-of creating separate objects: a duplicate FILE NAME (see
-\code{duplicates.skip}) and, optionally, a duplicate HEADER SET across
-differently-named files (see \code{header.match}).
+\strong{Reading.} A \code{.csv} is read with \code{special.read.csv()}
+(UTF-8, falling back to Latin-1); an \code{.xlsx} is read with
+\code{readxl}. Each data frame (or each sheet) is then passed through
+\code{special.strip()} (when \code{strip.special = TRUE}); a text column
+that changed is re-typed, so \code{"42.5"} followed by a degree sign becomes the number 42.5.
+Column names are then standardized with \code{standardize.headers()}:
+trimmed, each run of non-alphanumeric characters replaced by one
+underscore, leading/trailing underscores dropped, lower case. File names,
+and so object names, are not changed. All column matching below compares
+the standardized names. A file that cannot be read is logged as skipped.
 
-\strong{Header standardization (per Josh, 2026-09-14 project preference).}
-Every loaded data frame's own column names - a plain \code{.csv}, a
-single-sheet \code{.xlsx}, or each individual sheet of a multi-sheet
-\code{.xlsx} - are run through the shared package helper
-\code{standardize.headers()} (trim whitespace, collapse every run of
-non-alphanumeric characters to a single underscore, lowercase)
-immediately after being read, before any merge-matching logic runs. This
-function never hardcodes a specific column name anywhere in its own
-logic (\code{same.columns()}/\code{find.header.match()}/\code{merge.two()}
-all work generically off whatever \code{names()} a loaded object
-happens to have), so no other code needed to change - but it does mean
-\code{header.match}'s "100\\% column set match" comparison, and a
-same-named file's "columns match the existing object" check, now compare
-STANDARDIZED names. Two files whose raw headers only differed by case,
-whitespace, or punctuation (and so previously would NOT have counted as
-a header match) can now match and get merged where they wouldn't have
-before - this is a natural, intended consequence of standardizing before
-comparing, not a separate feature. \strong{File names themselves (used
-for the resulting object names, and for the file-name-based duplicate
-check) are NOT touched by this} - only the column headers INSIDE each
-loaded file/sheet are standardized; a file's own name is this function's
-pre-existing naming mechanism, not a "header from a loaded file", and is
-left exactly as \code{tools::file_path_sans_ext(basename(f))} always
-produced it.
+\strong{Where each file goes}, in this order:
+\enumerate{
+\item Same base name as a loaded object and \code{duplicates.skip = TRUE}:
+skipped (\code{"duplicate file"}).
+\item Same base name and the same set of column names: merged into that
+object (\code{"file had the same name"}).
+\item \code{header.match = TRUE} and a loaded data frame has the same set
+of column names: merged into the first one found
+(\code{"file has same headers"}).
+\item \code{objects.max} objects already exist: skipped
+(\code{"object limit met"}).
+\item Otherwise a new object. A file with a duplicate name but different
+columns is named \code{"<name> [<folder>]"}
+(\code{"file with same name already exists with different headers"});
+any other file uses its own name (\code{"file was first of its kind"}).
+}
+A file that could not be read gets \code{$reason}
+\code{"could not read file"}.
 
-For a file whose base name already matches something already loaded, the
-order of decisions is: (1) \code{duplicates.skip = TRUE} skips it, full
-stop; (2) otherwise, if its columns match the existing same-named object,
-it's merged into that object (columns are lined up by name first - "when
-merging any two files, the new file's columns are reordered to match the
-original data frame's"); (3) if the columns DON'T match, it falls through
-to \code{header.match} - checked exactly the same way as for a brand-new
-file name - before finally becoming its own object under a folder-
-suffixed alt name (e.g. \code{"myfile [subfolder]"}) if nothing matches.
+\strong{Merging.} All columns of both data frames are converted to
+character, the new file's columns are reordered to match the existing
+object, and the rows are bound with column names kept exactly as they are.
 
-When merging (by either mechanism), all columns are coerced to character
-first and combined with raw column names preserved exactly
-(\code{check.names = FALSE}) - the same approach used in
-\code{batz.arumeta_merge.format}, avoiding type mismatches between sources
-and avoiding silently mangled column names (these are now the
-already-standardized names from the step above, not the file's original
-raw headers).
-
-\code{$reason} values in \code{log.file}: for \code{action = "loaded"},
-either \code{"file was first of its kind"} (brand-new name, no
-\code{header.match} hit) or \code{"file with same name already exists
-with different headers"} (a same-name duplicate that also didn't match
-anything via \code{header.match}). For \code{action = "merged"}, either
-\code{"file had the same name"} or \code{"file has same headers"}. For
-\code{action = "skipped"}: \code{"object limit met"} (blocked by
-\code{objects.max}), \code{"duplicate file"} (skipped because
-\code{duplicates.skip = TRUE} found a same-named file already loaded), or
-\code{"could not read file"} (the file itself failed to read/parse - not
-one of the originally-specified reasons, added because there wasn't
-another option that fit a genuinely corrupt/unreadable file).
-
-\strong{Follow-up, 2026-09-30, per Josh - special characters.} Every
-\code{.csv} is now read with \code{special.read.csv()} (UTF-8, falling
-back to Latin-1), so a file with a stray Excel-saved \code{°} byte no
-longer fails with \code{invalid multibyte string} and gets skipped as
-\code{"could not read file"}. \code{.xlsx} files are still read with
-\code{readxl::read_excel()}. With the new \code{strip.special = TRUE}
-(default), each \code{.csv} and each individual \code{.xlsx} sheet is
-passed through \code{special.strip()} straight after it is read (before
-header standardization, matching or merging), removing non-ASCII
-characters from text columns; a column that had characters removed is
-re-typed, so \code{"42.5°"} becomes the number \code{42.5}. Column names
-are not affected by stripping (they are still standardized as before). If
-\code{log.file = TRUE}, the log gains a last column
-\code{$strip.special} naming, per file, the (standardized) headers where
-characters were removed; a file that could not be read gets
-\code{"TRUE NONE"} (or \code{"FALSE"}).
-
-\strong{Follow-up, 2026-10-02, per Josh - accents simplified, log
-counts.} With \code{strip.special = TRUE}, accented letters and common
-symbols are now simplified instead of dropped (\code{café} ->
-\code{cafe}, \code{Quercus × bebbiana} -> \code{Quercus X bebbiana},
-curly quotes -> straight quotes); characters with no plain equivalent
-(e.g. \code{°}, \code{µ}, \code{™}) are still removed. Column names
-are cleaned the same way. The log gets four new columns right after
-\code{$strip.special}: \code{$accented.letters.header} and
-\code{$removed.symbols.header} (number of unique column names with a
-character simplified / removed), and \code{$accented.letters.data} and
-\code{$removed.symbols.data} (number of unique data values with a
-character simplified / removed - \code{café} in 500 rows counts once;
-\code{café} and \code{French café} count twice). They are \code{NA}
-when \code{strip.special = FALSE}.
-
-\strong{Lower-case headers (2026-11-04, per Josh, Batz_reference_db Header.names).}
-The strip.special log columns are \code{$accented.letters.header} /
-\code{$accented.letters.data} (were Accented.letters.*).
+\strong{Console.} One line per file, a count of files skipped by
+\code{objects.max}, the objects created, and the duplicate rows removed
+per object.
 }
 \examples{
 \dontrun{
@@ -208,4 +146,7 @@ result$my.file
 result$log.file
 }
 
+}
+\seealso{
+\code{\link{batz.datawrangler_rename}}
 }

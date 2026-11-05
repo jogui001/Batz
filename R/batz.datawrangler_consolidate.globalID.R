@@ -6,54 +6,63 @@
 #' \code{aru.name}), picks the earliest record of that combination by the
 #' \code{header.dates} headers, and copies that record's unique ID
 #' (\code{header.uniqueid}, e.g. \code{globalid}) to every record of the
-#' combination under the new header \code{$globalid_consolidate}. Built
-#' 2026-10-30, per Josh.
+#' combination under the new header \code{$globalid_consolidate}.
 #'
 #' @param data A data frame, a list of data frames (e.g. the output of
-#'   \code{batz.merge_sitevisit.acoustics()}), or a character vector of
+#'   \code{\link{batz.merge_sitevisit.acoustics}}), or a character vector of
 #'   \code{.xlsx} / \code{.xls} / \code{.csv} file paths (every sheet of a
 #'   workbook is read). All tables are consolidated together, so a site's
 #'   earliest record is found across every table given.
 #' @param header.combo Character, default \code{c("project.name", "aru.name")}.
 #'   Headers whose unique combinations define a site.
-#' @param header.uniqueid Character, default \code{c("globalid")} (was \code{"GlobalID"} before 2026-11-04). Header
+#' @param header.uniqueid Character, default \code{c("globalid")}. Header
 #'   holding each record's unique ID. When more than one is given, the first
 #'   one found in a table is used.
 #' @param header.dates Character, default \code{c("date.habitat.assessment",
 #'   "date.deployment", "date")}. Date headers used to find the earliest
 #'   record. For each record the first of these headers (in the order given)
-#'   that has a value is used.
+#'   with a readable date is used.
 #'
 #' @return The same shape as \code{data} - a data frame, or a list of data
 #'   frames (one per table / sheet when files are read; list elements that are
 #'   not data frames are returned unchanged) - with \code{$globalid_consolidate}
 #'   added just after the unique-ID column of every table that has the
-#'   \code{header.combo} and \code{header.uniqueid} headers.
+#'   \code{header.combo} and \code{header.uniqueid} headers (an existing
+#'   \code{$globalid_consolidate} is replaced). When files are read, list
+#'   elements are named by sheet (one workbook), \code{<file>_<sheet>}
+#'   (several files) or the csv file name. The number of sites and the tables
+#'   used are printed. Nothing is written to disk.
 #'
 #' @details
 #' \strong{Steps.}
 #' \enumerate{
-#'   \item Tables missing any \code{header.combo} header, or every
-#'     \code{header.uniqueid} header, are left unchanged (NOTE).
+#'   \item Headers are matched ignoring case (a \code{GlobalID} column works
+#'     for \code{"globalid"}); the table's own column names are kept.
+#'   \item Tables with no rows, or missing any \code{header.combo} header or
+#'     every \code{header.uniqueid} header, are left unchanged (NOTE for a
+#'     missing header).
 #'   \item Combination values are compared ignoring case and leading /
 #'     trailing spaces (\code{"Seven Islands "} = \code{"seven islands"}).
 #'   \item Dates may be dates, date-times, Excel serial numbers,
-#'     \code{yyyymmdd} numbers or text (\code{yyyy-mm-dd}, \code{mm/dd/yyyy},
-#'     with or without a time).
-#'   \item For each combination the record with the earliest date is chosen.
-#'     Records with no date are only chosen when no record of the combination
-#'     has one. Ties go to the record read first (table order, then row order);
-#'     a NOTE lists combinations where tied records have different IDs.
+#'     \code{yyyymmdd} numbers or text (\code{yyyy-mm-dd}, \code{yyyy/mm/dd},
+#'     \code{mm/dd/yyyy}, \code{mm-dd-yyyy}, \code{yyyymmdd},
+#'     \code{dd-Mon-yyyy}, \code{Month dd, yyyy}; a time after the date is
+#'     ignored).
+#'   \item For each combination the record with the earliest date (and a
+#'     non-blank ID) is chosen. Records with no date are only chosen when no
+#'     record of the combination has one (NOTE). Ties go to the record read
+#'     first (table order, then row order); a NOTE lists combinations where
+#'     tied records have different IDs.
 #'   \item That record's ID is written to \code{$globalid_consolidate} for
 #'     every record of the combination. Records with a blank
 #'     \code{header.combo} value keep their own ID (NOTE).
 #' }
 #'
-#' \strong{Lower-case headers (2026-11-04, per Josh, Batz_reference_db Header.names).}
-#' The new column is \code{$globalid_consolidate} (was
-#' \code{$globalID_consolidate}); \code{header.uniqueid} defaults to globalid;
-#' \code{header.combo}, \code{header.uniqueid} and \code{header.dates} are
-#' matched ignoring case, so a \code{GlobalID} column still works.
+#' \strong{Workbooks.} A workbook that is open in Excel (its \code{~$} lock
+#' file is in the folder) or can't be read stops the function with "<file> is
+#' open in another program and cannot be loaded. Close it and re-run code."
+#'
+#' @seealso \code{\link{batz.merge_sitevisit.acoustics}}
 #'
 #' @examples
 #' \dontrun{

@@ -10,949 +10,293 @@ batz.plotactivity_observations(
   suntimes,
   aes.default,
   project.name = "new.project",
-  aes.style = "overide.value",
+  aes.style = "override.value",
   dir.save = getwd(),
   strip.special = TRUE,
   strip.special.plotopts = FALSE
 )
 }
 \arguments{
-\item{data}{A data frame of already-summarized per-species, per-night
-observation counts. Must have \code{$spp.id}, \code{$date},
-\code{$observations.count}, plus whatever column each \code{fig.list} row's own
-\code{$plot.group} names when given - see Details, "Follow-up,
-2026-09-23 ($plot.group made optional)" - defaults to \code{$group}
-(matching \code{\link{batz.generate_plotframe.bat}}'s own output
-column) when \code{fig.list} doesn't specify one.}
+\item{data}{Data frame of per-species, per-night counts, normally the
+output of \code{\link{batz.generate_plotframe.bat}}. Required columns:
+\code{$spp.id}, \code{$date}, \code{$observations.count}, plus the
+grouping column named by the row's \code{$plot.group} (default
+\code{$group}). Old header \code{$obs} is still accepted (used as
+\code{$observations.count}, with a WARNING). Raw \code{$spp.id} values
+\code{40kMyo} or \code{40kHzMyo} (any case or punctuation) are treated
+as 40kHzMyo.}
 
-\item{fig.list}{A data frame listing the plot(s) to generate - one row
-per plot. Must have \code{$plot.type}, \code{$plot.name}, \code{$facet.header},
-\code{$facet.plot}, \code{$facet.set}, \code{$myso}, \code{$all.detections},
-\code{$40khzmyo}, \code{$facet.label}, \code{$plot.set}, \code{$pool},
-\code{$date.format}, \code{$date.start}, \code{$date.end},
-\code{$xaxe.interval}. Column names must be unique. \code{$plot.group}
-is OPTIONAL (see Details, "Follow-up, 2026-09-23") - when blank or not
-present at all, defaults to the column \code{$group}. Five further
-columns are read PER-ROW if present but are entirely optional (each
-falls back to \code{aes.default} when blank or the column doesn't
-exist at all - see Details): \code{$yaxe.trans} (\code{"none"}/
-\code{"log"}/\code{"log10"}), \code{$y.scale} (\code{"regular"}/
-\code{"rounded"}/\code{"custom"}), \code{$y.custom} (semicolon-separated
-break values, only read when \code{$y.scale = "custom"}),
-\code{$ymax} (the top value plotted on the Y axis), and \code{$legend}
-(\code{TRUE}/\code{FALSE} - whether to show a legend distinguishing
-which \code{$plot.set} value each dodged bar is, when \code{$pool =
-  FALSE} and more than one value is selected - see \strong{Follow-up,
-2026-08-29 (round 2)} in Details).}
+\item{fig.list}{Data frame, one row per plot. See "fig.list columns" in
+Details. Column names must be unique.}
 
-\item{suntimes}{A data frame of sunrise/sunset times, e.g. the output of
-\code{batz.generate_suntimes.arulist()}. Must have \code{$aru.name},
-\code{$date}, \code{$date.monitoringnight}, \code{$sunregion},
-\code{$time.zone}, \code{$sunregion.type}, \code{$schedule1},
-\code{$schedule2}, \code{$sunset}, \code{$sunset.unix},
-\code{$sunrise}, \code{$sunrise.unix}, \code{$sunrise.monitoringnight},
-\code{$sunrise.monitoringnight.unix} - renamed from
-\code{$suns}/\code{$suns.unix}/\code{$sunr}/\code{$sunr.unix}/
-\code{$sunr.mon}/\code{$sunr.mon.unix} on 2026-09-25 (round
-twenty-six) - see Details. \strong{Accepted and header-
-checked, but not otherwise used yet this iteration} - see Details.}
+\item{suntimes}{Data frame of sunrise and sunset times, e.g. the output of
+\code{\link{batz.generate_suntimes.arulist}}. Its headers are checked
+(\code{$aru.name}, \code{$date}, \code{$date.monitoringnight},
+\code{$sunregion}, \code{$time.zone}, \code{$sunregion.type},
+\code{$schedule1}, \code{$schedule2}, \code{$sunset},
+\code{$sunset.unix}, \code{$sunrise}, \code{$sunrise.unix},
+\code{$sunrise.monitoringnight}, \code{$sunrise.monitoringnight.unix};
+old \code{schedual1} / \code{schedual2} are still accepted), but the
+values are not used in the plot.}
 
-\item{aes.default}{A data frame of default plot settings, one row per
-parameter (e.g. \code{plotopts_callobs.csv}). Must have
-\code{$category}, \code{$parameter}, \code{$default.value};
-an \code{$overide.value} column (blank, user-fillable) and
-\code{$notes} are optional - see \code{project.name}/\code{aes.style}
-below and Details, "Settings resolution (round nineteen)".}
+\item{aes.default}{Data frame of plot settings (plotopts), one row per
+parameter, e.g. \verb{plotopts_callobs.csv} from
+\code{\link{batz.generate_plotopts}}. Required columns:
+\code{$category}, \code{$parameter}, \code{$default.value}. The custom
+style column (named by \code{aes.style}) and \code{$notes} are optional.
+See "plotopts" in Details.}
 
-\item{project.name}{Character, default \code{"new.project"}. Per Josh's
-nineteenth follow-up (2026-09-16), this NO LONGER selects an
-\code{aes.default} override column - it is now used ONLY to build the
-first part of every saved file name:
-\code{"<project.name>_<plot.name>_<daterange>_<timestamp>.png"}. See
-Details, "Settings resolution (round nineteen)" for what replaced the
-old column-matching behavior, and "File naming (round twenty-one)" for
-this function's current save-name format.}
+\item{project.name}{Character, default \code{"new.project"}. Put at the
+start of every saved file name. A blank value leaves it out.}
 
-\item{aes.style}{Character, default \code{"overide.value"}. Names which
-column of \code{aes.default} is checked FIRST for each parameter
-(falling back to \code{$default.value} when that column doesn't exist,
-or is blank for that row) - replaces the old \code{project.name}
-column-matching mechanism entirely. A given plot row's OWN value in
-\code{fig.list} (when that column exists there and is non-blank)
-still takes priority over both - see Details, "Settings resolution
-(round nineteen)" for the full precedence.}
+\item{aes.style}{Character, default \code{"override.value"}. Name of the
+\code{aes.default} column checked first for each parameter. When that
+column does not exist, or its cell is blank, \code{$default.value} is
+used. With the default, an old \code{$overide.value} column is still
+read when there is no \code{$override.value} column.}
 
-\item{dir.save}{Character, default \code{getwd()}. Directory every
-generated PNG is saved into. Per Josh's nineteenth follow-up, the file
-name itself is now always
-\code{"<project.name>_<plot.name>_<daterange>_<timestamp>.png"} (see
-\code{project.name} above and Details, "File naming (round
-twenty-one)") - \code{aes.default}'s \code{$output.filename.pattern}
-is DEPRECATED and no longer read.}
+\item{dir.save}{Character, default \code{getwd()}. Folder every PNG is
+saved into.}
 
-\item{strip.special}{Logical, default \code{TRUE}. If \code{TRUE},
-simplifies accented letters and
-symbols (\code{é} -> \code{e}, \code{×} -> \code{X}) and removes other non-ASCII special characters (e.g. \code{°}, \code{µ},
-\code{™}) from the data input(s) (\code{data} and \code{suntimes}; \code{fig.list}/\code{aes.default} follow \code{strip.special.plotopts})
-at the very start, before any header check - see \code{@details}.
-This function reads no files itself; inputs loaded with a batz
-reader already get a UTF-8/Latin-1 fallback, so a stray \code{°}
-  can't stop them loading, whatever this is set to.}
+\item{strip.special}{Logical, default \code{TRUE}. TRUE simplifies
+accented letters and removes other non-ASCII characters (e.g. degree or
+micro signs) in \code{data} and \code{suntimes}, before any header
+check. FALSE leaves them as they are.}
 
-\item{strip.special.plotopts}{Logical, default \code{FALSE}. Added
-2026-10-02, per Josh. Controls special characters in the settings
-table(s) - \code{fig.list} and \code{aes.default} - separately from the data. \code{FALSE} (default)
-leaves them untouched, so plot text such as \code{"Temperature (°C)"}
-  keeps its symbol; if a cell can't be read in this R session (e.g. a
-Latin-1 \code{°} byte), the function stops with an error naming the
-table, the number of incompatible characters, and the first 5 rows per
-header (\code{+} if more). \code{TRUE} simplifies/removes special
-characters in them the same way \code{strip.special} does for data.}
+\item{strip.special.plotopts}{Logical, default \code{FALSE}. Same
+clean-up for the settings tables \code{fig.list} and
+\code{aes.default}. FALSE leaves them untouched (plot text keeps its
+symbols), but a cell that cannot be read in this R session stops the
+function with an error naming the table, the number of bad characters
+and the first rows per header. TRUE strips them instead.}
 }
 \value{
-Invisibly, a list with \code{plots} (one entry per generated
-plot's prepared data) and \code{ggplots} (the corresponding ggplot
-objects, only populated when the \code{ggplot2} package is available).
+Invisibly, a list with \code{$plots} and \code{$ggplots}, keyed by
+the row number among the kept \code{fig.list} rows (\code{"1"},
+\code{"2"}, ...). Plots split by \code{$facet.plot = FALSE} are keyed
+\code{"1.1"}, \code{"1.2"}, and so on. Both are empty lists when no plot
+is made. Each \code{$plots} entry holds:
+\describe{
+\item{\code{$job.label}, \code{$job}}{Plot title (\code{$plot.name},
+or \code{"row N"}) and the \code{fig.list} row.}
+\item{\code{$pd}}{Plotted rows: the \code{data} columns plus
+\code{$spp.common}, \code{$date.parsed}, \code{$facet.panel.value}
+(factor of facet titles), \code{$bar.type} (\code{"All detections"}
+or \code{"40kHzMyo"}), \code{$group.val} and \code{$obs.plot} (bar
+height on the transformed axis). When pooled, only
+\code{$spp.common}, \code{$facet.panel.value}, \code{$bar.type},
+\code{$date.parsed}, \code{$observations.count},
+\code{$group.val} (\code{"pooled"}) and \code{$obs.plot}.}
+\item{\code{$panel.labels}, \code{$facpan}, \code{$spp.plot}}{Facet
+titles, facet list and the species list used to filter.}
+\item{\code{$date.start}, \code{$date.end}}{X-axis date window.}
+\item{\code{$khz.flag}}{TRUE when 40kHzMyo is on for this plot.}
+\item{\code{$break.pos}, \code{$break.labels},
+\code{$y.upper.plot}}{Y break positions (transformed), their labels
+and the transformed axis top.}
+\item{\code{$group.col}, \code{$plot.sets.vals}}{Grouping column and
+the selected \code{$plot.set} values.}
+\item{\code{$pool.flag}, \code{$legend.flag}}{Resolved \code{$pool}
+and \code{$legend}.}
+\item{\code{$facet.plot}, \code{$facet.raw}, \code{$facet.ids}}{Facet
+mode, facet names and their short IDs used in the file name.}
+\item{\code{$resolved.legend.position}}{Resolved plotopts
+\code{legend.position}.}
+}
+\code{$ggplots} holds the ggplot objects (empty when ggplot2 is not
+installed).
+
+Files written: one PNG per plot in \code{dir.save}. Faceted:
+\verb{<project.name>_<plot.name>_F_<facet.first>to<facet.last>_<plot.set>_<YYYYMMDD>to<YYYYMMDD>_<TIMESTAMP>.png}.
+One per facet:
+\verb{<project.name>_<plot.name>_<facet>_<plot.set>_<YYYYMMDD>to<YYYYMMDD>_<TIMESTAMP>.png}.
+The \code{<plot.set>} part is the selected values joined with "+", with
+\code{-pooled} added when \code{$pool} is TRUE. A blank \code{$plot.set}
+gives \code{all} (just \code{-pooled} when pooled).
+Facet IDs are four-letter codes (\code{code4}), \code{AllDet} and
+\code{40kMyo} (a 40kHzMyo drawn inside the "All detections" facet is not
+counted). Spaces become "-" and characters Windows does not allow are
+removed. Names over 100 characters are shortened step by step (drop the
+year from a same-year end date, then cut each word of the facet IDs,
+\code{<plot.set>} and \code{$plot.name} to 6 characters).
 }
 \description{
-Generates the standard report plot showing, for every species (plus an
-"All detections" panel and an optional overlaid 40kHzMyo indicator), the
-number of observations (\code{$observations.count}) recorded each monitoring night, as a
-bar per night per panel. One plot is produced per row of \code{fig.list}
-whose \code{$plot.type} is \code{"call.observations"} (see Details for why
-this value was chosen and how to change it).
+Draws the standard report plot of nightly observation counts. For each
+species facet (plus an optional "All detections" facet and an optional
+40kHzMyo overlay) it shows one bar per night with that night's
+\code{$observations.count}. Several groups (e.g. ARUs) can be pooled into
+one bar or drawn side by side. One PNG is saved per \code{fig.list} row
+whose \code{$plot.type} is \code{"call.observations"} (or one per facet
+when \code{$facet.plot = FALSE}).
 }
 \details{
-\strong{fig.list format, 2026-10-09, per Josh.}
-\itemize{
-\item \code{$facet} is renamed \code{$facet.header} (only
-\code{"sppid"} so far - species facets, IDs are four-letter codes).
-\item New \code{$facet.plot}: \code{TRUE} = one faceted plot;
-\code{FALSE} = one plot per facet.
-\item \code{$facet.set} holds a preset short hand (\code{"NE"}) or a
-list separated by \code{";"} - species in any format, plus
-\code{"AllDet"} and preset names, e.g. \code{"AllDet;epfu;labo;lano"}
-or \code{"AllDet;NE"}. The order written is the facet order.
-\code{$all.detections = TRUE} adds All detections as the first facet
-when \code{$facet.set} doesn't list it. Blank = \code{"NE"}.
-Presets are in \code{plotutil_facet_presets} (batz.util_plot.helpers.R).
-\item \code{$facet.panel}, \code{$facpan} and \code{$plot.order} are
-no longer used. Old fig.list files (\code{$facet}, \code{$Alldect},
-no \code{$facet.plot}) still load, with a WARNING.
-\item Saved file names:
-\verb{<plot.name>_F_<facet.first>to<facet.last>_<plot.set>_<YYYYMMDD>to<YYYYMMDD>_<TIMESTAMP>.png}
-(faceted; All detections first = \code{"AllDet"}, a 40kHzMyo drawn in
-the same facet is not counted) or
-\verb{<plot.name>_<facet>_<plot.set>_<YYYYMMDD>to<YYYYMMDD>_<TIMESTAMP>.png}
-(one per facet). \code{project.name} is no longer part of the name.
-Names over 100 characters are shortened, in order, until they fit:
-drop the year from the last date (same-year range), cut each word of
-the facet ID(s), then \code{plot.set}, then \code{plot.name} to 6
-characters.
-}
-
-\strong{Header standardization (per Josh, 2026-09-14 project preference) -
-does not mechanically apply to this function, flagged not silently
-skipped.} The project-wide preference is that headers coming from a
-loaded file or an externally-supplied data frame are run through the
-shared package helper \code{standardize.headers()} (trim whitespace,
-collapse non-alphanumeric runs to underscores, lowercase). This function
-does not load any file itself, and all four of its arguments
-(\code{data}, \code{fig.list}, \code{suntimes}, \code{aes.default}) are
-already-loaded data frames handed in by the caller - \code{data} in
-particular is expected to be \code{\link{batz.generate_plotframe.bat}}'s
-own output. \code{DATA.REQUIRED}/\code{SUNTIMES.REQUIRED}/
-\code{FIG.LIST.REQUIRED}/\code{AES.DEFAULT.REQUIRED}/
-\code{AES.DEFAULT.REQUIRED.PARAMETERS} below are this function's own
-hardcoded interface contracts with those upstream functions'/files'
-already-established output schemas (e.g. \code{$spp.id}/\code{$date}/
-\code{$observations.count} from \code{batz.generate_plotframe.bat()}), not raw text
-copied from a loaded file's real header row, so there is no raw-header
-step here for the preference to attach to and none of these names were
-renamed. If \code{fig.list}/\code{aes.default}/\code{suntimes} are ever
-built by reading a CSV/spreadsheet directly (rather than being handed to
-this function pre-loaded), that loading step - wherever it lives -
-should run \code{standardize.headers()} on its own raw headers, and this
-function's own required-header constants would need to be written to
-match those standardized spellings; no such loading step exists inside
-this function itself.
-
-\strong{Follow-up, 2026-09-21, per Josh: header casing/separator
-mismatches are now tolerated here too, via a shared
-\code{canonicalize.headers()} helper.} The reasoning immediately above
-(this function does no raw-header-loading step of its own) still
-explains why \code{standardize.headers()} itself was never applied to
-\code{data}/\code{fig.list}/\code{suntimes}/\code{aes.default} wholesale
-\itemize{
-\item but in practice, whatever a caller actually hands this function may
-have passed back through a loading/reload step somewhere upstream (a
-save-to-CSV-and-reload, for instance) that DOES run
-\code{standardize.headers()} on its own raw headers, at which point a
-column this function expects to find as e.g. \code{"date.mon"} might
-actually arrive as \code{"date_mon"} - and a literal \code{setdiff()}
-against this function's own dot-separated required-header constants
-would report it (and everything else differing only in separator style)
-as entirely missing, even though the data is really all there.
-\code{canonicalize.headers()} (see
-\code{claude/batz.util_standardize.headers.R}) fixes this by
-standardizing both sides (the incoming data frame's own headers, and the
-required-header list this function is looking for) purely to MATCH
-columns up, then renaming every matched column - IN A LOCAL COPY ONLY,
-never touching the caller's own \code{data}/\code{suntimes}/
-\code{fig.list}/\code{aes.default} object - back to this function's own
-canonical (dot-separated) spelling, regardless of which casing/separator
-style it actually arrived in. Applied here to all four input frames (see
-the header-check code below). This function has no data-frame/CSV/xlsx
-output of its own (it saves PNG files and returns an invisible list of
-ggplot objects/prepared data, never a data frame or spreadsheet the
-caller would want re-cased), so no new \code{snake_case =} output-header
-option applies here - see \code{\link{batz.generate_plotframe.bat}}'s own
-\code{@details} for where that option was added instead, since it's the
-one of these three sibling functions that actually returns/writes a data
-frame. Also per this same follow-up: when more than one of
-\code{data}/\code{suntimes}/\code{fig.list}/\code{aes.default} is
-missing headers in a single call, each frame's own "... is missing these
-headers: ..." message is now joined with a BLANK line between them
-(\code{"\n\n"}, not a single \code{"\n"}) for readability, matching the
-identical fix made in \code{\link{batz.plotdetections_first.last}}.
-}
-
-\strong{Iteration 1 ("basic layout"), built 2026-08-28 per Josh's own
-framing that this function would be developed iteratively, copying the
-structure/steps of \code{batz.plotdetections_first.last()} and modifying
-it for a count-based Y axis instead of a time-of-night Y axis.} Carried
-over UNCHANGED from that function: header/duplicate-column validation,
-settings resolution (\code{fig.list} row > \code{project.name} column >
-\code{$default.value}), the New-England-special-case \code{$facpan} list,
-\code{$myso}/\code{$all.detections}/\code{$40khzmyo} panel-building logic,
-facet labeling and canonicalization via
-\code{batz.batusa_recode.names()}, \code{$plot.order} panel ordering, the
-\code{job.key}/\code{job.label} list-keying fix (rows sharing
-\code{$plot.name} each still get their own plot), and the exact-full-row
-\code{fig.list} duplicate-removal step (both fixed in that function after
-real bugs Josh hit - see its own \code{@details} for the full history;
-both are included here from the start rather than waiting to be
-rediscovered). REMOVED entirely: the Dawn/Dusk/Midnight reference lines
-and all of the time-of-night (\code{mins2.noon.min}/\code{max},
-sunrise/sunset) math that supported them - per Josh's explicit
-instruction ("There are no DAWN, DUSK or Midnight variables to be
-ploted"). Each bar is simply one \code{fig.list}-matched data row's own
-\code{$observations.count} value, plotted at its \code{$date} - no per-night aggregation
-happens inside this function (a night's "All detections" bar is
-\code{data}'s own pre-computed \code{$spp.id = "All Detections"} row for
-that night/ARU, exactly parallel to how \code{batz.plotdetections_first.last()}
-uses a pre-computed \code{"All detections"} row rather than summing
-individual species rows itself).
-
-\strong{\code{$plot.type = "call.observations"}} was chosen for this
-function's own \code{fig.list} rows (a judgment call, since Josh's spec
-didn't name one) - \code{fig.list.csv} is shared across every \code{batz}
-plotting function, each reading only the rows matching its own
-\code{$plot.type} value and skipping (with a console \code{NOTE}, not an
-error) any row belonging to another function, exactly like
-\code{batz.plotdetections_first.last()} already does for
-\code{"bat.detection"}. \strong{Josh's real \code{fig.list.csv} does not
-yet have a row with this \code{$plot.type} value} - add one (with
-\code{$yaxe.trans}/\code{$y.scale}/\code{$y.custom}/\code{$ymax} filled
-in as needed - those four columns already exist as blank headers in the
-delivered file) before calling this function against real data. If a
-different \code{$plot.type} string is wanted instead, it only needs to be
-changed in one place (the \code{PLOT.TYPE} constant near the top of this
-function's code).
-
-\strong{\code{suntimes} is accepted and header-checked but not otherwise
-used in this iteration.} Josh's own spec listed it as an input alongside
-\code{data}/\code{fig.list}/\code{aes.default}, but with no Dawn/Dusk/
-Midnight lines to compute, nothing in this first pass actually needs
-sunrise/sunset data - kept in the signature (rather than dropped) so
-existing call sites built against the same four core inputs as the
-sibling function keep working, and so a future iteration (e.g. excluding
-nights with no suntimes coverage, or a twilight-shading feature) can add
-real use of it without an interface change. \strong{Flagging this
-explicitly for Josh}: if \code{suntimes} should actually do something in
-this plot (e.g. gray out or omit un-monitored nights), say so and it can
-be wired in.
-
-\strong{Follow-up, 2026-09-22, per Josh: "change all functions
-that have aru as an header to \"aru.name\"", "update \"Batz reference
-db_*.xlxs\"":} \code{SUNTIMES.REQUIRED}'s first element is renamed from
-\code{"aru"} to \code{"aru.name"}, matching \code{\link{batz.generate_suntimes.arulist}}'s
-own renamed output column (see that function's own \code{@details}) and
-the identical rename already applied to \code{\link{batz.generate_plotframe.bat}}
-and \code{\link{batz.plotdetections_first.last}}. No reference in this
-function's own body needed to change to match, since - per the entry
-directly above - \code{suntimes} is accepted and header-checked but not
-otherwise read anywhere in this iteration's code. Per this function's
-existing \code{canonicalize.headers()}-based header check (both
-\code{suntimes}'s real column names and the required-header list are
-standardized purely to find matching columns, then renamed to the exact
-spelling expected), a \code{suntimes} data frame still spelled with the
-OLD bare \code{$aru} column name continues to be accepted without
-complaint - only a data frame missing the column entirely now fails the
-check.
-
-\strong{Follow-up, 2026-08-28, per Josh: \code{$plot.group}/
-\code{$plot.set}/\code{$pool} replace the old fixed \code{$aru.groupby}/
-\code{$plot.set} single-detector-column design.} Previously, this
-function always filtered \code{data} on a hardcoded \code{$aru.groupby}
-column, matched against a single \code{$plot.set} value. Three
-\code{fig.list} columns now generalize this:
-\itemize{
-\item \code{$plot.group} names WHICH column of \code{data} to filter/
-group by, per \code{fig.list} row - e.g. \code{"aru.name"} to plot by
-detector (matching \code{\link{batz.generate_plotframe.bat}}'s own
-\code{groupby} parameter and its \code{$groupedby} output column) or
-\code{"deployment.type"} to plot by some other category entirely.
-This is what gives a single \code{fig.list}/this function the
-flexibility to plot other sheets/groupings without a code change -
-\code{data} no longer needs a column literally called
-\code{$aru.groupby} at all. \strong{As of Follow-up, 2026-09-23
-below, this column is optional} - a blank value, or the column not
-existing in \code{fig.list} at all, now defaults to \code{"group"}
-rather than skipping the row (see that entry for the full history).
-A row whose (given or defaulted) \code{$plot.group} names a column
-\code{data} doesn't actually have is still skipped with a console
-\code{NOTE} (same tolerant, skip-don't-crash style used for an
-unrecognized \code{$plot.type}/\code{$facet}).
-\item \code{$plot.set} (renamed from the old plural \code{$plot.sets}
-- see Follow-up, 2026-09-23 below) lists every value of the
-\code{$plot.group} column to include in this plot - MULTIPLE values,
-not just one. Every double-quote character in the raw value is
-treated as a token delimiter (alongside whitespace) and stripped, so
-\code{"105059-NW3" "105059-SE3" "105059-SW3"}-shaped values parse
-into three tokens - this was deliberately NOT implemented as
-matching well-formed quote PAIRS, because Josh's own real
-\code{fig.list.csv} value for this column, once CSV-unescaped, comes
-through missing the very first value's leading quote (the field's
-own outer CSV quoting consumes it) - a quote-pair parser would
-silently drop that first token on real data. A single bare,
-unquoted value (e.g. \code{105059-NW3}, exactly like the old
-singular \code{$plot.set} this column itself replaced back on
-2026-08-28) or several bare whitespace-separated values with no
-quoting at all also work. A blank \code{$plot.set} matches every
-value of the \code{$plot.group} column (same as the old
-blank-\code{$plot.set} behavior). \strong{Limitation, flagged for
-Josh}: a value containing a literal space would be split into two -
-not expected for detector/group names, but worth knowing.
-\item \code{$pool} (\code{TRUE}/\code{FALSE}) controls how the
-(possibly several) selected \code{$plot.set} values are combined:
-\code{TRUE} sums \code{$observations.count} across all of them into ONE pooled bar
-per date/panel (as if they were a single group); \code{FALSE} keeps
-each selected value as its own bar, drawn side-by-side (dodged)
-within the same date/panel. Bars are dodged via \code{ggplot2}'s own
-\code{position_dodge2()} at each date; WHICH \code{$plot.set} value
-a given dodged bar is is shown via bar color, when \code{$legend} is
-on - see \strong{Follow-up, 2026-08-29 (round 2)} below for the
-current design (an earlier round used an outline color instead;
-see \strong{Follow-up, 2026-08-29} directly below for that history).
-}
-
-\strong{Follow-up, 2026-08-29, per Josh ("add legend option to
-function, legend = TRUE; add legend options to plotops file for things
-like size and colors"): a new \code{$legend} column (per-\code{fig.list}
-row, optional - falls back to \code{aes.default}'s own \code{legend}
-parameter, default \code{TRUE}), and three new \code{aes.default}
-parameters, resolve the "no legend for dodged bars" gap flagged
-above.} When \code{$pool = FALSE} and more than one \code{$plot.set}
-value is actually selected (nothing to distinguish otherwise - a single
-value, or a pooled bar, never shows this legend regardless of
-\code{$legend}), every dodged bar's OUTLINE color is mapped to its own
-\code{$plot.group} value (the same raw value carried as \code{$group}
-by \code{\link{batz.generate_plotframe.bat}}, when \code{data} comes
-from there) via a second, independent \code{ggplot2} color scale -
-\code{fill} is already used for \code{"All detections"}/\code{"40kHzMyo"}
-and is left completely alone, so both legends coexist without
-conflict. Three new \code{aes.default} parameters, category
-\code{"Legend"} (alongside the existing \code{legend.position}),
-control it: \code{legend.groupval.title} (the new legend's title
-text), \code{legend.groupval.colors} (a semicolon-separated list of hex
-colors, e.g. \code{"#1b9e77;#d95f02;#7570b3"} - assigned to each
-distinct selected value in sorted order, CYCLING back to the first
-color if there are more selected values than colors given), and
-\code{legend.groupval.outline.linewidth} (how thick that outline stroke
-is drawn - "size" in Josh's own wording). \strong{Two interpretive
-calls, flagged for Josh}: (1) the new legend distinguishes
-\code{$plot.set} values by bar OUTLINE color rather than fill, since
-\code{fill} was already spoken for by the all-detections/40kHzMyo
-distinction - a shared "fill" legend covering both dimensions at once
-isn't something \code{ggplot2} supports natively without extra
-packages; if a single combined legend is what's actually wanted instead,
-say so. (2) \code{legend.groupval.colors} cycling (rather than erroring,
-or auto-generating additional colors) when there are more selected
-\code{$plot.set} values than colors listed was chosen to keep behavior
-predictable and non-fatal; a plot with more distinct values than
-distinct colors will have two values sharing a color, which is worth
-knowing about if it happens. Verified with a new test: 3 selected
-\code{$plot.set} values, 3 configured colors, each value gets its own
-distinct outline color and shows up in the legend; \code{$legend =
-FALSE} (or a single selected value, or \code{$pool = TRUE}) renders
-exactly as before this change, with no outline-color mapping/legend at
-all.
-
-\strong{Follow-up, 2026-08-29 (dodge legibility), per Josh ("different
-groups plots on top of each other, add a dodge as default so they are
-side by side")}: \code{position_dodge2()} was already the default
-whenever \code{$pool = FALSE} and more than one \code{$plot.set} value
-is selected (see the \strong{Follow-up, 2026-08-28} entry above) - this
-was verified directly (built-plot layer data shows each selected
-value's bars offset to distinct, non-overlapping x positions on the
-same date). The actual problem was legibility, not positioning: with 3
-selected values dodged into the same \code{bar.width}, each bar becomes
-narrow enough that the group-value legend's own outline
-(\code{legend.groupval.outline.linewidth}, previously defaulting to
-\code{1}) was thick enough to cover the ENTIRE narrow bar face, hiding
-the \code{gray70}/black \code{$bar.type} fill underneath it - so same-
-colored dodged bars visually read as one solid, tightly-packed mass
-rather than clearly-separated bars, even though they were genuinely
-side by side underneath. This round's fix (lowering
-\code{legend.groupval.outline.linewidth} to \code{0.3}) was superseded
-the same day by \strong{round 2} below, which drops the outline
-approach entirely.
-
-\strong{Follow-up, 2026-08-29 (round 2 - per Josh, "keep the bar sizes
-constant, get rid of the boarder and make each bar a differnet
-color")}: replaces round 1's thin-outline fix above with a different
-design entirely - \code{legend.groupval.outline.linewidth} is REMOVED
-(no longer an \code{aes.default} parameter at all; an older
-\code{plotopts_callobs.csv} that still has that row is unaffected, it's
-simply ignored now) and no border/outline is drawn on any bar. Instead,
-when dodging (\code{$pool = FALSE}, >1 selected \code{$plot.set}
-value) and \code{$legend} is on, each bar's FILL itself is its own
-selected value's color (from \code{legend.groupval.colors}, same
-cycling behavior as before) - the \code{"40kHzMyo"} bar keeps its own
-fixed color (\code{bar.40khzmyo.fill}) regardless of which value's bar
-it overlays, so it still always reads as "the 40kHzMyo one". Both live
-in ONE combined \code{fill} legend/scale (titled via
-\code{legend.groupval.title}), since \code{fill} can only be mapped to
-one variable at a time - round 1's separate outline-color scale is
-gone, along with the plain \code{bar.alldetections.fill}/
-\code{bar.fill.legend.title}-driven gray fill for the "All detections"
-bar.type (that flat scheme is still used, unchanged, whenever there's
-nothing to distinguish - \code{$legend = FALSE}, a single selected
-value, or \code{$pool = TRUE}).
-
-Also per this same follow-up ("keep the bar sizes constant"):
-\code{position_dodge2()}'s \code{preserve} argument was changed from
-its default (\code{"total"}) to \code{"single"}. \code{"total"} keeps
-the OVERALL dodge cluster's width constant at every date, which means
-individual bars get WIDER on a night where fewer than the full set of
-selected values actually has data (e.g. 2 bars splitting the space
-meant for 3) - bar width would then vary from night to night depending
-on which values happened to have data. \code{"single"} instead keeps
-each individual bar's own width constant everywhere, sized as if the
-full set of selected values were always present, leaving a gap where a
-value has no data that night rather than stretching its neighbors to
-fill the space. \strong{Flagged for Josh}: this only changes anything
-on nights where not every selected \code{$plot.set} value has data -
-if every night has all 3 values, \code{"total"} and \code{"single"}
-look identical; \code{"single"} was chosen since it's the reading that
-matches "keep the bar sizes constant" literally.
-
-\strong{Y-axis resolution - the newest, most detailed part of this
-function - implements Josh's spec as follows:} \code{$yaxe.trans}
-(\code{"none"} default / \code{"log"} / \code{"log10"}) picks a transform
-applied to \code{$observations.count} before it's used as a bar's plotted height;
-\strong{\code{"log"}/\code{"log10"} are implemented as \code{log1p(observations.count)}/
-\code{log10(observations.count + 1)}, not a bare \code{log(observations.count)}/\code{log10(observations.count)}} - a
-deliberate choice (Josh's spec didn't say how to handle a night with 0
-observations, but \code{data} can and does have real detections that
-would sum to a whole-number 0 for some species/night combinations
-logically, and a bare \code{log(0)} is \code{-Inf}, which would break the
-axis) - verified against Josh's own target image
-(\code{"Number of bat calls detected.png"}): its Y-axis breaks
-(\code{0, 2, 8, 25, 75, 230}) are spaced almost exactly evenly once run
-through \code{log1p()} (successive gaps of about 1.10, 1.10, 1.06, 1.07,
-1.11 log-units), confirming this is the transform that image's axis
-actually used, not a coincidence. \code{$loglabels} (\code{FALSE}
-default) then controls whether each break is LABELED with the real
-\code{$observations.count}-scale number (\code{FALSE}) or the transformed value itself
-(\code{TRUE}) - it only has any effect when \code{$yaxe.trans} isn't
-\code{"none"}, per Josh's spec.
-
-\code{$y.scale} picks which values become breaks: \code{"regular"}
-places them at 5 points evenly spaced along the AXIS itself - i.e. evenly
-spaced in whatever space \code{$yaxe.trans} plots in, then converted back
-to a raw count for the label (see the BUGFIX entry below for why this
-matters); \code{"rounded"} places them at those same five axis positions
-but rounds each resulting raw value to the nearest whole number
-afterward (matters once the exact value isn't a whole number already,
-e.g. \code{$ymax = 230} with \code{$yaxe.trans = "none"} gives a raw 25\%
-point of \code{57.5}, which \code{"rounded"} shows as \code{58});
-\code{"custom"} ignores that computation entirely and uses whatever
-numbers are in \code{$y.custom} instead (semicolon-separated, e.g.
-\code{"0;2;8;25;75;230"} - the same convention as
-\code{$yaxe.break.labels} in \code{batz.plotdetections_first.last()}),
-matching Josh's target image exactly. \strong{Josh's own spec text marked
-BOTH \code{"regular"} and \code{"rounded"} as \code{"(default)"} - almost
-certainly a copy/paste slip, since only one can be the actual default.}
-\code{"regular"} was picked as the real default here (it's the option
-listed first, and is the more literal/simpler reading of "0,0.25,0.5,
-0.75,1"); \strong{Josh: please confirm this is the one you meant as the
-default}, since the two only visibly differ when the exact 25/50/75\%
-axis positions don't land on whole numbers.
-
-\strong{BUGFIX, 2026-08-28, per Josh ("scale is not working as expected.
-The attached file scale jumps from the bottom of the Y axis to almost
-the top. It should be evenly spaced along the y axes"): a real bug in
-how \code{"regular"}/\code{"rounded"} computed break VALUES, found from
-Josh's own real render with \code{$yaxe.trans = "log10"},
-\code{$y.scale = "regular"}, \code{$ymax = 230}.} The first version of
-this function computed \code{"regular"}/\code{"rounded"} breaks as 5
-values evenly spaced across the RAW count range (\code{0}, 25\%, 50\%,
-75\%, 100\% of \code{$ymax} - i.e. \code{0, 57.5, 115, 172.5, 230}), then
-transformed only their AXIS POSITIONS through \code{$yaxe.trans}. That's
-fine when \code{$yaxe.trans = "none"} (position and value are the same
-thing), but once a log-family transform is applied, evenly-spaced RAW
-values do NOT produce evenly-spaced POSITIONS - quite the opposite:
-\code{log10(1) = 0} but \code{log10(58.5) = 1.77}, already most of the
-way to \code{log10(231) = 2.36}, so the break from \code{0} to
-\code{57.5} visually spanned almost the entire axis while \code{57.5},
-\code{115}, \code{172.5}, and \code{230} all crowded into the remaining
-sliver at the top - exactly what Josh described. \strong{Fixed} by
-computing \code{"regular"}/\code{"rounded"} breaks the other way around:
-5 points evenly spaced along the TRANSFORMED axis itself (from
-\code{$yaxe.trans} applied to \code{0} to \code{$yaxe.trans} applied to
-\code{$ymax}), converted back to a raw count afterward for the label.
-This guarantees genuinely even spacing on the rendered axis regardless
-of \code{$yaxe.trans}, and is a no-op change for \code{$yaxe.trans =
-"none"} (where the transform is the identity function, so "evenly spaced
-in raw units" and "evenly spaced on the axis" were already the same
-thing) - only \code{"log"}/\code{"log10"} renders differently now.
-\strong{This means \code{"regular"}/\code{"rounded"} can now produce a
-nicely-spaced log axis on their own, without needing hand-picked
-\code{$y.custom} values} the way Josh's own target image did - though
-\code{"custom"} is still there for full manual control, e.g. round
-numbers instead of whatever the automatic 0/25/50/75/100\% axis points
-happen to compute to. Verified by rendering Josh's own real
-\code{fig.list} row (\code{$yaxe.trans = "log10"}, \code{$y.scale =
-"regular"}, \code{$ymax = 230}) before and after: before, the break
-positions computed to 0\%/74.8\%/87.3\%/94.7\%/100\% of the axis height
-(all but the first crowded into the top quarter); after, they compute to
-exactly 0\%/25\%/50\%/75\%/100\%, genuinely even.
-
-\strong{A second, related defect surfaced while adding a test for the fix
-above}: with \code{"regular"} (not \code{"rounded"}) and a log-family
-transform, the inverse-transformed break VALUES are essentially never
-round numbers (e.g. \code{2.898549...} for one of Josh's own breaks), and
-the axis LABELS were built straight from those un-rounded numbers, so
-\code{format()}'s default precision printed them out in full (e.g.
-\code{"2.898549"} instead of something readable). \strong{Fixed} by
-rounding to 1 decimal place for the LABEL text only (\code{2.9}); the
-break POSITION on the axis still comes from the exact, unrounded value,
-so this is purely cosmetic and does not reintroduce any unevenness.
-\code{"custom"} breaks are never rounded this way - a user's own
-hand-typed \code{$y.custom} numbers are always shown exactly as given.
-
-\code{$ymax} sets the top of the Y axis. When a \code{fig.list} row
-leaves it blank (or gives something that isn't a usable positive
-number), it's auto-computed as \code{max($observations.count)} across that plot's own
-filtered data, with a console \code{NOTE} reporting the value used -
-\strong{a placeholder for this first iteration, flagged for Josh}: this
-gives the axis exactly enough headroom to fit the tallest bar and no
-more, which may look visually tight; a fixed padding percentage (e.g.
-10\% above the max) could be added in a later iteration if wanted. The
-actual plotted axis upper limit is never allowed to clip a real bar or a
-user-supplied \code{$y.custom} value even if \code{$ymax} itself is
-smaller than one of those (\code{max($ymax, $y.custom values, $observations.count)} is
-used as the true limit) - this protects against a \code{$ymax}/
-\code{$y.custom} mismatch silently cutting off part of the plot.
-
-\strong{A real data/reference-table mismatch was found and worked around
-while building this against Josh's real \code{plfr.bats.csv}:} its 40kHz-
-Myotis rows use \code{$spp.id = "40kMyo"}, but
-\code{batz.batusa_recode.names()}'s own reference table's matching
-non-species category label is \code{"40KHzMyo"} - these do NOT match
-after that function's own case/dash/underscore-folding normalization
-(folding case doesn't add the missing "Hz"), so running
-\code{"40kMyo"} through \code{batz.batusa_recode.names()} alone leaves it
-unmatched (passed through unchanged, plus a console \code{WARNING} from
-that function). Worked around, scoped to this function only (the shared
-recode reference table itself was not touched): every data row's raw
-\code{$spp.id} is checked directly (case/punctuation-insensitively)
-against both \code{"40khzmyo"} and \code{"40kmyo"} before recoding, and
-either spelling is treated as the 40kHzMyo category for the bar-
-overlay/legend logic, regardless of what \code{batz.batusa_recode.names()}
-itself would have matched. \strong{Flagging for Josh}: worth deciding
-whether \code{"40kMyo"} should be renamed to \code{"40KHzMyo"} at the
-source (in whatever produces \code{plfr.bats.csv}), or whether
-\code{"40kMyo"} should be added as a recognized alias directly in
-\code{batz.batusa_recode.names()}'s own reference table (\code{NAbat.names.csv})
-\itemize{
-\item either fix would make this function's own local workaround
-unnecessary, but isn't required for this function to work correctly as
-delivered.
-}
-
-\strong{\code{$output.filename.pattern} is DEPRECATED as of Josh's
-nineteenth follow-up (2026-09-16)} - see "File naming (round nineteen)"
-below. Its default value in \code{plotopts_callobs.csv}
-(\code{"Number of bat calls detected at <ARU> between <date.start> and
-<date.end> <timestamp>.png"}) was originally chosen to match the literal
-file name of Josh's own target output image (\code{"Number of bat calls
-detected.png"}) - left in place, harmless, no longer read.
-
-\strong{Real bug found and fixed while visually comparing a render
-against Josh's target image: the 40kHzMyo bar overlay was invisible.}
-The first version of this function plotted \code{"All detections"} and
-\code{"40kHzMyo"} bars for the same night in ONE \code{geom_col()} call
-(\code{aes(fill = bar.type)}) - the data was correct (verified
-separately via \code{pd$bar.type}), but ggplot2 draws a single layer's
-rows in the fill aesthetic's own factor-level order, which defaults to
-alphabetical: \code{"40kHzMyo"} sorts before \code{"All detections"},
-so the black bar was drawn FIRST/underneath and the gray bar (same
-night, same width/x-position, fully opaque) completely covered it every
-time - invisible in every render even though the underlying data was
-right. Only caught by actually rendering and looking at the image, not
-from data-level checks alone (mirrors the same "verify by rendering, not
-just reading the code" lesson found repeatedly while building
-\code{batz.plotdetections_first.last()}). Fixed by splitting into two
-explicit \code{geom_col()} layers, each pre-filtered to one
-\code{bar.type} and added to the plot in bottom-to-top order (all-
-detections layer first, 40kHzMyo layer second) - this guarantees the
-draw order regardless of the fill factor's own alphabetical sort.
-Re-verified by rendering: the black segment now shows correctly at the
-base of the gray bar on every night with a real 40kHzMyo observation.
-
-\strong{Settings resolution (round nineteen), per Josh's 2026-09-16
-follow-up ("reorder the headings in all plotopts files to be $category
-$parameter $default.value $overide.value $notes ... add arguments
-aes.style = "overide.value" ... Function logic will first look in the
-column with the header = aes.style ... then if that element is blank
-use $default.value"):} the \code{project.name}-matches-a-column-name
-mechanism described above (e.g. a "gome" column) is REPLACED entirely.
-\code{aes.default} now has a fixed \code{$overide.value} column (blank
-by default, between \code{$default.value} and \code{$notes} - see
-\code{\link{batz.generate_plotopts}}), which the user fills in directly
-on their own copy of the CSV to override a setting. The new
-\code{aes.style} argument (default \code{"overide.value"}) names which
-column \code{get.default()} checks FIRST; when that column doesn't
-exist (an older sheet) or is blank for a given row, \code{$default.value}
-is used, exactly as before. \code{project.name} no longer participates
-in settings resolution AT ALL - it is now used purely to build the saved
-file name (see "File naming (round nineteen)" below, superseded by
-"File naming (round twenty-one)" further below). The THIRD tier of
-the old precedence - a \code{fig.list} row's own value beating both the
-column and the default - is UNCHANGED: \code{get.setting(job, param)}
-still checks \code{job} first, then falls through to the (now
-\code{aes.style}-driven) \code{get.default(param)}. This is a judgment
-call on backward compatibility, flagged for Josh, matching the identical
-change made in \code{\link{batz.plotdetections_first.last}} and
-\code{\link{batz.plotcover_bullseye}}: an older \code{aes.default} sheet
-with its own \code{project.name}-matching column will simply be ignored
-now - re-fill any values that were in that column into the new
-\code{$overide.value} column instead.
-
-\strong{File naming (round nineteen), same follow-up - SUPERSEDED by
-round twenty-one below.} Every saved PNG's
-file name was now always \code{"<project.name>_<ARU>_<timestamp>.png"} -
-\code{aes.default}'s \code{$output.filename.pattern} is DEPRECATED and no
-longer read at all (the row is left in place in \code{plotopts_callobs.csv},
-harmless, simply ignored). The \code{<ARU>} token was this function's own
-\code{aru.token} - the selected \code{$plot.set} value(s) joined with
-\code{"+"} (falling back to \code{$plot.group}'s own column name when no
-specific values were selected), with a \code{"-pooled"} suffix appended
-when \code{$pool = TRUE} - unchanged from how that token was already
-computed before this round, just now spliced directly into the fixed
-\code{"<project.name>_<ARU>_<timestamp>.png"} pattern instead of a
-user-editable one. Every saved file's name is printed to the console via
-\code{cat("Saved:", fname, "\n")}, as it already was before this round.
-
-\strong{File naming (round twenty-one), 2026-09-24, per Josh ("The plots
-come out too fast resulting in overwriting of plots"):} round
-nineteen's \code{"<project.name>_<ARU>_<timestamp>.png"} pattern
-(\code{<ARU>} = this function's own \code{aru.token} - the selected
-\code{$plot.set} value(s) joined with \code{"+"}, with a
-\code{"-pooled"} suffix when \code{$pool = TRUE}) is replaced with
-\code{"<project.name>_<plot.name>_<daterange>_<timestamp>.png"}, where
-\code{<plot.name>} is this job's own \code{job.label} (i.e. its
-\code{$plot.name}, falling back to \code{"row N"} when blank - unchanged
-from how \code{job.label} was already computed) and \code{<daterange>}
-is this job's resolved \code{$date.start}/\code{$date.end} formatted as
-\code{YYYYMMDDtoYYYYMMDD} (e.g. \code{20260408to20260427}). This directly
-addresses Josh's report: two \code{fig.list} rows that share the same
-\code{$plot.name} but cover different date windows previously could
-still land on the identical timestamp-only-differentiated file name when
-rendered back to back quickly enough (\code{format(Sys.time(), ...)} has
-1-second resolution) - the added \code{<daterange>} token means those two
-rows now always produce distinct file names even when their save
-timestamps happen to collide, exactly the same fix made in
-\code{\link{batz.plotsm4_heatmap}} and
-\code{\link{batz.plotdetections_first.last}}.
-\strong{Scope decision, flagged explicitly for Josh}: the old
-\code{aru.token} (the selected \code{$plot.set} value(s), joined with
-\code{"+"}, with a \code{"-pooled"} suffix) is DROPPED entirely from the
-file name, per Josh's literal naming spec for this function
-(\code{"<project.name>_<plot.name>_<daterange>_<timestamp>.png"} - no
-ARU/pooled token in that pattern). This means a saved file name for this
-function no longer indicates which \code{$plot.set} value(s)/pooling
-choice produced it, only its \code{$plot.name}/date window - two
-\code{fig.list} rows sharing both \code{$plot.name} and date window but
-differing only in \code{$plot.set}/\code{$pool} would now produce the
-same file-name prefix (still disambiguated by the trailing timestamp
-whenever they don't render in the exact same second, and either way each
-call's own console \code{"Saved:"} line and returned \code{$plots}/
-\code{$ggplots} entries remain correct regardless of the file name).
-\strong{If the \code{$plot.set}/pooled distinction should still be
-recoverable from the file name, say so and the old \code{aru.token} can
-be added back in alongside the new tokens rather than replacing them.}
-
-\strong{Timestamp format (round twenty-two), 2026-09-24, per Josh's
-package-wide request ("Update all functions that save files or charts:
-... \if{html}{\out{<timestamp>}} format match this format: YYYYMMDDHHHMMSS"):} the
-\code{<timestamp>} token in every saved file name across this package -
-this function included - is now built as \code{format(Sys.time(),
-"\%Y\%m\%d\%H\%M\%S")}: 14 digits, no separator between the date and time
-halves. This replaces the \code{"\%Y\%m\%d_\%H\%M\%S"} format (date and
-time halves separated by an underscore) used everywhere in this package
-since round nineteen. \strong{Read as a typo, flagged rather than
-silently guessed at}: Josh's literal spec text, \code{"YYYYMMDDHHHMMSS"},
-has 15 characters (three \code{H}s) where a clock time only ever needs
-two digits each for hour/minute/second (14 digits total) - taken as a
-dictation slip for \code{"YYYYMMDDHHMMSS"} (14 digits), which also
-matches the no-underscore timestamp format
-\code{\link{batz.generate_suntimes.arulist}} already used for its own
-\code{sav<timestamp>} token before this round. \strong{Please confirm
-this reading is right.} This is a pure formatting change to the
-\code{<timestamp>} token only - its value (the exact second the file was
-saved) and its position at the end of the file name are unchanged; only
-the separator between the date and time portions is removed. Applied
-package-wide in this same round: every other \code{batz} function that
-saves a chart or a data file (CSV/xlsx) - see each function's own
-\code{@details} for its own round-twenty-two entry - picks up the same
-14-digit, no-underscore \code{<timestamp>} format, whatever its own
-file-naming pattern is otherwise.
-
-Naming convention (per project preferences):
-\code{package.family_action.subject()}. This function is
-\code{batz.plotactivity_observations()}: family = "plotactivity" (the
-verb "plot" is baked into the family name), subject = "observations"
-(the number of observations/calls per night). \strong{Requested as
-\code{batz.plotactivlty_observations()} - "plotactivlty" was a typo for
-"plotactivity" (transposed letters), fixed here; nothing else about the
-name changed. Please flag if a different family/subject split was
-actually intended.}
-
-\strong{Follow-up, 2026-09-23, per Josh: two changes - fig.list's
-\code{$plot.sets} column renamed to \code{$plot.set} (standardizing on
-the singular spelling \code{\link{batz.plotdetections_first.last}}
-already used, since \code{fig.list.csv} is one file shared across every
-\code{batz} plotting function), and \code{$plot.group} is no longer a
-REQUIRED \code{fig.list} header.} Purely a header-name change for
-\code{$plot.sets} -> \code{$plot.set}: nothing about the underlying
-value-parsing behavior changed - a \code{$plot.set} cell can still hold
-several whitespace/quote-separated tokens exactly as \code{$plot.sets}
-did (see \strong{Follow-up, 2026-08-28} above), this is purely which
-column name \code{fig.list} is expected to use.
-\code{\link{batz.plotdetections_first.last}} already used the singular
-\code{$plot.set} spelling (matched against a single literal value there,
-not parsed into multiple tokens) - no code change was needed in that
-function, only this one, to bring the two into naming alignment; see
-that function's own \code{@details} for a one-line confirmation note.
-
-\code{$plot.group} - previously a REQUIRED \code{fig.list} header (a
-blank value, or a missing column, skipped the whole row with a console
-\code{NOTE}) - is now OPTIONAL: removed from \code{FIG.LIST.REQUIRED}
-entirely, and a blank value (or the column not existing in
-\code{fig.list} at all) now defaults to the fixed column name
-\code{"group"} - matching \code{\link{batz.generate_plotframe.bat}}'s
-own output column and the fixed (non-configurable) column
-\code{\link{batz.plotdetections_first.last}} has always grouped by -
-rather than skipping the row. A row can still supply its own
-\code{$plot.group} value to filter/group by a different column, exactly
-as before; only the FALLBACK when it's blank/absent changed (previously
-skip, now default to \code{"group"}). \strong{This was a genuine design
-choice among a few reasonable readings of "remove the requirement" -
-confirmed directly with Josh before implementing}: the alternatives
-considered (dropping the \code{$plot.group} mechanism entirely in favor
-of always using the fixed \code{"group"} column with no per-row
-override, or not filtering/grouping \code{data} by any column at all
-when blank) were both rejected in favor of this one, since it keeps
-every existing \code{$plot.set}/\code{$pool}/\code{$legend} behavior
-working completely unchanged for any \code{fig.list} row that already
-specifies \code{$plot.group} (every existing test in the \code{.dev.R}
-script continues to pass unmodified), while making the common case (a
-\code{data} frame already carrying \code{batz.generate_plotframe.bat()}'s
-own \code{$group} column) require one less \code{fig.list} column to be
-filled in. If the DEFAULTED column name (\code{"group"}) itself isn't
-present in \code{data} either, the row is still skipped with a console
-\code{NOTE} naming \code{"group"}, exactly the same tolerant
-skip-don't-crash behavior as an explicitly-given but nonexistent
-\code{$plot.group} value always had. Verified with new dev-script tests:
-a \code{fig.list} row with no \code{$plot.group} column at all, run
-against \code{data} with a \code{$group} column, resolves and plots
-exactly like an equivalent row that explicitly set
-\code{$plot.group = "group"}; an explicit \code{$plot.group} override
-(e.g. \code{"aru.groupby"}, as already exercised by the existing test
-suite) continues to take priority over the \code{"group"} default; and a
-blank/absent \code{$plot.group} against \code{data} with no \code{$group}
-column either still skips with the expected \code{NOTE}, rather than
-erroring.
-
-\strong{Follow-up, 2026-09-23, per Josh's bug report ("I do not get the
-log values instead 0 57.5 115 172.5 230" when \code{$yaxe.trans} was set
-to \code{"log10"} in \code{fig.list}):} investigated and found that
-\code{0, 57.5, 115, 172.5, 230} is exactly this function's own documented
-PRE-2026-08-28-bugfix output for \code{$yaxe.trans = "log10"}/
-\code{$y.scale = "regular"}/\code{$ymax = 230} (see the \strong{BUGFIX,
-2026-08-28} entry above) - the current code, run directly against Josh's
-real \code{fig.list.csv} row for this exact scenario, already resolves
-\code{$yaxe.trans} from \code{fig.list} first (per \code{get.setting()}'s
-documented precedence, unchanged) and produces the correct log-spaced
-breaks (\code{0, 3, 14, 58, 230}) - so the most likely explanation is
-that whatever Josh ran this against was a stale copy of this file (from
-before the 2026-08-28 fix), not a live bug in \code{get.setting()}'s
-fig.list-then-aes.default precedence itself, which was already working
-as designed when tested here. \strong{Action needed on Josh's machine}:
-confirm the \code{Batz} package/source actually running is this current
-file (restart the R session and/or reinstall after pulling the latest
-commit) and re-test.
-
-A separate, real latent bug WAS found and fixed while investigating,
-though: \code{get.setting()}/the \code{$plot.group} resolver both look up
-a \code{fig.list} column by an EXACT name match (\code{param \%in\%
-names(job)}), same as \code{FIG.LIST.REQUIRED}'s own columns - but unlike
-those required columns, the OPTIONAL per-row settings (\code{$plot.group},
-\code{$yaxe.trans}, \code{$loglabels}, \code{$y.scale}, \code{$y.custom},
-\code{$ymax}, \code{$legend}, \code{$plot.order}, \code{$facpan}) were
-never run through \code{canonicalize.headers()}, so a column arriving as
-e.g. \code{"Yaxe.trans "} (a trailing space) or \code{"Y_Scale"}
-(different case/separator) - which \code{read.csv()} happens to already
-strip/tolerate for a plain CSV, but a spreadsheet loader like
-\code{openxlsx::read.xlsx()}/\code{readxl::read_excel()} does NOT - would
-silently fail the exact match and fall through to \code{aes.default}'s
-default with no warning at all, exactly reproducing Josh's reported
-symptom for that (different, loader-dependent) cause. \strong{Fixed} by
-adding a second \code{canonicalize.headers()} pass over
-\code{fig.list.canon$df} for a new \code{FIG.LIST.OPTIONAL} list covering
-all nine of those columns, run separately from the
-\code{FIG.LIST.REQUIRED} pass so an absent optional column still isn't
-treated as a hard-stop missing-header error - only \code{$df} is kept
-from this second pass, \code{$missing} is untouched. Verified: a
-synthetic \code{fig.list} row with \code{"Yaxe.trans  "} (double trailing
-space), \code{"Y_Scale"}, and \code{"ymax "} instead of the canonical
-spellings now resolves and plots identically to a clean row (breaks
-\code{0, 3, 14, 58, 230}, matching); the existing real-data run (clean
-\code{fig.list.csv}, loaded via \code{read.csv()}) is unaffected (same
-output before and after). This is a real hardening fix, independent of
-whichever explanation above turns out to be Josh's actual cause.
-
-\strong{Follow-up, 2026-09-25, per Josh's package-wide audit request
-following the \code{suntimes} header rename in
-\code{\link{batz.generate_suntimes.arulist}} (round twenty-six):
-\code{SUNTIMES.REQUIRED} is updated to match, and a separate,
-pre-existing, unrelated stale entry is fixed in the same pass.} Since
-this function's own \code{@details} above ("\code{suntimes} is accepted
-and header-checked but not otherwise used in this iteration") already
-established that no code here actually reads any \code{suntimes} column
-beyond the header check itself, the rename below is a pure header-check
-update with no other code change: \code{$suns} -> \code{$sunset},
-\code{$suns.unix} -> \code{$sunset.unix}, \code{$sunr} -> \code{$sunrise},
-\code{$sunr.unix} -> \code{$sunrise.unix}, \code{$sunr.mon} ->
-\code{$sunrise.monitoringnight}, \code{$sunr.mon.unix} ->
-\code{$sunrise.monitoringnight.unix} - see
-\code{\link{batz.plotdetections_first.last}}'s own \code{@details} for
-the full rationale (this is NOT backward-compatible, since
-\code{canonicalize.headers()} cannot bridge a genuinely different word,
-unlike the earlier \code{$aru}->\code{$aru.name} casing-only rename).
-\strong{A second, separate, pre-existing bug caught in this same audit
-pass (unrelated to today's suns/sunr rename): \code{SUNTIMES.REQUIRED}
-still said \code{"date.mon"}}, a column \code{aru.suntimes} no longer
-has at all since round twenty-five (2026-09-25, earlier the same day),
-when \code{\link{batz.generate_suntimes.arulist}} renamed its own
-\code{$date.mon} output column to \code{$date.monitoringnight} - this
-function's own required-header constant was never updated to match at
-the time, exactly the same category of stale-constant bug found and
-fixed in \code{\link{batz.plotdetections_first.last}} during this same
-audit pass. Since \code{suntimes} is never read beyond the header check
-here either, this was purely a silent header-check-only conflict (any
-real \code{aru.suntimes} produced since round twenty-five would have
-failed this function's required-header check on \code{"date.mon"}
-alone). \code{SUNTIMES.REQUIRED} now says \code{"date.monitoringnight"}.
-
-\strong{Column identifiers renamed, 2026-09-27, per Josh's reference-workbook
-"Change.to" column.} Per Josh's batch rename covering this function's
-shipped code and its \code{.dev.R} test script: \code{$Alldect} (a
-\code{fig.list} column name, part of \code{FIG.LIST.REQUIRED}) ->
-\code{$all.dectections} (Josh's own spelling, kept exactly as given);
-and the specific literal \code{$aru} data-column identifier (as used in
-\code{SUNTIMES.REQUIRED}'s required-header list, matching
-\code{\link{batz.generate_suntimes.arulist}}'s own now-\code{$aru.name}
-output column) -> \code{$aru.name}. \code{SUNTIMES.REQUIRED} already read
-\code{"aru.name"} as of the 2026-09-22 follow-up above, so this entry is
-purely a documentation/naming-convention confirmation for that column;
-the only functional code change in this pass is
-\code{$Alldect} -> \code{$all.dectections} throughout (the required-header
-constant, the \code{@param fig.list} prose, this \code{@details} history,
-and every code reference to \code{job$Alldect}/\code{alldect.flag}'s
-source column). Other bare uses of "aru" in this file's prose (e.g.
-\code{aru.suntimes}, "ARU identifier", the general concept of an
-acoustic recording unit) are unrelated identifiers/prose and were left
-untouched.
-
-\strong{Follow-up, 2026-09-30, per Josh - special characters.} New
-last argument \code{strip.special = TRUE}. Every data frame input
-(\code{data}, \code{fig.list}, \code{suntimes} and \code{aes.default}) is now passed through the shared internal
-helper \code{special.strip()} as the very first step of the function,
-before any header standardization or required-header check: with
-\code{strip.special = TRUE}, non-ASCII characters (e.g. \code{°},
-\code{µ}, \code{é}, smart quotes) are removed from text/factor
-columns, and a column that had characters removed is re-typed the way
-\code{read.csv()} would (so \code{"42.5°"} becomes the number
-\code{42.5}); column names are not changed. This includes plot-text
-settings in \code{aes.default} (titles, axis/legend labels), so a
-label such as \code{"Temperature (°C)"} is drawn as
-\code{"Temperature (C)"} - pass \code{strip.special = FALSE} to keep
-such characters. This function reads no files and writes no log, so
-there is no \code{$strip.special} log column. Inputs without special
-characters behave exactly as before.
-
-\strong{Follow-up, 2026-10-02, per Josh - plot settings and accents.}
-\code{strip.special} now applies to the data input(s) only; \code{fig.list} and \code{aes.default}
-are governed by the new \code{strip.special.plotopts} (default
-\code{FALSE}), so symbols in plot labels are kept unless you ask
-otherwise. Accented letters are now simplified rather than dropped
-(\code{café} -> \code{cafe}).
-
-\strong{Follow-up, 2026-10-02, per Josh - species name formats and
-pooled data.} With \code{fig.list $facet = "sppid"}, each row's
-\code{$facet.label} sets the format of the species panel titles:
+\strong{fig.list columns.} Required and optional headers are matched
+ignoring case and "." / "_" / space differences.
+\describe{
+\item{\code{$plot.type}}{Only \code{"call.observations"} rows are
+plotted; other values are skipped with a NOTE. Rows with a blank
+\code{$plot.type} are dropped.}
+\item{\code{$plot.name}}{Plot title and second part of the file name (after \code{project.name}).
+Blank gives \code{"row N"}.}
+\item{\code{$facet.header}}{What the facets are. Only \code{"sppid"}
+(species facets) is supported; other values are skipped with a NOTE.}
+\item{\code{$facet.plot}}{TRUE (or anything but FALSE) = one faceted
+plot. FALSE = one plot per facet; facets with no data are skipped with
+a NOTE.}
+\item{\code{$facet.set}}{Facets and their order: a preset (\code{"NE"},
+also \code{"New England"}) or a list separated by ";" (or ",") of
+species in any format \code{\link{batz.batusa_recode.names}} reads,
+\code{"AllDet"} / \code{"All detections"}, \code{"40khzmyo"} and preset
+names, mixed freely (e.g. \code{"AllDet;epfu;labo;lano"} or
+\code{"AllDet;NE"}). Blank = \code{"NE"} (NOTE). Unrecognized entries
+are kept as written (NOTE). Duplicates are dropped. Every facet is
+shown, even with no data.}
+\item{\code{$myso}}{TRUE adds Indiana bat (MYSO). If little brown bat
+(MYLU) records are in the plotted data (plot set and date range), all
+MYLU and MYSO records are pooled as LUSO and LUSO replaces MYLU/MYSO in
+the facets (in the place of the first of them, or added last), with a
+NOTE. Otherwise Indiana bat is plotted and gets its own facet (added
+last if not listed in \code{$facet.set}).}
+\item{\code{$all.detections}}{TRUE adds an "All detections" facet first,
+if \code{$facet.set} does not already list it.}
+\item{\code{$40khzmyo}}{TRUE (or \code{"40khzmyo"} in
+\code{$facet.set}) plots 40kHzMyo bars. They are drawn on top of the
+bars in the "All detections" facet when it exists, otherwise in their
+own last facet. The 40kHzMyo legend key is shown whenever this is on.}
+\item{\code{$facet.label}}{Format of species facet titles:
 \code{"common_name"} (used when blank), \code{"scientific_name"},
-\code{"code4"}, \code{"code6"}, \code{"both"} (\code{"Big brown bat
-(Eptesicus fuscus)"}), or the older names \code{"common"},
-\code{"latin"}, \code{"scientific"} - any case or separator. A value
-that isn't a name format stops with an error naming the
-\code{fig.list} row. Panels that aren't species (\code{"All
-detections"}, \code{"40kHzMyo"}) keep their own name. If \code{data}
-comes from \code{\link{batz.generate_plotframe.bat}} with a
-\code{pool.interval} under one day, its time-bin rows are combined to
-one row per species/group/date before plotting (\code{$observations.count} summed),
-with a NOTE. Pools of a day or longer are plotted at their start date
-(\code{$date}).
+\code{"code4"}, \code{"code6"}, \code{"both"}, or \code{"common"},
+\code{"latin"}, \code{"scientific"}. Other values stop with an error
+naming the row. Non-species facets keep their own name.}
+\item{\code{$plot.set}}{One or more values of the \code{$plot.group}
+column to include, separated by spaces (double quotes are treated as
+spaces), matched ignoring case. Blank = all values.}
+\item{\code{$pool}}{TRUE sums \code{$observations.count} over all
+selected \code{$plot.set} values into one bar per date and facet.
+FALSE keeps one bar per value, side by side.}
+\item{\code{$date.format}}{X-axis date label format (strftime style,
+e.g. \code{"\%b-\%d/n\%Y"}). A literal "/n" becomes a line break.}
+\item{\code{$date.start}, \code{$date.end}}{Date window of the plot.
+Read as m/d/Y, Y-m-d or m/d/y.}
+\item{\code{$xaxe.interval}}{Number of evenly spaced labeled dates on
+the X axis, from \code{$date.start} to \code{$date.end}. An unusable
+value gives 2 labels (NOTE).}
+\item{Optional: \code{$plot.group}}{Column of \code{data} to filter and
+group by. Blank or absent = \code{$group}. A name that is not a column
+of \code{data} skips the row (NOTE).}
+\item{Optional: \code{$yaxe.trans}}{Y-axis transform: \code{"none"},
+\code{"log"} (log(x + 1)) or \code{"log10"} (log10(x + 1)). Other
+values give \code{"none"} (NOTE).}
+\item{Optional: \code{$loglabels}}{TRUE labels Y breaks with the
+transformed values (2 decimals) instead of counts.}
+\item{Optional: \code{$y.scale}}{How Y breaks are chosen:
+\code{"regular"}, \code{"rounded"} or \code{"custom"}. Other values
+give \code{"regular"} (NOTE).}
+\item{Optional: \code{$y.custom}}{Break values separated by ";", used
+when \code{$y.scale = "custom"}. No usable numbers gives
+\code{"regular"} (NOTE).}
+\item{Optional: \code{$ymax}}{Top count on the Y axis. Blank or not a
+positive number uses the largest count in the plot (NOTE).}
+\item{Optional: \code{$legend}}{TRUE colors side-by-side bars by their
+\code{$plot.set} value and shows a legend for them.}
+\item{Optional: \code{$xaxe.title}, \code{$yaxe.title}}{Axis titles.}
+}
+Each optional column, when blank or missing, falls back to the plotopts
+parameter of the same name. Old fig.list files still load: \code{$facet}
+is used as \code{$facet.header}, \code{$Alldect} /
+\code{$all.dectections} as \code{$all.detections}, and a missing
+\code{$facet.plot} is added as TRUE, each with a WARNING. Old
+\code{$facet.panel}, \code{$facpan} and \code{$plot.order} columns are
+ignored (NOTE). Exact duplicate rows (every column the same) are removed
+before plotting (NOTE).
 
-\strong{Spelling correction, 2026-10-28, per Josh:} \code{schedual1}/
-\code{schedual2} are now \code{schedule1}/\code{schedule2} in the required \code{suntimes} headers. A file or
-data frame that still uses \code{schedual1}/\code{schedual2} works
-unchanged - \code{canonicalize.headers()} accepts the old spelling.
+\strong{plotopts (aes.default).} Each setting is read from the first row
+whose \code{$parameter} matches the name (ignoring case and spaces).
+The value is the \code{aes.style} column when that cell is not blank,
+otherwise \code{$default.value}. For the fig.list settings above, a
+non-blank fig.list value wins over both. These \code{$parameter} rows must
+exist (case and spaces ignored), or the function stops listing the missing ones:
+\code{facpan.numcol}, \code{plot.title.size}, \code{plot.title.hjust},
+\code{axis.title.size}, \code{axis.text.size}, \code{legend.text.size},
+\code{legend.title.size}, \code{panel.spacing.x},
+\code{panel.border.linewidth}, \code{legend.position},
+\code{xaxe.interval}, \code{xaxe.title}, \code{xaxe.date.buffer.days}
+(padding in days on each side of the date window; 0.5 if not a number),
+\code{yaxe.title}, \code{yaxe.trans}, \code{loglabels}, \code{y.scale},
+\code{ymax}, \code{bar.width}, \code{bar.alldetections.fill},
+\code{bar.40khzmyo.fill}, \code{bar.fill.legend.title}, \code{legend},
+\code{legend.groupval.title}, \code{legend.groupval.colors} (";"-separated
+colors for side-by-side bars; colors repeat when there are more values
+than colors, and a built-in 8-color palette is used when blank),
+\code{ggsave.dpi}, \code{ggsave.units}, \code{ggsave.width.pad},
+\code{ggsave.height.pad}, \code{plot.width}, \code{plot.height}. An
+\code{output.filename.pattern} row is ignored.
 
-\strong{Lower-case headers (2026-11-04, per Josh, Batz_reference_db Header.names).}
-fig.list columns \code{$myso} and \code{$yaxe.trans} (were \code{$MYSO} /
-\code{$Yaxe.trans}; old headers still accepted). plotopts parameters are
-matched ignoring case, so an older plotopts file with Yaxe.trans still works.
+\strong{Input checks.}
+\itemize{
+\item Special characters are stripped or checked (\code{strip.special},
+\code{strip.special.plotopts}).
+\item Required headers of all four inputs are matched and renamed to the
+expected spelling. Missing headers, missing plotopts rows and
+duplicate column names are collected and reported in one error.
+\item Plot-frame rows from pools shorter than one day are combined to
+one row per species/group/date, summing \code{$observations.count}
+(NOTE).
+}
 
-\strong{Spelling fix (2026-11-04, per Josh).} fig.list column
-\code{$all.detections} (was \code{$all.dectections}; the old header and
-\code{$Alldect} are still accepted, with a WARNING).
+\strong{Preparing each plot.}
+\itemize{
+\item \code{data} is given \code{$spp.common} (common names) and
+filtered to the \code{$plot.set} values, the facet species (plus
+Indiana bat or LUSO for \code{$myso}, plus 40kHzMyo) and the date
+window. A row with no data left is skipped (NOTE).
+\item With \code{$pool = TRUE}, counts are summed by species, facet, bar
+type and date.
+\item Y axis: for \code{"regular"} and \code{"rounded"}, 5 breaks are
+placed evenly along the (transformed) axis from 0 to \code{$ymax} and
+turned back into counts (\code{"rounded"} rounds them to whole
+numbers; labels are rounded to 1 decimal with thousands commas). For
+\code{"custom"}, the \code{$y.custom} values are used. The axis top is
+never below the largest bar or break.
+}
+
+\strong{Drawing.}
+\itemize{
+\item Bars are side by side only when \code{$pool} is FALSE and more
+than one group value is present; side-by-side bars keep a constant
+width (\code{bar.width}).
+\item The "All detections" bars are drawn first and the 40kHzMyo bars on
+top, so the overlay is never hidden.
+\item Colors: with side-by-side bars and \code{$legend} TRUE, each group
+value gets its own color from \code{legend.groupval.colors} (legend
+title \code{legend.groupval.title}) and 40kHzMyo keeps
+\code{bar.40khzmyo.fill}. Otherwise bars use
+\code{bar.alldetections.fill} and \code{bar.40khzmyo.fill} (legend
+title \code{bar.fill.legend.title}, showing only the 40kHzMyo key).
+\item The X axis runs from \code{$date.start} to \code{$date.end} plus
+\code{xaxe.date.buffer.days} on each side. Facets are laid out in
+\code{facpan.numcol} columns.
+\item The PNG size is \code{plot.width} + \code{ggsave.width.pad} by
+\code{plot.height} + \code{ggsave.height.pad}, in \code{ggsave.units},
+at \code{ggsave.dpi}. A \code{Saved:} line is printed per file.
+\item If ggplot2 is not installed, only the prepared data is returned.
+}
 }
 \examples{
 \dontrun{
-# default dir.save = getwd(), default project.name = "new.project"
 result <- batz.plotactivity_observations(
   data = plfr.bats,
   fig.list = fig.list,
   suntimes = aru.suntimes,
-  aes.default = plotopts.callobs
+  aes.default = plotopts.callobs,
+  dir.save = "C:/path/to/output/folder"
 )
 result$ggplots[[1]]
 }
 
+}
+\seealso{
+\code{\link{batz.generate_plotframe.bat}},
+\code{\link{batz.generate_plotopts}},
+\code{\link{batz.plotdetections_first.last}}
 }

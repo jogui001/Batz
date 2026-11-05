@@ -1,33 +1,25 @@
-#' Standardize a vector of header/column names (internal helper)
+#' Standardize a vector of header names (internal helper)
 #'
-#' Trims leading/trailing whitespace, collapses every run of one or more
-#' non-alphanumeric characters (spaces, punctuation, symbols) into a single
-#' underscore, then lowercases the result - i.e. converts to snake_case.
-#' Used by every \code{batz} function that loads a file or accepts an
-#' externally-supplied data frame, to standardize incoming headers before
-#' any matching/selecting/renaming happens (per project preference, added
-#' 2026-09-14 - see \code{preferences.md}, "Header standardization").
+#' Converts header names to snake_case so incoming headers can be matched
+#' regardless of spacing, punctuation or case. Used by \code{batz} functions
+#' that load files or accept outside data frames, before any matching,
+#' selecting or renaming.
 #'
-#' @param x Character vector (or coercible) of header/column names to
-#'   standardize.
-#'
-#' @return A character vector the same length as \code{x}, in snake_case.
+#' @param x Character vector (or something coercible to one) of header names.
 #'
 #' @details
-#' Not exported - this is a package-internal utility shared across
-#' \code{batz} functions. All functions in a package's \code{R/} folder are
-#' loaded together, so any function in this package can call
-#' \code{standardize.headers()} directly without qualification, the same
-#' way several \code{batz} functions already call each other (e.g.
-#' \code{batz.merge_vetted.acoustics2()} calls
-#' \code{\link{batz.datawrangler_rename}} and
-#' \code{\link{batz.batusa_recode.names}}).
+#' Steps, in order:
+#' \itemize{
+#'   \item trim leading and trailing whitespace;
+#'   \item replace every run of non-alphanumeric characters (spaces,
+#'     punctuation, symbols, including \code{"."}) with one underscore;
+#'   \item drop a leading or trailing underscore;
+#'   \item lower-case the result.
+#' }
+#' Word boundaries are kept as underscores, so \code{"Project Code"} becomes
+#' \code{"project_code"}, not \code{"projectcode"}. Not exported.
 #'
-#' \strong{Substitutes} (never deletes) each non-alphanumeric run with a
-#' single underscore, so \code{"Project Code"} becomes
-#' \code{"project_code"} (the word boundary is preserved as an underscore),
-#' not \code{"projectcode"} - deleting instead of substituting would glue
-#' adjacent words together and defeat the point of "snake_case".
+#' @return A character vector the same length as \code{x}, in snake_case.
 #'
 #' @examples
 #' \dontrun{
@@ -35,6 +27,7 @@
 #' # -> "project_code"  "date_of_deployment"  "x"  "mic0_type"
 #' }
 #'
+#' @seealso \code{\link{canonicalize.headers}}, \code{\link{snake.headers}}
 #' @keywords internal
 standardize.headers <- function(x) {
   x <- trimws(as.character(x))
@@ -47,73 +40,44 @@ standardize.headers <- function(x) {
 #' Canonicalize a data frame's headers against a required-header list
 #' (internal helper)
 #'
-#' \strong{Added 2026-09-21, per Josh, to fix a real header-matching bug:}
-#' several \code{batz} functions (\code{\link{batz.generate_plotframe.bat}},
-#' \code{\link{batz.plotdetections_first.last}},
-#' \code{\link{batz.plotactivity_observations}}) deliberately do NOT run
-#' \code{standardize.headers()} on their \code{data}/\code{fig.list}/
-#' \code{suntimes}/\code{aes.default} inputs, because those inputs are
-#' expected to already be an upstream \code{batz} function's own
-#' already-established (dot-separated) output schema, not raw file
-#' headers - see each function's own \code{@details}, "Header
-#' standardization". In practice, though, whatever a caller actually hands
-#' one of these functions may have passed back through a loading/reload
-#' step somewhere in between (a save-to-CSV-and-reload, for instance) that
-#' DOES run \code{standardize.headers()} on its own raw headers - at which
-#' point a column the function expects to find as \code{"date.mon"} might
-#' actually arrive as \code{"date_mon"}, and a literal \code{setdiff()}
-#' against the function's own dot-separated required-header list reports
-#' it (and everything else that differs only in separator style) as
-#' entirely missing, even though the data is really all there.
+#' Matches the columns of \code{df} to a list of required header names while
+#' treating \code{"."}, \code{"_"}, spaces and case as equivalent, renames each
+#' matched column to its \code{required} spelling, and reports what is missing.
 #'
-#' \code{canonicalize.headers()} fixes this by standardizing BOTH sides
-#' (the incoming data frame's own headers, and the \code{required} list
-#' this function is looking for) to the same snake_case key purely to
-#' MATCH columns up - never to decide what anything is actually called
-#' afterward. Every column of \code{df} that matches one of \code{required}
-#' (after standardizing both) is renamed, in the copy returned here only,
-#' to that item's own \code{required} spelling (e.g. always
-#' \code{"date.mon"}, never \code{"date_mon"}, regardless of which style
-#' the column arrived in) - so the rest of the calling function keeps
-#' working exactly as before, referencing its usual dot-separated column
-#' names, and the function's return value/on-disk output keeps its usual
-#' naming convention completely unaffected by this. This never touches the
-#' caller's own object: \code{df} is this call's own local copy (R's
-#' ordinary copy-on-modify semantics for a function argument), and nothing
-#' in this helper writes anything back to the caller's environment. A
-#' column of \code{df} that isn't named in \code{required} is left exactly
-#' as it was, untouched.
-#'
-#' \strong{Follow-up, 2026-09-28, per Josh: this is also now the shared
-#' mechanism used package-wide whenever a required-header check needs to
-#' treat \code{"."} and \code{"_"} as equivalent} - see
-#' \code{\link{batz.generate_suntimes.arulist}}'s own \code{@details},
-#' "Follow-up, 2026-09-28", for the first function switched over to it for
-#' this specific purpose.
-#'
-#' \strong{Spelling corrections, 2026-10-28, per Josh.} Headers listed in
-#' \code{headers.corrected()} (\code{schedual1} -> \code{schedule1},
-#' \code{schedual2} -> \code{schedule2}) are matched under either
-#' spelling: a column with the old spelling counts as the corrected header
-#' (and is renamed to it) when the corrected one isn't already there.
-#'
-#' @param df A data frame to canonicalize.
+#' @param df A data frame.
 #' @param required Character vector of header names, in the calling
-#'   function's own canonical style (e.g. dot-separated), that \code{df}
-#'   is expected to have.
+#'   function's own spelling (e.g. dot-separated), that \code{df} should have.
 #'
-#' @return A list with \code{df} (a copy of \code{df} with every matched
-#'   column renamed to its own \code{required} spelling) and \code{missing}
-#'   (the subset of \code{required}, in \code{required}'s own original
-#'   spelling, with no match at all in \code{names(df)} - ready to print in
-#'   an error message).
+#' @details
+#' Both \code{names(df)} and \code{required} are passed through
+#' \code{\link{standardize.headers}} only to match them; the standardized form
+#' is never used as a column name. A column that matches is renamed to the
+#' \code{required} spelling (e.g. \code{"date_mon"} becomes \code{"date.mon"}),
+#' so the calling function can use its usual names. Columns not named in
+#' \code{required} are left unchanged. Only the local copy of \code{df} is
+#' changed.
+#'
+#' \strong{Corrected spellings.} Headers whose spelling was corrected
+#' (\code{schedual1} to \code{schedule1}, \code{schedual2} to \code{schedule2})
+#' are matched under either spelling: a column with the old spelling counts as
+#' the corrected header when the corrected one is not already present.
+#'
+#' Used by the plot, plot-frame and summary functions, e.g.
+#' \code{\link{batz.generate_plotframe.bat}},
+#' \code{\link{batz.plotactivity_observations}},
+#' \code{\link{batz.plotdetections_first.last}} and
+#' \code{\link{batz.generate_suntimes.arulist}}.
+#'
+#' @return A list with \code{$df} (\code{df} with every matched column renamed
+#'   to its \code{required} spelling) and \code{$missing} (the entries of
+#'   \code{required}, in their own spelling, with no match in \code{names(df)}).
 #'
 #' @examples
 #' \dontrun{
 #' df <- data.frame(date_mon = "1", spp_id = "epfu", obs = 1)
 #' canonicalize.headers(df, c("date.mon", "spp.id", "obs", "vetting.type"))
-#' # $df has columns date.mon/spp.id/obs (renamed from date_mon/spp_id/obs)
-#' # $missing is "vetting.type" (genuinely absent either way)
+#' # $df has columns date.mon, spp.id, obs
+#' # $missing is "vetting.type"
 #' }
 #'
 #' @keywords internal
@@ -135,8 +99,10 @@ canonicalize.headers <- function(df, required) {
 
 #' Headers whose spelling was corrected (internal)
 #'
-#' Added 2026-10-28, per Josh. \code{$header.old} (still accepted by
-#' \code{canonicalize.headers()}) and \code{$header.new}.
+#' Returns a data frame with \code{$header.old} (old spelling, still accepted
+#' by \code{canonicalize.headers()}) and \code{$header.new} (corrected
+#' spelling): \code{schedual1}/\code{schedule1} and
+#' \code{schedual2}/\code{schedule2}.
 #' @keywords internal
 #' @noRd
 headers.corrected <- function() {
@@ -147,14 +113,13 @@ headers.corrected <- function() {
 
 #' Convert Batz (dot-style) header names to snake_case (internal helper)
 #'
-#' Added 2026-10-30, per Josh: \code{$name.snake} in the Batz reference db
-#' (tab \code{Header.names}) is \code{$name.standard} with every \code{"."}
-#' replaced by \code{"_"} - nothing else changes (case, existing
-#' underscores and other characters are kept). Used by every \code{batz}
-#' function's \code{snake_case = TRUE} output option.
-#' \code{standardize.headers()} is still used to MATCH incoming raw headers
-#' (it also lowercases and turns spaces/punctuation into \code{"_"}), but
-#' no longer to name output columns.
+#' Replaces every \code{"."} in a header name with \code{"_"}. Nothing else
+#' changes: case, existing underscores and other characters are kept. This is
+#' how \code{$name.snake} in the Batz reference tables (tab
+#' \code{Header.names}) is derived from \code{$name.standard}, and it is used
+#' for the \code{snake_case = TRUE} output option of \code{batz} functions.
+#' To match raw incoming headers use \code{\link{standardize.headers}}
+#' instead (it also lower-cases and replaces spaces and punctuation).
 #'
 #' @param x Character vector of header names.
 #' @return \code{x} with every \code{"."} replaced by \code{"_"}.

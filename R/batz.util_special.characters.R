@@ -1,73 +1,69 @@
 #' Special-character helpers (internal)
 #'
-#' Added 2026-09-30, per Josh, after \code{read.csv()} failed on a real
-#' \code{Norcross.arulist.csv} with \code{invalid multibyte string at
-#' '<b0>'} - a stray degree sign (\code{°}) saved by Excel as a single
-#' Windows-1252/Latin-1 byte, which R 4.6 on Windows (UTF-8 by default)
-#' can't read. Shared by every \code{batz} function that reads a file or
-#' takes a data frame, so they all behave the same way.
+#' Shared helpers that let \code{batz} functions read files with non-UTF-8
+#' bytes (e.g. a degree sign saved by Excel as a single Latin-1 byte) and,
+#' when \code{strip.special = TRUE}, replace accented letters and symbols in
+#' headers and data with plain text. All \code{batz} functions that read a
+#' file or take a data frame use them, so they behave the same way.
 #'
-#' \strong{Revised 2026-10-02, per Josh:} accented letters and common
-#' symbols are now SIMPLIFIED to a plain equivalent instead of dropped
-#' (\code{café} -> \code{cafe}, \code{Quercus × bebbiana} ->
-#' \code{Quercus X bebbiana}); headers are cleaned as well as data; and
-#' loading logs gain four count columns (see \code{special.log.cols()}).
-#'
+#' @details
 #' \describe{
-#'   \item{\code{special.read.csv(file, ...)}}{Drop-in replacement for
-#'     \code{utils::read.csv()}. Reads the file as UTF-8 (a leading BOM, as
-#'     written by Excel's "CSV UTF-8", is skipped); if the file isn't valid
-#'     UTF-8 it is re-read as Latin-1, which accepts every byte. Always
-#'     happens, whatever \code{strip.special} is set to.}
-#'   \item{\code{special.read.lines(file, ...)}}{Same fallback for
-#'     \code{readLines()}.}
-#'   \item{\code{special.simplify(x)}}{Cleans a character vector:
-#'     every non-ASCII character in \code{special.simplify.map} is replaced
-#'     by its plain equivalent - accented/special Latin letters
-#'     (\code{é}->\code{e}, \code{ñ}->\code{n}, \code{ß}->\code{ss},
-#'     \code{æ}->\code{ae}), \code{×}->\code{X}, curly quotes -> straight
-#'     quotes, en/em dashes and minus sign -> \code{-}, non-breaking and
-#'     other wide spaces -> space, \code{…}->\code{...}, \code{½}->\code{1/2},
-#'     \code{±}->\code{+/-}. Any other non-ASCII character (e.g. \code{°},
-#'     \code{µ}, \code{™}, emoji, invisible BOM/zero-width marks) has no
-#'     plain equivalent and is removed. The table is fixed (built from the
-#'     Unicode character database), so results don't depend on the
-#'     computer's locale the way \code{iconv(..., "ASCII//TRANSLIT")} does.
-#'     Returns \code{list(x, simplified, removed)}; the last two flag which
-#'     elements had a character simplified / removed.}
-#'   \item{\code{special.strip(df, strip.special = TRUE)}}{If
-#'     \code{strip.special = TRUE}, runs \code{special.simplify()} on the
-#'     column names and on every text/factor column. A column that changed
-#'     is re-typed the way \code{read.csv()} would
-#'     (\code{utils::type.convert(as.is = TRUE)}), so \code{"42.036373°"}
+#'   \item{\code{special.read.csv(file, ...)}}{Replacement for
+#'     \code{utils::read.csv()}. Reads the file as UTF-8 (a leading BOM is
+#'     skipped); if the file is not valid UTF-8 it is re-read as Latin-1,
+#'     which accepts every byte. Always used, whatever \code{strip.special} is.
+#'     A non-character or multi-element \code{file} is passed straight to
+#'     \code{read.csv()}.}
+#'   \item{\code{special.read.lines(file, ...)}}{Same idea for
+#'     \code{readLines()}: reads as UTF-8, drops a leading BOM and converts
+#'     lines that are not valid UTF-8 from Latin-1.}
+#'   \item{\code{special.to.utf8(v)}}{Converts a character vector to UTF-8,
+#'     treating invalid elements as Latin-1.}
+#'   \item{\code{special.simplify(x)}}{Cleans a character vector. Each non-ASCII
+#'     character listed in \code{special.simplify.map} is replaced by its plain
+#'     equivalent: accented Latin letters to the base letter (\code{é} to
+#'     \code{e}, \code{ß} to \code{ss}, \code{æ} to \code{ae}), \code{×} to
+#'     \code{X}, curly quotes to straight quotes, dashes and minus sign to
+#'     \code{-}, wide and non-breaking spaces to a space, \code{…} to
+#'     \code{...}, \code{½} to \code{1/2}, \code{±} to \code{+/-}. Any other
+#'     non-ASCII character (\code{°}, \code{µ}, \code{™}, emoji, BOM and
+#'     zero-width marks) is removed. The table is fixed, so results do not
+#'     depend on the locale. Returns \code{list(x, simplified, removed)}; the
+#'     last two are logical vectors flagging the elements that had a character
+#'     simplified or removed.}
+#'   \item{\code{special.strip(df, strip.special = TRUE)}}{When
+#'     \code{strip.special = TRUE}, runs \code{special.simplify()} on the column
+#'     names and on every character or factor column. A column that changed is
+#'     re-typed with \code{utils::type.convert()}, so \code{"42.036373°"}
 #'     becomes the number \code{42.036373}. Returns \code{list(df, headers,
-#'     counts)}: \code{headers} names the data columns that changed (by
-#'     their cleaned names); \code{counts} is a named integer vector -
-#'     \code{accented.letters.header}/\code{removed.symbols.header} = number
-#'     of unique column names that had a character simplified / removed,
-#'     \code{accented.letters.data}/\code{removed.symbols.data} = number of
-#'     unique data values (across all columns) that had a character
-#'     simplified / removed. "Unique" means \code{café} in 500 rows counts
-#'     once, while \code{café} and \code{French café} count twice. A value
-#'     with both kinds counts in both. \code{NA} counts when
-#'     \code{strip.special = FALSE}.}
-#'   \item{\code{special.label(strip.special, headers)}}{The text for a
-#'     log's \code{$strip.special} column: \code{"FALSE"};
-#'     \code{"TRUE NONE"}; or \code{"TRUE ; <header1>; <header2>"}.}
-#'   \item{\code{special.log.cols(strip.special, headers, counts)}}{One-row
-#'     data frame of the five log columns: \code{strip.special},
-#'     \code{accented.letters.header}, \code{removed.symbols.header},
-#'     \code{accented.letters.data}, \code{removed.symbols.data}.
-#'     \code{special.log.cols.empty()} is the zero-row version.
-#'     \code{special.counts.add(a, b)} sums two count vectors (for log rows
-#'     that cover several files).}
-#'   \item{\code{special.check.plotopts(df, arg.name, obj.name, fn.name)}}{
-#'     Used by the plot functions when \code{strip.special.plotopts =
-#'     FALSE}: if \code{df} (a fig.list or plot-options table) contains text
-#'     that isn't valid in this R session (e.g. a Latin-1 \code{°} byte),
-#'     stops with a readable error naming the input, the function, the
-#'     total number of incompatible characters, and for each affected
-#'     header the first 5 rows (\code{+} if there are more).}
+#'     counts)}: \code{headers} names the data columns that changed (cleaned
+#'     names); \code{counts} is a named integer vector with
+#'     \code{accented.letters.header} and \code{removed.symbols.header} (number
+#'     of unique column names with a character simplified or removed) and
+#'     \code{accented.letters.data} and \code{removed.symbols.data} (number of
+#'     unique data values, across all columns, with a character simplified or
+#'     removed). A value with both kinds counts in both. All counts are
+#'     \code{NA} when \code{strip.special = FALSE} or \code{df} is not a data
+#'     frame; \code{df} is then returned unchanged.}
+#'   \item{\code{special.label(strip.special, headers)}}{Text for a log's
+#'     \code{$strip.special} column: \code{"FALSE"}, \code{"TRUE NONE"}, or
+#'     \code{"TRUE ; <header1>; <header2>"}.}
+#'   \item{\code{special.log.cols(strip.special, headers = character(0), counts = NULL)}}{One-row
+#'     data frame of the five log columns \code{$strip.special},
+#'     \code{$accented.letters.header}, \code{$removed.symbols.header},
+#'     \code{$accented.letters.data}, \code{$removed.symbols.data}. Counts are
+#'     \code{NA} when \code{counts} is \code{NULL} or \code{strip.special} is
+#'     not \code{TRUE}. \code{special.log.cols.empty()} is the zero-row version.
+#'     \code{special.counts.add(a, b)} adds two count vectors (for log rows that
+#'     cover several files); \code{NA} plus \code{NA} stays \code{NA}.}
+#'   \item{\code{special.check.plotopts(df, arg.name, obj.name, fn.name)}}{Used
+#'     by the plot functions when \code{strip.special.plotopts = FALSE}. If
+#'     \code{df} (a fig.list or plot-options table) has column names or text
+#'     that are not valid in this R session (e.g. a Latin-1 \code{°} byte), it
+#'     stops with an error naming the input, the function and the total number
+#'     of incompatible characters, and listing for each affected header the
+#'     first 5 rows (\code{+} if there are more). Otherwise returns
+#'     \code{NULL} invisibly.}
 #' }
 #'
 #' @keywords internal
@@ -117,8 +113,9 @@ special.to.utf8 <- function(v) {
 }
 
 #' Plain-text equivalents for accented letters and common symbols (internal).
-#' Built 2026-10-02 from the Unicode character database (each Latin letter
-#' with accents/marks -> its base letter) plus ligatures and symbols.
+#' Named character vector built from the Unicode character database: each
+#' Latin letter with accents or marks maps to its base letter, plus ligatures
+#' and common symbols. Used by \code{special.simplify()}.
 #' @keywords internal
 #' @noRd
 special.simplify.map <- c(

@@ -3,16 +3,23 @@
 ## $facet.label, and plotting data made by batz.generate_plotframe.bat()
 ## with pool.interval other than "1day".
 
-#' Species facet-panel labels from fig.list $facet.label
+#' Species facet-panel labels from fig.list $facet.label (internal)
 #'
-#' Used when fig.list $facet = "sppid". \code{fmt} is the row's
-#' $facet.label: any value \code{batz.batusa_recode.names()} accepts for
-#' \code{batname.format.out} ("common_name", "scientific_name", "code4",
-#' "code6", "both", or the older "common"/"latin"/"scientific"). Blank or NA
-#' means "common_name". A panel whose recoded label comes back blank (e.g.
-#' "All detections" with a species-only format) keeps its original name.
-#' An unusable value stops with an error naming the fig.list row.
-#' @return Named character vector: labels, named by \code{levels}.
+#' Used when fig.list \code{$facet.header = "sppid"}. Recodes each species name
+#' in \code{levels} with \code{batz.batusa_recode.names()} to the format in
+#' \code{fmt}.
+#' @param levels Species names (the facet levels).
+#' @param fmt The fig.list row's \code{$facet.label}: any value
+#'   \code{batz.batusa_recode.names()} accepts for \code{batname.format.out}
+#'   (\code{"common_name"}, \code{"scientific_name"}, \code{"code4"},
+#'   \code{"code6"}, \code{"both"}, ...). Quotes are dropped; blank or
+#'   \code{NA} means \code{"common_name"}.
+#' @param job.label,fn.name fig.list row label and calling function, used in
+#'   messages.
+#' @details A panel whose recoded label is blank (e.g. \code{"All detections"}
+#'   with a species-only format) keeps its original name. A \code{fmt} that
+#'   cannot be used stops with an error naming the fig.list row.
+#' @return Named character vector of labels, named by \code{levels}.
 #' @keywords internal
 #' @noRd
 plotutil_facet_labels <- function(levels, fmt, job.label, fn.name) {
@@ -31,16 +38,23 @@ plotutil_facet_labels <- function(levels, fmt, job.label, fn.name) {
   res
 }
 
-#' Collapse pooled plot-frame rows to one row per date
+#' Collapse pooled plot-frame rows to one row per date (internal)
 #'
-#' \code{batz.generate_plotframe.bat(pool.interval = )} below one day gives
-#' several rows per species/group/date (one per time bin). Plots that draw
-#' one bar or crossbar per date need one row per date, so rows that are
-#' identical in every column except the counts/times and pool times are
-#' combined: \code{$observations.count} (or old \code{$obs}) summed, \code{$mins2.noon.min} min,
-#' \code{$mins2.noon.max} max; \code{$pool.start}/\code{$pool.end} become
-#' the earliest start / latest end. Data without \code{$pool.start}, or
-#' with nothing to combine (the default "1day"), is returned unchanged.
+#' \code{batz.generate_plotframe.bat()} with a \code{pool.interval} shorter than
+#' one day gives several rows per species/group/date (one per time bin). Plots
+#' that draw one bar or crossbar per date need one row per date.
+#' @param data Plot-frame data frame.
+#' @param fn.name Calling function, used in the NOTE.
+#' @details Rows that are identical in every column except
+#'   \code{$observations.count} (or old \code{$obs}), \code{$mins2.noon.min},
+#'   \code{$mins2.noon.max}, \code{$pool.start} and \code{$pool.end} are
+#'   combined: counts are summed, \code{$mins2.noon.min} takes the minimum,
+#'   \code{$mins2.noon.max} the maximum, \code{$pool.start} the earliest and
+#'   \code{$pool.end} the latest value. Prints a NOTE with the row counts.
+#'   Data without \code{$pool.start}/\code{$pool.end}, with no rows, or with
+#'   nothing to combine (e.g. \code{pool.interval = "1day"}) is returned
+#'   unchanged.
+#' @return \code{data}, with one row per combined group and row names reset.
 #' @keywords internal
 #' @noRd
 plotutil_collapse_pools <- function(data, fn.name) {
@@ -86,10 +100,11 @@ plotutil_collapse_pools <- function(data, fn.name) {
 
 #' Preset facet sets for fig.list $facet.set (internal)
 #'
-#' Named list; each name is a preset's short hand (matched case-
-#' insensitively) and each value the species in plotting order. Add a new
-#' preset by adding one more entry. \code{plotutil_facet_preset_aliases} maps
-#' other spellings onto a preset name.
+#' Named list: each name is a preset short hand (matched ignoring case and
+#' punctuation) and each value the species, as common names, in plotting
+#' order. \code{NE} (New England) holds the eight New England species. Add a
+#' preset by adding an entry. \code{plotutil_facet_preset_aliases} maps other
+#' spellings (e.g. \code{"new england"}) to a preset name.
 #' @keywords internal
 #' @noRd
 plotutil_facet_presets <- list(
@@ -98,13 +113,25 @@ plotutil_facet_presets <- list(
 )
 plotutil_facet_preset_aliases <- c("new england" = "NE")
 
-#' Old fig.list headers -> current ones (internal)
+#' Old fig.list headers to current ones (internal)
 #'
-#' \code{$facet} -> \code{$facet.header}, \code{$Alldect} ->
-#' \code{$all.detections} (and \code{$all.dectections}, 2026-11-04); a missing \code{$facet.plot} is added as TRUE
-#' (the old behaviour - one faceted plot). Old \code{$facet.panel},
-#' \code{$facpan} and \code{$plot.order} columns are ignored. Prints a
-#' WARNING for each change.
+#' Accepts fig.list tables that use old headers.
+#' @param fig.list fig.list data frame (anything else is returned unchanged).
+#' @param fn.name Calling function, used in messages.
+#' @details
+#' \itemize{
+#'   \item \code{$facet} is used as \code{$facet.header};
+#'   \item \code{$Alldect} and the misspelled \code{$all.dectections} are used
+#'     as \code{$all.detections};
+#'   \item a missing \code{$facet.plot} is added as \code{TRUE} (one faceted
+#'     plot per row);
+#'   \item old \code{$facet.panel}, \code{$facpan} and \code{$plot.order}
+#'     columns are ignored (\code{$facet.set} sets the facets and their order).
+#' }
+#' Each rename or added column prints a WARNING; ignored columns print a NOTE.
+#' A rename is skipped when the current header is already present. Headers
+#' are matched after \code{standardize.headers()}.
+#' @return \code{fig.list} with current headers.
 #' @keywords internal
 #' @noRd
 plotutil_figlist_legacy <- function(fig.list, fn.name) {
@@ -135,14 +162,20 @@ plotutil_figlist_legacy <- function(fig.list, fn.name) {
 
 #' Resolve a fig.list $facet.set value into ordered facets (internal)
 #'
-#' \code{x} is a preset short hand (e.g. \code{"NE"}) or a list separated
-#' by \code{";"} (or \code{","}) of species in any format
-#' \code{batz.batusa_recode.names()} reads, \code{"AllDet"} / \code{"All
-#' detections"}, \code{"40khzmyo"}, or preset names - mixed freely, e.g.
-#' \code{"AllDet;NE"} or \code{"AllDet;epfu;labo;lano"}. The order written
-#' is the plotting order. Blank means the \code{"NE"} preset.
+#' @param x A preset short hand (e.g. \code{"NE"}) or a list separated by
+#'   \code{";"} (or \code{","}) of species in any format
+#'   \code{batz.batusa_recode.names()} reads, \code{"AllDet"} /
+#'   \code{"All detections"}, \code{"40khzmyo"}, or preset names, mixed
+#'   freely (e.g. \code{"AllDet;NE"} or \code{"AllDet;epfu;labo;lano"}). The
+#'   order written is the plotting order. Blank means the \code{"NE"} preset
+#'   (with a NOTE).
+#' @param job.label,fn.name fig.list row label and calling function, used in
+#'   messages.
+#' @details Species are recoded to common names. An entry that is neither a
+#'   preset nor a recognized species is kept as written, with a NOTE.
+#'   Duplicates (ignoring case and punctuation) are dropped.
 #' @return Character vector of facet names (common names, plus
-#'   \code{"All detections"} / \code{"40khzmyo"}), in order, no duplicates.
+#'   \code{"All detections"} / \code{"40khzmyo"}), in order.
 #' @keywords internal
 #' @noRd
 plotutil_resolve_facet_set <- function(x, job.label, fn.name) {
@@ -182,9 +215,13 @@ plotutil_resolve_facet_set <- function(x, job.label, fn.name) {
 
 #' Short facet ID for file names (internal)
 #'
-#' \code{$facet.header = "sppid"}: species -> four-letter code
-#' (\code{code4}), "All detections" -> \code{"AllDet"}. Anything without a
-#' code is kept, with characters unsafe in file names removed.
+#' @param x Facet names.
+#' @param facet.header The fig.list \code{$facet.header}; default \code{"sppid"}.
+#' @details With \code{facet.header = "sppid"} species are recoded to their
+#'   four-letter code (\code{code4}). In every case \code{"All detections"}
+#'   becomes \code{"AllDet"} and \code{"40khzmyo"} becomes \code{"40kMyo"};
+#'   anything else is kept as is.
+#' @return Character vector of IDs, same length as \code{x}.
 #' @keywords internal
 #' @noRd
 plotutil_facet_id <- function(x, facet.header = "sppid") {
@@ -202,24 +239,35 @@ plotutil_facet_id <- function(x, facet.header = "sppid") {
 
 #' Save name for a fig.list plot (internal)
 #'
-#' Faceted (\code{facet.plot = TRUE}):
-#' \verb{<plot.name>_F_<facet.first>to<facet.last>_<plot.set>_<YYYYMMDD>to<YYYYMMDD>_<TIMESTAMP>.png};
+#' Faceted (\code{faceted = TRUE}):
+#' \verb{[<project.name>_]<plot.name>_F_<facet.first>to<facet.last>_<plot.set>_<YYYYMMDD>to<YYYYMMDD>_<TIMESTAMP>.png};
 #' one plot per facet (\code{FALSE}):
-#' \verb{<plot.name>_<facet>_<plot.set>_<YYYYMMDD>to<YYYYMMDD>_<TIMESTAMP>.png}.
-#' Spaces become "-" and characters Windows doesn't allow are removed. If
-#' the name is longer than \code{max.len} characters it is shortened, in
-#' this order, stopping as soon as it fits: (1) same-year date range drops
-#' the year from the last date; (2) each word in the facet ID(s) cut to 6
-#' characters; (3) each word in plot.set cut to 6; (4) each word in
-#' plot.name cut to 6. A "word" is a run of letters/digits.
-#' @param facet.ids Facet IDs in plotted order (first and last are used
-#'   when \code{faceted = TRUE}; the single ID otherwise).
+#' \verb{[<project.name>_]<plot.name>_<facet>_<plot.set>_<YYYYMMDD>to<YYYYMMDD>_<TIMESTAMP>.png}.
+#' @param plot.name,plot.set Name parts (several values are joined with
+#'   \code{"+"}).
+#' @param facet.ids Facet IDs in plotted order (first and last are used when
+#'   \code{faceted = TRUE}; the first one otherwise).
+#' @param faceted \code{TRUE} for a faceted plot.
+#' @param date.start,date.end Date range of the plot.
+#' @param max.len Maximum file-name length; default 100.
+#' @param timestamp Default \code{format(Sys.time(), "\%Y\%m\%d\%H\%M\%S")}.
+#' @param fn.name Calling function, used in the NOTE; default \code{"batz"}.
+#' @param project.name Put first in the file name, followed by \code{"_"};
+#'   default \code{""} (left out).
+#' @details Spaces become \code{"-"}, characters Windows does not allow are
+#'   removed, and an empty part becomes \code{"all"}. A name longer than
+#'   \code{max.len} is shortened in this order, stopping as soon as it fits:
+#'   (1) when both dates are in the same year, the year is dropped from the
+#'   end date; (2) each word in the facet IDs is cut to 6 characters; (3) each
+#'   word in \code{plot.set} is cut to 6; (4) each word in \code{plot.name} is
+#'   cut to 6. A word is a run of letters and digits. If it is still too long
+#'   a NOTE is printed.
 #' @return File name (no folder).
 #' @keywords internal
 #' @noRd
 plotutil_figlist_filename <- function(plot.name, facet.ids, faceted, plot.set, date.start, date.end,
                                   max.len = 100, timestamp = format(Sys.time(), "%Y%m%d%H%M%S"),
-                                  fn.name = "batz") {
+                                  fn.name = "batz", project.name = "") {
   clean <- function(x) {
     x <- paste(trimws(as.character(x)), collapse = "+")
     x <- gsub('[\\\\/:*?"<>|]+', "", x)
@@ -240,7 +288,9 @@ plotutil_figlist_filename <- function(plot.name, facet.ids, faceted, plot.set, d
   d2 <- format(as.Date(date.end), "%Y%m%d")
   build <- function() {
     facet.tok <- if (isTRUE(faceted)) paste0("F_", first.tok, "to", last.tok) else first.tok
-    paste0(paste(name.tok, facet.tok, set.tok, paste0(d1, "to", d2), timestamp, sep = "_"), ".png")
+    parts <- c(name.tok, facet.tok, set.tok, paste0(d1, "to", d2), timestamp)
+    if (length(project.name) == 1 && !is.na(project.name) && nzchar(trimws(project.name))) parts <- c(clean(project.name), parts)
+    paste0(paste(parts, collapse = "_"), ".png")
   }
   f <- build()
   if (nchar(f) > max.len && identical(substr(d1, 1, 4), substr(d2, 1, 4))) {
@@ -257,12 +307,16 @@ plotutil_figlist_filename <- function(plot.name, facet.ids, faceted, plot.set, d
 
 #' Split a faceted plot entry into one entry per facet (internal)
 #'
-#' For \code{$facet.plot = FALSE}. \code{entry$pd$facet.panel.value} is a
-#' factor whose levels are the facet labels in plotted order;
-#' \code{facet.raw} are the matching raw facet names. Returns a list of
-#' entries, each with \code{pd} cut to one facet, \code{facet.ids} set to
-#' that facet's ID and \code{facet.plot = FALSE}. Facets with no data are
-#' skipped with a NOTE.
+#' Used for \code{$facet.plot = FALSE}.
+#' @param entry Plot entry; \code{entry$pd$facet.panel.value} is a factor whose
+#'   levels are the facet labels in plotted order.
+#' @param facet.raw Raw facet names matching those levels.
+#' @param facet.header The fig.list \code{$facet.header}, passed to
+#'   \code{plotutil_facet_id()}.
+#' @param fn.name Calling function, used in messages.
+#' @return List of entries, each with \code{pd} cut to one facet,
+#'   \code{facet.ids} set to that facet's ID and \code{facet.plot = FALSE}.
+#'   Facets with no data are skipped with a NOTE.
 #' @keywords internal
 #' @noRd
 plotutil_split_facets <- function(entry, facet.raw, facet.header, fn.name) {
@@ -284,3 +338,77 @@ plotutil_split_facets <- function(entry, facet.raw, facet.header, fn.name) {
   }
   out
 }
+
+#' Column of aes.default that holds the custom style (internal)
+#'
+#' @param aes.default Plot-options (aes.default) data frame.
+#' @param aes.style Name of the custom-style column (the plot functions'
+#'   default is \code{"override.value"}).
+#' @return \code{aes.style} when that column exists. When
+#'   \code{"override.value"} is asked for and only the old misspelled
+#'   \code{"overide.value"} column exists, \code{"overide.value"}.
+#'   \code{NA} when neither exists or \code{aes.style} is not a single value.
+#' @keywords internal
+#' @noRd
+plotutil_aes_style_col <- function(aes.default, aes.style) {
+  if (is.null(aes.style) || length(aes.style) != 1 || is.na(aes.style)) return(NA_character_)
+  if (aes.style %in% names(aes.default)) return(aes.style)
+  if (identical(aes.style, "override.value") && "overide.value" %in% names(aes.default)) return("overide.value")
+  NA_character_
+}
+
+#' $myso = TRUE: Indiana bat facet, or MYLU and MYSO pooled as LUSO (internal)
+#'
+#' Called when a fig.list row has \code{$myso = TRUE}.
+#' @param spp.common Common name of each record.
+#' @param spp.plot Species to plot.
+#' @param facpan Facets, in order.
+#' @param present Logical, one per record: \code{TRUE} when the record is in
+#'   the plotted data (plot set and date range).
+#' @param fn.name,job.label Calling function and fig.list row label, used in
+#'   the NOTE.
+#' @details When little brown bat (MYLU) records are present, every MYLU and
+#'   MYSO record is recoded to LUSO (little brown bat / Indiana bat), and LUSO
+#'   replaces MYLU/MYSO in \code{spp.plot} and \code{facpan} (at the place of
+#'   the first of them, or added at the end); a NOTE gives the number of
+#'   records pooled. Otherwise Indiana bat is kept and added to
+#'   \code{facpan} and \code{spp.plot} if it is not there already.
+#' @return List with \code{spp.common}, \code{spp.plot} and \code{facpan}.
+#' @keywords internal
+#' @noRd
+plotutil_myso_luso <- function(spp.common, spp.plot, facpan, present, fn.name, job.label) {
+  nm <- batz.batusa_recode.names(c("MYLU", "MYSO", "LUSO"), batname.format.out = "common_name")
+  lc <- tolower(trimws(spp.common))
+  present <- !is.na(present) & present
+  swap.in <- function(v, new, old) {
+    l <- tolower(trimws(v))
+    pos <- which(l %in% tolower(old))
+    if (length(pos) == 0) return(unique(c(v, new)))
+    v[pos[1]] <- new
+    if (length(pos) > 1) v <- v[-pos[-1]]
+    unique(v)
+  }
+  if (any(present & lc == tolower(nm[1]))) {
+    hit <- lc %in% tolower(nm[1:2])
+    spp.common[hit] <- nm[3]
+    spp.plot <- swap.in(spp.plot, nm[3], nm)
+    facpan <- swap.in(facpan, nm[3], nm)
+    cat(sprintf("NOTE: %s - '%s': $myso = TRUE and little brown bat (MYLU) is present - %d MYLU/MYSO record(s) plotted together as LUSO (%s).\n",
+                fn.name, job.label, sum(hit), nm[3]))
+  } else {
+    if (!(tolower(nm[2]) %in% tolower(facpan))) facpan <- c(facpan, nm[2])
+    if (!(tolower(nm[2]) %in% tolower(spp.plot))) spp.plot <- c(spp.plot, nm[2])
+  }
+  list(spp.common = spp.common, spp.plot = spp.plot, facpan = facpan)
+}
+
+#' Key for matching plotopts parameter names (internal)
+#'
+#' Lower case with all spaces removed, so \code{"Yaxe.trans"},
+#' \code{" yaxe.trans "} and \code{"yaxe. trans"} all match \code{"yaxe.trans"}.
+#' Used both to check for required \code{$parameter} rows and to read them.
+#' @param x Character vector of parameter names.
+#' @return Character vector of keys.
+#' @keywords internal
+#' @noRd
+plotutil_param_key <- function(x) tolower(gsub("\\s+", "", as.character(x)))

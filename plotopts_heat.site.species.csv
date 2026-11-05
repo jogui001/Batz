@@ -1,4 +1,4 @@
-"category","parameter","default.value","overide.value","notes"
+"category","parameter","default.value","override.value","notes"
 "Time axis","time.start","19:00","","Start of the night window (HH:MM, 24-hour). Drawn at the BOTTOM of the y axis."
 "Time axis","time.end","06:00","","End of the night window (HH:MM, 24-hour). Drawn at the TOP of the y axis. May be on the next day (e.g. 19:00 to 06:00 crosses midnight)."
 "Time axis","bin.minutes","20","","Width of each heat-map cell, in minutes."

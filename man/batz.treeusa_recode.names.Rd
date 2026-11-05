@@ -2,7 +2,7 @@
 % Please edit documentation in R/batz.treeusa_recode.names.R
 \name{batz.treeusa_recode.names}
 \alias{batz.treeusa_recode.names}
-\title{Recode Maine tree/shrub identifiers between scientific name, common names, and other reference fields}
+\title{Recode tree and shrub names}
 \usage{
 batz.treeusa_recode.names(
   data,
@@ -16,418 +16,151 @@ batz.treeusa_recode.names(
 )
 }
 \arguments{
-\item{data}{A vector of tree/shrub identifiers to recode. Must be a plain
-vector, not a data frame (unlike \code{batz.batusa_recode.names}, which
-accepts either).}
+\item{data}{A character (or factor) vector of tree/shrub names. A data
+frame is not accepted (error).}
 
 \item{head.out}{Character vector, default \code{"common.name"}. One or
-more of the reference database's own column names to return. If a
-single header is requested, the return value is a plain vector; if
-more than one, the return value is a data frame with one column per
-requested header, in the same row order as \code{data}. Matching an
-input element to a reference row always uses \code{scientific_name}/
-\code{common.name}/\code{common.name2} only, regardless of what's
-requested in \code{head.out}. An unrecognized header is an error.}
+more reference-table columns to return (see Details for the columns).
+An unknown column stops with an error listing the valid ones.}
 
-\item{dir.load}{Character. Directory to search for the base reference
-database file (\code{load.pattern}) and, when \code{reference.data !=
-  "default"}, for supplemental files (\code{pattern}). Default
-\code{getwd()}.}
+\item{dir.load}{Character, default \code{getwd()}. Folder searched for the
+base reference file (\code{load.pattern}) and for extra files
+(\code{pattern}).}
 
-\item{load.pattern}{Character, default
-\code{c("*USA.treeshrub_recode.names*", "*tree_species_and_shrubs*")}
-(wildcard/glob pattern(s), converted internally to a regex via
-\code{utils::glob2rx()}). See \strong{Details} for why this now
-searches for more than one literal file name.}
+\item{load.pattern}{Character vector of file-name wildcards, default
+\code{c("*USA.treeshrub_recode.names*", "*tree_species_and_shrubs*")}.
+The base reference file (CSV, XLSX or XLS); matching ignores case. If
+several files match, the first is used and a NOTE is printed.}
 
-\item{dir.sub}{Logical, default \code{TRUE} (changed from \code{FALSE},
-per Josh, 2026-09-14 - see Details). If \code{TRUE}, also search
-subdirectories of \code{dir.load} - for \code{load.pattern} and, when
-applicable, for \code{pattern}.}
+\item{dir.sub}{Logical, default \code{TRUE}. Also search subfolders of
+\code{dir.load} (for both \code{load.pattern} and \code{pattern}).}
 
-\item{pattern}{Character, default \code{"plant.names.csv"}. One or more
-(a vector is fine) file name(s)/glob pattern(s) identifying
-supplemental reference CSVs to search for in \code{dir.load} (and its
-subdirectories, if \code{dir.sub = TRUE}) when \code{reference.data !=
-  "default"}. Ignored entirely when \code{reference.data = "default"}.}
+\item{pattern}{Character vector of file names/wildcards, default
+\code{"plant.names.csv"}. Extra reference files to load when
+\code{reference.data} is \code{"append"} or \code{"overwrite"};
+ignored for \code{"default"}.}
 
-\item{reference.data}{Character, default \code{"default"}. One of:
-\code{"default"} - use only the base reference table loaded via
-\code{load.pattern}, exactly as before this feature was added;
-\code{"append"} - also search for and load every file matching
-\code{pattern}, and add their (validated/reconciled) rows onto the
-base table; \code{"overwrite"} - also search for and load every file
-matching \code{pattern}, but use ONLY those rows in place of the base
-table (see Details for the fallback when nothing usable is found).}
+\item{reference.data}{Character, default \code{"default"}. One of
+\code{"default"} (base table only), \code{"append"} (base table plus
+the rows of every usable \code{pattern} file) or \code{"overwrite"}
+(only the rows of the \code{pattern} files; the base table is used if
+none is usable).}
 
-\item{strip.special}{Logical, default \code{TRUE}. If \code{TRUE}, removes
-non-ASCII special characters (e.g. \code{°}, \code{µ}, \code{é}, smart
-quotes, the hybrid sign \code{×}) from the base reference file and
-every supplemental reference file after loading - see \code{@details}.
-\code{data} is a plain vector and is not stripped. Files are always
-read with a UTF-8/Latin-1 fallback, so a stray \code{°} can't stop
-them loading, whatever this is set to.}
+\item{strip.special}{Logical, default \code{TRUE}. If \code{TRUE},
+accented letters and common symbols are simplified (\code{é} to
+\code{e}, \code{×} to \code{X}, curly quotes to straight quotes) and
+other non-ASCII characters (e.g. \code{°}, \code{µ}, \code{™}) are
+removed, in every reference file (headers and values) and in
+\code{data}.}
 }
 \value{
-A vector (if \code{head.out} has length 1) or data frame (if
-\code{head.out} has length > 1) of the same length/row count as
-\code{data}, with every element re-expressed in the requested
-header(s). An input element with no match anywhere in the reference
-table is returned unchanged (not \code{NA}, no error) in every
-requested header.
+If \code{head.out} has one value, a character vector the same
+length as \code{data}; otherwise a data frame with one column per
+\code{head.out} value, in \code{data} order. Unmatched values are
+returned unchanged in every column. When any value is unmatched, a data
+frame \code{treesmismatch.log} is also assigned in the calling
+environment (see Details).
 }
 \description{
-Given a vector containing any mix of scientific (Latin) name or either of
-two common names for a Maine tree or shrub species, looks each value up
-in a reference database loaded from disk and returns it re-expressed in
-one or more requested output headers (\code{head.out}). Matching ignores
-case and all whitespace/punctuation, so formatting differences between
-the input and the reference table (or between different inputs) don't
-cause a false mismatch. Shares its core lookup/pass-through/reporting
-logic with \code{\link{batz.batusa_recode.names}}, generalized to load
-its reference table from disk (rather than an embedded table) and to
-support more than one output header at once.
+Looks up tree/shrub identifiers (scientific name or either of two common
+names) in a reference table read from disk and returns the requested
+reference column(s) (\code{head.out}), e.g. common name, scientific name,
+family or growth habit. The base table can be extended or replaced with
+extra plant lists (\code{reference.data}, \code{pattern}).
 }
 \details{
-As of 2026-09-14 (per Josh), the base reference table can optionally be
-supplemented with one or more additional CSV files found on disk -
-see \code{reference.data}/\code{pattern} below and \strong{"Supplemental
-reference data (reference.data/pattern)"} in Details.
+\strong{Reference table.} The base file's headers are standardized
+(lower case, non-alphanumeric runs turned into \code{_}), then the old
+names \code{common_one}, \code{common_two}, \code{grouping_one},
+\code{grouping_two}, \code{grouping_three}, \code{growth_habit},
+\code{native_status} and \code{wood_type} are renamed to
+\code{common.name}, \code{common.name2}, \code{grouping.one},
+\code{grouping.two}, \code{grouping.three}, \code{growth.habit},
+\code{native.status} and \code{wood.type}. Expected columns:
+\code{scientific_name}, \code{common.name}, \code{common.name2},
+\code{genus}, \code{family}, \code{native.status}, \code{growth.habit},
+\code{wood.type}, \code{grouping.one}, \code{grouping.two},
+\code{grouping.three}. Any column present can be used in
+\code{head.out}. All values are read as text and trimmed. CSV files are
+read as UTF-8, falling back to Latin-1; Excel files need \pkg{readxl}.
 
-\strong{Header standardization (per Josh, 2026-09-14 project preference).}
-The reference database's own column names are a literal, uninvented copy
-of that file's real header text (not a \code{batz}-invented shorthand), so
-they're run through the shared package helper \code{standardize.headers()}
-(trim whitespace, collapse every run of non-alphanumeric characters to a
-single underscore, lowercase) immediately after loading, the same as any
-other loaded file's headers - both for the base reference file and for
-every supplemental file read under \code{reference.data = "append"/
-"overwrite"}. This is a no-op against the CURRENT real reference file for
-every column except \code{common_one}/\code{common_two} - see
-\strong{"Column identifiers renamed, 2026-09-29"} below for why those two
-need an extra legacy-input-alias step after standardization. \code{match.cols}
-and the default \code{head.out} are written as their already-standardized
-spellings, so no further change was needed there; if the reference file's
-real headers ever change to something standardize.headers() would alter,
-\code{head.out} should be called with the new standardized spelling.
+\strong{Matching.} Each value is compared with \code{scientific_name},
+\code{common.name} and \code{common.name2} after lower-casing and
+removing every character that is not a-z or 0-9, so
+\code{"Ash-leaved Maple"}, \code{"ashleaved_maple"} and
+\code{"ASHLEAVEDMAPLE"} all match. The first match wins (column order
+above, then row order), so a common name shared by several species
+always returns the first one. Returned values are the reference text,
+not the normalized text.
 
-\strong{Reference file location - real naming mismatch, flagged not
-silently fixed:} the original spec named the search pattern
-\code{"maine_tree_species_and_shrubs"} and said the file lives in a
-"reference database files" folder. On Josh's real "4 Current  test
-data" folder, a file named exactly \code{maine_tree_species_and_shrubs.csv}
-does exist, but it sits at the top level of that folder - the copy
-actually inside "reference database files" is named
-\code{tree_species_and_shrubs.csv} (missing the \code{"maine_"} prefix;
-confirmed byte-for-byte identical content to the other copy).
-\strong{Renamed 2026-09-14, per Josh:} the internal reference data frame
-is now called \code{reference.plants} (previously \code{reference}),
-loaded from a file named \code{"USA.treeshrub_recode.names.csv"} -
-matching the naming convention already used elsewhere in this package
-(\code{NAbat.names.csv}, \code{USAstates.names.csv} - see
-\code{\link{batz.batusa_list.species}}). Since this is a THIRD name for
-what appears to be the same underlying reference table, \code{load.pattern}'s
-default was widened to a vector matching \emph{either} the new canonical
-name or the previously-established real file name(s), so the function
-keeps working with whichever copy Josh actually has in \code{dir.load}
-at the time. \strong{Please confirm with Josh which single name should
-be treated as canonical going forward} (and, if a rename is wanted,
-whether the "reference database files" copy should also be renamed to
-match) - until then, this function does not silently prefer one name
-over another beyond "first match wins" (see \strong{Reference file
-structure} below for the multiple-match notice).
-
-\strong{dir.sub default changed 2026-09-14, per Josh:} \code{dir.sub} now
-defaults to \code{TRUE} (previously \code{FALSE}) - subdirectories of
-\code{dir.load} are searched by default, for both the base reference
-file and any supplemental files. Pass \code{dir.sub = FALSE} to restore
-the old top-level-only search.
-
-\strong{Reference file structure} (verified against the real data, 121
-species/shrub rows x 11 columns): \code{$scientific_name}, \code{$common.name}
-(the raw file's own header text is still literally \code{common_one} -
-see \strong{"Column identifiers renamed, 2026-09-29"} below for how this
-is bridged), \code{$common.name2} (raw file header \code{common_two}),
-\code{$genus}, \code{$family}, \code{$native.status},
-\code{$growth.habit}, \code{$wood.type}, \code{$grouping.one},
-\code{$grouping.two}, \code{$grouping.three}. \code{$common.name2} is
-blank for many rows (not every species has a second common name); a
-blank never matches anything, and if \code{$common.name2} itself is
-requested via \code{head.out} for a row with no second name, that
-header just comes back \code{""} for that row. \code{$wood.type} is not
-one of the 10 columns \code{reference.data = "append"/"overwrite"}
-reconciles supplemental files against (see below) - it is carried
-through from the base table untouched, and comes back \code{NA} for any
-row contributed by a supplemental file that didn't happen to also match
-a \code{wood.type}-like column.
-
-\strong{Supplemental reference data (\code{reference.data}/\code{pattern}),
-added 2026-09-14 per Josh.} When \code{reference.data = "append"} or
-\code{"overwrite"}, after \code{reference.plants} is loaded as above,
-\code{dir.load} (and its subdirectories, if \code{dir.sub = TRUE}) is
-searched for every file matching \code{pattern} (one or more file
-names/glob patterns; the default \code{"plant.names.csv"} is a literal
-name, but a wildcard like \code{"*.csv"} works the same way as
-\code{load.pattern}). Each matched file is processed independently, in
-the order \code{list.files()} returns, and folded into a single
-\code{reference.plants.temp} data frame:
+\strong{Extra reference files} (\code{reference.data = "append"} or
+\code{"overwrite"}). Every file matching \code{pattern} is read in turn:
 \enumerate{
-\item \strong{Column matching (name AND content).} The file's own
-headers are standardized (see above), then matched to
-\code{reference.plants}'s 10 non-\code{wood.type} columns
-(\code{scientific_name}, \code{common.name}, \code{common.name2}, \code{genus},
-\code{family}, \code{native.status}, \code{growth.habit},
-\code{grouping.one}, \code{grouping.two}, \code{grouping.three}) in
-three passes: (1) an exact match on the standardized header text;
-(2) for anything left over, a keyword match on the standardized
-header (e.g. a header containing \code{"latin"}/\code{"scientific"}
-maps to \code{scientific_name}; \code{"common"} to \code{common.name} then
-\code{common.name2}, in file column order; \code{"group"}/
-\code{"grouping"} to \code{grouping.one}/\code{two}/\code{three}, in
-file column order; \code{"genus"}, \code{"family"},
-\code{"native"}/\code{"status"}, \code{"growth"}/\code{"habit"} to
-their like-named column); (3) for anything STILL unmapped, a
-content signature check against whichever of \code{scientific_name}/
-\code{native.status}/\code{growth.habit} remain unclaimed (a column
-that's mostly two-word capitalized text - e.g. \code{"Acer negundo"}
-- is treated as \code{scientific_name}; a column whose values mostly fall in
-a small native/introduced/invasive vocabulary is treated as
-\code{native.status}; a column whose values mostly fall in a small
-tree/shrub/vine vocabulary is treated as \code{growth.habit}). This
-is a best-effort heuristic, not a guarantee - \strong{flagged, not
-silently perfect:} an odd or ambiguous input file may map incorrectly
-or not at all; any input column that never gets claimed by a
-canonical name is simply dropped (not merged as an extra column).
-Note that a real supplemental file's own \code{common_one}/
-\code{common_two} header text still standardizes to those same
-snake_case strings (never to \code{common.name}/\code{common.name2}
-- see \strong{"Column identifiers renamed, 2026-09-29"} below), so
-this case is expected to fall through to the pass-2 keyword match
-(both headers contain \code{"common"}) rather than the pass-1 exact
-match - the same first-column-wins/second-column-wins assignment
-order is preserved either way.
-\item \strong{Required headers.} A file must end up with (after step
-1) at least \code{scientific_name}, at least one of
-\code{common.name}/\code{common.name2}, and at least one of
-\code{grouping.one}/\code{grouping.two}/\code{grouping.three} - if
-any of those three categories is entirely missing, the file is
-skipped (not added to \code{reference.plants.temp}) and
-\code{"<basename> <full path> skipped as missing required headers:
-    <list>"} is printed via \code{cat()}.
-\item \strong{Recycling/derivation/padding.} For a file that passes
-step 2: if only one of \code{common.name}/\code{common.name2} is
-present, the other is set equal to it (recycled, not left blank);
-if only one or two of \code{grouping.one}/\code{two}/\code{three}
-are present, the missing slot(s) are filled by recycling the
-FIRST present grouping column's value (an arbitrary but consistent
-choice - \strong{flagged}: there's no principled way to pick which
-grouping level to recycle from without more information from Josh);
-if \code{genus} is missing, it's derived as the first
-whitespace-separated word of \code{scientific_name}; if \code{family},
-\code{native.status}, or \code{growth.habit} is missing, it's added
-as \code{NA} for every row. Every column that had to be
-recycled/derived/padded this way is collected into one list.
-\item \strong{Notice.} If that list is empty (the file's own headers,
-once matched in step 1, already covered all 10 columns natively -
-nothing needed recycling, deriving, or padding),
-\code{"<basename> <full path> complete success very nice!"} is
-printed. Otherwise, \code{"<basename> <full path> loaded but padded
-    as missing these headers: <list>"} is printed, naming every
-recycled/derived/padded column.
-\item \strong{Merge.} The file's reconciled 10-column data frame is
-added onto \code{reference.plants.temp} (row-bound; a file's
-\code{wood.type} is not part of this reconciliation and is simply
-absent - i.e. \code{NA} - for these rows).
+\item Headers are standardized and mapped to the ten plant columns
+(all except \code{wood.type}): exact name first; then keywords
+(\code{species}/\code{latin}/\code{scientific}/\code{sciname},
+\code{genus}, \code{family}, \code{native}/\code{status},
+\code{growth}/\code{habit}, \code{common} for \code{common.name} then
+\code{common.name2}, \code{group} for \code{grouping.one} to
+\code{grouping.three}, in file column order); then content (mostly
+two-word capitalized text = \code{scientific_name}; mostly
+native/introduced/invasive words = \code{native.status}; mostly
+tree/shrub/vine words = \code{growth.habit}). Unmapped columns are
+dropped. This mapping is a best guess.
+\item A file without \code{scientific_name}, a common-name column and a
+grouping column is skipped, with the message
+\code{"<file> <path> skipped as missing required headers: ..."}. An
+unreadable file is skipped with \code{"... skipped as unreadable"}.
+\item Missing columns are filled: one common name copies the other;
+missing grouping columns copy the first grouping column present;
+\code{genus} is the first word of \code{scientific_name};
+\code{family}, \code{native.status} and \code{growth.habit} are
+\code{NA}. The message is \code{"<file> <path> complete success very
+    nice!"} when nothing was filled, otherwise \code{"<file> <path> loaded
+    but padded as missing these headers: ..."}.
+\item The rows of all usable files are combined. \code{"append"} adds
+them under the base table (\code{wood.type} is \code{NA} for them);
+\code{"overwrite"} uses only them. If no file matches or none is
+usable, a NOTE is printed (when nothing matched) and the base table
+is used.
 }
-Once every matched file has been processed: \code{reference.plants.all}
-starts as a copy of \code{reference.plants}. If \code{reference.data =
-"append"}, \code{reference.plants.temp}'s rows are added onto
-\code{reference.plants.all} (column union with the base table, so
-\code{wood.type} is simply \code{NA} for the new rows). If
-\code{reference.data = "overwrite"}, \code{reference.plants.all} is
-REPLACED entirely by \code{reference.plants.temp} (the base
-\code{reference.plants} table is discarded) - \strong{flagged:} if
-\code{pattern} matches nothing usable (every candidate file is skipped,
-or none matches at all), there is nothing to overwrite with, so
-\code{reference.plants.all} falls back to the unmodified
-\code{reference.plants} rather than becoming empty. \code{reference.plants.all}
-(not \code{reference.plants}) is what the rest of this function - matching,
-\code{head.out} validation, everything below this point - actually uses.
 
-\strong{Matching normalization} is stronger than
-\code{batz.batusa_recode.names}': case is folded AND every space/
-punctuation character is stripped out entirely (not just collapsed to a
-single space), per the spec's "ignore missing spaces and special
-characters" - so e.g. \code{"Ash-leaved Maple"}, \code{"ash leaved
-maple"}, \code{"Ashleaved_Maple"}, and \code{"ASHLEAVEDMAPLE"} all match
-the same reference row. This normalization is matching-only; the value
-returned always comes from the reference table's original (whitespace-
-trimmed, not de-punctuated) text.
-
-\strong{Duplicate reference keys (real data):} three genuine collisions
-exist in the real reference file - \code{"Juneberry"} (\code{$common.name2})
-is shared by three different \emph{Amelanchier} species, and
-\code{"Filbert"} (\code{$common.name2}) by two \emph{Corylus} species. No
-tie-break parameter was requested for this function, so the FIRST match
-wins (checked in \code{scientific_name}/\code{common.name}/\code{common.name2}
-column order, then row order in \code{reference.plants.all}) - an input
-of \code{"Juneberry"} alone is genuinely ambiguous in the source data
-and always resolves to the first of the three. Loading supplemental
-data via \code{reference.data = "append"} can introduce further
-collisions (including a supplemental row colliding with a base row);
-the same first-match rule applies.
-
-\strong{Unmatched inputs:} passed through unchanged in every requested
-\code{head.out} column. Whenever at least one input doesn't match,
-\code{"These inputs were missing:"} is printed followed by the vector of
-unique unmatched values, and a data frame called \code{treesmismatch.log}
-is auto-assigned into the calling environment (same bare-call-populates-
-workspace convention used by \code{\link{batz.generate_arumeta.eventlog}}
-/\code{\link{batz.merge_aru.meta}}), with columns:
-\code{$input} (each unique unmatched value), \code{$missmatch.count}
-(how many times that exact value occurs in \emph{this call's}
-\code{data} - an instance count, not a distinct-value count), and
-\code{$closest.match} (the single nearest reference entry across
-\code{scientific_name}/\code{common.name}/\code{common.name2}, by Levenshtein edit
-distance via \code{utils::adist()} on the normalized strings). When
-every input matches, \code{treesmismatch.log} is not created/updated.
-A last column, \code{$strip.special} (added 2026-09-30), is the same on
-every row: \code{"FALSE"} (not selected), \code{"TRUE NONE"} (nothing
-found), or \code{"TRUE ; <header>; ..."} (the reference-file headers
-where characters were removed, across every file loaded in the call).
-
-\strong{Column identifiers renamed, 2026-09-27, per Josh's reference-workbook "Change.to" column.} The following column identifiers were renamed throughout this function's inputs/outputs and this reference table's own columns: \code{grouping_one} -> \code{grouping.one}, \code{grouping_two} -> \code{grouping.two}, \code{grouping_three} -> \code{grouping.three}, \code{growth_habit} -> \code{growth.habit}, \code{native_status} -> \code{native.status}, \code{wood_type} -> \code{wood.type}, \code{missmatch_count} -> \code{missmatch.count} (an output-only column of \code{treesmismatch.log}), and the reference table's own species-identifier column \code{species} -> \code{scientific_name} (this function loads its reference table from disk rather than embedding one, so there is no embedded lookup table to update here - only \code{match.cols}/\code{plant.schema.cols} and every \code{$}/\code{[["..."]]}/string-literal reference to these column names). General prose uses of the word "species" (e.g. describing tree species, species identifiers) were left unchanged, as were unrelated identifiers such as \code{batz.batusa_list.species}.
-
-\strong{Column identifiers renamed, 2026-09-29, per Josh's reference-workbook
-review and his follow-up "These are the same things" / "Make changes":
-\code{common_one} -> \code{common.name}, \code{common_two} ->
-\code{common.name2}.} \code{common_one}/\code{"Bat Species"} had been
-flagged as colliding with \code{\link{batz.batusa_list.species}}'s own
-\code{"Bat Species"} -> \code{common.name} pending rename; Josh confirmed
-these are a single shared, reused identifier (the same pattern already
-used for \code{date.start}/\code{date.end} across sibling functions in
-this catalog), not a real collision - the reference workbook's two
-separate pending rows are merged into one \code{Header.names} row,
-\code{common.name}, listing both functions; \code{common_two}, held
-pending on that same resolution, is applied alongside it as
-\code{common.name2}. \strong{Unlike \code{\link{batz.batusa_list.species}},
-this function's reference table is loaded fresh from disk on every call
-(not embedded), and its real file's own header text is still literally
-\code{common_one}/\code{common_two} - \code{standardize.headers()} can
-only ever produce snake_case (lowercase, non-alphanumeric runs collapsed
-to a single underscore), so it can never itself turn either raw header
-into a dot-spelled identifier.} To bridge this, \code{load.tree.reference()}
-now renames \code{common_one} -> \code{common.name} and \code{common_two}
--> \code{common.name2} immediately after \code{standardize.headers()} (a
-legacy-input-alias step, mirroring the same pattern already used
-elsewhere in this package - e.g. \code{\link{batz.merge_vetted.acoustics}}'s
-\code{monitoringnight}/\code{serial} aliases - for exactly this "a plain
-\code{setdiff()}/name lookup against a dot-spelled identifier can never
-be satisfied by any real raw file" bug class). \code{match.cols},
-\code{plant.schema.cols}, \code{keyword.map}'s keys, and
-\code{build.plant.row.set()}'s field checks are all updated to the new
-dot-spelled names to match. \strong{Verified:} re-ran this function
-end to end against the real reference file with no error, confirmed
-\code{head.out = "common.name"} (the new default) and
-\code{head.out = "common.name2"} both resolve correctly, and confirmed
-\code{reference.data = "append"}/\code{"overwrite"} still correctly
-identify a supplemental file's own (still snake_case) \code{common_one}/
-\code{common_two} headers via the pass-2 keyword match (see the
-"Column matching" note above) - no behavior change there beyond which
-pass does the matching.
-
-\strong{BUGFIX, 2026-09-29, found while verifying the rename above end to
-end against the real reference file: the 2026-09-27 rename round (see
-that entry above) renamed \code{grouping_one}/\code{grouping_two}/
-\code{grouping_three}/\code{growth_habit}/\code{native_status}/
-\code{wood_type} to dot-spelled identifiers in \code{plant.schema.cols}/
-\code{keyword.map}/this documentation, but never added the
-legacy-input-alias bridge these six identifiers need to actually reach
-the base reference table - the same bridge \code{common_one}/
-\code{common_two} needed above, and for the identical reason:
-\code{standardize.headers()} can only ever produce a snake_case
-identifier, so a plain lookup for a dot-spelled column against
-\code{reference.plants} (loaded fresh from disk, never embedded) could
-never succeed. This meant every one of these six identifiers had been
-completely unreachable via \code{head.out} - including this function's
-own documented \code{@examples} usage,
-\code{head.out = c("scientific_name", "family", "growth.habit")} -
-since the 2026-09-27 round shipped.} \strong{Fixed} by adding the same
-legacy-input-alias step to \code{load.tree.reference()} for all six
-identifiers. \strong{Verified}: re-ran
-\code{batz.treeusa_recode.names(data, head.out = c("scientific_name",
-"family", "growth.habit"))} (this function's own documented example)
-against the real reference file - previously an immediate error
-(\code{head.out} not found in \code{names(reference)}), now resolves
-correctly - and confirmed \code{grouping.one}/\code{grouping.two}/
-\code{grouping.three}/\code{native.status}/\code{wood.type} all resolve
-the same way.
-
-\strong{Follow-up, 2026-09-30, per Josh - special characters.} Every
-reference CSV (base \code{load.pattern} file and every supplemental
-\code{pattern} file) is now read with the shared
-\code{special.read.csv()} helper (UTF-8, falling back to Latin-1), so a
-file with a stray Latin-1 byte loads instead of failing (a supplemental
-file would previously have been "skipped as unreadable"). Excel files
-are still read with \code{readxl::read_excel()}. New argument
-\code{strip.special} (default \code{TRUE}) removes every non-ASCII
-character from each reference file's data immediately after it loads,
-before header reconciliation and matching. \code{data} is a plain
-vector (not a data frame), so it is not stripped. Matching is
-unaffected either way, because \code{normalize.tree()} already drops
-everything except \code{a-z0-9} before comparing (so
-\code{"Quercus × bebbiana"} and \code{"Quercus bebbiana"} already
-matched each other). What stripping DOES change is the returned
-\code{head.out} values: a reference entry containing e.g. the hybrid
-sign is returned without it (\code{"Quercus  bebbiana"}, with the
-surrounding spaces left as they were), and the same for
-\code{treesmismatch.log$closest.match}. Set \code{strip.special = FALSE}
-to return reference values exactly as spelled in the file.
-\code{treesmismatch.log} gains a last column \code{$strip.special} (see
-\strong{Unmatched inputs} above). Output is unchanged for reference
-files without special characters.
-
-\strong{Follow-up, 2026-10-02, per Josh - accents simplified, log
-counts.} With \code{strip.special = TRUE}, accented letters and common
-symbols are now simplified instead of dropped (\code{café} ->
-\code{cafe}, \code{Quercus × bebbiana} -> \code{Quercus X bebbiana},
-curly quotes -> straight quotes); characters with no plain equivalent
-(e.g. \code{°}, \code{µ}, \code{™}) are still removed. Column names
-are cleaned the same way. The log gets four new columns right after
-\code{$strip.special}: \code{$accented.letters.header} and
-\code{$removed.symbols.header} (number of unique column names with a
-character simplified / removed), and \code{$accented.letters.data} and
-\code{$removed.symbols.data} (number of unique data values with a
-character simplified / removed - \code{café} in 500 rows counts once;
-\code{café} and \code{French café} count twice). They are \code{NA}
-when \code{strip.special = FALSE}.
-
-\strong{Lower-case headers (2026-11-04, per Josh, Batz_reference_db Header.names).}
-The strip.special log columns are \code{$accented.letters.header} /
-\code{$accented.letters.data} (were Accented.letters.*).
+\strong{Unmatched values.} \code{"These inputs were missing:"} and the
+unique unmatched values are printed, and \code{treesmismatch.log} is
+assigned in the calling environment with one row per unique unmatched
+value: \code{$input}, \code{$mismatch.count} (number of times it occurs
+in \code{data}), \code{$closest.match} (nearest
+\code{scientific_name}/\code{common.name}/\code{common.name2} value by
+edit distance on the normalized text), \code{$strip.special}
+(\code{"FALSE"}, \code{"TRUE NONE"}, or \code{"TRUE ; <header>; ..."}
+naming the reference-file columns that changed),
+\code{$accented.letters.header}, \code{$removed.symbols.header},
+\code{$accented.letters.data}, \code{$removed.symbols.data} (number of
+unique column names / values in the reference files with a character
+simplified or removed; \code{NA} when \code{strip.special = FALSE}).
+When every value matches, \code{treesmismatch.log} is not created or
+updated.
 }
 \examples{
 \dontrun{
 batz.treeusa_recode.names(c("sugar maple", "RED OAK", "not.a.real.tree"))
-# -> "Sugar Maple"   "Northern Red Oak"   "not.a.real.tree"
-# treesmismatch.log now in your workspace (1 row: "not.a.real.tree")
+# unmatched "not.a.real.tree" is returned as is; see treesmismatch.log
 
 batz.treeusa_recode.names("Ash-leaved Maple", head.out = "scientific_name")
-# -> "Acer negundo"
 
 batz.treeusa_recode.names(c("Sugar Maple", "Red Oak"),
                            head.out = c("scientific_name", "family", "growth.habit"))
-# -> data frame with $scientific_name, $family, $growth.habit columns
 
-# pull in every "plant.names.csv" found under dir.load (recursively, since
-# dir.sub defaults to TRUE) and add their rows onto the base reference table
+# add the rows of every "plant.names.csv" under dir.load
 batz.treeusa_recode.names("sugar maple", reference.data = "append")
 
-# same, but searching for several possible supplemental file names, and
-# using ONLY their rows (base reference.plants table discarded)
+# use only the extra files
 batz.treeusa_recode.names("sugar maple",
                            pattern = c("plant.names.csv", "shrub_extra.csv"),
                            reference.data = "overwrite")
 }
 
+}
+\seealso{
+\code{\link{batz.batusa_recode.names}}
 }

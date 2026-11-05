@@ -18,21 +18,22 @@ batz.plotactivity_heatmap2(
   time.end = "08:00",
   time.interval = "1 hour",
   project.name = "new.project",
-  aes.style = "overide.value",
+  aes.style = "override.value",
   dir.save = getwd()
 )
 }
 \arguments{
-\item{data}{Data frame to plot. Needs \code{date.col} (see Details),
-\code{time.col} and \code{$observations.count} (or \code{$obs}).
-\code{$group} and \code{$spp.id} are used to split/select plots.}
+\item{data}{Data frame to plot. Needs a date column (see Details), the
+\code{time.col} column and \code{$observations.count} (or \code{$obs}).
+\code{$group} and \code{$spp.id} are used to split and select plots.}
 
-\item{fig.list}{Optional data frame, one row per plot - see Details,
-"fig.list". \code{NULL} (default) = one plot per group x spp.id.}
+\item{fig.list}{Optional data frame, one row per plot (see Details).
+\code{NULL} (default) = one plot per group x spp.id.}
 
 \item{aes.default}{Optional plot-settings data frame
-(\code{plotopts_heatmap2.csv}: \code{$category}, \code{$parameter},
-\code{$default.value}, plus the \code{aes.style} column).}
+(\code{plotopts_heatmap2.csv}) with \code{$category},
+\code{$parameter}, \code{$default.value}, plus the \code{aes.style}
+column. Default \code{NULL}.}
 
 \item{date.col}{Character, default \code{"date.monitoringnight"}. Date
 column, and the day layout: \code{"date.monitoringnight"} (noon to
@@ -46,22 +47,22 @@ time bin, e.g. \code{"15 min"}, \code{"30 min"}, \code{"1 hour"}. Must
 divide evenly into 24 hours.}
 
 \item{bin.values}{Numeric, default \code{c(0, 1, 10, 25, 50)} (or text
-\code{"0;1;10;25;50"} in fig.list/plotopts). See Details, "Colour
-scale".}
+\code{"0;1;10;25;50"} in fig.list/plotopts), in increasing order. See
+Details, "Colour scale".}
 
 \item{bin.colors}{Character, default \code{c("white", "#FFFF80",
   "#FFFF00", "#FFAA00", "#FF5500", "#FF0000")}. Colours (separated by
-\code{";"} in fig.list/plotopts) or one palette name - see Details.}
+\code{";"} in fig.list/plotopts) or one palette name (see Details).}
 
-\item{bin.scale}{Character, \code{"discrete"} (default) or
+\item{bin.scale}{Character, default \code{"discrete"}; or
 \code{"continuous"}. See Details, "Colour scale".}
 
-\item{time.start}{Character, default \code{"15:00"}. Time at the
-bottom of the Y axis (HH:MM).}
+\item{time.start}{Character, default \code{"15:00"}. Time at the bottom
+of the Y axis (HH:MM).}
 
 \item{time.end}{Character, default \code{"08:00"}. Time at the top of
 the Y axis (HH:MM). With \code{"date.monitoringnight"} it may be after
-midnight (e.g. \code{"15:00"} to \code{"08:00"}).}
+midnight.}
 
 \item{time.interval}{Character, default \code{"1 hour"}. Spacing of the
 Y-axis labels.}
@@ -70,120 +71,156 @@ Y-axis labels.}
 of the file name when \code{fig.list = NULL} (fig.list plots are named
 from \code{$plot.name}).}
 
-\item{aes.style}{Character, default \code{"overide.value"}. Column of
-\code{aes.default} that overrides \code{$default.value} when filled.}
+\item{aes.style}{Character, default \code{"override.value"}. Column of
+\code{aes.default} that overrides \code{$default.value} when filled. An
+old \code{overide.value} column is still read when
+\code{aes.style = "override.value"} and there is no
+\code{override.value} column.}
 
-\item{dir.save}{Character, default \code{getwd()}. Folder the PNG(s)
-are saved in.}
+\item{dir.save}{Character, default \code{getwd()}. Folder the PNG(s) are
+saved in (created if needed).}
 }
 \value{
-Invisibly, a list: \code{$data} (the binned counts, one row per
-plot/facet/date/time bin), \code{$plots} (named list of ggplot
-objects) and \code{$files} (saved file paths).
+Invisibly, a list:
+\describe{
+\item{data}{The binned counts, one row per plot, facet, date and time
+bin: \code{$facet}, \code{$date}, \code{$time} (bin start, HH:MM),
+\code{$observations.count}, \code{$count.bin} (legend bin;
+\code{NA} for a continuous scale) and \code{$plot} (file name
+without \code{.png}). \code{NULL} if nothing was plotted.}
+\item{plots}{Named list of ggplot objects (names = file names without
+\code{.png}).}
+\item{files}{Paths of the saved PNG files.}
+}
 }
 \description{
-Added 2026-10-07, per Josh. Draws a ggplot2 heatmap of observation
-counts - \code{$observations.count} (or the older \code{$obs}) - with
-date on the X axis and time of day on the Y axis. Built for the output
-of \code{\link{batz.generate_plotframe.bat}} (e.g. with
-\code{pool.interval = "15 min"}), but works on any data frame with a
-date column, a time column and a count column.
+Draws ggplot2 heatmaps of observation counts (\code{$observations.count})
+with date on the X axis and time of day on the Y axis, and saves each as
+a PNG. Built for the output of \code{\link{batz.generate_plotframe.bat}}
+(e.g. with \code{pool.interval = "15 min"}), but works on any data frame
+with a date column, a time column and a count column.
 }
 \details{
-\strong{Two ways to run it (2026-10-09).} With \code{fig.list = NULL}
-(the original behaviour) one PNG is saved per \code{$group} x
-\code{$spp.id} combination in \code{data}, named
-\verb{<project.name>_<group>_<spp.id>_<date.min>to<date.max>.png}. With
-a \code{fig.list}, each row with \code{$plot.type = "activity.heatmap"}
-makes a plot (or one plot per facet) the same way as the other batz
-fig.list plot functions - see \strong{fig.list} below.
+\strong{Two ways to run it.} With \code{fig.list = NULL}, one PNG is saved
+per \code{$group} x \code{$spp.id} combination in \code{data}, named
+\verb{<project.name>_<group>_<spp.id>_<YYYYMMDD>to<YYYYMMDD>.png} (first
+and last date of that combination). With a \code{fig.list}, each row with
+\code{$plot.type = "activity.heatmap"} makes one faceted plot or one plot
+per facet (see \strong{fig.list} below).
 
-\strong{Where each setting comes from.} Every setting below
-(\code{date.col} through \code{time.interval}, plus the plotopts-only
-ones such as \code{plot.width}) is taken from, in order: (1) the
-fig.list row's own column of that name, if filled; (2) the function
-argument, if you passed it; (3) \code{aes.default} (its
-\code{aes.style} column, then \code{$default.value}); (4) the argument's
-default. See \code{plotopts_heatmap2.csv} for every setting.
+\strong{Where each setting comes from.} Every setting (\code{date.col}
+through \code{time.interval}, plus plotopts-only settings such as
+\code{plot.width}) is taken from, in order: (1) the fig.list row's
+column of that name, if filled; (2) the function argument, if you passed
+it; (3) \code{aes.default} (its \code{aes.style} column, then
+\code{$default.value}); (4) the argument's default. Plotopts-only
+settings and their built-in defaults: \code{legend.title}
+("Number of Observations"), \code{legend.position} ("bottom"),
+\code{midline.color} ("black"), \code{midline.linewidth} (0.6),
+\code{facpan.numcol} (1, facet columns), \code{facpan.hgt} (3, height
+per facet row when faceted), \code{plot.width} (10), \code{plot.height}
+(6), \code{ggsave.units} ("in"), \code{ggsave.dpi} (300),
+\code{plot.title.size} (12), \code{axis.title.size} (12),
+\code{axis.text.size} (10), \code{strip.text.size} (10),
+\code{legend.title.size} (11), \code{legend.text.size} (10),
+\code{date.format} ("\\%d \\%b"; \code{"/n"} starts a new line),
+\code{xaxe.interval} (blank = automatic; a number of 2 or more gives that
+many evenly spaced date labels), \code{xaxe.title} (blank = "Monitoring
+Night" or "Date"), \code{yaxe.title} ("Time of Day"). See
+\code{plotopts_heatmap2.csv}.
 
-\strong{Day layout.} With \code{date.col = "date.monitoringnight"} the
-Y axis runs from noon on one calendar day to noon the next, and a solid
-black line marks 00:00:00 (midnight). With \code{date.col =
-"date.calendar"} (\code{"date.calander"} is also accepted) the Y axis
-runs from midnight to midnight, and the black line marks 12:00:00
-(noon). Time runs upward from \code{time.start} (bottom) to
-\code{time.end} (top), like \code{\link{batz.plotactivity_heatmap}}.
-Monitoring-night dates are moved to calendar days (and back) when the
-layout needs it.
+\strong{Day layout.} With \code{date.col = "date.monitoringnight"} the Y
+axis runs from noon to noon and a line (\code{midline.color}) marks
+00:00 (midnight). With \code{date.col = "date.calendar"}
+(\code{"date.calander"} is also accepted) it runs from midnight to
+midnight and the line marks 12:00 (noon); any other name also uses the
+calendar layout, with a NOTE. Time runs upward from \code{time.start}
+(bottom) to \code{time.end} (top); if \code{time.end} is not after
+\code{time.start} within the day, the full day is plotted with a NOTE.
+Records outside the range are not shown (NOTE with their count).
 
-\strong{Date column.} If \code{data} has a column named
-\code{date.col} it is used. Otherwise, for a
-\code{batz.generate_plotframe.bat()} frame (which has \code{$date} and a
-\code{$groupby.date} naming the date type), \code{$date} is used.
+\strong{Date column.} If \code{data} has a column named \code{date.col}
+(case and \code{"."}/\code{"_"} ignored) it is used. Otherwise, for a
+\code{batz.generate_plotframe.bat()} frame, \code{$date} is used, with
+\code{$groupby.date} telling whether it holds monitoring nights or
+calendar dates. Records before noon are moved to the next calendar day
+(or previous monitoring night) when the layout differs from the date
+type. Dates may be \code{Date}, date-time, or text such as
+\code{2026-08-14}, \code{8/14/2026} or \code{20260814}.
 
-\strong{Time column.} Only the time of day is read from
-\code{time.col} - e.g. \code{"2026-08-14 21:15:00"}, \code{"21:15"},
-\code{"21:15:00"} or \code{"9:15 PM"}. Each record goes in the bin its
-time falls in, and counts in the same date/bin are summed. Bins with no
-records count as 0.
+\strong{Time and counts.} Only the time of day is read from
+\code{time.col} (e.g. \code{"2026-08-14 21:15:00"}, \code{"21:15"},
+\code{"21:15:00"} or \code{"9:15 PM"}). Each record goes in the bin its
+time falls in, and counts in the same date and bin are summed; empty
+bins are 0. Rows with an unreadable date, time or count are dropped with
+a NOTE. An old \code{$obs} count column is still accepted with a
+WARNING. If \code{data} was pooled at a coarser interval than
+\code{bin.intervals} (\code{$pool.interval}), a NOTE says each pool's
+count goes in the bin of its start time.
 
-\strong{Colour scale (bin.scale, 2026-10-09).}
+\strong{Colour scale (\code{bin.scale}).}
 \itemize{
 \item \code{"discrete"} (default): \code{bin.values} are the upper
 limits of each bin. With \code{c(0, 1, 10, 25, 50)} the bins are 0,
 1, 2-10, 11-25, 26-50 and 51+, so \code{bin.colors} needs one more
-colour than \code{bin.values}. Every bin is shown in the legend,
-with its colour, even when no cell falls in it.
-\item \code{"continuous"}: a colour gradient from \code{min(bin.values)}
-to \code{max(bin.values)}, with \code{bin.colors} spread evenly from
-the bottom to the top of the scale. Counts above the top value get
-the top colour; the legend ticks are at \code{bin.values}, the top
-one labelled e.g. \code{"20+"}.
+colour than \code{bin.values}. Every bin is shown in the legend, even
+when no cell falls in it.
+\item \code{"continuous"}: a gradient from \code{min(bin.values)} to
+\code{max(bin.values)}, with \code{bin.colors} spread evenly. Counts
+above the top value get the top colour; legend ticks are at
+\code{bin.values}, the top one labelled e.g. \code{"20+"}.
 }
 
-\strong{Named palettes (2026-10-09).} \code{bin.colors} may be a list
-of colours or ONE palette name, from \pkg{viridis}/\pkg{viridisLite}
-(\code{"magma"}, \code{"viridis"}, ...), \pkg{scico} (\code{"batlow"},
-\code{"lajolla"}, ...), \pkg{RColorBrewer} (\code{"YlOrRd"}, ...),
-\code{"Okabe-Ito"} (base R) or \pkg{colorspace} (\code{"Heat"},
-\code{"Sunset"}, ...). Name the package to be exact -
-\code{"scico::batlow"}, \code{"RColorBrewer::YlOrRd"},
-\code{"colorspace::YlOrRd"}. Put \code{"-"} in front to reverse it
+\strong{Named palettes.} \code{bin.colors} may be a list of colours or
+ONE palette name from \pkg{viridis}/\pkg{viridisLite} (\code{"magma"},
+\code{"viridis"}, ...), \pkg{scico} (\code{"batlow"}, \code{"lajolla"},
+...), \pkg{RColorBrewer} (\code{"YlOrRd"}, ...), \code{"Okabe-Ito"}
+(base R) or \pkg{colorspace} (\code{"Heat"}, \code{"Sunset"}, ...). Name
+the package to be exact (\code{"scico::batlow"},
+\code{"colorspace::YlOrRd"}); put \code{"-"} in front to reverse
 (\code{"-magma"}). The right number of colours is taken from the
-palette. \strong{Name clashes:} colorspace has its own version of many
-viridis, scico and RColorBrewer palettes under the same names (e.g.
-\code{YlOrRd}, \code{Blues}, \code{batlow}, \code{viridis},
-\code{plasma}) - close but not identical colours. scico, RColorBrewer,
-viridis and Okabe-Ito don't clash with each other. A bare name uses the
-original package (viridis, then scico, then RColorBrewer, then
-Okabe-Ito, then colorspace) and prints a NOTE when it clashes; write
-\code{"colorspace::<name>"} for the colorspace version. The packages are
-optional - only the one a palette comes from has to be installed.
+palette (9 for a continuous scale). colorspace has its own versions of
+many viridis, scico and RColorBrewer palettes under the same names; a
+bare name uses the first match in the order viridis, scico,
+RColorBrewer, Okabe-Ito, colorspace and prints a NOTE when it clashes.
+Only the package a palette comes from has to be installed.
 
-\strong{fig.list (2026-10-09).} Same format as the other batz fig.list
-plot functions. Required columns: \code{$plot.type}
-(\code{"activity.heatmap"}; other rows are skipped), \code{$plot.name},
-\code{$facet.header} (\code{"sppid"}), \code{$facet.plot},
-\code{$facet.set}, \code{$all.detections}, \code{$40khzmyo},
-\code{$facet.label}, \code{$plot.set}, \code{$date.start},
-\code{$date.end}. Optional: any setting named above (e.g.
-\code{$bin.scale}, \code{$bin.colors}, \code{$time.start}), plus
-\code{$date.format}, \code{$xaxe.interval}, \code{$xaxe.title},
-\code{$yaxe.title}. \code{$facet.set} is a preset (\code{"NE"}) or an
-ordered list (\code{"AllDet;lano;labo"}); the order written is the
-facet order. \code{$all.detections = TRUE} adds All detections as the
-first facet. A 40kHzMyo facet (\code{$40khzmyo = TRUE}) is drawn as its
-own facet - a heatmap can't overlay it. All detections uses the
-\code{"All Detections"} rows of \code{data}; if there are none, every
-species row is summed. \code{$plot.set} picks \code{$group} value(s)
-(several are summed together); blank = all. \code{$facet.plot = TRUE}
-saves one faceted plot named
-\verb{<plot.name>_F_<facet.first>to<facet.last>_<plot.set>_<YYYYMMDD>to<YYYYMMDD>_<TIMESTAMP>.png};
-\code{FALSE} saves one plot per facet named
-\verb{<plot.name>_<facet>_<plot.set>_<YYYYMMDD>to<YYYYMMDD>_<TIMESTAMP>.png}
-(facets with no data are skipped). Names over 100 characters are
-shortened as described in \code{\link{batz.plotactivity_observations}}.
-See \code{heat2.figlist.csv} for an example.
+\strong{fig.list.} Same format as the other batz fig.list plot
+functions. Required columns:
+\describe{
+\item{\code{$plot.type}}{\code{"activity.heatmap"}; other rows are
+skipped with a NOTE.}
+\item{\code{$plot.name}}{Plot title and first part of the file name.}
+\item{\code{$facet.header}}{\code{"sppid"} (the only value
+implemented; other rows are skipped).}
+\item{\code{$facet.plot}}{\code{TRUE}: one faceted plot. \code{FALSE}:
+one plot per facet (facets with no data are skipped). If the column
+is missing, \code{TRUE} is used with a WARNING.}
+\item{\code{$facet.set}}{A preset (e.g. \code{"NE"}) or an ordered list
+(\code{"AllDet;lano;labo"}); the order is the facet order.}
+\item{\code{$all.detections}}{\code{TRUE} adds All detections as the
+first facet. It uses the \code{"All Detections"} rows of
+\code{data}, or the sum of every species row if there are none. The
+old headers \code{$all.dectections} and \code{$Alldect} are still
+accepted with a WARNING.}
+\item{\code{$40khzmyo}}{\code{TRUE} adds a 40kHzMyo facet (its own
+facet; a heatmap cannot overlay it).}
+\item{\code{$facet.label}}{Facet labels.}
+\item{\code{$plot.set}}{\code{$group} value(s) to plot, separated by
+\code{;} or \code{,} (several are summed, with a NOTE); blank = all.}
+\item{\code{$date.start}, \code{$date.end}}{Date range; blank = range
+of the data.}
+}
+Optional: any setting named above (e.g. \code{$bin.scale},
+\code{$bin.colors}, \code{$time.start}, \code{$date.format}). File names
+are
+\verb{<plot.name>_F_<facet.first>to<facet.last>_<plot.set>_<YYYYMMDD>to<YYYYMMDD>_<YYYYMMDDHHMMSS>.png}
+(faceted) or
+\verb{<plot.name>_<facet>_<plot.set>_<YYYYMMDD>to<YYYYMMDD>_<YYYYMMDDHHMMSS>.png}
+(one per facet), with \code{"all"} for a blank \code{plot.set}. Names
+over 100 characters are shortened as described in
+\code{\link{batz.plotactivity_observations}}. See
+\code{heat2.figlist.csv} for an example.
 }
 \examples{
 \dontrun{
@@ -203,9 +240,5 @@ plotopts <- read.csv("plotopts_heatmap2.csv", check.names = FALSE)
 batz.plotactivity_heatmap2(plfr, fig.list = heat2.figlist,
   aes.default = plotopts, dir.save = "C:/path/to/figures")
 }
-
-\strong{Spelling fix (2026-11-04, per Josh).} fig.list column
-\code{$all.detections} (was \code{$all.dectections}; the old header and
-\code{$Alldect} are still accepted, with a WARNING).
 
 }

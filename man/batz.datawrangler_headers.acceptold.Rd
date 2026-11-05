@@ -2,8 +2,7 @@
 % Please edit documentation in R/batz.datawrangler_headers.acceptold.R
 \name{batz.datawrangler_headers.acceptold}
 \alias{batz.datawrangler_headers.acceptold}
-\title{Rename deprecated/legacy headers on load, using the package's own
-header-rename reference table}
+\title{Rename old (deprecated) headers when data are loaded}
 \usage{
 batz.datawrangler_headers.acceptold(
   data,
@@ -18,176 +17,102 @@ batz.datawrangler_headers.acceptold(
 )
 }
 \arguments{
-\item{data}{A data frame (or an object \code{names()} works on) whose
-column names should be checked/renamed.}
+\item{data}{A data frame whose column names are checked.}
 
-\item{function.name}{Character, required. Name of the \code{batz}
-function calling this (e.g. \code{"batz.merge_vetted.acoustics"}), so
-any logged conflict can be traced back to where it occurred.}
+\item{function.name}{Character, required. Name of the calling \code{batz}
+function (e.g. \code{"batz.merge_vetted.acoustics"}); written to the
+conflict log.}
 
-\item{filename}{Character, default the name of whatever was passed in
-as \code{data} (via \code{deparse(substitute(data))}). File name (if
-\code{data} was just read from disk) or data frame/object name, for
-\code{$filename} in the conflict log.}
+\item{filename}{Character, default \code{deparse(substitute(data))} (the
+name of the object passed as \code{data}). File or object name for the
+log's \code{$filename} column.}
 
-\item{path}{Character, default \code{NA}. Path of the file \code{data}
-was loaded from, if any, for \code{$path} in the conflict log.}
+\item{path}{Character, default \code{NA_character_}. Path of the file
+\code{data} came from, for the log's \code{$path} column.}
 
-\item{log.file}{Logical, default \code{FALSE} (per Josh's spec). If
-\code{TRUE}, a \code{header.conflict.log} data frame recording every
-column this call could NOT safely resolve is attached to the return
-value - see Details for exactly how.}
+\item{log.file}{Logical, default \code{FALSE}. If \code{TRUE}, a
+conflict log is attached to the result as
+\code{attr(result, "header.conflict.log")}.}
 
-\item{headers.table}{Optional, default \code{NULL}. A reference table
-already loaded via \code{\link{batz.generate_headers.acceptold}}, to
-avoid re-reading the CSV from disk on every call (e.g. a caller that
-processes many files in a loop can load it once and pass it through).
-When \code{NULL} (the default), it's loaded fresh via
-\code{batz.generate_headers.acceptold(dir.load, file.name)}.}
+\item{headers.table}{Data frame or \code{NULL} (default). A reference
+table already read with \code{\link{batz.generate_headers.acceptold}}
+(useful when processing many files in a loop). If \code{NULL}, it is
+read with \code{batz.generate_headers.acceptold(dir.load, file.name)}.}
 
-\item{dir.load, file.name}{Passed through to
-\code{\link{batz.generate_headers.acceptold}} when \code{headers.table}
-is \code{NULL}. See that function's own documentation.}
+\item{dir.load}{Character, default \code{getwd()}. Folder of the
+reference CSV; used only when \code{headers.table = NULL}.}
+
+\item{file.name}{Character, default \code{"batz_headers_acceptold.csv"}.
+Reference CSV name; used only when \code{headers.table = NULL}.}
 
 \item{strip.special}{Logical, default \code{TRUE}. If \code{TRUE},
-simplifies accented letters and
-symbols (\code{é} -> \code{e}, \code{×} -> \code{X}) and removes other non-ASCII special characters (e.g. \code{°}, \code{µ},
-\code{™}) from every data frame input (\code{data} and a
-supplied \code{headers.table}) at the start of the call - see
-\code{@details}. Files are always read with a UTF-8/Latin-1 fallback,
-so a stray \code{°} can't stop them loading, whatever this is set to.}
+\code{data} and a supplied \code{headers.table} are cleaned at the
+start: accented letters and common symbols are simplified
+(\code{é} to \code{e}, \code{×} to \code{X}) and other non-ASCII
+characters (e.g. \code{°}, \code{µ}, \code{™}) are removed, in column
+names and text values.}
 }
 \value{
-\code{data}, with every column that matched exactly one
-confirmed replacement header renamed to it. Columns that didn't match
-anything in the reference table are left completely untouched. When
-\code{log.file = TRUE}, a \code{header.conflict.log} data frame (see
-Details) is attached to the returned object as an attribute, i.e.
-\code{attr(result, "header.conflict.log")} - the return value is
-always just the data frame itself either way, so
-\code{data <- batz.datawrangler_headers.acceptold(data, ...)} works
-the same regardless of \code{log.file}. \code{header.conflict.log}
-columns: \code{$filename}, \code{$path}, \code{$function},
-\code{$header.old}, \code{$header.new}, and (last)
-\code{$strip.special}: \code{"FALSE"} (not selected),
-\code{"TRUE NONE"} (nothing found), or \code{"TRUE ; <header>; ..."}
-(the columns of \code{data} where characters were removed).
+\code{data} (a data frame) with each safely matched old header
+renamed. Columns not in the reference table are unchanged. When
+\code{strip.special = TRUE}, text columns that changed are re-typed
+(\code{"42.5°"} becomes the number \code{42.5}). When
+\code{log.file = TRUE}, \code{attr(result, "header.conflict.log")} is a
+data frame (zero rows if there were no conflicts) with columns
+\code{$filename}, \code{$path}, \code{$function}, \code{$header.old},
+\code{$header.new}, \code{$strip.special} (\code{"FALSE"},
+\code{"TRUE NONE"}, or \code{"TRUE ; <header>; ..."} naming the data
+columns that changed), \code{$accented.letters.header},
+\code{$removed.symbols.header} (number of unique column names with a
+character simplified / removed), \code{$accented.letters.data} and
+\code{$removed.symbols.data} (number of unique values with a character
+simplified / removed; \code{NA} when \code{strip.special = FALSE}).
 }
 \description{
-Consults \code{\link{batz.generate_headers.acceptold}}'s reference table
-and renames any column of \code{data} that matches a recognized old
-header spelling to its current standard name, so a file or data frame
-built against an older \code{batz} naming convention keeps working with
-today's functions. Matching is tolerant of separator/case differences
-(via \code{standardize.headers()}), the same way
-\code{\link{canonicalize.headers}} already matches headers elsewhere in
-this package. A column that can't be safely resolved - because the
-reference table has no confirmed replacement for it yet, or because it
-genuinely matches more than one possible replacement - is left
-unchanged and flagged with a \code{warning()} (and, optionally, a
-logged row) rather than guessed at.
+Renames each column of \code{data} whose name is a known old header
+spelling (from \code{\link{batz.generate_headers.acceptold}}) to its
+current name, so files built with older \code{batz} header names still
+work. A column that cannot be renamed safely is left unchanged, with a
+warning and (optionally) a row in a conflict log.
 }
 \details{
-\strong{Built 2026-09-25, per Josh's request, alongside
-\code{\link{batz.generate_headers.acceptold}}.} Several judgment calls
-were made building this; all flagged below - please confirm.
+\strong{Matching.} Column names of \code{data} and \code{$header.old} are
+compared after standardizing (lower case, every run of non-alphanumeric
+characters turned into \code{_}), so \code{"Mic_Serial_Number"},
+\code{"mic.serial.number"} and \code{"mic_serial_number"} all match.
+Columns that do not match any \code{$header.old} are left alone and not
+logged.
 
-\strong{Judgment call, flagged: the conflict log is attached as an
-attribute, not returned as a second list element.} Josh's own spec asks
-for a function that "makes the changes required for the script to run"
-when loading a file/data frame - i.e. it's meant to sit inline in a
-pipeline (\code{data <- batz.datawrangler_headers.acceptold(data, ...)})
+\strong{Outcomes for a matched column.}
 \itemize{
-\item so this keeps the return value a plain data frame in both
-\code{log.file} states, rather than changing shape to
-\code{list(data = ..., header.conflict.log = ...)} whenever
-\code{log.file = TRUE}, which would break that inline use every time
-logging is turned on. The log is still fully accessible via
-\code{attr(result, "header.conflict.log")}. Please confirm this is the
-right shape, versus preferring the list form despite the pipeline
-inconvenience.
+\item One non-blank \code{$header.new}: the column is renamed, with no
+warning and no log row.
+\item Only a blank \code{$header.new} (no confirmed replacement): left
+unchanged, warning, log row with \code{header.new = "NOMATCH"}.
+\item More than one different \code{$header.new} for the same
+standardized old header: left unchanged, warning, log row with
+\code{$header.new} = the candidates separated by \code{"; "}.
 }
 
-\strong{Judgment call, flagged: only conflicts are logged, not clean
-renames.} Josh's spec describes \code{header.conflict.log} as
-generated "if there is a conflict" and names its purpose as recording
-"the conflict" - so a column that matches exactly one confirmed
-replacement is renamed silently (no log row at all); only a column
-that could NOT be safely renamed - no confirmed replacement yet
-(logged as \code{header.new = "NOMATCH"}), or a genuine match to more
-than one possible replacement (logged as \code{header.new} = the
-candidates, semicolon-separated) - produces a log row. A column not
-recognized in the reference table at all isn't a conflict either
-(it's just not a deprecated header \code{batz} knows about) and also
-produces no log row.
+\strong{Name collisions.} After renaming, if two columns would end up
+with the same name (two old spellings of one field in the same file, or
+an old header whose new name already exists in \code{data}), all columns
+involved keep their original names, a warning is given and each gets a
+log row with \code{$header.new} = the shared name.
 
-\strong{Judgment call, flagged: a same-target collision between two
-DIFFERENT old headers is treated as a conflict too, beyond Josh's
-original spec.} If two of \code{data}'s columns would each resolve to
-the same new name (e.g. two legacy spellings of what the reference
-table calls the same field, both present at once in one file - or an
-old header whose confirmed replacement happens to collide with another
-column already spelled that way), renaming both would silently merge
-or overwrite a column. This is caught after the initial rename pass:
-both offending columns are reverted to their original spelling,
-warned, and logged with \code{header.new} = the colliding target name.
-This case isn't in Josh's original spec (which only describes one old
-header matching more than one new name) but seemed like the same kind
-of problem under a different shape - please confirm this extra check
-is wanted, or whether a same-target collision should instead just be
-allowed to rename both (accepting the resulting duplicate column
-names) or silently rename only the first.
-
-\strong{Matching is tolerant, resolution is not.} Both \code{data}'s
-own column names and the reference table's \code{$header.old} column
-are run through \code{standardize.headers()} before comparing, so
-\code{"Mic_Serial_Number"}, \code{"mic.serial.number"}, and
-\code{"mic_serial_number"} are all recognized as the same old header
-regardless of which separator/case style actually shows up in a given
-file. Ambiguity is then judged on that same standardized key: if the
-reference table maps that key to more than one distinct non-blank
-\code{$header.new}, it's a real conflict (see
-\code{\link{batz.generate_headers.acceptold}}'s own \code{@details} for
-the 8 rows currently flagged this way) and nothing is guessed.
-
-\strong{Follow-up, 2026-09-30, per Josh - special characters.} New last
-argument \code{strip.special = TRUE}. \code{data} (and
-\code{headers.table}, if supplied as a data frame) are passed through
-\code{special.strip()} at the very start of the call, removing non-ASCII
-characters (e.g. \code{°}) from text columns and re-typing any column
-that changed, so \code{"42.5°"} becomes \code{42.5}; this also applies to
-the returned \code{data}. Column names are not changed by stripping, so
-header matching is unaffected. When \code{headers.table = NULL}, the
-reference CSV is loaded via \code{batz.generate_headers.acceptold()},
-which now reads it with a UTF-8/Latin-1 fallback and strips it too. The
-default \code{filename} is captured before stripping, so it still names
-the object passed in. \code{header.conflict.log} gains a last column
-\code{$strip.special} (the columns of \code{data} that had characters
-removed).
-
-\strong{Follow-up, 2026-10-02, per Josh - accents simplified, log
-counts.} With \code{strip.special = TRUE}, accented letters and common
-symbols are now simplified instead of dropped (\code{café} ->
-\code{cafe}, \code{Quercus × bebbiana} -> \code{Quercus X bebbiana},
-curly quotes -> straight quotes); characters with no plain equivalent
-(e.g. \code{°}, \code{µ}, \code{™}) are still removed. Column names
-are cleaned the same way. The log gets four new columns right after
-\code{$strip.special}: \code{$accented.letters.header} and
-\code{$removed.symbols.header} (number of unique column names with a
-character simplified / removed), and \code{$accented.letters.data} and
-\code{$removed.symbols.data} (number of unique data values with a
-character simplified / removed - \code{café} in 500 rows counts once;
-\code{café} and \code{French café} count twice). They are \code{NA}
-when \code{strip.special = FALSE}.
+The conflict log is an attribute so the return value is always a plain
+data frame: \code{data <- batz.datawrangler_headers.acceptold(data, ...)}
+works whatever \code{log.file} is. The default \code{filename} is taken
+before \code{data} is cleaned.
 }
 \examples{
 \dontrun{
-# clean, unambiguous rename (no conflict, so log.file=TRUE logs nothing)
+# clean renames (nothing is logged)
 d <- data.frame(ARU.serial = "SM4-01", Alldect = 12)
 d2 <- batz.datawrangler_headers.acceptold(d, function.name = "batz.example")
 names(d2)  # "aru.serial" "all.detections"
 
-# a header flagged pending review in the reference table
+# old header with no confirmed replacement
 d <- data.frame(project_code = "SITE1")
 d2 <- batz.datawrangler_headers.acceptold(d, function.name = "batz.example",
                                            log.file = TRUE)
@@ -196,10 +121,5 @@ attr(d2, "header.conflict.log")  # one row, header.new = "NOMATCH"
 
 }
 \seealso{
-\code{\link{batz.generate_headers.acceptold}}, whose reference
-table this function consults.
-
-\strong{Lower-case headers (2026-11-04, per Josh, Batz_reference_db Header.names).}
-The strip.special log columns are \code{$accented.letters.header} /
-\code{$accented.letters.data} (were Accented.letters.*).
+\code{\link{batz.generate_headers.acceptold}}
 }

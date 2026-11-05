@@ -2,7 +2,7 @@
 % Please edit documentation in R/batz.generate_plotopts.R
 \name{batz.generate_plotopts}
 \alias{batz.generate_plotopts}
-\title{Generate a settings ("plotopts") CSV file for one or more Batz plot functions}
+\title{Generate a project settings ("plotopts") CSV file for Batz plot functions}
 \usage{
 batz.generate_plotopts(
   generate.files = c("batz.plotcover_bullseye", "batz.plotdetections_first.last",
@@ -14,138 +14,72 @@ batz.generate_plotopts(
 )
 }
 \arguments{
-\item{generate.files}{Character vector, default all three recognized
-plot function names (\code{c("batz.plotcover_bullseye",
-"batz.plotdetections_first.last", "batz.plotactivity_observations")}):
-which plot function(s) to generate a new settings file for. Every
-element must be one of these three recognized names - see Details.}
+\item{generate.files}{Character vector of plot function names to create a
+settings file for. Default
+\code{c("batz.plotcover_bullseye", "batz.plotdetections_first.last",
+  "batz.plotactivity_observations")}. Every element must be one of these
+three names.}
 
-\item{project.name}{Character, default \code{"new project"} (per Josh's
-own literal spec text for this function - note this is a plain space,
-not the dot used in \code{project.name}'s default on the plot
-functions themselves, e.g. \code{"new.project"}; kept exactly as
-Josh specified it here since this value only ever becomes a file-name
-prefix, the same role \code{project.name} plays on the plot
-functions). Used as the leading part of every generated file's name:
-\verb{"<project.name>_plotopts_<function.name>.csv"}.}
+\item{project.name}{Character, default \code{"new project"}. Leading part of
+each output file name.}
 
-\item{dir.load}{Directory to read each recognized plot function's master
-settings CSV from (see the \code{MASTER.PLOTOPTS.FILES} mapping in
-Details). Default \code{getwd()}. Added this round - see Details.}
+\item{dir.load}{Directory that holds the master settings CSV files. Default
+\code{getwd()}.}
 
-\item{dir.save}{Directory to write the generated settings file(s) into.
-Default \code{getwd()}.}
+\item{dir.save}{Directory the new settings files are written to (created if
+missing). Default \code{getwd()}.}
 
-\item{strip.special.plotopts}{Logical, default \code{FALSE}. Replaces
-the \code{strip.special} input added 2026-09-30 (2026-10-02, per Josh:
-plot-settings files are controlled by \code{strip.special.plotopts},
-not \code{strip.special}). \code{FALSE} (default) copies the master
-settings file with every character kept (e.g. an axis label like
-\code{"Temperature (°C)"}); \code{TRUE} simplifies accented letters
-and removes other special characters in the copy. Files are always
-read with a UTF-8/Latin-1 fallback, so a stray \code{°} can't stop
-them loading.}
+\item{strip.special.plotopts}{Logical, default \code{FALSE}. \code{FALSE}
+keeps every character (e.g. an axis label \code{"Temperature (degree sign C)"}).
+\code{TRUE} simplifies accented letters (e.g. e-acute to \code{"e"}) and
+removes other non-ASCII characters in the copy.}
 }
 \value{
-Invisibly, a character vector of the file names written (not
-full paths - just the \verb{"<project.name>_plotopts_<function.name>.csv"}
-name for each element of \code{generate.files}, in the same order).
-As a side effect, each saved file's name is also printed to the
-console (per Josh: "Print the save names for all").
+Invisibly, a character vector of the file names written (names only,
+not full paths), in the order of \code{generate.files}. Writes one CSV per
+element of \code{generate.files} to \code{dir.save} and prints each saved
+file name to the console.
 }
 \description{
-Round nineteen, per Josh (2026-09-16). Every \code{batz} plot function
-(\code{batz.plotcover_bullseye}, \code{batz.plotdetections_first.last},
-\code{batz.plotactivity_observations}) reads its own drawing settings
-from a master settings CSV (columns \code{category}, \code{parameter},
-\code{default.value}, \code{overide.value}, \code{notes} - see each
-function's own documentation, "Settings resolution (round nineteen)").
-\code{batz.generate_plotopts()} is a small helper that copies that
-master settings file, unchanged, into a new project-specific file named
-after \code{project.name} - so starting a new project no longer means
-hand-copying/renaming one of the master \verb{plotopts_*.csv} files
-yourself.
+Copies the master plot settings CSV of each requested plot function into a
+new project-specific file named
+\verb{<project.name>_plotopts_<function.name>.csv}. Edit the
+\code{$override.value} column of the copy to customise a project's plots
+without touching the master file.
 }
 \details{
-\strong{This does not invent or compute any settings.} It reads whatever
-master settings CSV is currently on disk for each requested plot
-function (via \code{dir.load} and the fixed \code{MASTER.PLOTOPTS.FILES}
-mapping below) and writes it back out byte-for-byte-equivalent (same
-columns, same rows, same values, re-quoted as needed by
-\code{utils::write.csv()}) under the new file name. Editing the
-\code{$overide.value} column of the file this function writes is the
-normal way to customize a project's plot appearance without touching
-the shared master file - see \code{$aes.style} on the plot functions
-themselves.
-
-\strong{Recognized plot functions and their master files (judgment call,
-flagged):} Josh's spec described \code{generate.files} only as "a
-vector of all current plot function names in Batz package", without
-listing the actual master file name to copy for each one. The three
-functions treated as "plot functions" here are the three whose
-settings files were restructured earlier in this same round nineteen
-pass - \code{batz.generate_plotframe.bat} was confirmed NOT a plotting
-function and is excluded, exactly as it was excluded from the rest of
-round nineteen's changes. The mapping used:
+\strong{Master files.} Each recognised plot function maps to one master file
+in \code{dir.load}:
 \itemize{
-\item \code{batz.plotcover_bullseye} -> \verb{plotopts_bullseye.csv}
-\item \code{batz.plotdetections_first.last} -> \verb{plotopts_first.last.csv}
-\item \code{batz.plotactivity_observations} -> \verb{plotopts_callobs.csv}
+\item \code{batz.plotcover_bullseye}: \verb{plotopts_bullseye.csv}
+\item \code{batz.plotdetections_first.last}: \verb{plotopts_first.last.csv}
+\item \code{batz.plotactivity_observations}: \verb{plotopts_callobs.csv}
 }
-A name in \code{generate.files} that isn't one of these three stops the
-function immediately with a clear error listing the recognized names,
-rather than silently skipping it.
+Any other name in \code{generate.files} stops the function with an error
+that lists the recognised names. A missing master file also stops the
+function.
 
-\strong{Output file name - "plotopts", not "plotobs" (judgment call,
-flagged).} Josh's spec text says \verb{"<project.name>_plotobs_<function.name>.csv"}
-when describing the file name, but calls the same file a "plotops
-file" (also not "plotopts") one sentence earlier - read as a dictation/
-typing slip either way, not a real request for a third, differently-spelled
-term. The output name here uses \code{"plotopts"}, matching the
-established spelling used everywhere else this round
-(\verb{plotopts_bullseye.csv}, \verb{plotopts_first.last.csv},
-\verb{plotopts_callobs.csv}, and the \code{$aes.style}/\code{$overide.value}
-mechanism's own documentation) - please confirm this reading is right.
-
-\strong{\code{dir.load} - added, not explicitly requested (judgment
-call, flagged).} Josh's spec listed \code{dir.save} but not a matching
-"where to read the master files from" argument. Since this function has
-to read each master settings CSV from somewhere, \code{dir.load}
-(default \code{getwd()}, mirroring \code{dir.save}'s own default) was
-added so the read location is explicit and overridable rather than
-hardcoded - consistent with this project's existing
-\code{dir.load}/\code{dir.save} naming pair used elsewhere in the
-package (see the Naming conventions section of this project's
-preferences).
-
-\strong{Follow-up, 2026-09-30, per Josh - special characters.} Each
-master settings CSV is now read with \code{special.read.csv()} (UTF-8,
-falling back to Latin-1), so an Excel-saved stray \code{°} byte no
-longer stops it loading. With the new \code{strip.special = TRUE}
-(default), each master table is passed through \code{special.strip()}
-straight after reading, removing non-ASCII characters from its values
-before the copy is written; every column is kept as character, so
-values are otherwise written back exactly as read. \strong{Flagged:}
-this also removes characters from settings that may legitimately need
-them (plot titles/axis labels such as \code{"°C"} or \code{"µs"},
-accented site names) - pass \code{strip.special = FALSE} to copy the
-master file's text unchanged. No log.
-
-\strong{Follow-up, 2026-10-02, per Josh.} Input \code{strip.special}
-renamed to \code{strip.special.plotopts} with default \code{FALSE}, so
-copies keep plot-label symbols unless asked otherwise.
+\strong{Copy.} The master file is read with \code{special.read.csv()} (UTF-8,
+with a Latin-1 fallback, so a stray degree-sign byte does not stop it loading).
+All columns are read as character, so values are written back as read
+(only the CSV quoting may change). No settings are added, removed or
+computed. With \code{strip.special.plotopts = TRUE}, special characters are
+simplified or removed first. No log is written.
 }
 \examples{
 \dontrun{
-# Generate settings files for all three plot functions, using the
-# master copies in the current working directory, into a new
-# project sub-folder:
+# Settings files for all three plot functions, into a project sub-folder
 batz.generate_plotopts(project.name = "acme.wetlands.2026",
-                        dir.save = "acme_project")
+                       dir.save = "acme_project")
 
-# Just one function:
+# One function only
 batz.generate_plotopts(generate.files = "batz.plotcover_bullseye",
-                        project.name = "acme.wetlands.2026")
+                       project.name = "acme.wetlands.2026")
 }
 
+}
+\seealso{
+\code{\link{batz.plotcover_bullseye}},
+\code{\link{batz.plotdetections_first.last}},
+\code{\link{batz.plotactivity_observations}}
 }

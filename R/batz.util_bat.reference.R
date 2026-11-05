@@ -1,35 +1,35 @@
 #' Bat reference tables (internal)
 #'
-#' Added 2026-10-23, per Josh. One shared copy of the bat reference tables,
-#' used by every batz function that works with bat names
-#' (\code{\link{batz.batusa_recode.names}}, \code{\link{batz.batusa_list.species}},
-#' \code{\link{batz.merge_vetted.acoustics}}), taken from Josh's
-#' \code{Batz reference tables_20261023_v2.xlsx} (MAMM-Batz Package/8reference
-#' tables - the master copy; update these tables from it):
+#' Shared bat reference tables used by the functions that work with bat names
+#' (\code{\link{batz.batusa_recode.names}}, \code{\link{batz.batusa_list.species}}).
+#' The master copy is the Batz reference-tables workbook; update these tables
+#' from it.
+#'
+#' @details
 #' \describe{
-#'   \item{\code{bat.ref.names()}}{tab \code{bat.names} - 54 species + 8
-#'     category labels, plus the new \code{$family} column (blank for the
-#'     category labels).}
-#'   \item{\code{bat.ref.groups()}}{tab \code{BAT Groupings} - species pairs
-#'     and genus-level groups (e.g. \code{LUSO} = little brown bat / Indiana
-#'     bat).}
-#'   \item{\code{bat.ref.freqclasses()}}{tab \code{NABATFrequency Classes} -
+#'   \item{\code{bat.ref.names()}}{data frame, tab \code{bat.names}: 54 species
+#'     plus 8 category labels (\code{All detections}, \code{HiF}, \code{Social}, ...).
+#'     Columns include \code{$region}, \code{$scientific_name}, \code{$common_name},
+#'     \code{$code4}, \code{$code6}, \code{$family} (blank for category labels),
+#'     listing-status and state columns, \code{$hibernation.strategy},
+#'     \code{$phonic.group} and \code{$notes}.}
+#'   \item{\code{bat.ref.groups()}}{data frame, tab \code{BAT Groupings}: species
+#'     pairs and genus-level groups (e.g. \code{LUSO} = little brown bat / Indiana
+#'     bat, \code{MYSP} = unknown Myotis).}
+#'   \item{\code{bat.ref.freqclasses()}}{data frame, tab \code{NABATFrequency Classes}:
 #'     frequency classes and other call labels (\code{HiF}, \code{40kMyo},
-#'     \code{NoID}, ...). \code{$Label} holds the spellings found in vetting
-#'     files.}
-#'   \item{\code{bat.ref.filter.regions(df, regions)}}{keeps the rows whose
-#'     \code{$region} matches any of \code{regions} (rows marked \code{All}
-#'     are always kept). A \code{$region} cell may list several regions
-#'     separated by \code{;} or \code{,}; the row is kept if any of them
-#'     matches. Case and quotes are ignored.}
-#'   \item{\code{aru.ref.types()}}{tab \code{aru.types} (added 2026-10-23):
-#'     \code{$header} = input-file headers that may name the recorder model,
-#'     \code{$recorder.type} = recognized recorder models. Used by
-#'     \code{\link{batz.merge_vetted.acoustics}} for \code{$aru.model}.}
+#'     \code{NoID}, ...). \code{$label} holds the spellings found in vetting files.}
+#'   \item{\code{aru.ref.types()}}{list with \code{$header} (input-file headers that
+#'     may name the recorder model) and \code{$recorder.type} (recognized recorder
+#'     models).}
+#'   \item{\code{bat.ref.split.regions(x)}}{splits region cells on \code{;} or
+#'     \code{,}, drops quotes, trims and lower-cases; returns a character vector.}
+#'   \item{\code{bat.ref.filter.regions(df, regions = c("ALL", "NABAT"))}}{keeps the
+#'     rows of \code{df} whose \code{$region} matches any of \code{regions}. Rows
+#'     marked \code{All} are always kept. A cell may list several regions; the row
+#'     is kept if any of them matches. Case and quotes are ignored.}
 #' }
-#' Non-breaking spaces in the spreadsheet cells were changed to normal spaces
-#' and trimmed; nothing else was changed. After any edit run
-#' \code{stopifnot(all(sapply(tbl, length) == nrow(tbl)))} on each table.
+#' After editing a table, check that every column has \code{nrow()} values.
 #' @keywords internal
 #' @noRd
 bat.ref.names <- function() {
@@ -54,7 +54,7 @@ structure(list(region = c("NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", 
 "Antillean fruit-eating bat", "Mexican long-tongued bat", "Rafinesque's big-eared bat", "Townsend's big-eared bat", 
 "Ozark big-eared bat", "Virginia big-eared bat", "Hairy-legged vampire bat", "Big brown bat", "Spotted bat", 
 "Florida bonneted bat", "Greater bonneted bat", "Underwood's bonneted bat", "Allen's big-eared bat", 
-"Silver-haired bat", "Eastern red bat", "Hoary bat", "Hawaiian hoary bat", "Southern yellow bat", "Desert Red Bat", 
+"Silver-haired bat", "Eastern red bat", "Hoary bat", "Hawaiian hoary bat", "Southern yellow bat", "Western red bat", 
 "Northern yellow bat", "Minor red bat", "Seminole bat", "Western yellow bat", "Mexican long-nosed bat", 
 "Lesser long-nosed bat", "California leaf-nosed bat", "Pallas' mastiff bat", "Peter's ghost-faced bat", 
 "Southwestern myotis", "Southeastern myotis", "California myotis", "Western small-footed myotis", "Long-eared myotis", 
@@ -173,39 +173,39 @@ structure(list(region = c("NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", 
 "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", 
 "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", 
 "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", 
-"NABAT", "NABAT", "NABAT"), common_name = c("Pallid bat, big brown bat", "Rafinesque's big-eared bat, Ozark big-eared bat", 
-"Rafinesque's big-eared bat, Townsend's big-eared bat", "Rafinesque's big-eared bat, Virginia big-eared bat", 
-"Big brown bat, eastern red bat", "Big brown bat, Hoary bat", "Big brown bat, silver-haired bat", "Big brown bat, Western yellow bat", 
-"Big brown bat, little brown bat", "Big brown bat, Evening bat", "Big brown bat, Brazilian free-tailed bat", 
-"Spotted bat, Greater bonneted bat", "Spotted bat, Allen's big-eared bat", "Greater bonneted bat, Big free-tailed bat", 
-"Eastern red bat, Desert Red Bat", "Eastern red bat, Northern yellow bat", "Eastern red bat, Seminole bat", 
-"Eastern red bat, little brown bat", "Eastern red bat, evening bat", "Eastern red bat, tricolored bat", 
-"Hoary bat, silver-haired bat", "Hoary bat, Pocketed free-tailed bat", "Hoary bat, Mexican free-tailed bat", 
-"Desert red bat, Western yellow bat", "Western red bat, canyon bat", "Silver-haired bat, Brazilian free-tailed bat", 
-"Unknown species in the Leptonycteris genus", "Southwestern myotis, Long-eared myotis", "Southeastern myotis, Eastern small-footed myotis", 
-"Southeastern myotis, Indiana bat", "California myotis, western small-footed myotis", "California myotis, Yuma myotis", 
-"Western small-footed myotis, long-legged myotis", "Long-eared myotis, Northern long-eared bat", "Long-eared myotis , fringed myotis", 
-"Little brown bat, western small-footed myotis", "Little brown bat, Arizona myotis", "Little brown bat, northern long-eared bat", 
-"Little brown bat, Indiana bat", "Little brown bat, Cave bat myotis", "Little brown bat, long-legged myotis", 
-"Little brown bat, Yuma myotis", "Northern long-eared bat, Indiana bat", "Unknown species in the Myotis genus", 
-"Pocketed free-tailed bat, Big free-tailed bat", "Pocketed free-tailed bat, Brazilian free-tailed bat", 
-"Unknown species in the Nyctinomops genus", "Canyon bat, Tri-colored bat"), scientific_name = c("Antrozous pallidus, Eptesicus fuscus", 
-"Corynorhinus rafinesquii, Corynorhinus townsendii ingens", "Corynorhinus rafinesquii, Corynorhinus townsendii", 
-"Corynorhinus rafinesquii, Corynorhinus townsendii virginianus", "Eptesicus fuscus, Lasiurus borealis", 
-"Eptesicus fuscus, Lasiurus cinereus", "Eptesicus fuscus, Lasionycteris noctivagans", "Eptesicus fuscus, Lasiurus xanthinus", 
-"Eptesicus fuscus, Myotis lucifugus", "Eptesicus fuscus, Nycticeius humeralis", "Eptesicus fuscus, Tadarida brasiliensis", 
-"Euderma maculatum, Eumops perotis", "Euderma maculatum, Idionycteris phyllotis", "Eumops perotis, Nyctinomops macrotis", 
-"Lasiurus borealis, Lasiurus frantzii", "Lasiurus borealis, Lasiurus intermedius", "Lasiurus borealis, Lasiurus seminolus", 
-"Lasiurus borealis, Myotis lucifugus", "Lasiurus borealis, Nycticeus humeralis", "Lasiurus borealis, Perimyotis subflavus", 
-"Lasiurus cinereus, Lasionycteris noctivagans", "Lasiurus cinereus, Nyctinomops femorosaccus", "Lasiurus cinereus, Tadarida brasiliensis", 
-"Lasiurus frantzii, Lasiurus xanthinus", "Lasiurus frantzii, Parastrellus hesperus", "Lasiurus noctivagans, Tadarida brasiliensis", 
-"Leptonycteris sp.", "Myotis auriculus, Myotis evotis", "Myotis austroriparius, Myotis leibii", "Myotis austroriparius, Myotis sodalis", 
-"Myotis californicus, Myotis ciliolabrum", "Myotis californicus, Myotis yumanensis", "Myotis ciliolabrum, Myotis volans", 
-"Myotis evotis, Myotis septentrionalis", "Myotis evotis, Myotis thysanodes", "Myotis lucifugus, Myotis ciliolabrum", 
-"Myotis lucifugus, Myotis occultus", "Myotis lucifugus, Myotis septentrionalis", "Myotis lucifugus, Myotis sodalis", 
-"Myotis lucifugus, Myotis velifer", "Myotis lucifugus, Myotis volans", "Myotis lucifugus, Myotis yumanensis", 
-"Myotis septentrionalis, Myotis sodalis", "Myotis sp.", "Nyctinomops femorosaccus, Nyctinomops macrotis", 
-"Nyctinomops femorosaccus, Tadarida brasiliensis", "Nyctinomops sp.", "Parastrellus hesperus, Perimyotis subflavus"
+"NABAT", "NABAT", "NABAT"), common_name = c("Pallid bat; big brown bat", "Rafinesque's big-eared bat; Ozark big-eared bat", 
+"Rafinesque's big-eared bat; Townsend's big-eared bat", "Rafinesque's big-eared bat; Virginia big-eared bat", 
+"Big brown bat; eastern red bat", "Big brown bat; Hoary bat", "Big brown bat; silver-haired bat", "Big brown bat; Western yellow bat", 
+"Big brown bat; little brown bat", "Big brown bat; Evening bat", "Big brown bat; Brazilian free-tailed bat", 
+"Spotted bat; Greater bonneted bat", "Spotted bat; Allen's big-eared bat", "Greater bonneted bat; Big free-tailed bat", 
+"Eastern red bat; Western red bat", "Eastern red bat; Northern yellow bat", "Eastern red bat; Seminole bat", 
+"Eastern red bat; little brown bat", "Eastern red bat; evening bat", "Eastern red bat; tricolored bat", 
+"Hoary bat; silver-haired bat", "Hoary bat; Pocketed free-tailed bat", "Hoary bat; Mexican free-tailed bat", 
+"Western red bat; Western yellow bat", "Western red bat; canyon bat", "Silver-haired bat; Brazilian free-tailed bat", 
+"Unknown species in the Leptonycteris genus", "Southwestern myotis; Long-eared myotis", "Southeastern myotis; Eastern small-footed myotis", 
+"Southeastern myotis; Indiana bat", "California myotis; western small-footed myotis", "California myotis; Yuma myotis", 
+"Western small-footed myotis; long-legged myotis", "Long-eared myotis; Northern long-eared bat", "Long-eared myotis; fringed myotis", 
+"Little brown bat; western small-footed myotis", "Little brown bat; Arizona myotis", "Little brown bat; northern long-eared bat", 
+"Little brown bat; Indiana bat", "Little brown bat; Cave bat myotis", "Little brown bat; long-legged myotis", 
+"Little brown bat; Yuma myotis", "Northern long-eared bat; Indiana bat", "Unknown species in the Myotis genus", 
+"Pocketed free-tailed bat; Big free-tailed bat", "Pocketed free-tailed bat; Brazilian free-tailed bat", 
+"Unknown species in the Nyctinomops genus", "Canyon bat; Tri-colored bat"), scientific_name = c("Antrozous pallidus; Eptesicus fuscus", 
+"Corynorhinus rafinesquii; Corynorhinus townsendii ingens", "Corynorhinus rafinesquii; Corynorhinus townsendii", 
+"Corynorhinus rafinesquii; Corynorhinus townsendii virginianus", "Eptesicus fuscus; Lasiurus borealis", 
+"Eptesicus fuscus; Lasiurus cinereus", "Eptesicus fuscus; Lasionycteris noctivagans", "Eptesicus fuscus; Lasiurus xanthinus", 
+"Eptesicus fuscus; Myotis lucifugus", "Eptesicus fuscus; Nycticeius humeralis", "Eptesicus fuscus; Tadarida brasiliensis", 
+"Euderma maculatum; Eumops perotis", "Euderma maculatum; Idionycteris phyllotis", "Eumops perotis; Nyctinomops macrotis", 
+"Lasiurus borealis; Lasiurus frantzii", "Lasiurus borealis; Lasiurus intermedius", "Lasiurus borealis; Lasiurus seminolus", 
+"Lasiurus borealis; Myotis lucifugus", "Lasiurus borealis; Nycticeius humeralis", "Lasiurus borealis; Perimyotis subflavus", 
+"Lasiurus cinereus; Lasionycteris noctivagans", "Lasiurus cinereus; Nyctinomops femorosaccus", "Lasiurus cinereus; Tadarida brasiliensis", 
+"Lasiurus frantzii; Lasiurus xanthinus", "Lasiurus frantzii; Parastrellus hesperus", "Lasionycteris noctivagans; Tadarida brasiliensis", 
+"Leptonycteris sp.", "Myotis auriculus; Myotis evotis", "Myotis austroriparius; Myotis leibii", "Myotis austroriparius; Myotis sodalis", 
+"Myotis californicus; Myotis ciliolabrum", "Myotis californicus; Myotis yumanensis", "Myotis ciliolabrum; Myotis volans", 
+"Myotis evotis; Myotis septentrionalis", "Myotis evotis; Myotis thysanodes", "Myotis lucifugus; Myotis ciliolabrum", 
+"Myotis lucifugus; Myotis occultus", "Myotis lucifugus; Myotis septentrionalis", "Myotis lucifugus; Myotis sodalis", 
+"Myotis lucifugus; Myotis velifer", "Myotis lucifugus; Myotis volans", "Myotis lucifugus; Myotis yumanensis", 
+"Myotis septentrionalis; Myotis sodalis", "Myotis sp.", "Nyctinomops femorosaccus; Nyctinomops macrotis", 
+"Nyctinomops femorosaccus; Tadarida brasiliensis", "Nyctinomops sp.", "Parastrellus hesperus; Perimyotis subflavus"
 ), code4 = c("ANPAEPFU", "CORACOTI", "CORACOTO", "CORACOTV", "EPFULABO", "EPFULACI", "EPFULANO", "EPFULAXA", 
 "EPFUMYLU", "EPFUNYHU", "EPFUTABR", "EUMAEUPE", "EUMAIDPH", "EUPENYMA", "LABOLAFR", "LABOLAIN", "LABOLASE", 
 "LABOMYLU", "LABONYHU", "LABOPESU", "LACILANO", "LACINYFE", "LACITABR", "LAFRLAXA", "LAFRPAHE", "LANOTABR", 
@@ -224,7 +224,7 @@ structure(list(region = c("NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", 
 bat.ref.freqclasses <- function() {
 structure(list(region = c("NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", 
 "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "All"
-), definition = c("Various species with pulses that have a minim um frequency of approximately 15-25 kHz", 
+), definition = c("Various species with pulses that have a minimum frequency of approximately 15-25 kHz", 
 "Various species with pulses that have a minimum frequency of approximately 35-45 kHz", "Various species of Myotis with pulses that have a minimum frequency of approximately 35-45 kHz", 
 "Myotis volans or other species of Myotis with pulses that have a minimum frequency of approximately 35-45 kHz.", 
 "Various species with pulses that have a minimum frequency of approximately 50 kHz.", "Various species with pulses having a minimum frequency higher than ~30 kHz", 
@@ -236,7 +236,7 @@ structure(list(region = c("NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", 
 "The call has fewer than five good-quality pulses above 35KHz", "The call has fewer than five good-quality pulses below 35KHz", 
 "All ultrasonic calls that are bats including fragments and unidentified species"), label = c("25k", 
 "40k", "40kMyo", "40kmyomyvo", "50k", "HighF/HiF", "HighF", "HiF", "Hilo", "LowF/LoF", "LoF", "LowF", 
-"NOISE", "NOTBAT", "NoID", "lt20k", "Social", "2BAT", "HiFrag", "LoFrag", "All detections"), scientific_name = c("Unidentifiable Species 35-45 kHz", 
+"NOISE", "NOTBAT", "NoID", "lt20k", "Social", "2BAT", "HiFrag", "LoFrag", "All detections"), scientific_name = c("Unidentifiable Species 15-25 kHz", 
 "Unidentifiable Species 35-45 kHz", "Unidentifiable Myotis Species", "Myotis volans or other Myotis spp.", 
 "Unidentifiable Species > 50 kHz", "Unidentifiable Species > 30 kHz", "Unidentifiable Species > 30 kHz", 
 "Unidentifiable Species > 30 kHz", "Multiple bats High & Low Frequencies", "Unidentifiable Species < 30 kHz", 
@@ -247,9 +247,9 @@ structure(list(region = c("NABAT", "NABAT", "NABAT", "NABAT", "NABAT", "NABAT", 
 "Unidentifiable Species > 30 kHz", "Multiple bats High & Low Frequencies", "Unidentifiable Species < 30 kHz", 
 "Unidentifiable Species < 30 kHz", "Unidentifiable Species < 30 kHz", "Noise", "Not a bat", "Unknown bat species", 
 "lt20k", "Social Calls", "Multiple bats", "HiFrag", "LoFrag", "All detections"), code4 = c("25k", "40k", 
-"40KHzMyo", "40kmyomyvo", "50k", "HiF", "HiF", "HiF", "Hilo", "LowF/LoF", "LoF", "LoF", "LoF", "NOTBAT", 
+"40KHzMyo", "40kmyomyvo", "50k", "HiF", "HiF", "HiF", "Hilo", "LowF/LoF", "LoF", "LoF", "Noise", "NOTBAT", 
 "NoID", "lt20k", "Social", "Multiple", "HiFrag", "LoFrag", "All detections"), code6 = c("25k", "40k", 
-"40KHzMyo", "40kmyomyvo", "50k", "HiF", "HiF", "HiF", "Hilo", "LowF/LoF", "LoF", "LoF", "LoF", "NOTBAT", 
+"40KHzMyo", "40kmyomyvo", "50k", "HiF", "HiF", "HiF", "Hilo", "LowF/LoF", "LoF", "LoF", "Noise", "NOTBAT", 
 "NoID", "lt20k", "Social", "Multiple", "HiFrag", "LoFrag", "All detections")), row.names = c(NA, -21L
 ), class = "data.frame")
 }

@@ -21,206 +21,135 @@ batz.generate_arumeta.eventlog(
 \item{dir.sub}{Logical, default \code{FALSE}. If \code{TRUE}, also search
 subdirectories of \code{dir.load}.}
 
-\item{load.pattern}{Character vector of wildcard/glob suffix patterns
-(converted internally to a regex via \code{utils::glob2rx()}), default
-\code{c("*HabitatAssessments_20m.csv", "*Acoustic_SiteVisitARU.csv")} -
-the deployment-form and service-visit-form file name patterns. See
-\strong{Note} below on which file is treated as "deployment".}
+\item{load.pattern}{Character vector of wildcard (glob) patterns, converted
+to a regular expression with \code{utils::glob2rx()} and matched
+case-insensitively. Default
+\code{c("*HabitatAssessments_20m.csv", "*Acoustic_SiteVisitARU.csv")}
+(deployment form, service-visit form).}
 
 \item{duplicates.remove}{Logical, default \code{TRUE}. Drop exact
-duplicate rows from the final combined event log.}
+duplicate rows from \code{aru.eventlog}.}
 
 \item{log.file}{Logical, default \code{FALSE}. If \code{TRUE}, also
-return (and auto-assign) \code{aru.eventlog.filelog} (one row per input
-file: \code{$filename}, \code{$file.type}, \code{$status}, \code{$notes},
-\code{$strip.special})
-and \code{aru.eventlog.sitelog} (one row per site: \code{$client},
-\code{$project}, \code{$project.code}, \code{$site.name}, \code{$deployment},
-\code{$service.count}, \code{$recovery}, \code{$duplicates.removed},
-\code{$strip.special}). \code{$strip.special} (last column of both) is
-\code{"FALSE"} (not selected), \code{"TRUE NONE"} (nothing found), or
-\code{"TRUE ; <header>; ..."} (the headers where characters were
-removed - in that file for \code{aru.eventlog.filelog}; across all files
-read in the call for \code{aru.eventlog.sitelog}).}
+return (and assign) \code{aru.eventlog.filelog} and
+\code{aru.eventlog.sitelog} (see Value).}
 
 \item{max.missing}{Integer, default \code{5}. The largest number of
-canonical headers a file is allowed to be missing (after exact,
-case-insensitive matching) and still be merged in; missing headers are
-padded with \code{NA}. A file missing more than this many headers is
-not merged and is logged with status \code{"failed"}.}
+expected headers a file may be missing and still be merged; missing
+columns are filled with \code{NA}. A file missing more is not merged
+and is logged as \code{"failed"}.}
 
 \item{strip.special}{Logical, default \code{TRUE}. If \code{TRUE},
-simplifies accented letters and
-symbols (\code{é} -> \code{e}, \code{×} -> \code{X}) and removes other non-ASCII special characters (e.g. \code{°}, \code{µ},
-\code{™}) from the data after loading - see
-\code{@details}. Files are always read with a UTF-8/Latin-1 fallback,
-so a stray \code{°} can't stop them loading, whatever this is set to.}
+accented letters and common symbols are simplified (\code{é} -> \code{e},
+\code{×} -> \code{X}, curly quotes -> straight quotes) and other
+non-ASCII characters (e.g. \code{°}, \code{µ}, \code{™}) are removed,
+in column names and data, right after each file is read. A changed
+column is re-typed, so \code{"42.5°"} becomes the number \code{42.5}.
+Files are always read as UTF-8 with a Latin-1 fallback, whatever this
+is set to.}
 }
 \value{
 Invisibly, a named list: \code{aru.eventlog} (always), plus
 \code{aru.eventlog.filelog} and \code{aru.eventlog.sitelog} when
-\code{log.file = TRUE}. Every element is also auto-assigned into the
-calling environment (see \strong{Details}), so a bare call with no
-assignment creates \code{aru.eventlog} (and the two log tables, if
-requested) directly in your workspace.
+\code{log.file = TRUE}. Each element is also assigned into the calling
+environment, so a bare call creates them in your workspace.
+\describe{
+\item{aru.eventlog}{One row per event, sorted by
+\code{$site.unified}, \code{$date.time}, then event type. Columns
+are the deployment and service headers (see Details; \code{NA} where
+a column belongs to the other form) plus \code{$event.type},
+\code{$site.unified} (\code{$site.name} for deployments,
+\code{$site_name} for service visits) and \code{$date.time}
+(character, date + time). An empty \code{data.frame()} if nothing
+loaded.}
+\item{aru.eventlog.filelog}{One row per input file: \code{$filename},
+\code{$file.type} (\code{"deployment"} or \code{"service"}),
+\code{$status} (\code{"success"}, \code{"missing"},
+\code{"duplicate"} or \code{"failed"}), \code{$notes}, then the
+special-character columns for that file.}
+\item{aru.eventlog.sitelog}{One row per site: \code{$client},
+\code{$project}, \code{$project.code}, \code{$site.name},
+\code{$deployment}, \code{$service.count}, \code{$recovery},
+\code{$duplicates.removed}, then the special-character columns
+(for all files read in the call).}
+}
+The special-character columns are \code{$strip.special}
+(\code{"FALSE"}, \code{"TRUE NONE"} or \code{"TRUE ; <header>; ..."}),
+\code{$accented.letters.header}, \code{$removed.symbols.header},
+\code{$accented.letters.data} and \code{$removed.symbols.data} (number
+of unique column names / data values with a character simplified or
+removed; \code{NA} when \code{strip.special = FALSE}).
 }
 \description{
-Searches a directory (and, optionally, its subdirectories) for the
-deployment-form and service-visit-form files used to track ARU
-(Autonomous Recording Unit) fieldwork, classifies each loaded file as a
-\strong{deployment} or a \strong{service} (service/recovery) record,
-lines up their columns against two canonical header lists, and combines
-everything into one chronological event log per ARU/site: every
-deployment, every service visit, every recovery, and any equipment swap
-recorded along the way. Intended as an input to later functions that need
-to know what happened to a given ARU/site and when (e.g. to explain gaps
-in logger data or annotate plots).
+Searches a directory (and, optionally, its subdirectories) for ARU
+deployment-form and service-visit-form exports, classifies each file as a
+deployment or a service record, lines up its columns against a fixed
+header list, and combines everything into one chronological event log per
+site: every deployment, service visit, recovery and equipment swap.
+Optionally returns a per-file log and a per-site summary.
 }
 \details{
-\strong{Header standardization (added 2026-09-14, per project
-preference):} every loaded file's raw headers are first run through
-\code{standardize.headers()} (trim whitespace, replace runs of special
-characters with an underscore, lowercase - i.e. snake_case) before
-anything else touches them. Because \code{deployment.headers}/
-\code{service.headers} are themselves just the literal deployment/
-service form field text (not a \code{batz}-invented shorthand), those
-canonical lists are standardized the same way - so \code{aru.eventlog}'s
-own column names changed too (e.g. what used to be \code{$Client}/
-\code{$"Date of Deployment"}/\code{$"Project Code"} are now
-\code{$client}/\code{$date_of_deployment}/\code{$project_code}). This is
-a real, visible output-schema change from before this preference existed
+\strong{Headers.} Every file's headers are standardized with
+\code{standardize.headers()} (trimmed, lower case, runs of punctuation or
+spaces become \code{"_"}) and matched exactly to the expected form fields.
+Matching is not typo tolerant: a misspelled header (e.g. \code{"Clien"})
+counts as missing. Matched fields are renamed:
 \itemize{
-\item please update any downstream script that referenced the old
-space/mixed-case column names.
+\item Deployment form: \code{$client}, \code{$project},
+\code{$project.code}, \code{$date.deployment}, \code{$aru.model},
+\code{$aru.make}, \code{$microphone.model}, \code{$microphone.make},
+\code{$site.name}, \code{$survey_type}, \code{$longitude} (X),
+\code{$latitude} (Y), \code{$aru.serial} (Serial Number of Detector),
+\code{$microphone.serial}, \code{$personnel},
+\code{$date.habitat.assessment}.
+\item Service form: \code{$client}, \code{$project},
+\code{$project.code}, \code{$date}, \code{$site_name},
+\code{$reason.sitevisit}, \code{$personnel}, \code{$notes},
+\code{$aru.serial}, \code{$microphone.serial}, \code{$power.serial}
+(Power Kit/Solar Serial Number), \code{$hobo.serial},
+\code{$select_all_actions_performed}, \code{$microphone.serial_new},
+\code{$aru.serial_new}.
+}
+Other columns are dropped.
+
+\strong{Deployment or service.} A file with a \code{Date of Deployment}
+column is a deployment record; any other file is a service record. The
+test uses the content, not the file name.
+
+\strong{Repeated columns.} If a file has the same column more than once,
+the copies are merged: the non-blank value is kept per row, and
+different non-blank values are joined with \code{"; "}. The file's
+\code{$status} is then \code{"duplicate"} and \code{$notes} lists the
+columns. Missing columns give \code{"missing"} and are listed in
+\code{$notes}.
+
+\strong{Events.}
+\itemize{
+\item Each deployment row is one \code{"deployment"} event.
+\item Each service row's \code{$select_all_actions_performed} is split
+on commas, and each action (e.g. \code{status_check},
+\code{download}, \code{aru_swap}, \code{mic_swap}, \code{recovery})
+becomes its own event row. A visit with no action becomes a
+\code{"service"} event.
+\item Events at the same site and time are ordered
+\code{deployment, status_check, download, aru_swap, mic_swap,
+    recovery, service}, then any other action.
 }
 
-\strong{Auto-assign into caller's environment:} following the same
-pattern already used in \code{batz.arumeta_merge.format} and
-\code{batz.datawrangler_load.files}, every returned object is also
-\code{assign()}-ed into \code{parent.frame()}, so
-\code{batz.generate_arumeta.eventlog(...)} with no assignment populates
-the workspace directly; \code{result <- batz.generate_arumeta.eventlog(...)}
-still works exactly the same for anyone who prefers \code{result$aru.eventlog}
--style access.
+\strong{Date and time.} \code{$date.time} is the date
+(\code{$date.deployment} or \code{$date}) plus the time. If the date
+already contains a time it is used as is; when there is no time,
+12:00:00 is used.
 
-\strong{Classifying a file as deployment vs. service:} a loaded file is
-treated as a \emph{deployment} record if it has a column named
-\code{"Date of Deployment"} (case-insensitive); otherwise it's treated as
-a \emph{service} record. This is a content-based test, not a filename
-test, so it works even if a file's name doesn't match the usual pattern.
+\strong{Grouping by site.} Sorting and the site summary use
+\code{$site.unified}, not \code{$aru.serial}; \code{$aru.serial} is kept
+as a column. The console reports files that failed or were missing
+headers, and sites with no deployment or no recovery event.
 
-\strong{Within-file duplicate columns:} if a file has the same column
-name more than once, all copies are compared row-by-row (\code{NA} and
-\code{""} treated as equivalent blanks): identical everywhere - keep one,
-drop the rest; differ anywhere - merge into one column, taking whichever
-copy is non-blank per row and concatenating with \code{"; "} where both
-are non-blank and disagree (same conflict-aware merge already used in
-\code{batz.arumeta_merge.format}).
-
-\strong{Header matching against the canonical deployment/service lists}
-is exact-string and case-insensitive, but NOT typo-tolerant. Real
-\code{HabitatAssessments_20m.csv} data has genuine header typos
-("Clien", "Prject Code") that will always show up as missing columns
-(padded \code{NA}) rather than being auto-corrected - see \code{$notes}
-in \code{aru.eventlog.filelog} for exactly what didn't match on any given
-run.
-
-\strong{Deriving event types for service rows:} a service row's
-\code{"Select all actions performed"} column is split on commas into
-individual action tokens (e.g. \code{"aru_swap"}, \code{"mic_swap"},
-\code{"recovery"}) and each becomes its own event row (so a single visit
-can generate more than one event row). A visit with no recorded action
-becomes a generic \code{"service"} event so it's never silently dropped.
-When more than one event shares the same site and timestamp, they're
-ordered \code{deployment, status_check, download, aru_swap, mic_swap}
-first (per spec), then \code{recovery, service} (not given an explicit
-position in the spec's ordering list).
-
-\strong{Grouping key: site, not ARU serial.} Same-timestamp ordering and
-the per-site summary/checks group by \code{site.unified}, not
-\code{aru.serial} (per Josh: site and ARU are treated as the same thing
-for now, since headers aren't yet standardized across the different
-source forms). \code{aru.serial} is still carried through as a column,
-just not used as a grouping/ordering key.
-
-\strong{Note - which file is "deployment":} the deployment header list
-matches \code{HabitatAssessments_20m.csv}, not
-\code{HabitatAssessments_quad.csv} (quad.csv shares none of the expected
-deployment headers and is not read by this function at all). See the
-dev script's header comment for the full reasoning - please confirm this
-is the intended source file.
-
-\strong{Column identifiers renamed, 2026-09-27, per Josh's
-reference-workbook "Change.to" column.} The following raw/legacy header
-spellings were renamed to their new canonical form throughout this
-function's code and documentation: \code{ARU.serial} (output) ->
-\code{aru.serial}; \code{aru_serial_number} (input) -> \code{aru.serial};
-\code{date_of_deployment} -> \code{date.deployment};
-\code{date_of_habitat_assessment} -> \code{date.habitat.assessment};
-\code{detector_make} -> \code{aru.make}; \code{detector_model} ->
-\code{aru.model}; \code{hobo_sensor_serial_number} -> \code{hobo.serial};
-\code{mic_serial_number} -> \code{microphone.serial}; \code{microphone_make}
--> \code{microphone.make}; \code{microphone_model} ->
-\code{microphone.model}; \code{new_aru_serial_number} ->
-\code{aru.serial_new}; \code{new_mic_serial_number} ->
-\code{microphone.serial_new}; \code{project_code} -> \code{project.code};
-\code{reason_for_site_visit} -> \code{reason.sitevisit};
-\code{serial_number_of_detector} (input) -> \code{aru.serial};
-\code{serial_number_of_microphone} (input) -> \code{microphone.serial};
-\code{site} -> \code{site.name}; \code{Site.unified} -> \code{site.unified}
-(case only); \code{service} (the site-log service-event count, output) ->
-\code{service.count}; \code{x} (raw longitude header alias) ->
-\code{longitude}; \code{y} (raw latitude header alias) -> \code{latitude}.
-\code{aru_serial_number}, \code{serial_number_of_detector}, and the old
-\code{ARU.serial} output all converge on the same \code{aru.serial} name
-(likewise \code{mic_serial_number}/\code{serial_number_of_microphone} on
-\code{microphone.serial}) since they were different raw spellings this
-function already accepted/produced for the same concept - that
-convergence is intentional, not a duplicate-name bug. The file-
-classification check against the raw, standardize.headers()-derived
-\code{"date_of_deployment"} spelling is deliberately NOT renamed, since
-real incoming CSV headers always standardize to that legacy spelling
-regardless of this function's own canonical naming; likewise, other
-unrenamed appearances of \code{"service"}/\code{"site"} in this file are
-the general English words (a service visit, a site's rows) or unrelated
-\code{event.type}/\code{file.type} category labels, not this function's
-\code{service.count}/\code{site.name} columns.
-
-\strong{Follow-up, 2026-09-30, per Josh - special characters.} Every
-input CSV is now read with \code{special.read.csv()} (UTF-8, falling back
-to Latin-1), so a form export with a stray Excel-saved \code{°} byte no
-longer fails with \code{invalid multibyte string}. With the new
-\code{strip.special = TRUE} (default), each file is passed through
-\code{special.strip()} straight after reading - before header
-standardization, duplicate-column resolution, classification or header
-matching - removing non-ASCII characters from its text columns (a column
-that changed is re-typed, so e.g. \code{"42.5°"} in \code{$x}/\code{$y}
-becomes the number \code{42.5}). Column names are not changed by
-stripping. Both log tables gain a last column \code{$strip.special}:
-per file in \code{aru.eventlog.filelog} (standardized header names), and
-for the whole call in \code{aru.eventlog.sitelog} (a site's rows can
-come from several files).
-
-\strong{Follow-up, 2026-10-02, per Josh - accents simplified, log
-counts.} With \code{strip.special = TRUE}, accented letters and common
-symbols are now simplified instead of dropped (\code{café} ->
-\code{cafe}, \code{Quercus × bebbiana} -> \code{Quercus X bebbiana},
-curly quotes -> straight quotes); characters with no plain equivalent
-(e.g. \code{°}, \code{µ}, \code{™}) are still removed. Column names
-are cleaned the same way. The log gets four new columns right after
-\code{$strip.special}: \code{$accented.letters.header} and
-\code{$removed.symbols.header} (number of unique column names with a
-character simplified / removed), and \code{$accented.letters.data} and
-\code{$removed.symbols.data} (number of unique data values with a
-character simplified / removed - \code{café} in 500 rows counts once;
-\code{café} and \code{French café} count twice). They are \code{NA}
-when \code{strip.special = FALSE}.
-
-\strong{Lower-case headers (2026-11-04, per Josh, Batz_reference_db Header.names).}
-The service-form field Power Kit/Solar Serial Number is output as
-\code{$power.serial} (was \code{$power_kit_solar_serial_number}; Header.names
-\code{$Change.to}). The strip.special log columns are
-\code{$accented.letters.header} / \code{$accented.letters.data}.
+\strong{Site summary.} \code{$service.count} counts \code{status_check},
+\code{download}, \code{aru_swap}, \code{mic_swap} and \code{service}
+events. \code{$duplicates.removed} counts exact duplicate rows found for
+the site.
 }
 \examples{
 \dontrun{

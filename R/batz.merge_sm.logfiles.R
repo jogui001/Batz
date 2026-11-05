@@ -1,94 +1,63 @@
 #' Merge activity-log summary files from any SM ARU (SM4 and SM5)
 #'
-#' Added 2026-09-29, per Josh. Loads every summary file matching
-#' \code{load.pattern}, works out from each file's headers whether an SM4
-#' or an SM5 (firmware 1.5 or earlier, or 1.6 or later) wrote it, and
-#' merges each version into its own data frame: \code{SM4},
-#' \code{SM5_1.5}, \code{SM5_1.6}. Same inputs, conversions and log
-#' schema as \code{batz.merge_sm4.logfiles()} and
-#' \code{batz.merge_sm5.logfiles()}.
+#' Loads every summary file matching \code{load.pattern}, works out from each
+#' file's headers whether an SM4 or an SM5 (firmware 1.5 or earlier, or 1.6
+#' or later) wrote it, and merges each version into its own data frame:
+#' \code{SM4}, \code{SM5_1.5}, \code{SM5_1.6}. Inputs, conversions and log
+#' columns are the same as in \code{\link{batz.merge_sm4.logfiles}} and
+#' \code{\link{batz.merge_sm5.logfiles}}.
 #'
 #' @param dir.load Character. Directory to search for files matching
 #'   \code{load.pattern}. Default \code{getwd()}.
 #' @param dir.sub Logical, default \code{FALSE}. If \code{TRUE}, also search
 #'   subdirectories of \code{dir.load}.
-#' @param load.pattern Character vector of wildcard/glob patterns (converted
-#'   internally to a regex via \code{utils::glob2rx()}, matched
-#'   case-insensitively), default
+#' @param load.pattern Character vector of wildcard (glob) patterns, converted
+#'   to a regular expression with \code{utils::glob2rx()} and matched
+#'   case-insensitively. Default
 #'   \code{c("*_A_Summary*.txt", "*_B_Summary*.txt")}.
 #' @param duplicates.remove Logical, default \code{TRUE}. Drop exact
 #'   duplicate rows from each merged data frame.
 #' @param log.file Logical, default \code{FALSE}. If \code{TRUE}, also
-#'   return (and auto-assign) \code{log.file_sm}: one row per file examined,
-#'   with columns \code{$aru.name}, \code{$filename}, \code{$version}
-#'   (\code{"SM4"}, \code{"SM5.1.5"}, \code{"SM5.1.6"} or
-#'   \code{"unknown"}), \code{$date.start}, \code{$date.end},
-#'   \code{$date.unique}, \code{$date.range}, \code{$records},
-#'   \code{$load.status}, \code{$reason}, \code{$filepath}.
+#'   return (and assign) \code{log.file_sm}: one row per file examined, with
+#'   the same columns as \code{log.file_sm4} (see
+#'   \code{\link{batz.merge_sm4.logfiles}}). \code{$version} is
+#'   \code{"SM4"}, \code{"SM5.1.5"}, \code{"SM5.1.6"} or \code{"unknown"}.
 #' @param strip.special Logical, default \code{TRUE}. If \code{TRUE},
-#'   simplifies accented letters and
-#'   symbols (\code{é} -> \code{e}, \code{×} -> \code{X}) and removes other non-ASCII special characters (e.g. \code{°}, \code{µ},
-#'   \code{™}) from each file's data after loading. Files are
-#'   always read with a UTF-8/Latin-1 fallback, so a stray \code{°} can't
-#'   stop them loading, whatever this is set to. The log gets a last column
-#'   \code{$strip.special}: \code{"FALSE"} (not selected), \code{"TRUE
-#'   NONE"} (nothing found) or \code{"TRUE ; <header>; ..."} (headers where
-#'   characters were removed).
+#'   accented letters and common symbols are simplified (\code{é} -> \code{e},
+#'   \code{×} -> \code{X}, curly quotes -> straight quotes) and other
+#'   non-ASCII characters (e.g. \code{°}, \code{µ}, \code{™}) are removed,
+#'   in column names and data, right after each file is read. Files are
+#'   always read as UTF-8 with a Latin-1 fallback, whatever this is set to.
+#'   The log columns \code{$strip.special}, \code{$accented.letters.header},
+#'   \code{$removed.symbols.header}, \code{$accented.letters.data} and
+#'   \code{$removed.symbols.data} report what was changed.
 #'
 #' @return Invisibly, a named list: \code{SM4}, \code{SM5_1.5},
-#'   \code{SM5_1.6} (always; an empty \code{data.frame()} for a version
-#'   with no files), plus \code{log.file_sm} when \code{log.file = TRUE}. Every
-#'   element is also auto-assigned into the calling environment.
+#'   \code{SM5_1.6} (always; an empty \code{data.frame()} for a version with
+#'   no files), plus \code{log.file_sm} when \code{log.file = TRUE}. Each
+#'   element is also assigned into the calling environment.
 #'
 #'   \code{SM4} has the same columns as \code{sm4logs.merged}:
 #'   \code{$aru.name}, \code{$date}, \code{$time}, \code{$lat}, \code{$ns},
-#'   \code{$longitude}, \code{$ew}, \code{$power_v}, \code{$temp_c},
-#'   \code{$files}, \code{$scrubbed}, \code{$mic0_type}, \code{$X},
-#'   \code{$Y}. \code{SM5_1.5}/\code{SM5_1.6} are as documented in
+#'   \code{$longitude}, \code{$ew}, \code{$power.v}, \code{$temperature.c},
+#'   \code{$files}, \code{$scrubbed}, \code{$mic0.type}, \code{$X},
+#'   \code{$Y}. \code{SM5_1.5}/\code{SM5_1.6} are as described in
 #'   \code{\link{batz.merge_sm5.logfiles}}.
 #'
 #' @details
-#' \strong{Version detection:} see \code{batz.util_sm.logfile.R} (shared
-#' internal engine) and the \code{@details} of
+#' Uses the same internal engine (\code{sm.logfile.merge()},
+#' \code{batz.util_sm.logfile.R}) as the SM4 and SM5 functions, but keeps all
+#' three versions. Version detection is described in
 #' \code{\link{batz.merge_sm5.logfiles}}. A file whose headers match none of
-#' the three known layouts is logged as \code{$version = "unknown"},
+#' the three layouts is logged as \code{$version = "unknown"},
 #' \code{"Failure"}, reason \code{"could not identify SM version from
-#' headers"}; nothing is guessed or merged for it.
+#' headers"}; it is not merged.
 #'
-#' \strong{Output names} (per Josh, 2026-09-29): \code{SM4},
-#' \code{SM5_1.5}, \code{SM5_1.6}, \code{log.file_sm}. The log was first
-#' named \code{log.file}; renamed to \code{log.file_sm} the same day, per
-#' Josh. Each SM function now has its own log name - \code{log.file_sm4}
-#' (\code{batz.merge_sm4.logfiles()}), \code{log.file_sm5}
-#' (\code{batz.merge_sm5.logfiles()}) and \code{log.file_sm} (this
-#' function) - so none overwrites another.
-#'
-#' \strong{Follow-up, 2026-09-30, per Josh - special characters.} New
-#' input \code{strip.special} (see above); files now load even with a
-#' stray Latin-1 \code{°} byte, and the log has a new last column
-#' \code{$strip.special}.
-#'
-#' \strong{Follow-up, 2026-10-02, per Josh - accents simplified, log
-#' counts.} With \code{strip.special = TRUE}, accented letters and common
-#' symbols are now simplified instead of dropped (\code{café} ->
-#' \code{cafe}, \code{Quercus × bebbiana} -> \code{Quercus X bebbiana},
-#' curly quotes -> straight quotes); characters with no plain equivalent
-#' (e.g. \code{°}, \code{µ}, \code{™}) are still removed. Column names
-#' are cleaned the same way. The log gets four new columns right after
-#' \code{$strip.special}: \code{$accented.letters.header} and
-#' \code{$removed.symbols.header} (number of unique column names with a
-#' character simplified / removed), and \code{$accented.letters.data} and
-#' \code{$removed.symbols.data} (number of unique data values with a
-#' character simplified / removed - \code{café} in 500 rows counts once;
-#' \code{café} and \code{French café} count twice). They are \code{NA}
-#' when \code{strip.special = FALSE}.
+#' Each SM merge function has its own log name (\code{log.file_sm4},
+#' \code{log.file_sm5}, \code{log.file_sm}), so none overwrites another.
 #'
 #' @seealso \code{\link{batz.merge_sm4.logfiles}},
 #'   \code{\link{batz.merge_sm5.logfiles}}
-#'
-#' \strong{Lower-case headers (2026-11-04, per Josh, Batz_reference_db Header.names).}
-#' The strip.special log columns are \code{$accented.letters.header} /
-#' \code{$accented.letters.data} (were Accented.letters.*).
 #'
 #' @examples
 #' \dontrun{

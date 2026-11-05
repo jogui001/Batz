@@ -1,87 +1,76 @@
-#' Calculate a combined call date-time from separate $date and $time vectors
+#' Combine separate date and time vectors into one call date-time
 #'
-#' Given two parallel vectors \code{date} and \code{time} (e.g. the
-#' \code{$date}/\code{$time} columns \code{batz.vettedacoustics_merge.format()}
-#' parses out of a recording's file name), auto-detects the format each is
-#' recorded in, parses them, pastes them back together, and returns one
-#' combined date-time character vector formatted per \code{time.format.out}.
+#' Takes two parallel vectors, \code{date} and \code{time} (for example the
+#' \code{$date} and \code{$time} columns parsed from recording file names),
+#' detects the format of each, parses them, and returns one combined
+#' date-time string per element, formatted with \code{time.format.out}.
+#' Here "call" is a noun: the time of a bat call (recording).
 #'
-#' (Renamed 2026-08-29, per Josh, to standardize \code{format}-suffixed
-#' parameters as \code{.in} (candidate input formats) or \code{.out}
-#' (output format): \code{date.format} -> \code{date.format.in},
-#' \code{time.format} -> \code{time.format.in}, \code{output.format} ->
-#' \code{time.format.out}.)
+#' @details
+#' \strong{Built-in formats.} Dates: \verb{\%Y\%m\%d}, \verb{\%Y-\%m-\%d},
+#' \verb{\%Y/\%m/\%d}, \verb{\%m/\%d/\%Y}, \verb{\%d/\%m/\%Y},
+#' \verb{\%m-\%d-\%Y}, \verb{\%d-\%m-\%Y}, \verb{\%m/\%d/\%y},
+#' \verb{\%d/\%m/\%y}. Times: \verb{\%H\%M\%S}, \verb{\%H:\%M:\%S},
+#' \verb{\%H\%M}, \verb{\%H:\%M}, \verb{\%I:\%M:\%S \%p}, \verb{\%I:\%M \%p}.
 #'
-#' \strong{How format detection works} (the spec described the goal but not
-#' the mechanics, so a concrete rule had to be built - see the dev script's
-#' header comment for the full assumptions list):
+#' \strong{Format detection} (done once for \code{date}, once for \code{time}):
 #' \itemize{
-#'   \item A small, fixed list of common date formats (and, separately,
-#'     time formats) is tried against the WHOLE vector at once - one
-#'     format is assumed to describe every non-blank value, not a mix
-#'     row-by-row.
-#'   \item A candidate format is "viable" only if it matches the FULL
-#'     string for every value (not just a lenient prefix match - see the
-#'     WARNING below) and parses to a real, valid date/time.
-#'   \item If exactly one candidate is viable, that's the detected format.
-#'   \item If more than one is viable and they parse the data to
-#'     DIFFERENT actual values (e.g. \code{"01/02/2025"} as
-#'     \verb{\%m/\%d/\%Y} vs \verb{\%d/\%m/\%Y}) - genuine ambiguity - the
-#'     viable candidates are printed and the function stops, UNLESS the
-#'     currently-set \code{date.format.in}/\code{time.format.in} value (its
-#'     default counts the same as an explicit override - see the dev
-#'     script's assumption #4) is itself one of the viable candidates, in
-#'     which case that one is used silently instead.
-#'   \item If more than one candidate is viable but they all agree on
-#'     every value, there's no real ambiguity - the first viable one is
-#'     used.
-#'   \item If NO candidate matches at all, that's a separate, always-fatal
-#'     error (added as a safety net, not literally specified).
+#'   \item Values are converted to character and trimmed. Blank and NA values
+#'     are ignored for detection. If no value is left, the function stops.
+#'   \item One format is assumed for the whole vector, not row by row.
+#'   \item A format is viable only if its regular expression matches the
+#'     WHOLE string of every value and every value parses to a valid
+#'     date/time. The full-string check stops a short format (e.g.
+#'     \verb{\%H\%M}) from silently reading only the start of a longer value
+#'     (e.g. \code{"212144"}).
+#'   \item No viable format: the function stops and lists the formats tried.
+#'   \item One viable format, or several that give identical values: the
+#'     first viable format (in the order above) is used.
+#'   \item Several viable formats that disagree on any value (e.g.
+#'     \code{"01/02/2025"} as \verb{\%m/\%d/\%Y} vs \verb{\%d/\%m/\%Y}): the
+#'     first entry of \code{date.format.in} / \code{time.format.in} that is
+#'     viable is used. If none is, the viable formats are printed and the
+#'     function stops.
 #' }
+#' \code{date.format.in} and \code{time.format.in} only break ties between
+#' built-in formats; they do not add new formats. Their defaults count the
+#' same as values passed by the caller.
 #'
-#' \strong{WARNING - a real correctness trap this avoids:}
-#' \code{strptime()}/\code{as.Date()} only require a format to match the
-#' BEGINNING of a string, not consume all of it - naively trying
-#' \verb{\%H\%M} against a real 6-digit time like \code{"212144"} would
-#' "succeed" by reading just the first 4 digits (21:21) and silently
-#' discarding \code{"44"}, a wrong answer with no warning. Every candidate
-#' format is paired internally with a hand-built regex requiring an EXACT
-#' full-string match before it's even considered, specifically to prevent
-#' this.
+#' \strong{Combining.} Parsed dates are formatted as \verb{\%Y-\%m-\%d} and
+#' times as \verb{\%H:\%M:\%S}, pasted together, parsed as a UTC date-time and
+#' formatted with \code{time.format.out}. Blank or NA elements in \code{date}
+#' or \code{time} give NA in the result.
 #'
-#' Blank/NA elements in \code{date} or \code{time} pass through as
-#' \code{NA} in the result.
-#'
-#' Naming convention (per project preferences):
-#' \code{package.family_action.subject()}. This function is
-#' \code{batz.datawrangler_call.datetime()}: family = "datawrangler"
-#' (general-purpose data-cleanup helpers), action/subject = "call.datetime"
-#' - "call" here is a noun (the time of a bat call/recording, standard
-#' bioacoustics usage), not a verb.
-#'
-#' @param date Character or coercible-to-character vector of recorded
-#'   dates (e.g. \code{$date}).
-#' @param time Character or coercible-to-character vector of recorded
-#'   times, the same length as \code{date} (e.g. \code{$time}).
+#' @param date Character (or coercible) vector of recorded dates, e.g.
+#'   \code{$date}.
+#' @param time Character (or coercible) vector of recorded times, e.g.
+#'   \code{$time}. Must be the same length as \code{date}, otherwise the
+#'   function stops.
 #' @param date.format.in Character vector, default \code{c("\%Y\%m\%d")}.
-#'   Candidate input format string(s) (\code{strptime()}/\code{as.Date()}
-#'   style) to prefer if \code{date}'s format is genuinely ambiguous
-#'   between more than one built-in candidate - see Details.
+#'   Preferred date format(s), used only when several built-in date formats
+#'   fit the data but disagree. See Details.
 #' @param time.format.in Character vector, default \code{c("\%H\%M\%S")}.
-#'   Same idea as \code{date.format.in}, for \code{time}.
+#'   Same role as \code{date.format.in}, for \code{time}.
 #' @param time.format.out Character, default
-#'   \code{"\%Y-\%m-\%d \%H:\%M:\%S"}. \code{strftime()}-style OUTPUT
-#'   format used to build the returned combined date-time strings.
+#'   \code{"\%Y-\%m-\%d \%H:\%M:\%S"}. \code{strftime()}-style format of the
+#'   returned date-time strings.
 #'
-#' @return A character vector the same length as \code{date}/\code{time}:
-#'   the combined date-time for every element, formatted per
-#'   \code{time.format.out} (\code{NA} for any blank/NA input element).
+#' @return A character vector the same length as \code{date} and \code{time},
+#'   with one combined date-time per element formatted with
+#'   \code{time.format.out} (NA where \code{date} or \code{time} is blank or
+#'   NA). Nothing is written to disk.
 #'
 #' @examples
 #' \dontrun{
-#' date.time <- batz.datawrangler_call.datetime(vetted.merged$date, vetted.merged$time)
-#' vetted.merged$date.time <- date.time
+#' vetted.merged$call.datetime <- batz.datawrangler_call.datetime(
+#'   vetted.merged$date, vetted.merged$time)
+#'
+#' ## day-first dates
+#' batz.datawrangler_call.datetime(c("01/02/2025", "13/02/2025"),
+#'   c("21:21:44", "22:00:00"), date.format.in = "\%d/\%m/\%Y")
 #' }
+#'
+#' @seealso \code{\link{batz.merge_vetted.acoustics}}
 #'
 #' @export
 batz.datawrangler_call.datetime <- function(date, time,

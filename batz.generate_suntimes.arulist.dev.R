@@ -736,3 +736,14 @@ st.old <- batz.generate_suntimes.arulist(dir.load = old.spell.dir, write.output 
 stopifnot(all(c("schedule1", "schedule2") %in% names(st.old$aru.suntimes)),
           st.old$aru.suntimes$schedule1[1] == "A")
 cat("TEST 10 PASS: old-spelling arulist runs; output has schedule1/schedule2\n")
+
+## ---------------------------------------------------------------------------
+## Output column $time.zone (input time_zone or time.zone accepted) - 2026-11-04
+## ---------------------------------------------------------------------------
+dir.tz <- file.path(tempdir(), "suntimes_tz"); dir.create(dir.tz, showWarnings = FALSE)
+write.csv(data.frame(aru.name = "A1", longitude = -70.2, latitude = 43.6, sunregion = "x", sunregion.longitude = -70.2,
+  sunregion.latitude = 43.6, date.start = "2026-07-01", date.end = "2026-07-03", time_zone = "America/New_York",
+  sunregion.type = "fixed.unique", schedule1 = "", schedule2 = ""), file.path(dir.tz, "tz_arulist.csv"), row.names = FALSE)
+r.tz <- batz.generate_suntimes.arulist(dir.load = dir.tz, write.output = FALSE)
+st.tz <- if (is.data.frame(r.tz)) r.tz else r.tz[[1]]
+cat("has $time.zone:", "time.zone" %in% names(st.tz), "  has $time_zone:", "time_zone" %in% names(st.tz), "\n")

@@ -1,400 +1,289 @@
-#' Generate standard ARU site appendices (Word/PDF) from Survey123 deployment and servicing forms
+#' Generate ARU site appendices (Word/PDF) from Survey123 site forms
 #'
-#' Takes the Survey123 deployment (habitat), quadrant and servicing forms for
-#' a project and writes one standard site report ("appendix") per ARU site,
-#' laid out like Josh's \code{Model ARU Appendix by Identifier.docx}: project
-#' and detector information, servicing events, recovery, habitat assessment,
-#' ARU photos (Figures 1-3), the canopy/understory bullseye plot (Figure 4)
-#' and the SM4 activity heatmap (Figure 5). (Stage 1, 2026-10-27, had the
-#' first four sections only.)
+#' Reads the Survey123 deployment (habitat), quadrant and servicing forms of
+#' a project and writes one standard site report ("appendix") per ARU site
+#' from a Word template: project and detector information, servicing
+#' events, recovery, habitat assessment, ARU photos (Figures 1-3), the
+#' canopy/understory bullseye plot (Figure 4) and the SM4 recording heatmap
+#' (Figure 5). Reports can be collated into one file and/or written one per
+#' site, as Word and/or PDF.
 #'
-#' @param data Either the path to the Survey123 export workbook (\code{.xlsx},
-#'   one tab per form, e.g. \code{FY26_SevenIslands_NABat_Aru_DeploymentService.xlsx})
-#'   or a named list of data frames, one per form. The three forms are found
-#'   by tab name - \code{deploy} (also \code{deployment}, \code{habitat}),
-#'   \code{quad} (also \code{quadrant}) and \code{service} (also
-#'   \code{survice}, \code{servicing}) - or, failing that, by which tab's
-#'   headers best match each form's Survey123 headers. Other tabs (e.g.
-#'   \code{repeat_photo_1}) are ignored. \strong{2026-10-30, per Josh:} may
-#'   also be a folder. The \code{.xlsx} in it (sub-folders searched,
-#'   \code{Archive} folders skipped) with the most form tabs is used - the
-#'   newest if several tie (NOTE) - e.g. the workbook written by
-#'   \code{batz.merge_sitevisit.acoustics()}. When \code{photo.dir} is
-#'   \code{NULL} and the folder holds photos, the folder is also used as
+#' @param data The Survey123 export workbook (\code{.xlsx}, one tab per
+#'   form), a named list of data frames (one per form), or a folder. For a
+#'   folder, the \code{.xlsx} (sub-folders searched, \code{Archive} folders
+#'   and \code{~$} lock files skipped) with the most form tabs is used, the
+#'   newest if several tie (NOTE), e.g. the workbook written by
+#'   \code{\link{batz.merge_sitevisit.acoustics}}; when \code{photo.dir} is
+#'   \code{NULL} and the folder holds photos, it is also used as
 #'   \code{photo.dir}.
-#' @param client,client.contact,project.label,project.code,project.manager
-#'   Character, default \code{""}. Used for the report header only when the
-#'   data has no column of that name (Batz spelling, any case/separator) with
-#'   a value for that site.
+#' @param client,client.contact Character, default \code{""}. Report header
+#'   values, used only when the data has no non-blank column of that name.
 #' @param project.name Character, default \code{""}. Keeps only records whose
-#'   \code{$project.name} (Survey123 "Project") matches, ignoring case and
-#'   spaces. Blank uses every record, which is only allowed when the data
-#'   holds one project. Also the \code{<PROJECTNAME>} part of the file names
-#'   (the data's own project name when blank).
+#'   \code{$project.name} matches (case and punctuation ignored). Blank uses
+#'   every record, which is only allowed when the data holds one project.
+#'   Also the \code{<PROJECTNAME>} part of the file names (blank: the data's
+#'   own project name, else \code{"project"}).
+#' @param project.label,project.code,project.manager Character, default
+#'   \code{""}. Report header values, used only when the data has no
+#'   non-blank column of that name.
 #' @param word Logical, default \code{TRUE}. Write Word (\code{.docx}) files.
 #' @param pdf Logical, default \code{FALSE}. Write PDF files (converted from
-#'   the Word file - see Details). At least one of \code{word}/\code{pdf}
+#'   the Word file, see Details). At least one of \code{word}/\code{pdf}
 #'   must be \code{TRUE}.
-#' @param collate Logical, default \code{TRUE}. One file with every site,
-#'   each starting on a new page:
-#'   \code{<PROJECTNAME>_Siteappendixall_<timestamp>}.
-#' @param separate Logical, default \code{TRUE}. One file per site:
-#'   \code{<PROJECTNAME>_<aru.name>_<timestamp>}.
-#' @param dir.save Character, default \code{getwd()}. Where files are written.
+#' @param collate Logical, default \code{TRUE}. Write one file with every
+#'   site, each starting on a new page:
+#'   \code{<PROJECTNAME>_Siteappendixall_<yyyymmdd_hhmmss>}.
+#' @param separate Logical, default \code{TRUE}. Write one file per site:
+#'   \code{<PROJECTNAME>_<aru.name>_<yyyymmdd_hhmmss>}. At least one of
+#'   \code{collate}/\code{separate} must be \code{TRUE}.
+#' @param dir.save Character, default \code{getwd()}. Output folder (created
+#'   if needed).
 #' @param time.zone Character, default \code{"America/New_York"}. Survey123
-#'   stores date-times in UTC; they are shown in this time zone. Use
-#'   \code{"UTC"} to show them as stored.
+#'   date-times (stored in UTC) are shown in this time zone; also used for
+#'   the dawn/dusk times of Figure 5. \code{"UTC"} shows them as stored.
 #' @param continue.missing Logical or \code{NULL} (default). What to do when
-#'   one or two of the three forms are missing: \code{NULL} asks
-#'   (\code{Y/N}) in an interactive session and stops otherwise;
-#'   \code{TRUE} continues; \code{FALSE} stops.
+#'   one or two of the three forms are missing: \code{NULL} asks (Y/N) in an
+#'   interactive session and stops otherwise; \code{TRUE} continues;
+#'   \code{FALSE} stops.
 #' @param template Character, default \code{NULL} (= \code{"terrestrial"}).
-#'   Either the name of a built-in template - \code{"terrestrial"} uses
-#'   \code{inst/templates/batz.aru.appendix.terrestrial.template.docx}, the
-#'   only one so far - or the path to a Word file with
-#'   \code{\{\{placeholder\}\}} fields (see Details).
-#' @param show.time Logical, default \code{FALSE}. Added 2026-10-27. Date
-#'   fields show the date only (\code{7/19/2026}); \code{TRUE} adds the time
-#'   (\code{7/19/2026 18:51}).
-#' @param equipment.inventory Data frame or the path to the equipment
-#'   database (\code{.xlsx}/\code{.csv}), default \code{NULL}. Added
-#'   2026-10-27. An equipment list with a serial-number column (\code{Serial},
-#'   \code{Serial Number}, \code{Serial No} or \code{SN}) and, optionally,
-#'   \code{Make} (or \code{Manufacturer}), \code{Model} and an equipment-type
-#'   column (\code{Type}, \code{Equipment Type}, \code{Equipment},
-#'   \code{Category}). Headers are matched ignoring case and punctuation and a
-#'   leading \code{batz.equipment_} / \code{equipment_}, so Josh's
-#'   \code{survey123 equipment database.xlsx} (\code{batz.equipment_type},
-#'   \code{_make}, \code{_model}, \code{_serial}; \code{_QRcode} and
-#'   \code{_notes} are not used yet) works as is. When
-#'   given: (1) a blank make or model in the report is filled from the
-#'   inventory row with the same serial number; (2) every value in a field
-#'   whose Batz name contains \code{serial} (deployment and service forms) is
-#'   checked - a serial not in the inventory, or listed there as a different
-#'   kind of equipment (ARU / microphone / power / HOBO), is reported in
-#'   \code{$serial.check}; (3) a serial listed under more than one equipment
-#'   type in the inventory is reported in \code{$serial.check} (form
-#'   \code{"equipment.inventory"}), and one listed twice under the same type
-#'   is named in a NOTE; (4) a serial whose \code{working.status} (or
-#'   \code{status}) is not \code{Working} - e.g. \code{Retired},
-#'   \code{Out of Commission}, \code{Missing} - is reported in
-#'   \code{$serial.check}.
-#' @param photo.dir Character, default \code{NULL}. Added 2026-10-28. The
-#'   folder of ARU photos (e.g. \code{.../NABAT Test Data/ARU Photos}), searched
-#'   with its sub-folders; folders named \code{Archive} are skipped. A photo
-#'   belongs to a site when its folder is named after the site
-#'   (\code{107802-NW1/ATT57_107802-_North_....HEIC}) or one \code{_}-separated
-#'   part of its file name is the site name (\code{ATT123_5175-SE1_North_...}),
-#'   ignoring case and punctuation. The view is read from the file name:
-#'   \code{Detector_Setup}, \code{Microphone_View}, \code{North},
-#'   \code{East}, \code{South}, \code{West}. Files with a \code{New} part
-#'   (\code{..._55-NW1_New_Detector_Setup_...}) are used only when there is no
-#'   other photo of that view. \code{NULL}: the photo cells read
-#'   \code{"No photo folder given (photo.dir)"}.
-#'   \strong{2026-10-30:} when \code{data} is a folder that holds photos,
-#'   \code{NULL} uses that folder (and its sub-folders).
-#' @param photo.width Numeric, default \code{3}. Added 2026-10-28. Photo width
-#'   in inches (height kept in proportion, at most 3.5 in).
-#' @param sm4.data Data frame or the path to a merged SM4 log \code{.csv}
-#'   (e.g. \code{mergedsm4.csv}), default \code{NULL}. Added 2026-10-28. Needs
-#'   \code{aru.name}, \code{date} and \code{time} columns; used for Figure 5.
-#' @param plotopts.bullseye,plotopts.sm4heatmap Data frame or the path to the
-#'   \code{plotopts_bullseye.csv} / \code{plotopts_sm4heatmap.csv} settings
-#'   tables, default \code{NULL} (= the copies in \code{inst/plotopts}, else
-#'   a copy in the working directory).
-#'   Added 2026-10-28. Passed to \code{batz.plotcover_bullseye()} and
-#'   \code{batz.plotsm4_heatmap()}.
+#'   The name of a built-in template (\code{"terrestrial"} =
+#'   \code{inst/templates/batz.aru.appendix.terrestrial.template.docx}) or
+#'   the path to a \code{.docx} with \code{\{\{placeholder\}\}} fields (see
+#'   Details).
 #' @param strip.special Logical, default \code{TRUE}. Simplifies accented
-#'   letters and removes other non-ASCII characters from the loaded forms,
-#'   as in the other Batz loaders.
+#'   letters and common symbols and removes other non-ASCII characters in
+#'   the loaded forms and the equipment inventory (headers and values).
+#' @param show.time Logical, default \code{FALSE}. Date fields show the date
+#'   only (\code{7/19/2026}); \code{TRUE} adds the time
+#'   (\code{7/19/2026 18:51}).
+#' @param equipment.inventory Data frame, or the path to the equipment
+#'   database (\code{.xlsx} or \code{.csv}), default \code{NULL}. Must have a
+#'   serial-number column; make, model, equipment type and working status are
+#'   optional (see Details).
+#' @param photo.dir Character, default \code{NULL}. Folder of ARU photos,
+#'   searched with its sub-folders (\code{Archive} folders skipped). See
+#'   Details. \code{NULL} (and \code{data} not a folder with photos): the
+#'   photo cells read \code{"No photo folder given (photo.dir)"}.
+#' @param sm4.data Data frame, or the path to a merged SM4 log \code{.csv}
+#'   (e.g. from \code{\link{batz.merge_sm4.logfiles}}), default \code{NULL}.
+#'   Needs \code{aru.name} (or \code{aru}), \code{date} and \code{time}
+#'   columns (any case/separator). Used for Figure 5.
+#' @param plotopts.bullseye,plotopts.sm4heatmap Data frame or path to the
+#'   \code{plotopts_bullseye.csv} / \code{plotopts_sm4heatmap.csv} settings
+#'   table, default \code{NULL} (the copy in the package's
+#'   \code{inst/plotopts}, else a copy in the working directory). Passed to
+#'   \code{\link{batz.plotcover_bullseye}} and
+#'   \code{\link{batz.plotsm4_heatmap}}.
+#' @param photo.width Numeric, default \code{3}. Photo width in inches
+#'   (height in proportion, at most 3.5 in).
 #'
-#' @return Invisibly, a list: \code{$sites} (one row per site with every
-#'   value written into the report), \code{$habitat} (added 2026-10-28: one
-#'   row per Habitat Assessment table, with \code{$aru.name} and every value
-#'   written into it), \code{$files} (paths written),
-#'   \code{$aru.habitat}, \code{$aru.quad}, \code{$aru.service} (the forms
-#'   with Batz headers, after the \code{project.name} subset), and
-#'   \code{$serial.check} (one row per serial-number problem: \code{$aru.name},
-#'   \code{$form}, \code{$field}, \code{$serial}, \code{$issue}; a NOTE is
-#'   printed when it has rows).
+#' @return Invisibly, a list:
+#' \describe{
+#'   \item{\code{$sites}}{One row per site with every value written into
+#'     the report (photo/figure fields hold the message shown when there is
+#'     no image, else \code{""}).}
+#'   \item{\code{$habitat}}{One row per Habitat Assessment table:
+#'     \code{$aru.name} and every value written into it.}
+#'   \item{\code{$files}}{Paths of the files written.}
+#'   \item{\code{$serial.check}}{One row per serial-number problem:
+#'     \code{$aru.name}, \code{$form}, \code{$field}, \code{$serial},
+#'     \code{$issue}. A NOTE lists the first 10 when it has rows.}
+#'   \item{\code{$aru.habitat}, \code{$aru.quad}, \code{$aru.service}}{The
+#'     three forms with Batz headers, after the \code{project.name} subset
+#'     (\code{NULL} for a missing form).}
+#' }
 #'
 #' @details
+#' Needs the \pkg{officer} and \pkg{xml2} packages (and \pkg{readxl} to
+#' read \code{.xlsx}).
+#'
 #' \strong{Steps.}
 #' \enumerate{
-#'   \item The workbook (or list) is read and the \code{deploy},
-#'     \code{quad} and \code{service} forms are found. If one or two are
-#'     missing, \code{"Tabs missing from input data: <tabs> do you still
-#'     wish to continue?"} is printed and \code{Y}/\code{N} asked (see
-#'     \code{continue.missing}); if all three are missing the function stops
-#'     with \code{"none of the required tabs are present: quad, deploy,
-#'     service"}.
-#'   \item Each form's Survey123 headers are renamed to Batz headers using
-#'     \code{survey123.ref.headers()} (Josh's \code{Header conversion and
-#'     outputs.xlsx}), matched ignoring case, spaces and punctuation. When two
-#'     Survey123 columns become the same Batz column (e.g. service
-#'     \code{Site Name} + \code{Specify Other Site} -> \code{$aru.name}, the
-#'     two \code{Personnel} columns) the first non-blank value is used, and a
-#'     value of \code{"other"} is replaced by its "Specify other" column.
-#'     The forms become \code{aru.habitat}, \code{aru.quad} and
-#'     \code{aru.service}.
-#'   \item Records are subset to \code{project.name}.
-#'   \item One report per \code{$aru.name} in the deployment form (service
-#'     records are matched to it ignoring case and spaces). Service records
-#'     whose \code{$aru.name} has no deployment are listed in a NOTE.
-#'   \item Each report is filled from the template and written as Word
-#'     and/or PDF, collated and/or separate. Saved file names are printed.
+#'   \item The forms are found by tab name - \code{deploy}
+#'     (\code{deployment}, \code{habitat}), \code{quad} (\code{quadrant}) and
+#'     \code{service} (\code{survice}, \code{servicing}) - or else by the
+#'     unused tab whose headers match at least half of that form's Survey123
+#'     headers. Other tabs are ignored. If one or two forms are missing,
+#'     \code{"Tabs missing from input data: <tabs> do you still wish to
+#'     continue?"} is shown (see \code{continue.missing}); if all three are
+#'     missing the function stops.
+#'   \item Survey123 headers are renamed to Batz headers with the internal
+#'     reference table \code{survey123.ref.headers()}, matched ignoring case
+#'     and punctuation. Columns already carrying a Batz header (any case),
+#'     or an older misspelled Batz header (e.g.
+#'     \code{vegetation.understroy_clutter}), are accepted. When two columns
+#'     become the same Batz column (e.g. \code{Site Name} and
+#'     \code{Specify Other Site} -> \code{$aru.name}), the first non-blank
+#'     value is used, and \code{"other"} is replaced by the "specify other"
+#'     value.
+#'   \item Records are subset to \code{project.name}; quadrant records are
+#'     kept when their \code{$parentglobalid} is a kept deployment
+#'     \code{$globalid}.
+#'   \item One report per \code{$aru.name} in the deployment form (the
+#'     service form when there is no deployment form). Service and quadrant
+#'     records are matched to it ignoring case and punctuation. Service
+#'     sites with no deployment are named in a NOTE and not reported. With
+#'     several deployment records for a site, the earliest is used for the
+#'     site values (NOTE), and each gets its own Habitat Assessment table.
+#'   \item Photos and figures are prepared, the template is filled and the
+#'     files are written; each saved file name is printed.
 #' }
 #'
-#' \strong{Where each value comes from} (field IDs from \code{Model ARU
-#' Appendix by Identifier stage1}): header - \code{client},
-#' \code{client.contact}, \code{project.label}, \code{project.code},
-#' \code{project.manager} (data column, else the input). Project
-#' information - \code{aru.habitat$biologist.permitted},
-#' \code{$permit.federal}, \code{$personnel.bri}, \code{$date.habitat.assessment},
-#' \code{$date.deployment}, \code{$date.recovery_planned} (blank - the
-#' deployment form has no such field yet), final recovery =
-#' \code{max(aru.service$date)}, servicing dates = dates of the non-retrieval
-#' service visits, \code{$survey.type}, \code{$site.type},
-#' \code{$landowner.info}, \code{$aru.label} (= \code{$aru.name} when there
-#' is no such column), \code{$aru.name}, \code{$county}, \code{$state}
-#' (full name), coordinates = \code{$latitude, $longitude} (6 decimals).
-#' Detector info - \code{aru.habitat$aru.make, $aru.model, $aru.serial};
-#' \code{$power.make, $power.model, $power.serial};
-#' \code{$microphone.make, $microphone.model, $microphone.serial};
-#' \code{$microphone.height}; \code{$microphone.orientation_horizontal};
-#' \code{$microphone.orientation_vertical}; \code{$system.check_timings};
-#' \code{$system.check_hardware}; \code{$survey.schedule} (blank when the form
-#' has no such field). Columns that don't exist are left blank. Servicing
-#' events - one row per non-retrieval visit: \code{aru.service$date},
-#' \code{$personnel.bri}, \code{$actions.performed}, \code{$notes}. Recovery
-#' - the last \code{"retrieval"} visit: date, \code{$aru.serial_new} (else
-#' \code{$aru.serial}), \code{$power.serial_new} (else \code{$power.serial}),
-#' \code{$microphone.serial_new} (else \code{$microphone.serial}), height /
-#' orientations / status checks when the service form has them, and
-#' \code{$notes}.
-#'
-#' \strong{Formatting.} Coded Survey123 answers are shown with their
-#' Survey123 labels from \code{survey123.ref.choices()}, per field:
-#' \code{aru.make} (\code{wildlife_acoustics} -> \code{Wildlife Acoustics}),
-#' \code{aru.model}, \code{survey.type}, \code{site.type} (\code{inland} ->
-#' \code{Inland}), \code{state} (\code{ME} -> \code{Maine}),
-#' \code{system.check_*} (\code{yes} -> \code{Yes}), \code{actions.performed}
-#' (\code{sdcard_swap,new_location} -> \code{SD cards swapped, Location
-#' Moved}). Personnel codes are kept (\code{BRF, ECG}) - the footnote lists
-#' the names. Dates are \code{m/d/yyyy}, or \code{m/d/yyyy hh:mm} with \code{show.time = TRUE}. The text \code{"NA"} (any case) or \code{"N/A"} counts as
-#' blank.
-#'
-#' \strong{Template.} The default (terrestrial) template is Josh's
-#' \code{Model ARU Appendix2.docx stage1} with each value replaced by a
-#' \code{\{\{placeholder\}\}} (the servicing table has one template row that is
-#' repeated per visit). The duplicate second recovery table at the end of the
-#' model document was left out. To change wording or layout, edit a copy of
-#' the template in Word, keeping each \code{\{\{...\}\}} as one unformatted
-#' piece of text, and pass it as \code{template}.
-#'
-#' \strong{Footnotes} (2026-10-27) are marked with symbols (\code{*},
-#' dagger, double dagger, section, pilcrow, double bar, then doubled) instead
-#' of numbers. Footnotes with the same text get the same symbol, e.g. the
-#' staff-initials note on \emph{Personnel} and on \emph{Staff}; each page
-#' still shows the note at its foot.
-#'
-#' \strong{Replaced equipment} (2026-10-27). When a servicing visit records a
-#' new serial (\code{aru.serial_new}, \code{microphone.serial_new},
-#' \code{power.serial_new}, \code{hobo.serial_new}), the visit's Notes get
-#' \verb{<old serial> -> <new serial>} added (several are separated by
-#' \code{;}). The old serial is the one on that service form, else the one
-#' deployed or last put in (\code{unknown} if neither is known). A later
-#' service form whose serial doesn't match the serial deployed / last put in
-#' is reported in \code{$serial.check}, with or without an inventory. No
-#' footnote text is bold.
-#'
-#' \strong{Defaults} (2026-10-28). When a power row (deployment or recovery)
-#' has no make, model or serial, it reads \code{"Internal power, 4 x D
-#' Batteries"}. When the retrieval visit has no microphone height,
-#' direction or orientation, the deployment values are repeated.
-#'
-#' \strong{New model} (2026-10-28, per Josh: \code{Model ARU Appendix by
-#' Identifier.docx}). The terrestrial template was rebuilt from this model:
+#' \strong{Report values.}
 #' \itemize{
-#'   \item Project information reads \emph{Final Recovery/Last Service} and
-#'     \emph{Landowner Information}, with \emph{Site} before \emph{Site Label}.
-#'   \item Recovery: \emph{All status checks completed} is replaced by
-#'     \emph{Status Check: Settings} (\code{aru.service$system.check_timings}),
-#'     \emph{Status Check: Hardware} (\code{$system.check_hardware}) and
-#'     \emph{Survey Schedule} (\code{$survey.schedule}), from the retrieval
-#'     visit (blank when the form has no such field). The \emph{Notes} row is
-#'     kept.
-#'   \item \strong{Habitat Assessment} table, one per deployment record:
-#'     assessment date (\code{$date.deployment}, as in the model), area (fixed
-#'     text), \code{$site.description_basic}, \code{$targeted.feature},
-#'     \code{$roosting.habitat_bats}, \code{$water.resources_site},
-#'     \code{$water.resources_distance.to.microphone},
-#'     \code{$water.resources_type.nearestbody}, tree species, understory
-#'     species, \code{$vegetation.tree_estimated.dbh},
+#'   \item Header: \code{client}, \code{client.contact},
+#'     \code{project.label}, \code{project.code}, \code{project.manager} -
+#'     the first non-blank data value, else the argument.
+#'   \item Project information (deployment form): \code{$biologist.permitted},
+#'     \code{$permit.federal}, \code{$personnel.bri},
+#'     \code{$date.habitat.assessment}, \code{$date.deployment}, target
+#'     recovery (\code{$date.recovery_planned}, else deployment date + 28
+#'     days), final recovery/last service (latest service \code{$date}),
+#'     servicing dates (non-retrieval visits, \code{"None"} if none),
+#'     \code{$survey.type}, \code{$site.type}, \code{$landowner.info},
+#'     \code{$aru.name}, \code{$aru.label} (else \code{$aru.name}),
+#'     \code{$county}, \code{$state} (full name), coordinates
+#'     (\code{$latitude, $longitude}, 6 decimals).
+#'   \item Detector info: ARU make, model, serial; microphone make, model,
+#'     serial, height, direction (\code{$microphone.orientation_horizontal}),
+#'     vertical orientation, distance to water and to clutter (from the first
+#'     habitat record; \code{"None present"} when the water distance is blank
+#'     and Water Resources is "No water resources present at site"); power
+#'     make, model, serial (\code{"Internal power, 4 x D Batteries"} when all
+#'     blank); status checks; survey schedule (\code{$survey.schedule}, else
+#'     \code{"Continuous -30min Dusk to +30min Dawn"}).
+#'   \item Servicing events: one row per non-retrieval visit, by date:
+#'     \code{$date}, \code{$personnel.bri}, \code{$actions.performed},
+#'     \code{$notes}.
+#'   \item Recovery: the last visit with \code{$visit.reason} =
+#'     \code{"retrieval"} (else \code{"No retrieval visit recorded"}):
+#'     date; ARU, power and microphone make/model/serial (the
+#'     \code{*.serial_new} value, else \code{*.serial}); microphone height
+#'     and orientations and survey schedule (blank values repeat the
+#'     deployment values); \code{$notes}.
+#'   \item Habitat Assessment (one table per deployment record): assessment
+#'     date (\code{$date.deployment}), \code{$site.description_basic},
+#'     \code{$targeted.feature}, \code{$roosting.habitat_bats},
+#'     \code{$water.resources_site}, \code{$water.resources_type.nearestbody},
+#'     tree and understory species, \code{$vegetation.tree_estimated.dbh},
 #'     \code{$vegetation.tree_estimated.agerange},
-#'     \code{$vegetation.understory_clutter},
-#'     \code{$vegetation.understory_clutter.distance}, \code{$landcover}
-#'     (coded answers shown with their Survey123 labels).
+#'     \code{$vegetation.understory_clutter}, \code{$landcover}.
 #'   \item Species rows: \emph{Tree Species Dominant} =
 #'     \code{$vegetation.tree_dominant.species}; \emph{Tree Species All
-#'     Present} = that plus \code{$vegetation.tree_all.species} (if present)
-#'     and the quadrant form's Tree 1-3 species; \emph{Understory Species
-#'     Dominant} = \code{$vegetation.understory_dominant.species}, else the
-#'     quadrant Sapling 1-3 species; \emph{Understory Species All Present} =
-#'     the dominant understory species, \code{$vegetation.understory_all.species}
-#'     (if present) and the Sapling 1-3 species. Lists are split on \code{,}
-#'     and \code{;}, each species is listed once (case and spacing ignored)
-#'     and they are ordered by how often they were recorded, most often first
-#'     (ties keep the order first seen).
-#'   \item \strong{ARU Photos} (Figures 1-3): see \code{photo.dir}. HEIC
-#'     photos (iPhone) need the \code{magick} package; with it every photo
-#'     is turned upright, shrunk to at most 1600 px and saved as JPEG for
-#'     the report. Without \code{magick}, JPEG/PNG photos are used as they
-#'     are and HEIC cells say the package is needed. A view with no photo
-#'     reads \code{"No photo found"}. (2026-10-28: each photo's memory is
-#'     freed as soon as it is converted, and a failed conversion is tried
-#'     once more - a full set of 12 MP phone photos had filled ImageMagick's
-#'     cache - and an empty converted file counts as unreadable.)
-#'   \item \strong{Figure 4}: \code{batz.plotcover_bullseye()} for the site,
-#'     from the quadrant form (\code{$quadrant}, \code{$canopy.cover},
-#'     \code{$understory.cover}) and the deployment microphone height and
-#'     orientations. When \code{icon.dir} in the settings table is not
-#'     found, the icons in \code{inst/img} are used.
-#'   \item \strong{Figure 5}: \code{batz.plotsm4_heatmap()} for the site,
-#'     from \code{sm4.data}. Each SM4 log line is one minute of recording;
-#'     lines are counted per 15-minute interval of the monitoring night
-#'     (noon to noon; log times are taken as local time), giving
-#'     \code{$aru.name}, \code{$date.monitoringnight},
-#'     \code{$mins2.noon.mon}, \code{$mins.oper}. Dawn/dusk lines come from
-#'     \code{batz.generate_suntimes.arulist()} run on the deployment
-#'     coordinates in \code{time.zone}. Sites are matched to the log's
-#'     \code{aru.name} ignoring case and punctuation; a site with no log
-#'     rows reads \code{"No SM4 log data for this site"} and is named in a
-#'     NOTE.
+#'     Present} = that field, then \code{$vegetation.tree_all.species}, then
+#'     the quadrant Tree 1-3 species, most often recorded first;
+#'     \emph{Understory Species Dominant} =
+#'     \code{$vegetation.understory_dominant.species}, else the quadrant
+#'     Sapling 1-3 species; \emph{Understory Species All Present} = the same
+#'     order with the understory fields and Sapling 1-3 species. Lists are
+#'     split on \code{,} and \code{;} and each species is listed once (case
+#'     ignored). A name one letter off another species name in the project's
+#'     forms (5+ letters) takes the spelling recorded most often (e.g.
+#'     \code{Balsalm Fir} -> \code{Balsam Fir}); a NOTE lists each fix.
 #' }
 #'
-#' \strong{Layout and species update} (2026-10-28, second round, per Josh).
+#' \strong{Formatting.} Coded answers are shown with their Survey123 labels
+#' (internal \code{survey123.ref.choices()}), e.g.
+#' \code{wildlife_acoustics} -> \code{Wildlife Acoustics}, \code{ME} ->
+#' \code{Maine}, \code{yes} -> \code{Yes}, \code{sdcard_swap,new_location}
+#' -> \code{SD cards swapped, Location Moved}. Personnel codes are kept
+#' (\code{BRF, ECG}); a footnote lists the names. Dates are
+#' \code{m/d/yyyy} (\code{m/d/yyyy hh:mm} with \code{show.time = TRUE}).
+#' Heights and distances are meters with the unit (\code{"4 m"}), over
+#' 1000 m in km (\code{"1.5 km"}). \code{"NA"}, \code{"N/A"} (any case)
+#' count as blank.
+#'
+#' \strong{Replaced equipment and serial checks.} When a service visit has a
+#' new serial (\code{aru.serial_new}, \code{microphone.serial_new},
+#' \code{power.serial_new}, \code{hobo.serial_new}),
+#' \verb{<old serial> -> <new serial>} is added to that visit's notes (several separated by
+#' \code{;}). The old serial is the one on the service form, else the one
+#' deployed or last put in (\code{unknown} if neither). A service form
+#' serial that differs from the one deployed / last put in is reported in
+#' \code{$serial.check}, with or without an inventory.
+#'
+#' \strong{Equipment inventory.} Headers are matched ignoring case,
+#' punctuation and a leading \code{batz.equipment_} / \code{equipment_}:
+#' serial (\code{serial}, \code{serial number}, \code{serial no}, \code{sn}),
+#' make (\code{make}, \code{manufacturer}, \code{brand}), \code{model}, type
+#' (\code{type}, \code{equipment type}, \code{equipment}, \code{category},
+#' \code{item}) and status (\code{working status}, \code{status},
+#' \code{condition}). Then:
 #' \itemize{
-#'   \item \emph{Tree / Understory Species All Present}: the quadrant species
-#'     (Tree 1-3, or Sapling 1-3) come first, most often recorded first (ties
-#'     in the order first named); then the form's dominant and other species
-#'     in that order, skipping any species already listed. Each species
-#'     appears once; a name one letter off an earlier one (e.g.
-#'     \code{Balsalm Fir} / \code{Balsam Fir}) is treated as the same
-#'     species, the first spelling is kept and the pair is named in a NOTE.
-#'     This replaces the frequency order described above. \emph{Understory
-#'     Species Dominant} is the form's field, else the sapling species in the
-#'     same quadrant order.
-#'   \item "(within view)" is removed from the two \emph{All Present} labels;
-#'     the area reads "20m x 20m plot with Microphone at the center".
-#'   \item \emph{Microphone Distance to Water (m)} (was \emph{Distance Mic to
-#'     Nearest Water (m)}) and \emph{Microphone Distance to Clutter (m)} moved
-#'     from the Habitat Assessment table to the Detector Info table, below
-#'     \emph{Microphone Orientation}, from the first habitat record
-#'     (\code{$site.water.distance}, \code{$site.clutter.distance} in
-#'     \code{$sites}).
-#'   \item The recovery table no longer has the two Status Check rows.
-#'   \item \emph{Survey Schedule}: when the form has none, it reads
-#'     "-30min before dusk and +30min after dawn" (Josh's wording); the
-#'     recovery row repeats the deployment value.
-#'   \item Figure 4: panels are the microphone bar, then Understory, then
-#'     Canopy Cover (\code{sub.plots = c("mic.bar", "understory.bull",
-#'     "canopy.bull")}); the microphone-height bullseye is left out. Drawn
-#'     2.5 in tall (\code{plot.height}, unless its override is set).
-#'   \item Figure 5: the y axis runs from the even hour at or before the
-#'     earliest dusk - 30 min to the even hour at or after the latest
-#'     dawn + 30 min, widened to the next even hour if any recorded minutes
-#'     fall outside it, with 2-hour labels. Caption: "Number of successful
-#'     monitoring minutes for the SM4BAT deployed at <aru.name> from
-#'     <date.deployment> through <last service date> calculated in 15min
-#'     intervals." The last service date is \code{max(aru.service$date)}
-#'     (the service form has no \code{date.deployment}).
-#'   \item Figures 4 and 5 are drawn smaller (at most 3.0 in and 3.6 in tall)
-#'     and start a new page together. Blank pages are avoided: page breaks
-#'     are set on the section headings, and between collated sites the break
-#'     goes at the end of the previous site's last paragraph.
+#'   \item a blank make or model in the report is filled from the inventory
+#'     row with the same serial;
+#'   \item every value of a deployment or service field whose Batz name
+#'     contains \code{serial} is checked: not in the inventory, listed as a
+#'     different kind of equipment (ARU / microphone / power / HOBO, read
+#'     from the type text), or a status other than \code{Working} (e.g.
+#'     \code{Retired}, \code{Missing}) is reported in \code{$serial.check};
+#'   \item a serial listed under more than one equipment type is reported
+#'     (form \code{"equipment.inventory"}); one listed twice under the same
+#'     type is named in a NOTE.
 #' }
 #'
-#' \strong{Third round} (2026-10-28, per Josh; replaces the species order
-#' and Survey Schedule text above).
-#' \itemize{
-#'   \item Species rows list every unique species across the fields once, in
-#'     this order: the dominant species field, then the "all species" field,
-#'     then the quadrant species by
-#'     \code{names(sort(table(quad.species), decreasing = TRUE))}; a species
-#'     already listed is not repeated. Spelling errors are fixed: a name one
-#'     letter off another name in the project's forms takes the spelling
-#'     recorded most often across all sites (e.g. \code{Balsalm Fir} ->
-#'     \code{Balsam Fir}), in the Dominant rows too; a NOTE lists each fix.
-#'   \item Detector Info: the microphone rows are grouped under a
-#'     \emph{Microphone} row - \emph{Make, Model & Serial #}, \emph{Height},
-#'     \emph{Direction(degrees)}, \emph{Vertical Orientation},
-#'     \emph{Distance to Water}, \emph{Distance to Clutter}.
-#'   \item Heights and distances are meters, written with their unit
-#'     (\code{"4 m"}); over 1000 m they are shown in km (\code{"1.5 km"}).
-#'     The recovery row label is now \emph{Microphone Height:} (was
-#'     \emph{Microphone Height (m)}), since the value carries the unit.
-#'   \item A blank Survey Schedule reads "Continuous -30min Dusk to +30min
-#'     Dawn".
-#'   \item Figure 5 has no site name above the plot.
-#'   \item \emph{Power Make, Model & Serial #} moved to just below
-#'     \emph{Distance to Clutter} in Detector Info.
-#'   \item \emph{Distance to Water}: when blank and Water Resources is "No
-#'     water resources present at site", it reads "None present".
-#'   \item Figure 4 (fourth round): panel titles "Microphone Height and
-#'     vertical orientation", "Microphone Direction and Understory Clutter",
-#'     "Microphone Direction and Canopy Cover" (unless overridden in
-#'     \code{plotopts.bullseye}); labels (a), (b), (c) at the bottom right
-#'     of each panel; the direction arrow on the Understory panel only
-#'     (\code{arrow.panel = "first"}); the blank margin under the panels
-#'     halved; new caption naming (a), (b), (c), the red dashed site
-#'     averages and the black direction arrow.
-#'   \item ARU photos: no table borders; each photo is centered at the
-#'     bottom of its cell.
-#'   \item Figure 4 (fifth round): titles "Height and vertical orientation",
-#'     "Direction and Understory Clutter", "Canopy Cover", 2 pt smaller
-#'     (\code{title.size.adjust = -2}); Figure 4 now shares a page with
-#'     Figure 3, and Figure 5 starts its own page.
-#'   \item Sixth round: the outer box around the header (logo/client) table
-#'     is removed; Figure 4 caption now says "canopy cover" and categories
-#'     "0, 1-25,25-50,50-75,75-100\%"; in the collated file the figure
-#'     numbers run on from site to site (site 2's figures are 6-10, ...);
-#'     separate files start at Figure 1.
-#'   \item Seventh round: no borders at all on the header (logo/client)
-#'     table; the Habitat Assessment section follows the recovery table on
-#'     the same page when the whole table fits (its heading and rows are
-#'     kept together, so it moves to the next page as a block when it does
-#'     not); \emph{Target Recovery} = deployment date + 28 days when the
-#'     data has no target recovery date.
-#' }
+#' \strong{Photos (Figures 1-3).} A photo (\code{.jpg}, \code{.png},
+#' \code{.heic}, \code{.heif}, \code{.tif}) belongs to a site when its folder
+#' is named after the site (\code{107802-NW1/ATT57_107802-_North_....HEIC})
+#' or one \code{_}-separated part of its file name is the site name
+#' (\code{ATT123_5175-SE1_North_...}), case and punctuation ignored. The
+#' view comes from the file name: \code{Detector_Setup},
+#' \code{Microphone_View}, \code{North}, \code{East}, \code{South},
+#' \code{West}. Files with a \code{New} part are used only when there is no
+#' other photo of that view; with several matches the first (sorted) is
+#' used (NOTE). With the \pkg{magick} package every photo is turned upright,
+#' shrunk to at most 1600 px and saved as JPEG (HEIC needs \pkg{magick});
+#' without it JPEG/PNG are used as they are and other formats get a message
+#' in the cell. A view with no photo reads \code{"No photo found"}.
 #'
-#' \strong{Spelling corrections} (2026-10-28, per Josh). Batz headers renamed:
-#' \code{vegetation.tree_all.speacies} -> \code{vegetation.tree_all.species};
-#' \code{vegetation.understroy_*} -> \code{vegetation.understory_*};
-#' \code{*_dominate.species} -> \code{*_dominant.species};
-#' \code{water.resoruces _*} -> \code{water.resources_*};
-#' \code{vegetation.tree_esimated.*} -> \code{vegetation.tree_estimated.*};
-#' \code{microphone.orientation_horizonal} ->
-#' \code{microphone.orientation_horizontal}; the temporary arulist's
-#' \code{schedual1}/\code{schedual2} -> \code{schedule1}/\code{schedule2}.
-#' A form (or data frame) that still uses an old spelling is renamed on load
-#' (\code{survey123.ref.renamed()}). The missing-tab prompt now reads
-#' "do you still wish to continue?" (was "wished"), and the Figure 4 caption
-#' "taking the mean of the mid-points of each quadrant" (was "meaning of the
-#' mid-point"). The Survey123 service tab name \code{survice} is still
-#' accepted because the Survey123 form itself uses it.
+#' \strong{Figure 4} (\code{\link{batz.plotcover_bullseye}}). Built from the
+#' quadrant form (\code{$quadrant}, \code{$canopy.cover},
+#' \code{$understory.cover}) and the deployment microphone height and
+#' orientations, with \code{sub.plots = c("mic.bar", "understory.bull",
+#' "canopy.bull")}, \code{arrow.panel = "first"}, panel labels (a)-(c) and
+#' \code{title.size.adjust = -2}. When the settings table's custom-style
+#' column (\code{override.value}, or an old \code{overide.value}) is blank,
+#' \code{plot.height} is set to 2.5 and the panel titles to "Height and
+#' vertical orientation", "Direction and Understory Clutter" and "Canopy
+#' Cover". When \code{icon.dir} is not found, the icons in the package's
+#' \code{inst/img} are used. Half of the blank margin under the panels is
+#' cut (needs \pkg{png}). Shown at most 3.0 in tall.
 #'
-#' \strong{PDF.} Converted from the Word file with the \code{doconv} package
-#' if it is installed (uses Word on Windows), otherwise with LibreOffice
-#' (\code{soffice}) if found. If neither is available the PDF is skipped with
-#' a warning.
+#' \strong{Figure 5} (\code{\link{batz.plotsm4_heatmap}}). Each SM4 log line
+#' is one minute of recording; lines are counted per 15-minute interval of
+#' the monitoring night (noon to noon; log times are taken as local time),
+#' giving \code{$aru.name}, \code{$date.monitoringnight},
+#' \code{$mins2.noon.mon}, \code{$mins.oper}. Rows with an unreadable
+#' date/time are skipped (NOTE). Dawn/dusk come from
+#' \code{\link{batz.generate_suntimes.arulist}} on the deployment
+#' coordinates in \code{time.zone}. The y axis runs from the even hour at or
+#' before the earliest dusk - 30 min to the even hour at or after the latest
+#' dawn + 30 min, widened if recorded minutes fall outside, with 2-hour
+#' labels and no title. Shown at most 3.6 in tall. A site with no log rows
+#' reads \code{"No SM4 log data for this site"} (NOTE).
 #'
-#' \strong{Lower-case headers (2026-11-04, per Josh, Batz_reference_db Header.names).}
-#' Survey123 Batz headers are now lower case (e.g. \code{globalid},
-#' \code{parentglobalid}, \code{understory.cover},
-#' \code{vegetation.tree_tree1.species}, \code{vegetation.tree_estimated.dbh}).
-#' Workbooks with the old capitalisation are still read: headers are matched
-#' ignoring case.
+#' \strong{Template.} The built-in terrestrial template holds each value as
+#' a \code{\{\{placeholder\}\}} named like the \code{$sites} /
+#' \code{$habitat} columns; the servicing table has one template row that is
+#' repeated per visit, and the Habitat Assessment table is repeated per
+#' deployment record. To change wording or layout, edit a copy in Word,
+#' keeping each \code{\{\{...\}\}} as one unformatted piece of text, and
+#' pass its path as \code{template}. Unused placeholders are blanked.
+#' Footnotes are marked with symbols (\code{*}, dagger, double dagger,
+#' section, pilcrow, double bar, then doubled) in order of first use;
+#' footnotes with the same text share a symbol; footnote text is not bold.
+#' In the collated file each site starts on a new page and figure numbers
+#' run on from site to site (site 2 starts at Figure 6); separate files
+#' start at Figure 1.
+#'
+#' \strong{PDF.} Converted with the \pkg{doconv} package if installed (uses
+#' Word), otherwise with LibreOffice (\code{soffice}) if found; otherwise
+#' the PDF is skipped with a warning. With \code{word = FALSE} the Word file
+#' is written to a temporary folder and deleted.
+#'
+#' @seealso \code{\link{batz.merge_sitevisit.acoustics}},
+#'   \code{\link{batz.plotcover_bullseye}}, \code{\link{batz.plotsm4_heatmap}},
+#'   \code{\link{batz.generate_suntimes.arulist}}
 #'
 #' @examples
 #' \dontrun{
@@ -406,6 +295,10 @@
 #'   word = TRUE, pdf = FALSE, collate = TRUE, separate = TRUE,
 #'   equipment.inventory = "survey123 equipment database.xlsx",
 #'   photo.dir = "ARU Photos", sm4.data = "mergedsm4.csv")
+#'
+#' # a folder holding the merged site-forms workbook and the photos
+#' batz.generate_aru.appendix(data = "NABAT Test Data", project.name = "NA Bat",
+#'                            pdf = TRUE)
 #' }
 #'
 #' @export
@@ -1163,16 +1056,16 @@ batz.generate_aru.appendix <- function(data,
   aes.bull <- load.opts(plotopts.bullseye, "plotopts_bullseye.csv")
   if (!is.null(aes.bull)) {
     ## the mic icons ship in inst/img
-    icon <- aes.bull$default.value[aes.bull$parameter == "icon.dir"]
+    icon <- aes.bull$default.value[plotutil_param_key(aes.bull$parameter) == plotutil_param_key("icon.dir")]
     if (length(icon) == 1 && !dir.exists(icon)) {
       inst.img <- system.file("img", package = "Batz")
       if (!nzchar(inst.img)) inst.img <- system.file("img", package = "batz")
-      if (nzchar(inst.img)) aes.bull$default.value[aes.bull$parameter == "icon.dir"] <- inst.img
+      if (nzchar(inst.img)) aes.bull$default.value[plotutil_param_key(aes.bull$parameter) == plotutil_param_key("icon.dir")] <- inst.img
     }
     ## 2026-10-28: a shorter figure (2.5 in panels, unless plot.height has
     ## its own override) so Figures 4 and 5 fit on one page
-    ov <- intersect(c("overide.value", "override.value"), names(aes.bull))
-    i.h <- which(aes.bull$parameter == "plot.height")
+    ov <- intersect(c("override.value", "overide.value"), names(aes.bull))
+    i.h <- which(plotutil_param_key(aes.bull$parameter) == plotutil_param_key("plot.height"))
     if (length(ov) > 0 && length(i.h) == 1 && (is.na(aes.bull[[ov[1]]][i.h]) || !nzchar(trimws(aes.bull[[ov[1]]][i.h])))) {
       aes.bull[[ov[1]]][i.h] <- "2.5"
     }
@@ -1182,7 +1075,7 @@ batz.generate_aru.appendix <- function(data,
                      understory.title = "Direction and Understory Clutter",
                      canopy.title     = "Canopy Cover")
     for (tn in names(fig4.titles)) {
-      i.t <- which(aes.bull$parameter == tn)
+      i.t <- which(plotutil_param_key(aes.bull$parameter) == plotutil_param_key(tn))
       if (length(ov) > 0 && length(i.t) == 1 && (is.na(aes.bull[[ov[1]]][i.t]) || !nzchar(trimws(aes.bull[[ov[1]]][i.t])))) {
         aes.bull[[ov[1]]][i.t] <- fig4.titles[[tn]]
       }
@@ -1263,7 +1156,7 @@ batz.generate_aru.appendix <- function(data,
       if (is.na(lat) || is.na(lon)) return(NULL)
       data.frame(aru.name = nm, longitude = lon, latitude = lat, sunregion = nm, sunregion.longitude = lon,
                  sunregion.latitude = lat, date.start = format(min(nts)), date.end = format(max(nts) + 1),
-                 time_zone = time.zone, sunregion.type = "fixed.unique", schedule1 = "", schedule2 = "",
+                 time.zone = time.zone, sunregion.type = "fixed.unique", schedule1 = "", schedule2 = "",
                  stringsAsFactors = FALSE)
     }))
     st <- NULL

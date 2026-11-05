@@ -15,17 +15,17 @@ batz.summarize_aruloc.coordinates(
 }
 \arguments{
 \item{data}{Data frame of ARU log records - e.g. the output of
-\code{\link{batz.merge_sm.logfiles}}. Must have \code{$aru.name},
-\code{$date}, \code{$time} (see "Dates and times" below),
-\code{$longitude} and \code{$latitude} (signed decimal degrees). Header
-spelling is matched loosely (\code{"."}/\code{"_"}/case ignored). Other
-columns are ignored.}
+\code{\link{batz.merge_sm.logfiles}}. Must have the \code{group.by}
+column (default \code{$aru.name}), \code{$date}, \code{$time} (see "Dates
+and times" below), \code{$longitude} and \code{$latitude} (signed decimal
+degrees). Header spelling is matched loosely (\code{"."}/\code{"_"}/space/
+case ignored). Other columns are ignored.}
 
 \item{aru.combo}{Data frame of ARU sets. The \strong{first column} is
 used, whatever it is called (e.g. \code{$Sets}); each row lists one set
 of ARU names separated by \code{";"} (e.g. \code{"NWS01; NWS02;
-NWS03"}). Blank rows are dropped. Names are matched to
-\code{data$aru.name} ignoring case and surrounding spaces.}
+  NWS03"}). Blank rows are dropped. Names are matched to the
+\code{group.by} column ignoring case and surrounding spaces.}
 
 \item{gap.days}{Numeric, default \code{1}. A gap longer than this many
 days between two consecutive records of the same ARU at the same
@@ -36,95 +36,78 @@ location starts a new location record.}
 log before they get a GPS fix - before summarizing.}
 
 \item{group.by}{Character, default \code{"aru.name"}. The column in
-\code{data} that identifies each ARU: \code{"aru.name"} or
-\code{"aru.label"} (any other single column name also works). Location
-records are split by this column, \code{aru.combo} names are matched
-against it, and it is the first column of \code{coordinate.summary}
-(named after \code{group.by}).}
+\code{data} that identifies each ARU, e.g. \code{"aru.name"} or
+\code{"aru.label"} (useful when one ARU was redeployed under several
+labels, e.g. \code{NWS03-1}, \code{NWS03-2}). Location records are split
+by this column, \code{aru.combo} names are matched against it, and it is
+the first column of \code{coordinate.summary} (named after
+\code{group.by}).}
 
-\item{strip.special}{Logical, default \code{TRUE}. If \code{TRUE},
-simplifies accented letters and
-symbols (\code{é} -> \code{e}, \code{×} -> \code{X}) and removes other non-ASCII special characters (e.g. \code{°}, \code{µ},
-\code{™}) from \code{data} and \code{aru.combo} before
-anything else, so e.g. a latitude of \code{"42.036373°"} is read as
-the number \code{42.036373} instead of being dropped as unreadable.}
+\item{strip.special}{Logical, default \code{TRUE}. \code{TRUE}: simplifies
+accented letters and common symbols (curly quotes become straight
+quotes) and removes other non-ASCII characters (e.g. degree and micro
+signs) from the headers and text of \code{data} and \code{aru.combo}
+before anything else, so e.g. a latitude written with a degree sign is
+read as a number instead of being dropped as unreadable.}
 }
 \value{
-Invisibly, a named list with two data frames, also auto-assigned
+Invisibly, a named list with two data frames, also assigned
 into the calling environment:
 
 \code{coordinate.summary} - one row per location record, ordered by
 the \code{group.by} column then \code{$datetime.start}:
-\code{$aru.name} (or whichever column \code{group.by} names), \code{$datetime.start} and \code{$datetime.end}
-(earliest/latest record, character \code{"YYYY-MM-DD HH:MM:SS"} in the
-unit's own clock time), \code{$longitude}, \code{$latitude},
-\code{$records} (number of records).
+\code{$aru.name} (or whichever column \code{group.by} names),
+\code{$datetime.start} and \code{$datetime.end} (earliest/latest record,
+character \code{"YYYY-MM-DD HH:MM:SS"} in the unit's own clock time),
+\code{$longitude}, \code{$latitude}, \code{$records} (number of records).
 
-\code{coordinate.average} - one row per row of \code{aru.combo}:
-\code{$aru.names} (the set as written in \code{aru.combo}),
-\code{$longitude}, \code{$latitude} (median of the unique locations of
-the ARUs in that set).
+\code{coordinate.average} - one row per non-blank row of
+\code{aru.combo}: \code{$aru.names} (the set as written in
+\code{aru.combo}), \code{$longitude}, \code{$latitude} (median of the
+unique locations of the ARUs in that set).
 }
 \description{
-Added 2026-09-30, per Josh. Splits each ARU's records into separate
-location records (one row per continuous stay at one
-\code{longitude}/\code{latitude}), counts the records in each, and
-calculates the median location for each set of ARUs listed in
-\code{aru.combo}.
+Splits each ARU's records into separate location records (one row per
+continuous stay at one \code{longitude}/\code{latitude}), counts the
+records in each, and calculates the median location for each set of ARUs
+listed in \code{aru.combo}.
 }
 \details{
+\strong{Header check.} \code{data} must have the \code{group.by} column,
+\code{date}, \code{time}, \code{longitude}, \code{latitude}; missing ones
+stop the function with \code{"data is missing these headers: ..."}. A
+record with a missing or unreadable coordinate, or whose
+\code{date}/\code{time} can't be read, is dropped with a console NOTE (the
+date/time NOTE shows an example value).
+
 \strong{Location records.} Records are sorted by ARU and date/time. A new
 location record starts whenever (1) the ARU's \code{longitude}/
 \code{latitude} differs from its previous record - so an ARU that moves
-A -> B -> A gets three records, not two - or (2) the gap since its
-previous record at that location is more than \code{gap.days}.
-Coordinates must match exactly; any GPS jitter counts as a new location.
+from A to B and back to A gets three records, not two - or (2) the gap
+since its previous record is more than \code{gap.days}. Coordinates must
+match exactly; any GPS jitter counts as a new location.
 
 \strong{Median location.} For each set, the median \code{longitude} and
 the median \code{latitude} are taken separately over the \emph{unique}
-\code{aru.name}/\code{longitude}/\code{latitude} combinations of the ARUs
-in that set - each distinct location counts once, however many records
-or location records it has. An ARU with many distinct GPS fixes
-therefore pulls the median toward itself more than an ARU with one.
+ARU/\code{longitude}/\code{latitude} combinations of the ARUs in that set -
+each distinct location counts once, however many records or location
+records it has. An ARU with many distinct GPS fixes therefore pulls the
+median toward itself more than an ARU with one.
 
-\strong{Unmatched names.} An \code{aru.combo} name not found in
-\code{data$aru.name} gives a warning naming the closest match (e.g.
+\strong{Unmatched names.} An \code{aru.combo} name not found in the
+\code{group.by} column gives a warning naming the closest match (e.g.
 \code{"NWSO1"} with a letter O vs \code{"NWS01"} with a zero) and is left
 out of that set's median. A set with no matched names gets \code{NA}.
 
-\strong{Header check.} \code{data} must have \code{aru.name}, \code{date},
-\code{time}, \code{longitude}, \code{latitude}; missing ones stop the
-function with \code{"data is missing these headers: ..."}. A record whose
-\code{date}/\code{time} can't be read, or with a missing coordinate, is
-dropped with a console NOTE.
-
-\strong{Dates and times} (follow-up 2026-09-30, per Josh's real run,
-where every record failed to read): \code{$date} can be a \code{Date}
-column or text as \code{YYYY-MM-DD}, \code{YYYY/MM/DD}, \code{M/D/YYYY}
-(US order, as Excel saves it), \code{M-D-YYYY} or \code{YYYY-Mon-DD};
-\code{$time} can be text \code{HH:MM:SS} or \code{HH:MM}, an Excel time
-read by \code{readxl} (\code{POSIXct} on 1899-12-31), an
-\code{hms}/\code{difftime} column, or an Excel fraction of a day.
-Day-first dates (\code{D/M/YYYY}) aren't supported, since they can't be
-told apart from US dates. The NOTE for unreadable records now shows an
-example value.
-
-\strong{Follow-up, 2026-09-30, per Josh - group.by and special
-characters.} New input \code{group.by} (default \code{"aru.name"}) to
-summarize by \code{"aru.label"} instead - useful when one ARU was
-redeployed under several labels (e.g. \code{NWS03-1}, \code{NWS03-2}).
-The required-header check, the location-record breaks, the
-\code{aru.combo} matching and the first output column all follow it. New
-input \code{strip.special} (default \code{TRUE}) removes non-ASCII
-characters from both inputs first. This function has no log, so there is
-no \code{$strip.special} column.
-
-\strong{Follow-up, 2026-10-02, per Josh - accents simplified.} With
-\code{strip.special = TRUE}, accented letters and common symbols are
-now simplified instead of dropped (\code{café} -> \code{cafe},
-\code{×} -> \code{X}, curly quotes -> straight quotes); characters
-with no plain equivalent (e.g. \code{°}, \code{µ}, \code{™}) are still
-removed. Column names are cleaned the same way.
+\strong{Dates and times.} \code{$date} can be a \code{Date} or
+\code{POSIXct} column or text as \code{YYYY-MM-DD}, \code{YYYY/MM/DD},
+\code{M/D/YYYY} (US order, as Excel saves it), \code{M-D-YYYY} or
+\code{YYYY-Mon-DD}; the first layout that reads every value is used, else
+each value is read with the first layout that fits it. \code{$time} can be
+text \code{HH:MM:SS} or \code{HH:MM}, an Excel time read by \code{readxl}
+(\code{POSIXct} on 1899-12-31), an \code{hms}/\code{difftime} column, or an
+Excel fraction of a day. Day-first dates (\code{D/M/YYYY}) aren't
+supported, since they can't be told apart from US dates.
 }
 \examples{
 \dontrun{

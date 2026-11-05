@@ -1,4 +1,4 @@
-"category","parameter","default.value","overide.value","notes"
+"category","parameter","default.value","override.value","notes"
 "Panel layout","facpan.numcol","3","","Number of columns in the facet_wrap panel grid."
 "Panel layout","facpan.wid","1.9","","Width of each facet panel, inches."
 "Panel layout","facpan.hgt","1.9","","Height of each facet panel, inches."
@@ -49,3 +49,5 @@
 "Save / export","ggsave.width.pad","0.5","","Inches added to the computed panel width when saving (ggsave width = plwid + this value)."
 "Save / export","ggsave.height.pad","1","","Inches added to the computed panel height when saving (ggsave height = plhgt + this value)."
 "Save / export","output.filename.pattern","Earliest and latest bat calls detected at <ARU> between <date.start> and <date.end> <timestamp>.png","","Output PNG file name pattern, with <ARU>/<date.start>/<date.end>/<timestamp> as placeholders. (Corrected 2026-08-27, per Josh: was ""Earlies and lastest ball calls"" - a typo flagged when this file was first built, now fixed at Josh's explicit request.) DEPRECATED as of Josh's nineteenth follow-up (2026-09-16) - no longer read; the saved file name is now always ""<project.name>_<site>_<timestamp>.png""."
+"Save / export","plot.width","6","","Width of the saved plot, in ggsave.units."
+"Save / export","plot.height","7","","Height of the saved plot, in ggsave.units."

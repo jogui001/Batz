@@ -13,7 +13,7 @@ batz.plot_heat.site.species(
   groupby.time = "time",
   duplicates.remove = TRUE,
   project.name = "new.project",
-  aes.style = "overide.value",
+  aes.style = "override.value",
   dir.save = getwd(),
   strip.special = TRUE,
   strip.special.plotopts = FALSE
@@ -21,166 +21,188 @@ batz.plot_heat.site.species(
 }
 \arguments{
 \item{data}{Data frame of vetted detections, one row per recording
-(pass). Must have \code{$aru.name}, the species column named by
+(pass). Required columns: \code{$aru.name}, the species column named by
 \code{spp.id}, the monitoring-night date column named by
 \code{groupby.date}, and the clock-time column named by
-\code{groupby.time}. Every column named in a fig.list row's
-\code{$plot.group} must also exist. Headers are matched with
-\code{canonicalize.headers()}, so dot-, underscore-, space- or
-mixed-case spellings are all accepted (e.g. \code{ARU Name},
-\code{DATE-12}).}
+\code{groupby.time}. Headers are matched ignoring case and "." / "_" /
+space differences (e.g. \code{ARU Name}, \code{DATE-12}). A column
+named in a fig.list row's \code{$plot.group} must also exist, or that
+row is skipped (NOTE).}
 
 \item{fig.list}{Data frame, one row per plot. Required columns:
 \code{$plot.type}, \code{$plot.name}, \code{$plot.species},
 \code{$plot.set}, \code{$date.start}, \code{$date.end},
-\code{$xaxe.title}, \code{$yaxe.title}. Optional columns:
+\code{$xaxe.title}, \code{$yaxe.title}. Optional:
 \code{$plot.group}, \code{$group.labels}, \code{$site.exclude},
-\code{$site.bold}. List-type cells (\code{$plot.species},
-\code{$plot.set}, \code{$site.exclude}, \code{$site.bold},
-\code{$group.labels}) are separated by \code{";"} or \code{","}. A
-row can also override any \code{aes.default} parameter by having a
-column of the same name (e.g. \code{$bin.minutes}, \code{$time.start}).
-See Details.}
+\code{$site.bold}. A row can also override any \code{aes.default}
+parameter with a column of the same name (e.g. \code{$bin.minutes},
+\code{$time.start}). See Details.}
 
-\item{aes.default}{Data frame of plot settings, one row per parameter -
-normally \code{plotopts_heat.site.species.csv}. Must have
-\code{$category}, \code{$parameter}, \code{$default.value}; an
-\code{$overide.value} column and \code{$notes} are optional.}
+\item{aes.default}{Data frame of plot settings (plotopts), normally
+\verb{plotopts_heat.site.species.csv}. Required columns:
+\code{$category}, \code{$parameter}, \code{$default.value}. The custom
+style column (named by \code{aes.style}) and \code{$notes} are
+optional. See "plotopts" in Details.}
 
 \item{spp.id}{Character, default \code{"species"}. Name of the species
-column in \code{data} (same parameter name as
-\code{\link{batz.generate_plotframe.bat}}).}
+column in \code{data}.}
 
 \item{groupby.date}{Character, default \code{"date.monitoringnight"}.
-Name of the monitoring-night date column. A raw Kaleidoscope-style
-export has this as \code{DATE-12}; pass \code{groupby.date = "date-12"}.}
+Name of the monitoring-night date column (read as m/d/Y, Y-m-d, m/d/y
+or Y/m/d). For a raw Kaleidoscope-style export use \code{"date-12"}.}
 
 \item{groupby.time}{Character, default \code{"time"}. Name of the
-clock-time column (\code{HH:MM:SS}; a full date-time such as
-\code{"2023-05-06 21:14:08"} also works - the first \code{HH:MM}
-found is used). Use the real recording time, not \code{TIME-12}.}
+clock-time column. The first \code{HH:MM} found is used, so a full
+date-time such as \code{"2023-05-06 21:14:08"} also works. Use the real
+recording time, not \code{TIME-12}.}
 
-\item{duplicates.remove}{Logical, default \code{TRUE}. Drop exact
-duplicate rows of \code{data} before counting; the number dropped is
-reported.}
+\item{duplicates.remove}{Logical, default \code{TRUE}. TRUE drops exact
+duplicate rows of \code{data} before counting (NOTE with the number
+dropped).}
 
 \item{project.name}{Character, default \code{"new.project"}. First part
 of each saved file name.}
 
-\item{aes.style}{Character, default \code{"overide.value"}. Column of
-\code{aes.default} checked first for each parameter, falling back to
-\code{$default.value} when blank or absent. A fig.list row's own value
-for that parameter wins over both.}
+\item{aes.style}{Character, default \code{"override.value"}. Name of the
+\code{aes.default} column checked first for each parameter. When that
+column does not exist, or its cell is blank, \code{$default.value} is
+used. With the default, an old \code{$overide.value} column is still
+read when there is no \code{$override.value} column. A non-blank
+fig.list value of the same name wins over both.}
 
 \item{dir.save}{Character, default \code{getwd()}. Folder the PNGs are
-saved in.}
+saved in (created if needed).}
 
-\item{strip.special}{Logical, default \code{TRUE}. Simplifies accented
-letters and removes other non-ASCII characters in \code{data} (this
-function's local copy only) before matching, same as every other
-\code{batz} function.}
+\item{strip.special}{Logical, default \code{TRUE}. TRUE simplifies
+accented letters and removes other non-ASCII characters in \code{data}
+(local copy only) before matching. FALSE leaves them as they are.}
 
-\item{strip.special.plotopts}{Logical, default \code{FALSE}. Same for
-\code{fig.list} and \code{aes.default}. \code{FALSE} keeps their text
-as is and stops with a readable error if a cell can't be read.}
+\item{strip.special.plotopts}{Logical, default \code{FALSE}. Same
+clean-up for \code{fig.list} and \code{aes.default}. FALSE keeps their
+text, but a cell that cannot be read in this R session stops the
+function with an error. TRUE strips them instead.}
 }
 \value{
-Invisibly, a list with \code{plots} and \code{ggplots}, one
-element per plot made (named by \code{$plot.name}). Each
-\code{plots} element has \code{$cells} - one row per site x time bin:
-\code{$group}, \code{$aru.name}, \code{$bin}, \code{$bin.start},
-\code{$bin.end}, \code{$passes}, \code{$nights}, \code{$value},
-\code{$value.class} - and \code{$sites} - one row per site:
-\code{$group}, \code{$aru.name}, \code{$nights}, \code{$passes} -
-plus \code{$file} (the saved PNG name) and \code{$settings}.
+Invisibly, a list with \code{$plots} and \code{$ggplots}, one
+element per plot made, named by \code{$plot.name} (\code{"rowN"} when
+blank). Each \code{$plots} element holds:
+\describe{
+\item{\code{$cells}}{One row per site x time bin: \code{$group},
+\code{$aru.name}, \code{$bin} (0 = first bin), \code{$bin.start},
+\code{$bin.end} (HH:MM), \code{$passes}, \code{$nights},
+\code{$value}, \code{$value.class} (factor of class labels).}
+\item{\code{$sites}}{One row per site, in plot order: \code{$group},
+\code{$aru.name}, \code{$nights}, \code{$passes}.}
+\item{\code{$settings}}{List: \code{$time.start}, \code{$time.end},
+\code{$bin.minutes}, \code{$n.bins}, \code{$value.type},
+\code{$bin.breaks}, \code{$bin.colors}, \code{$plot.group},
+\code{$species}, \code{$dates} (first and last night).}
+\item{\code{$file}}{Saved PNG name (\code{NA} when no PNG was saved).}
+}
+\code{$ggplots} holds the ggplot objects (empty when ggplot2 is not
+installed). Files written: one PNG per plot in \code{dir.save}, named
+\verb{<project.name>_<plot.name>_<YYYYMMDD>to<YYYYMMDD>_<YYYYMMDDHHMMSS>.png}
+(first and last monitoring night in the selected data, then a time
+stamp). A \code{Saved:} line is printed per file.
 }
 \description{
 Draws a site-by-time-of-night heat map for one bat species (or several
 pooled): one column per site (\code{$aru.name}), one row per
-\code{bin.minutes} interval of the night (default 20 minutes, 19:00 at
-the bottom to 06:00 at the top), each cell colored by a class of
-passes per monitoring night (default classes 0, 1-10, 11-50, 51-100,
-101-150, >150; 0 is white). Sites can be grouped into labelled blocks
-(e.g. communities), selected sites dropped, and selected sites shown in
-bold. One PNG per row of \code{fig.list} whose \code{$plot.type} is
+\code{bin.minutes} interval of the night (\code{time.start} at the
+bottom, \code{time.end} at the top), each cell colored by a class of
+passes per monitoring night (e.g. 0, 1-10, 11-50, 51-100, 101-150 and
+over 150). Sites can be grouped into labelled blocks (e.g. communities),
+selected sites dropped, and selected sites shown in bold. One PNG is
+saved per \code{fig.list} row whose \code{$plot.type} is
 \code{"heat.site.species"}.
 }
 \details{
-\strong{Added 2026-10-16, per Josh.} Built from the \emph{Otomops
-harrisoni} heat map made for the OLMN (Kajiado) and KA (NKRCP) sites
-from \code{South_North_combined_vetted_1.csv}, with the same settings
-style as the other \code{batz} plot functions (\code{fig.list} +
-\code{aes.default} / \code{$overide.value}). The name follows the
-\code{batz.<family>_<action>.<subject>()} convention as given
-(family \code{plot}, action \code{heat}, subject \code{site.species}).
-
-\strong{fig.list columns.}
-\itemize{
-\item \code{$plot.type} - must be \code{"heat.site.species"}; other
-rows are skipped with a NOTE, so one shared \code{fig.list.csv}
-can hold rows for several plot functions.
-\item \code{$plot.name} - used in the saved file name.
-\item \code{$plot.species} - species to plot, matched to
-\code{data[[spp.id]]} ignoring case and outer spaces. Several
-species are pooled into one plot. Also the plot title.
-\item \code{$plot.group} (optional) - column of \code{data} that groups
+\strong{fig.list columns.} List cells are separated by ";" or ",".
+\describe{
+\item{\code{$plot.type}}{Must be \code{"heat.site.species"}; other rows
+are skipped with a NOTE, so one shared fig.list can hold rows for
+several plot functions. Rows with a blank \code{$plot.type} are
+dropped, and exact duplicate rows are removed.}
+\item{\code{$plot.name}}{Used in the file name and as the list name.}
+\item{\code{$plot.species}}{Species to plot, matched to
+\code{data[[spp.id]]} ignoring case and outer spaces. Several species
+are pooled into one plot; the title joins them with " + ". Blank
+stops with an error; species not found give a NOTE.}
+\item{\code{$plot.group}}{Optional. Column of \code{data} that groups
 sites into blocks (e.g. \code{"community"}). Blank or absent = one
-block of sites, no headings.
-\item \code{$plot.set} - which sites to include: values of
-\code{$plot.group} when it is given (e.g. \code{"OLMN;KA"} = every
-site in those communities), otherwise \code{$aru.name} values.
-Blank = every site. Blocks are drawn in \code{$plot.set} order.
-\item \code{$group.labels} (optional) - headings for the blocks, as
+block, no headings. A site with more than one value uses the first
+one (NOTE).}
+\item{\code{$plot.set}}{Sites to include: values of \code{$plot.group}
+when it is given (e.g. \code{"OLMN;KA"}), otherwise \code{$aru.name}
+values. Blocks are drawn in \code{$plot.set} order. Values not found
+give a NOTE. Blank = every site (blocks sorted).}
+\item{\code{$group.labels}}{Optional. Block headings as
 \code{"value=label"} pairs, e.g. \code{"OLMN=Kajiado;KA=NKRCP"}. A
-block without a label uses its own value.
-\item \code{$site.exclude} (optional) - sites (\code{$aru.name}) to
-leave out, e.g. \code{"KABC_06;KABC_07"}.
-\item \code{$site.bold} (optional) - sites whose x-axis name is drawn
-in \code{$site.bold.face} (default bold), e.g. \code{"OLMN3;KA07"}.
-\item \code{$date.start} / \code{$date.end} - monitoring nights to
-include (\code{m/d/Y}, \code{Y-m-d} or \code{m/d/y}). Blank = no
-limit on that side.
-\item \code{$xaxe.title} / \code{$yaxe.title} - axis titles.
+block without a label uses its own value.}
+\item{\code{$site.exclude}}{Optional. Sites (\code{$aru.name}) to leave
+out.}
+\item{\code{$site.bold}}{Optional. Sites whose X-axis name is drawn in
+\code{site.bold.face}.}
+\item{\code{$date.start}, \code{$date.end}}{Monitoring nights to
+include (m/d/Y, Y-m-d, m/d/y or Y/m/d). Blank = no limit on that
+side.}
+\item{\code{$xaxe.title}, \code{$yaxe.title}}{Axis titles.}
 }
+A row that matches no records makes no plot (NOTE).
+
+\strong{Records.} Records with a blank \code{$aru.name} or an unreadable
+\code{groupby.date} are dropped (NOTE). Records with no readable time
+count toward monitoring nights but are not plotted (NOTE).
 
 \strong{Time bins.} Each record's clock time is placed in a
-\code{bin.minutes} bin counted from \code{time.start}; the window runs
-to \code{time.end} and may cross midnight. Records outside the window
-are not plotted (they still count toward monitoring nights). The y axis
-runs from \code{time.start} at the bottom to \code{time.end} at the
-top, labelled every \code{yaxe.break.hours}.
+\code{bin.minutes} bin counted from \code{time.start}. The window runs to
+\code{time.end} and may cross midnight; equal start and end give 24
+hours. Passes outside the window are not plotted (NOTE) but their
+records still count toward monitoring nights. The Y axis is labelled
+every \code{yaxe.break.hours}.
 
-\strong{Cell values.} With \code{value.type = "mean.night"} (default)
-a cell is the site's passes in that bin divided by the site's
-monitoring nights: the number of unique \code{groupby.date} values for
-that site among ALL records (any species) inside the date window - the
-same effort definition as \code{\link{batz.generate_plotframe.conservancyrate}}.
-A night when a detector ran but saved no files is not in the data, so it
-is not counted. With one night per site the mean equals the total.
-\code{value.type = "total"} plots raw counts. Every site x bin cell is
-drawn, so a bin with no passes shows as 0 (white) - an empty cell means
-none were detected.
+\strong{Cell values.} With \code{value.type = "mean.night"} a cell is
+the site's passes in that bin divided by the site's monitoring nights:
+the number of unique \code{groupby.date} values for that site among all
+records (any species) inside the date window. A night when a detector
+ran but saved no files is not in the data, so it is not counted.
+\code{value.type = "total"} plots raw counts. Other values stop with an
+error. Every site x bin cell is drawn, so a bin with no passes shows as
+class 0.
 
-\strong{Color classes.} \code{bin.breaks} (default \code{10;50;100;150})
+\strong{Color classes.} \code{bin.breaks} (e.g. \code{10;50;100;150})
 are the upper edges of the classes after 0: 0, (0,10], (10,50],
 (50,100], (100,150], >150, labelled 0, 1-10, 11-50, 51-100, 101-150,
-\code{>150}. A fractional mean (e.g. 0.33 with three nights) falls in 1-10.
-Every class is shown in the legend even when no cell uses it.
-\code{bin.colors} needs one color per class (\code{bin.breaks} + 2);
-if the count is wrong a NOTE is printed and a white + viridis set is
-used instead.
+\code{>150}. A fractional mean (e.g. 0.33) falls in 1-10. Every class is
+shown in the legend even when no cell uses it. \code{bin.colors} needs
+one color per class (number of breaks + 2); otherwise a NOTE is printed
+and white + viridis colors are used. \code{legend.title} may contain
+\code{<bin.minutes>}, which is replaced by the bin length.
 
 \strong{Site order.} Within each block, sites are sorted by the text
-before their number, then by the number (OLMN3, OLMN7, OLMN13 ... ,
-KA01, KA02 ...).
+before their number, then by the number (OLMN3, OLMN7, OLMN13, then
+KA01, KA02). Blocks are separated by a line (\code{group.divider.color},
+\code{group.divider.linewidth}).
 
-\strong{File name.} \code{"<project.name>_<plot.name>_<daterange>_<timestamp>.png"},
-\code{<daterange>} = first and last monitoring night plotted
-(\code{YYYYMMDDtoYYYYMMDD}), \code{<timestamp>} = \code{YYYYMMDDHHMMSS}
-\itemize{
-\item the same pattern as \code{\link{batz.plotsm4_heatmap}}. Each saved name
-is printed.
-}
+\strong{plotopts (aes.default).} These \code{$parameter} rows must exist,
+or the function stops listing the missing ones: \code{time.start},
+\code{time.end} (HH:MM), \code{bin.minutes}, \code{yaxe.break.hours},
+\code{value.type}, \code{bin.breaks}, \code{bin.colors},
+\code{legend.title}, \code{legend.position}, \code{legend.nrow},
+\code{tile.color}, \code{tile.linewidth}, \code{site.bold.face} (bold,
+italic, bold.italic or plain; others give bold),
+\code{xaxe.text.angle}, \code{group.divider.color},
+\code{group.divider.linewidth}, \code{strip.text.size},
+\code{plot.title.size}, \code{plot.title.face}, \code{plot.title.hjust},
+\code{axis.title.size}, \code{axis.text.size}, \code{legend.text.size},
+\code{legend.title.size}, \code{ggsave.dpi}, \code{ggsave.units},
+\code{ggsave.width.pad}, \code{ggsave.height.pad}, \code{plot.width},
+\code{plot.height}. A numeric setting that is not a number stops with an
+error. The PNG size is \code{plot.width} + \code{ggsave.width.pad} by
+\code{plot.height} + \code{ggsave.height.pad}, in \code{ggsave.units},
+at \code{ggsave.dpi}, on a white background.
+
+If ggplot2 is not installed, only the prepared data is returned.
 }
 \examples{
 \dontrun{
@@ -194,4 +216,8 @@ res$ggplots[[1]]
 head(res$plots[[1]]$cells)
 }
 
+}
+\seealso{
+\code{\link{batz.plot_bar.bat.group}},
+\code{\link{batz.generate_plotopts}}
 }

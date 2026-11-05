@@ -5,16 +5,18 @@
 #' number of sites where the species was detected (right axis), with a
 #' narrow black bar for passes per monitoring night (left axis, log
 #' scale). Communities can be split into labelled panels (e.g. by
-#' \code{$project}: Kajiado / NKRCP). The input is the table made by
-#' \code{\link{batz.generate_plotframe.bat.group}}. One PNG per row of
-#' \code{fig.list} whose \code{$plot.type} is \code{"bar.bat.group"}.
+#' \code{$project}). The input is the table made by
+#' \code{\link{batz.generate_plotframe.bat.group}}. One PNG is saved per
+#' \code{fig.list} row whose \code{$plot.type} is \code{"bar.bat.group"}.
 #'
-#' @param data Data frame from \code{\link{batz.generate_plotframe.bat.group}}
-#'   (dot or snake_case headers). Must have \code{$year}, \code{$community},
-#'   \code{$species}, \code{$observation_count}, \code{$sites_sampled},
+#' @param data Data frame from \code{\link{batz.generate_plotframe.bat.group}}.
+#'   Headers are matched ignoring case and "." / "_" / space differences.
+#'   Required columns: \code{$year}, \code{$community}, \code{$species},
+#'   \code{$observation_count}, \code{$sites_sampled},
 #'   \code{$sites_detected}, \code{$date.monitoringnight_sampled},
-#'   \code{$date.monitoringnight_detected}, \code{$project}. Every column
-#'   named in a fig.list row's \code{$plot.group} must also exist.
+#'   \code{$date.monitoringnight_detected}, \code{$project}. A column named
+#'   in a fig.list row's \code{$plot.group} must also exist, or that row is
+#'   skipped (NOTE).
 #' @param fig.list Data frame, one row per plot. Required columns:
 #'   \code{$plot.type}, \code{$plot.name}, \code{$plot.species},
 #'   \code{$plot.set}, \code{$xaxe.title}, \code{$yaxe.title}. Optional:
@@ -22,84 +24,119 @@
 #'   \code{$community.exclude}, \code{$yaxe.title.right}. A row can also
 #'   override any \code{aes.default} parameter with a column of the same
 #'   name. See Details.
-#' @param aes.default Data frame of plot settings - normally
-#'   \code{plotopts_bar.bat.group.csv}. Must have \code{$category},
-#'   \code{$parameter}, \code{$default.value}; \code{$overide.value} and
-#'   \code{$notes} optional.
+#' @param aes.default Data frame of plot settings (plotopts), normally
+#'   \verb{plotopts_bar.bat.group.csv}. Required columns: \code{$category},
+#'   \code{$parameter}, \code{$default.value}. The custom style column
+#'   (named by \code{aes.style}) and \code{$notes} are optional. See
+#'   "plotopts" in Details.
 #' @param project.name Character, default \code{"new.project"}. First part
 #'   of each saved file name.
-#' @param aes.style Character, default \code{"overide.value"}. Column of
-#'   \code{aes.default} checked first for each parameter, falling back to
-#'   \code{$default.value}; a fig.list row's own value wins over both.
+#' @param aes.style Character, default \code{"override.value"}. Name of the
+#'   \code{aes.default} column checked first for each parameter. When that
+#'   column does not exist, or its cell is blank, \code{$default.value} is
+#'   used. With the default, an old \code{$overide.value} column is still
+#'   read when there is no \code{$override.value} column. A non-blank
+#'   fig.list value of the same name wins over both.
 #' @param dir.save Character, default \code{getwd()}. Folder the PNGs are
-#'   saved in.
-#' @param strip.special Logical, default \code{TRUE}. Simplifies accented
-#'   letters and removes other non-ASCII characters in \code{data} (local
-#'   copy only).
-#' @param strip.special.plotopts Logical, default \code{FALSE}. Same for
-#'   \code{fig.list} and \code{aes.default}; \code{FALSE} keeps their text
-#'   and stops with a readable error if a cell can't be read.
+#'   saved in (created if needed).
+#' @param strip.special Logical, default \code{TRUE}. TRUE simplifies
+#'   accented letters and removes other non-ASCII characters in \code{data}
+#'   (local copy only). FALSE leaves them as they are.
+#' @param strip.special.plotopts Logical, default \code{FALSE}. Same
+#'   clean-up for \code{fig.list} and \code{aes.default}. FALSE keeps their
+#'   text, but a cell that cannot be read in this R session stops the
+#'   function with an error. TRUE strips them instead.
 #'
-#' @return Invisibly, a list with \code{plots} and \code{ggplots}, one
-#'   element per plot made (named by \code{$plot.name}). Each \code{plots}
-#'   element has \code{$bars} - one row per community: \code{$group},
-#'   \code{$community}, \code{$observation_count}, \code{$sites_sampled},
-#'   \code{$sites_detected}, \code{$date.monitoringnight_sampled},
-#'   \code{$date.monitoringnight_detected}, \code{$passes.per.night},
-#'   \code{$color} - plus \code{$file} (saved PNG name) and \code{$settings}.
+#' @return Invisibly, a list with \code{$plots} and \code{$ggplots}, one
+#'   element per plot made, named by \code{$plot.name} (\code{"rowN"} when
+#'   blank). Each \code{$plots} element holds:
+#'   \describe{
+#'     \item{\code{$bars}}{One row per community: \code{$group},
+#'       \code{$community}, \code{$observation_count}, \code{$sites_sampled},
+#'       \code{$sites_detected}, \code{$date.monitoringnight_sampled},
+#'       \code{$date.monitoringnight_detected}, \code{$passes.per.night},
+#'       \code{$color}.}
+#'     \item{\code{$settings}}{List: \code{$species}, \code{$year},
+#'       \code{$plot.group}, \code{$passes.per}, \code{$yaxe.left.breaks},
+#'       \code{$yaxe.right.breaks}, \code{$right.to.left} (scale factor from
+#'       right-axis to left-axis units).}
+#'     \item{\code{$file}}{Saved PNG name (\code{NA} when no PNG was saved).}
+#'   }
+#'   \code{$ggplots} holds the ggplot objects (empty when ggplot2 is not
+#'   installed). Files written: one PNG per plot in \code{dir.save}, named
+#'   \verb{<project.name>_<plot.name>_<year>_<YYYYMMDDHHMMSS>.png}.
 #'
 #' @details
-#' \strong{Added 2026-10-21, per Josh.} Built from the \emph{Otomops
-#' harrisoni} community bar plot (Kajiado and NKRCP panels) made in an
-#' earlier chat, whose plotting code was never saved. The heights were
-#' checked against that image: the black bars are
-#' \code{$observation_count / $date.monitoringnight_sampled} for
-#' \code{$year = "all"} (e.g. OLMN 1924 / 7 = 275, KA 1629 / 13 = 125), the
-#' pale bars \code{$sites_sampled} and the solid bars
-#' \code{$sites_detected}. The default community colors are the ones read
-#' off that image (ColorBrewer Paired for the Kajiado communities, Dark2
-#' for NKRCP).
-#'
-#' \strong{fig.list columns.}
-#' \itemize{
-#'   \item \code{$plot.type} - must be \code{"bar.bat.group"}; other rows
-#'     are skipped with a NOTE.
-#'   \item \code{$plot.name} - used in the saved file name.
-#'   \item \code{$plot.species} - species to plot (one), matched to
-#'     \code{$species} ignoring case. Also the plot title.
-#'   \item \code{$plot.year} (optional) - \code{$year} value to plot;
-#'     blank = \code{"all"} (all years pooled).
-#'   \item \code{$plot.group} (optional) - column that splits communities
-#'     into panels, e.g. \code{"project"}. Blank = one panel.
-#'   \item \code{$plot.set} - which panels to include, as values of
+#' \strong{fig.list columns.} List cells are separated by ";" or ",".
+#' \describe{
+#'   \item{\code{$plot.type}}{Must be \code{"bar.bat.group"}; other rows are
+#'     skipped with a NOTE. Rows with a blank \code{$plot.type} are dropped,
+#'     and exact duplicate rows are removed.}
+#'   \item{\code{$plot.name}}{Used in the file name and as the list name.}
+#'   \item{\code{$plot.species}}{Exactly one species, matched to
+#'     \code{$species} ignoring case (otherwise an error). Also the plot
+#'     title.}
+#'   \item{\code{$plot.year}}{Optional. \code{$year} value to plot; blank =
+#'     \code{"all"} (all years pooled).}
+#'   \item{\code{$plot.group}}{Optional. Column that splits communities into
+#'     panels, e.g. \code{"project"}. Blank = one panel.}
+#'   \item{\code{$plot.set}}{Panels to include, as values of
 #'     \code{$plot.group} (e.g. \code{"South;North"}), drawn in this order;
-#'     without \code{$plot.group}, a list of communities. Blank = all.
-#'   \item \code{$group.labels} (optional) - panel headings,
-#'     \code{"South=Kajiado;North=NKRCP"}.
-#'   \item \code{$community.exclude} (optional) - communities to leave out.
-#'   \item \code{$xaxe.title}, \code{$yaxe.title} - axis titles (left axis);
-#'     \code{$yaxe.title.right} (optional, default
-#'     \code{"Number of Sites"}) for the right axis.
+#'     without \code{$plot.group}, a list of communities. Values not found
+#'     give a NOTE. Blank = all (panels sorted).}
+#'   \item{\code{$group.labels}}{Optional. Panel headings, e.g.
+#'     \code{"South=Kajiado;North=NKRCP"}. Unlisted panels keep their value.}
+#'   \item{\code{$community.exclude}}{Optional. Communities to leave out.}
+#'   \item{\code{$xaxe.title}, \code{$yaxe.title}}{X-axis and left-axis
+#'     titles.}
+#'   \item{\code{$yaxe.title.right}}{Optional. Right-axis title; blank =
+#'     \code{"Number of Sites"}.}
 #' }
-#' List cells are separated by \code{";"} or \code{","}.
+#' A row with no data for its species and year, or no communities left after
+#' \code{$plot.set} / \code{$community.exclude}, makes no plot (NOTE).
+#'
+#' \strong{Bars.} Rows of the same community within a panel are summed.
+#' Communities are sorted alphabetically within each panel. The black bar is
+#' \code{$observation_count} divided by monitoring nights: with
+#' \code{passes.per = "sampled"} by \code{$date.monitoringnight_sampled}
+#' (all site-nights in the community), with \code{"detected"} by
+#' \code{$date.monitoringnight_detected} (only site-nights with the
+#' species). Other values stop with an error. A community with 0 passes has
+#' no black bar.
 #'
 #' \strong{Axes.} The left axis is \code{log1p}-scaled (so 0 can be shown)
-#' with breaks \code{yaxe.left.breaks} (default 0, 4, 20, 80, 400). The
-#' right axis is linear with breaks \code{yaxe.right.breaks}. The two are
-#' lined up so that the top left break and the top right break sit at the
-#' same height; data above either is still drawn (the axis extends).
-#' \code{passes.per} chooses the black-bar denominator: \code{"sampled"}
-#' (default, all site-nights in the community) or \code{"detected"}
-#' (only site-nights with the species). A community with 0 passes has no
-#' black bar.
+#' with breaks \code{yaxe.left.breaks}. The right axis is linear with breaks
+#' \code{yaxe.right.breaks}. The two are lined up so the top left break and
+#' the top right break sit at the same height; data above either is still
+#' drawn (the axis extends).
 #'
 #' \strong{Colors.} \code{community.colors} is a list of
-#' \code{community=#hex} pairs; a community not in the list gets a color
-#' from \code{grDevices::hcl.colors(, "Dark 3")} and a NOTE. The pale bar
+#' \code{community=#hex} pairs. A community not in the list gets a color
+#' from \code{grDevices::hcl.colors(n, "Dark 3")} and a NOTE. The pale bar
 #' uses the same color at \code{sampled.alpha}.
 #'
-#' \strong{File name.} \code{"<project.name>_<plot.name>_<year>_<timestamp>.png"},
-#' timestamp \code{YYYYMMDDHHMMSS}.
+#' \strong{plotopts (aes.default).} These \code{$parameter} rows must exist,
+#' or the function stops listing the missing ones: \code{passes.per},
+#' \code{yaxe.left.breaks}, \code{yaxe.right.breaks},
+#' \code{community.colors}, \code{sampled.alpha}, \code{bar.width},
+#' \code{passes.bar.width}, \code{passes.bar.color},
+#' \code{bar.outline.color}, \code{bar.outline.linewidth},
+#' \code{passes.legend.label}, \code{community.legend.title},
+#' \code{legend.position}, \code{legend.nrow}, \code{strip.fill},
+#' \code{strip.text.size}, \code{plot.title.size}, \code{plot.title.face}
+#' (plain, bold, italic or bold.italic; others give plain),
+#' \code{plot.title.hjust}, \code{axis.title.size}, \code{axis.text.size},
+#' \code{legend.text.size}, \code{legend.title.size}, \code{ggsave.dpi},
+#' \code{ggsave.units}, \code{ggsave.width.pad}, \code{ggsave.height.pad},
+#' \code{plot.width}, \code{plot.height}. A numeric setting that is not a
+#' number stops with an error. The PNG size is \code{plot.width} +
+#' \code{ggsave.width.pad} by \code{plot.height} + \code{ggsave.height.pad},
+#' in \code{ggsave.units}, at \code{ggsave.dpi}, on a white background.
+#'
+#' If ggplot2 is not installed, only the prepared data is returned.
+#'
+#' @seealso \code{\link{batz.generate_plotframe.bat.group}},
+#'   \code{\link{batz.generate_plotopts}}
 #'
 #' @examples
 #' \dontrun{
@@ -108,14 +145,15 @@
 #'                                           write.output = FALSE)
 #' fig.list <- read.csv("fig.list_bar.bat.group.csv", check.names = FALSE)
 #' plotopts <- read.csv("plotopts_bar.bat.group.csv", check.names = FALSE)
-#' res <- batz.plot_bar.bat.group(plfr, fig.list, plotopts, project.name = "south.north")
+#' res <- batz.plot_bar.bat.group(plfr, fig.list, plotopts,
+#'                                project.name = "south.north")
 #' res$plots[[1]]$bars
 #' }
 #'
 #' @export
 batz.plot_bar.bat.group <- function(data, fig.list, aes.default,
                                     project.name = "new.project",
-                                    aes.style = "overide.value",
+                                    aes.style = "override.value",
                                     dir.save = getwd(),
                                     strip.special = TRUE,
                                     strip.special.plotopts = FALSE) {
@@ -168,7 +206,7 @@ batz.plot_bar.bat.group <- function(data, fig.list, aes.default,
   problems <- c(missing.msg(data.canon, "data"), missing.msg(fig.canon, "fig.list"),
                 missing.msg(aes.canon, "aes.default"))
   if ("parameter" %in% names(aes.canon$df)) {
-    miss.par <- setdiff(AES.DEFAULT.REQUIRED.PARAMETERS, trimws(aes.canon$df$parameter))
+    miss.par <- AES.DEFAULT.REQUIRED.PARAMETERS[!plotutil_param_key(AES.DEFAULT.REQUIRED.PARAMETERS) %in% plotutil_param_key(aes.canon$df$parameter)]
     if (length(miss.par) > 0) problems <- c(problems, sprintf(
       "aes.default is missing these required $parameter rows: %s - it may be an older copy of plotopts_bar.bat.group.csv",
       paste(miss.par, collapse = ", ")))
@@ -187,11 +225,11 @@ batz.plot_bar.bat.group <- function(data, fig.list, aes.default,
   }
   key <- function(v) tolower(trimws(as.character(v)))
   get.default <- function(param) {
-    i <- which(trimws(aes.default$parameter) == param)[1]
+    i <- which(plotutil_param_key(aes.default$parameter) == plotutil_param_key(param))[1]
     if (is.na(i)) return("")
     val <- as.character(aes.default$default.value[i])
-    if (aes.style %in% names(aes.default)) {
-      ov <- aes.default[[aes.style]][i]
+    if (!is.na(aes.col <- plotutil_aes_style_col(aes.default, aes.style))) {
+      ov <- aes.default[[aes.col]][i]
       if (!blank(ov)) val <- as.character(ov)
     }
     if (is.na(val)) "" else val

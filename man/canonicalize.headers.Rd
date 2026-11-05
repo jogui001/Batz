@@ -8,77 +8,47 @@
 canonicalize.headers(df, required)
 }
 \arguments{
-\item{df}{A data frame to canonicalize.}
+\item{df}{A data frame.}
 
 \item{required}{Character vector of header names, in the calling
-function's own canonical style (e.g. dot-separated), that \code{df}
-is expected to have.}
+function's own spelling (e.g. dot-separated), that \code{df} should have.}
 }
 \value{
-A list with \code{df} (a copy of \code{df} with every matched
-column renamed to its own \code{required} spelling) and \code{missing}
-(the subset of \code{required}, in \code{required}'s own original
-spelling, with no match at all in \code{names(df)} - ready to print in
-an error message).
+A list with \code{$df} (\code{df} with every matched column renamed
+to its \code{required} spelling) and \code{$missing} (the entries of
+\code{required}, in their own spelling, with no match in \code{names(df)}).
 }
 \description{
-\strong{Added 2026-09-21, per Josh, to fix a real header-matching bug:}
-several \code{batz} functions (\code{\link{batz.generate_plotframe.bat}},
-\code{\link{batz.plotdetections_first.last}},
-\code{\link{batz.plotactivity_observations}}) deliberately do NOT run
-\code{standardize.headers()} on their \code{data}/\code{fig.list}/
-\code{suntimes}/\code{aes.default} inputs, because those inputs are
-expected to already be an upstream \code{batz} function's own
-already-established (dot-separated) output schema, not raw file
-headers - see each function's own \code{@details}, "Header
-standardization". In practice, though, whatever a caller actually hands
-one of these functions may have passed back through a loading/reload
-step somewhere in between (a save-to-CSV-and-reload, for instance) that
-DOES run \code{standardize.headers()} on its own raw headers - at which
-point a column the function expects to find as \code{"date.mon"} might
-actually arrive as \code{"date_mon"}, and a literal \code{setdiff()}
-against the function's own dot-separated required-header list reports
-it (and everything else that differs only in separator style) as
-entirely missing, even though the data is really all there.
+Matches the columns of \code{df} to a list of required header names while
+treating \code{"."}, \code{"_"}, spaces and case as equivalent, renames each
+matched column to its \code{required} spelling, and reports what is missing.
 }
 \details{
-\code{canonicalize.headers()} fixes this by standardizing BOTH sides
-(the incoming data frame's own headers, and the \code{required} list
-this function is looking for) to the same snake_case key purely to
-MATCH columns up - never to decide what anything is actually called
-afterward. Every column of \code{df} that matches one of \code{required}
-(after standardizing both) is renamed, in the copy returned here only,
-to that item's own \code{required} spelling (e.g. always
-\code{"date.mon"}, never \code{"date_mon"}, regardless of which style
-the column arrived in) - so the rest of the calling function keeps
-working exactly as before, referencing its usual dot-separated column
-names, and the function's return value/on-disk output keeps its usual
-naming convention completely unaffected by this. This never touches the
-caller's own object: \code{df} is this call's own local copy (R's
-ordinary copy-on-modify semantics for a function argument), and nothing
-in this helper writes anything back to the caller's environment. A
-column of \code{df} that isn't named in \code{required} is left exactly
-as it was, untouched.
+Both \code{names(df)} and \code{required} are passed through
+\code{\link{standardize.headers}} only to match them; the standardized form
+is never used as a column name. A column that matches is renamed to the
+\code{required} spelling (e.g. \code{"date_mon"} becomes \code{"date.mon"}),
+so the calling function can use its usual names. Columns not named in
+\code{required} are left unchanged. Only the local copy of \code{df} is
+changed.
 
-\strong{Follow-up, 2026-09-28, per Josh: this is also now the shared
-mechanism used package-wide whenever a required-header check needs to
-treat \code{"."} and \code{"_"} as equivalent} - see
-\code{\link{batz.generate_suntimes.arulist}}'s own \code{@details},
-"Follow-up, 2026-09-28", for the first function switched over to it for
-this specific purpose.
+\strong{Corrected spellings.} Headers whose spelling was corrected
+(\code{schedual1} to \code{schedule1}, \code{schedual2} to \code{schedule2})
+are matched under either spelling: a column with the old spelling counts as
+the corrected header when the corrected one is not already present.
 
-\strong{Spelling corrections, 2026-10-28, per Josh.} Headers listed in
-\code{headers.corrected()} (\code{schedual1} -> \code{schedule1},
-\code{schedual2} -> \code{schedule2}) are matched under either
-spelling: a column with the old spelling counts as the corrected header
-(and is renamed to it) when the corrected one isn't already there.
+Used by the plot, plot-frame and summary functions, e.g.
+\code{\link{batz.generate_plotframe.bat}},
+\code{\link{batz.plotactivity_observations}},
+\code{\link{batz.plotdetections_first.last}} and
+\code{\link{batz.generate_suntimes.arulist}}.
 }
 \examples{
 \dontrun{
 df <- data.frame(date_mon = "1", spp_id = "epfu", obs = 1)
 canonicalize.headers(df, c("date.mon", "spp.id", "obs", "vetting.type"))
-# $df has columns date.mon/spp.id/obs (renamed from date_mon/spp_id/obs)
-# $missing is "vetting.type" (genuinely absent either way)
+# $df has columns date.mon, spp.id, obs
+# $missing is "vetting.type"
 }
 
 }

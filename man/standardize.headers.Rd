@@ -2,41 +2,33 @@
 % Please edit documentation in R/batz.util_standardize.headers.R
 \name{standardize.headers}
 \alias{standardize.headers}
-\title{Standardize a vector of header/column names (internal helper)}
+\title{Standardize a vector of header names (internal helper)}
 \usage{
 standardize.headers(x)
 }
 \arguments{
-\item{x}{Character vector (or coercible) of header/column names to
-standardize.}
+\item{x}{Character vector (or something coercible to one) of header names.}
 }
 \value{
 A character vector the same length as \code{x}, in snake_case.
 }
 \description{
-Trims leading/trailing whitespace, collapses every run of one or more
-non-alphanumeric characters (spaces, punctuation, symbols) into a single
-underscore, then lowercases the result - i.e. converts to snake_case.
-Used by every \code{batz} function that loads a file or accepts an
-externally-supplied data frame, to standardize incoming headers before
-any matching/selecting/renaming happens (per project preference, added
-2026-09-14 - see \code{preferences.md}, "Header standardization").
+Converts header names to snake_case so incoming headers can be matched
+regardless of spacing, punctuation or case. Used by \code{batz} functions
+that load files or accept outside data frames, before any matching,
+selecting or renaming.
 }
 \details{
-Not exported - this is a package-internal utility shared across
-\code{batz} functions. All functions in a package's \code{R/} folder are
-loaded together, so any function in this package can call
-\code{standardize.headers()} directly without qualification, the same
-way several \code{batz} functions already call each other (e.g.
-\code{batz.merge_vetted.acoustics2()} calls
-\code{\link{batz.datawrangler_rename}} and
-\code{\link{batz.batusa_recode.names}}).
-
-\strong{Substitutes} (never deletes) each non-alphanumeric run with a
-single underscore, so \code{"Project Code"} becomes
-\code{"project_code"} (the word boundary is preserved as an underscore),
-not \code{"projectcode"} - deleting instead of substituting would glue
-adjacent words together and defeat the point of "snake_case".
+Steps, in order:
+\itemize{
+\item trim leading and trailing whitespace;
+\item replace every run of non-alphanumeric characters (spaces,
+punctuation, symbols, including \code{"."}) with one underscore;
+\item drop a leading or trailing underscore;
+\item lower-case the result.
+}
+Word boundaries are kept as underscores, so \code{"Project Code"} becomes
+\code{"project_code"}, not \code{"projectcode"}. Not exported.
 }
 \examples{
 \dontrun{
@@ -44,5 +36,8 @@ standardize.headers(c("Project Code", "  Date of Deployment ", "X", "MIC0 TYPE")
 # -> "project_code"  "date_of_deployment"  "x"  "mic0_type"
 }
 
+}
+\seealso{
+\code{\link{canonicalize.headers}}, \code{\link{snake.headers}}
 }
 \keyword{internal}

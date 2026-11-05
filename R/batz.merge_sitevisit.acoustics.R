@@ -3,19 +3,17 @@
 #' Reads every Survey123 export used for ARU site deployments (habitat
 #' assessment / deployment, quadrant, site maintenance & retrieval forms) and
 #' merges them into one Excel file with standardized (Batz) headers - one tab
-#' per form type (\code{quad}, \code{habitat}, \code{service}). Built
-#' 2026-10-29, per Josh.
+#' per form type (\code{quad}, \code{habitat}, \code{service}).
 #'
 #' @param dir.load Character, default \code{getwd()}. Folder searched for the
 #'   Survey123 export workbooks.
 #' @param load.pattern Character vector of file-name patterns (wildcards
 #'   \code{*} and \code{?}), default \code{c("*SiteMaintenance*Retrieval*.xlsx",
-#'   "*HabitatAssessment*.xlsx", "*deployments*.xlsx")} (2026-10-29: the first
-#'   two match Josh's FY26 export names, e.g.
+#'   "*HabitatAssessment*.xlsx", "*deployments*.xlsx")} (e.g.
 #'   \code{..._SiteMaintenanceRetrieval_Final.xlsx},
 #'   \code{..._HabitatAssessments_Final.xlsx}). A file is read when its name
-#'   matches any of them (case ignored). Excel lock files (\code{~$...}) are
-#'   skipped.
+#'   matches any of them (case ignored) and ends in \code{.xlsx} or
+#'   \code{.xls}. Excel lock files (\code{~$...}) are skipped.
 #' @param dir.sub Logical, default \code{TRUE}. Also search sub-folders of
 #'   \code{dir.load}.
 #' @param form.list \code{NA} (default), the path to a workbook laid out like
@@ -24,14 +22,13 @@
 #'   database \code{Survey123.aruforms_headers.choices} for this run (see
 #'   Details, "Adding forms").
 #' @param dir.save Character, default \code{getwd()}. Folder the merged
-#'   workbook is written to (named \code{dir.save} like the other Batz
-#'   functions - Josh's spec had \code{dir.sav}).
+#'   workbook is written to (created if needed).
 #' @param save.name Character, default \code{"mergedsurvey123.xlsx"}. Name of
-#'   the merged workbook (\code{.xlsx} is added if the name has no
-#'   \code{.xlsx} ending).
+#'   the merged workbook (a name without an \code{.xlsx} ending gets
+#'   \code{.xlsx} in place of its extension).
 #' @param header.combo Character, default \code{c("project.name", "aru.name")}.
-#'   Passed to \code{batz.datawrangler_consolidate.globalID()}: headers whose
-#'   unique combinations define a site (added 2026-10-30, per Josh).
+#'   Passed to \code{\link{batz.datawrangler_consolidate.globalID}}: headers
+#'   whose unique combinations define a site.
 #' @param header.uniqueid Character, default \code{c("globalid")}. Passed to
 #'   \code{batz.datawrangler_consolidate.globalID()}: the unique-ID header.
 #' @param header.dates Character, default \code{c("date.habitat.assessment",
@@ -46,35 +43,39 @@
 #'   \code{$headers.matched}, \code{$headers.not.used}), \code{$headers.db}
 #'   (the \code{Survey123.aruforms_headers.choices} database used, including
 #'   anything added through \code{form.list}) and \code{$file} (the workbook
-#'   written).
+#'   written). The form-type tabs are written to \code{file.path(dir.save,
+#'   save.name)}, and the row count of each tab is printed.
 #'
 #' @details
 #' \strong{Internal database.} \code{Survey123.aruforms_headers.choices} (a
-#' list of data frames, one per tab) holds Josh's \code{Survey123_aruforms all headers.xlsx}: for tabs
-#' \code{quad}, \code{habitat}, \code{service}, the Batz header
-#' (\code{batz.headers}), the tab-qualified header (\code{aru.<tab>_batz.headers},
-#' e.g. \code{aru.quad$aru.name}, since some tabs share a header that different
-#' functions such as \code{batz.generate_aru.appendix()} use at different
-#' times) and one column per form version (e.g. \code{forest_2026},
-#' \code{inland_2026}, \code{service_2026}) giving that version's Survey123
-#' header. Tab \code{Choices}: \code{$list_name}, \code{$name} (the Survey123
-#' code) and \code{$label} (the cleaned-up text). A sheet that already has
-#' Batz headers may use the earlier spellings \code{measurment.units} /
+#' list of data frames, one per tab) holds \code{Survey123_aruforms all
+#' headers.xlsx}: for tabs \code{quad}, \code{habitat}, \code{service}, the
+#' Batz header (\code{batz.headers}), the tab-qualified header
+#' (\code{aru.<tab>_batz.headers}, e.g. \code{aru.quad$aru.name}, since some
+#' tabs share a header that different functions such as
+#' \code{batz.generate_aru.appendix()} use at different times) and one column
+#' per form version (e.g. \code{forest_2026}, \code{inland_2026},
+#' \code{service_2026}) giving that version's Survey123 header. Tab
+#' \code{Choices}: \code{$list_name}, \code{$name} (the Survey123 code) and
+#' \code{$label} (the cleaned-up text). Output Batz headers are lower case
+#' (e.g. \code{objectid}, \code{globalid}, \code{parentglobalid},
+#' \code{vegetation.tree_tree1.dbh}). A sheet that already has Batz headers
+#' may use the old spellings \code{measurment.units} /
 #' \code{microphone.callibration_value} (and the others in
 #' \code{survey123.ref.renamed()}); they are read as the corrected headers.
 #'
 #' \strong{Adding forms (\code{form.list}).} Each tab given is merged into the
 #' database for this run: tabs \code{quad}, \code{habitat}, \code{service} and
-#' \code{Choices} add their versions / choices to the existing ones, and any
-#' other tab becomes a new form type (and a new tab in the output). Every
-#' header tab needs at least three columns: \code{batz.headers},
-#' \code{aru.<tabname>_batz.headers} (any column whose name starts with
-#' \code{aru.} and contains \code{_batz.headers}; it is renamed to
-#' \code{aru.<tabname>_batz.headers}) and one or more form-version
-#' columns. The tab name comes from the sheet / list-element name, else from
-#' the \code{aru.<tab>$} prefix of the tab-qualified headers. A \code{Choices}
-#' tab needs \code{list_name}, \code{name} and \code{label}. The package's own
-#' copy is not changed - send Josh's updated workbook to have it embedded.
+#' \code{Choices} add their versions / choices to the existing ones (a version
+#' already in the database is replaced), and any other tab becomes a new form
+#' type (and a new tab in the output). Every header tab needs at least three
+#' columns: \code{batz.headers}, \code{aru.<tabname>_batz.headers} (any column
+#' whose name starts with \code{aru.} and contains \code{_batz.headers}, case
+#' ignored; it is renamed to \code{aru.<tabname>_batz.headers}) and one or
+#' more form-version columns. The tab name comes from the sheet / list-element
+#' name, else from the \code{aru.<tab>$} prefix of the tab-qualified headers.
+#' A \code{Choices} tab needs \code{list_name}, \code{name} and \code{label}.
+#' The package's own copy is not changed.
 #'
 #' \strong{Steps.}
 #' \enumerate{
@@ -92,18 +93,23 @@
 #'     retire headers). Columns the database doesn't list are not carried
 #'     over; they are named in a NOTE and in \code{$log$headers.not.used}.
 #'     When two Survey123 columns share a Batz header (e.g. \code{Site Name}
-#'     and \code{Specify Other Site} -> \code{aru.name}) the first non-blank
-#'     value is used, and \code{"other"} is replaced by the "specify" value.
+#'     and \code{Specify Other Site} both give \code{aru.name}) the first
+#'     non-blank value is used, and \code{"other"} is replaced by the
+#'     "specify" value.
 #'   \item The sheet's rows are appended to that form type's data frame with
-#'     \code{$form.version} = the version name (e.g. \code{inland_2026}).
-#'   \item One tab per form type is written to \code{file.path(dir.save,
-#'     save.name)} (with the \code{openxlsx} package, else \code{writexl}).
+#'     \code{$form.version} = the version name (e.g. \code{inland_2026}); a
+#'     sheet that already has Batz headers keeps its own \code{$form.version}
+#'     (else \code{"batz.headers"}).
+#'   \item Project names are filled in and the consolidated GlobalID is added
+#'     (below). A column whose type differs between files becomes text.
+#'   \item One tab per form type is written with the \code{openxlsx}
+#'     package, else \code{writexl}.
 #' }
 #' Values are copied as they are; Survey123 codes are not changed to their
 #' Choices labels.
 #'
-#' \strong{Workbooks that can't be opened} (2026-10-30, per Josh). Each file
-#' is checked before it is read, and the run stops with a plain message:
+#' \strong{Workbooks that can't be opened.} Each file is checked before it is
+#' read, and the run stops with a plain message when it is:
 #' \itemize{
 #'   \item open in Excel (its \code{~$} lock file is in the folder, or the
 #'     file can't be read): "<file> is open in another program and cannot be
@@ -116,44 +122,35 @@
 #' A workbook that passes these checks but still can't be unzipped gets the
 #' "open in another program" message plus a note that it may be damaged.
 #'
-#' \strong{Project name from the same file} (2026-10-30, per Josh). Every
-#' tab gets \code{$project.name} (added before \code{$aru.name} where a tab
-#' has none, e.g. \code{quad}). A record with no project name takes it from
-#' a record in another tab (sheet) of the same input file that shares, in
-#' this order: a GlobalID (any header containing "globalid", so a quadrant's
-#' \code{ParentGlobalID} finds its habitat record's \code{GlobalID}), a site
+#' \strong{Project name from the same file.} Every tab gets
+#' \code{$project.name} (added just before \code{$aru.name} where a tab has
+#' none, e.g. \code{quad}). A record with no project name takes it from a
+#' record in another tab (sheet) of the same input file that shares, in this
+#' order: a GlobalID (any header containing "globalid", so a quadrant's
+#' \code{parentglobalid} finds its habitat record's \code{globalid}), a site
 #' (\code{site} / \code{site.name}), or an \code{aru.name}. When several
 #' project names match, the most common is used. Records with no match get
-#' \code{"unknown.check"}, and after processing the run prints
-#' "<n> have no associated project name, the value  "unknown.check"".
-#' This happens before the consolidated GlobalID, so \code{quad} records are
-#' consolidated too.
+#' \code{"unknown.check"}, and the run prints how many there are.
 #'
-#' \strong{Consolidated GlobalID} (2026-10-30, per Josh). After the merge,
+#' \strong{Consolidated GlobalID.} After the merge,
 #' \code{batz.datawrangler_consolidate.globalID()} is run on the merged tabs
-#' with \code{header.combo}, \code{header.uniqueid} and \code{header.dates}:
-#' the GlobalID of each site's earliest record (across all tabs) is added to
-#' every record of that site as \code{$globalid_consolidate}, just after
-#' \code{$globalid}. A tab without all the \code{header.combo} headers (e.g.
-#' \code{quad}, which has no \code{project.name}) is left unchanged (NOTE).
-#' (Since the project-name step above, every tab has \code{project.name}.)
+#' that have rows, with \code{header.combo}, \code{header.uniqueid} and
+#' \code{header.dates}: the GlobalID of each site's earliest record (across
+#' all tabs) is added to every record of that site as
+#' \code{$globalid_consolidate}, just after \code{$globalid}. A tab without all
+#' the \code{header.combo} headers is left unchanged (NOTE).
 #'
-#' \strong{Lower-case headers (2026-11-04, per Josh, Batz_reference_db Header.names).}
-#' Output Batz headers are lower case (e.g. \code{objectid}, \code{globalid},
-#' \code{parentglobalid}, \code{globalid_consolidate},
-#' \code{vegetation.tree_tree1.dbh}); \code{header.uniqueid} defaults to
-#' globalid; \code{form.list} columns are \code{batz.headers} /
-#' \code{aru.<tab>_batz.headers} (the old \code{Batz.headers} spellings are
-#' still accepted).
-#'
-#' \strong{Survey123 field names (2026-11-04, per Josh).} Batz headers for the
-#' Survey123 fields that had no Batz name: \code{tree.1/2/3.average.dbh} ->
+#' \strong{Survey123 field names.} Batz headers for some long Survey123
+#' fields: \code{tree.1/2/3.average.dbh} become
 #' \code{vegetation.tree_tree1/2/3.dbh_average};
-#' \code{identify.the.species.of.the.3.saplings.closest.to.the.center.mic.point.} ->
-#' \code{vegetation.sapling_species};
-#' \code{select.any.equipment.that.needs.to.be.replaced.} -> \code{equipment.replace};
-#' \code{specify.other.equipment.} -> \code{equipment.replace_other};
-#' \code{specify.other.action.performed} -> \code{action.performed_other}.
+#' \code{identify.the.species.of.the.3.saplings.closest.to.the.center.mic.point.}
+#' becomes \code{vegetation.sapling_species};
+#' \code{select.any.equipment.that.needs.to.be.replaced.} becomes
+#' \code{equipment.replace}; \code{specify.other.equipment.} becomes
+#' \code{equipment.replace_other}; \code{specify.other.action.performed}
+#' becomes \code{action.performed_other}.
+#'
+#' @seealso \code{\link{batz.datawrangler_consolidate.globalID}}
 #'
 #' @examples
 #' \dontrun{

@@ -1,13 +1,15 @@
 #' Internal engine shared by the SM log-file merge functions
 #'
-#' Shared by \code{batz.merge_sm4.logfiles()}, \code{batz.merge_sm5.logfiles()}
-#' and \code{batz.merge_sm.logfiles()} (added 2026-09-29, per Josh), so all
-#' three read, identify, convert and log files the same way.
+#' Used by \code{batz.merge_sm4.logfiles()}, \code{batz.merge_sm5.logfiles()}
+#' and \code{batz.merge_sm.logfiles()}, so all three find, read, identify,
+#' convert and log Song Meter summary files the same way.
+#' \code{sm.logfile.schemas()} returns the three known header sets,
+#' \code{sm.logfile.detect.version()} picks the version of one file and
+#' \code{sm.logfile.merge()} does the merge.
 #'
 #' @details
 #' \strong{Version detection.} After \code{standardize.headers()}, each
-#' file's headers are compared with three known header sets
-#' (\code{sm.logfile.schemas()}):
+#' file's headers are compared with the three header sets:
 #' \itemize{
 #'   \item \code{"SM4"}: \code{date, time, lat, ns, lon, ew, power_v,
 #'     temp_c, files, scrubbed, mic0_type}
@@ -22,23 +24,40 @@
 #' set completely is assigned the version whose \emph{distinguishing}
 #' headers it has the most of (SM4: \code{files}/\code{scrubbed}/
 #' \code{mic0_type}; SM5.1.5: \code{fs1files}...\code{scrub2}; SM5.1.6:
-#' \code{acl}/\code{acr}; \code{acfiles} counts toward both SM5 sets) and
-#' fails with "These headers are missing: ..." for that version. No
-#' distinguishing header at all, or a tie, gives \code{"unknown"}.
+#' \code{acl}/\code{acr}; \code{acfiles} only counts when another
+#' distinguishing header of that set is present) and fails with
+#' "These headers are missing: ..." for that version. No distinguishing
+#' header at all, or a tie, gives \code{"unknown"}.
 #'
-#' \strong{Follow-up, 2026-09-30, per Josh - special characters.} Each
-#' file is read with \code{special.read.csv()} (UTF-8, falling back to
-#' Latin-1, so a stray \code{°} can't stop it loading) and, when
-#' \code{strip.special = TRUE}, stripped of non-ASCII characters with
-#' \code{special.strip()} before its headers are checked. Every log row gets
-#' a last column \code{$strip.special}: \code{"FALSE"}, \code{"TRUE NONE"}
-#' or \code{"TRUE ; <header>; ..."} (standardized header names).
-#' \strong{2026-10-02:} accented letters are now simplified (not dropped),
-#' and four count columns follow \code{$strip.special}:
+#' \strong{Loading.} Files are found with \code{list.files()} (glob
+#' \code{load.pattern}, case-insensitive, recursive when \code{dir.sub =
+#' TRUE}). The ARU name is the file name up to the first \code{_}. Each file
+#' is read with \code{special.read.csv()} (UTF-8, falling back to Latin-1)
+#' and, when \code{strip.special = TRUE}, cleaned with \code{special.strip()}
+#' (accented letters simplified, other non-ASCII symbols removed) before its
+#' headers are checked. A file fails (logged, not loaded) when it can't be
+#' read, its version is unknown, its version is not in \code{versions.keep},
+#' headers are missing, or it has no rows.
+#'
+#' \strong{Output columns.} \code{$aru.name}, then the version's headers
+#' with \code{lon} -> \code{$longitude}, \code{power_v} -> \code{$power.v},
+#' \code{temp_c} -> \code{$temperature.c}, \code{mic0_type} ->
+#' \code{$mic0.type}, then \code{$X} (longitude, negative when \code{ew =
+#' "W"}) and \code{$Y} (latitude, negative when \code{ns = "S"}). Dates such
+#' as \code{2026-Jun-05} are converted to \code{2026-06-05}. With
+#' \code{duplicates.remove = TRUE}, exact duplicate rows are dropped per
+#' version.
+#'
+#' \strong{Return.} \code{sm.logfile.merge()} returns \code{list(data, log)}:
+#' \code{data} is a named list with one data frame per version in
+#' \code{versions.keep} (empty data frame when nothing loaded); \code{log}
+#' has one row per file: \code{aru.name, filename, version, date.start,
+#' date.end, date.unique, date.range, records, load.status, reason,
+#' filepath}, then \code{$strip.special} (\code{"FALSE"}, \code{"TRUE NONE"}
+#' or \code{"TRUE ; <header>; ..."}) and the four count columns
 #' \code{$accented.letters.header}, \code{$removed.symbols.header},
-#' \code{$accented.letters.data}, \code{$removed.symbols.data} (unique
-#' values simplified / removed; \code{NA} when \code{strip.special =
-#' FALSE} or the file couldn't be read).
+#' \code{$accented.letters.data}, \code{$removed.symbols.data} (\code{NA}
+#' when \code{strip.special = FALSE} or the file couldn't be read).
 #'
 #' @keywords internal
 #' @noRd
@@ -51,6 +70,8 @@ sm.logfile.schemas <- function() {
   )
 }
 
+#' Identify the SM version of one log file from its standardized headers
+#' ("SM4", "SM5.1.5", "SM5.1.6" or "unknown").
 #' @keywords internal
 #' @noRd
 sm.logfile.detect.version <- function(hdrs) {
@@ -76,6 +97,7 @@ sm.logfile.detect.version <- function(hdrs) {
   names(score)[which.max(score)]
 }
 
+#' Find, read, check and merge SM log files; returns \code{list(data, log)}.
 #' @keywords internal
 #' @noRd
 sm.logfile.merge <- function(dir.load, dir.sub, load.pattern, duplicates.remove,
@@ -185,6 +207,9 @@ sm.logfile.merge <- function(dir.load, dir.sub, load.pattern, duplicates.remove,
 
     output <- expected
     output[output == "lon"] <- "longitude"
+    output[output == "power_v"] <- "power.v"
+    output[output == "temp_c"] <- "temperature.c"
+    output[output == "mic0_type"] <- "mic0.type"
     tmp <- raw[expected]
     names(tmp) <- output
     for (cn in names(tmp)) if (is.character(tmp[[cn]])) tmp[[cn]] <- trimws(tmp[[cn]])

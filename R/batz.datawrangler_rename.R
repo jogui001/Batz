@@ -1,159 +1,88 @@
-#' Quickly rename a set of values (or column headers) using a reference data frame
+#' Recode a set of values (or column headers) using a lookup table
 #'
-#' Recodes every element of a vector, or every element of every column of a
-#' data frame, by looking each value up in a two-column reference table: if
-#' the value is found in the reference table's first column, it is replaced
-#' by the corresponding value in the reference table's second column. Values
-#' with no match are left unchanged. Optionally reports diagnostics on
-#' unmatched input elements and on duplicate keys in the reference table.
-#' Alternatively, set \code{headers.rename = TRUE} to rename column HEADERS
-#' instead of recoding the data frame's contents.
+#' Recodes each value of a vector, or of every column of a data frame, by
+#' looking it up in the first column of a two-column lookup table and
+#' replacing it with the value in the second column. Values with no match are
+#' left unchanged. With \code{headers.rename = TRUE} the column headers are
+#' renamed instead of the contents. Optional console diagnostics report
+#' unmatched values and duplicate keys.
 #'
-#' @param data A vector or a data frame to be recoded. If a data frame is
-#'   supplied and \code{headers.rename = FALSE} (the default), every column
-#'   is recoded against the same \code{recode.table} (there is no
-#'   column-selection argument). If \code{headers.rename = TRUE}, \code{data}
-#'   must be a data frame (a vector has no headers to rename).
-#' @param recode.table A data frame (or tibble) with at least two columns:
-#'   the first column holds the values to search for, the second column
-#'   holds the corresponding replacement values. Columns are read by
-#'   position, not by name, so \code{recode.table} may use any column names.
-#' @param missing.count Logical, default \code{FALSE}. If \code{TRUE}, print
-#'   the number of instances (every occurrence, not just distinct values) in
-#'   \code{data} that had no match anywhere in \code{recode.table}'s first
-#'   column. If there are none, prints \code{"all elements modified"}. When
-#'   \code{headers.rename = TRUE}, this counts unmatched COLUMN HEADERS
-#'   instead of unmatched data values (see \code{headers.rename} below).
-#' @param missing.list Logical, default \code{FALSE}. If \code{TRUE}, print a
-#'   table of each unique unmatched value in \code{data} and how many
-#'   instances of it were found. If there are none, prints
-#'   \code{"all elements modified"}. When \code{headers.rename = TRUE}, this
-#'   lists unmatched COLUMN HEADERS instead of unmatched data values.
+#' @param data A vector or a data frame to recode. For a data frame, every
+#'   column is recoded with the same \code{recode.table}. Must be a data frame
+#'   when \code{headers.rename = TRUE}.
+#' @param recode.table A data frame (or tibble) with at least two columns.
+#'   Column 1 holds the values to find; column 2 holds the replacements.
+#'   Columns are read by position, so any column names work.
+#' @param missing.count Logical, default \code{FALSE}. If \code{TRUE}, prints
+#'   the number of values (every occurrence) with no match in
+#'   \code{recode.table}, or \code{"all elements modified"} if every value
+#'   matched. With \code{headers.rename = TRUE}, counts unmatched column
+#'   headers instead.
+#' @param missing.list Logical, default \code{FALSE}. If \code{TRUE}, prints a
+#'   table of each unique unmatched value and its count (\code{$value},
+#'   \code{$count}), or \code{"all elements modified"}. With
+#'   \code{headers.rename = TRUE}, lists unmatched column headers instead.
 #' @param duplicates.count Logical, default \code{FALSE}. If \code{TRUE},
-#'   print the number of elements in \code{recode.table}'s first column that
-#'   repeat (all instances of any repeated key, not just the extras). If none
-#'   repeat, prints \code{"all reference elements are unique"}. Since
-#'   2026-09-25, two keys that differ only in case (e.g. \code{"Test1"} and
-#'   \code{"test1"}) count as a repeat (see \code{@details}).
+#'   prints the total number of rows in \code{recode.table} whose first-column
+#'   key repeats (all copies counted), or
+#'   \code{"all reference elements are unique"}.
 #' @param duplicates.list Logical, default \code{FALSE}. If \code{TRUE},
-#'   print a table of the name and total count of each element in
-#'   \code{recode.table}'s first column that repeats. If none repeat, prints
-#'   \code{"all reference elements are unique"}. Since 2026-09-25, keys
-#'   differing only in case are grouped together (see \code{@details}).
-#' @param match.first Logical, default \code{TRUE}. When
-#'   \code{recode.table}'s first column has a duplicate key (e.g. it maps
-#'   the same input value to two different replacements), \code{TRUE} uses
-#'   the FIRST matching row's replacement value (matching R's own
-#'   \code{match()} behavior); \code{FALSE} uses the LAST matching row's
-#'   replacement value instead. Since 2026-09-25, "duplicate key" and
-#'   "matching row" are both determined case-insensitively (see
-#'   \code{@details}).
-#' @param headers.rename Logical, default \code{FALSE}. If \code{TRUE}, the
-#'   function does NOT touch the contents of \code{data} at all - instead it
-#'   looks up each of \code{data}'s column HEADERS in \code{recode.table}'s
-#'   first column, and renames any header found there to the matching second-
-#'   column value. Headers with no match in \code{recode.table} are left
-#'   unchanged. Requires \code{data} to be a data frame (errors otherwise).
-#' @param strip.special Logical, default \code{TRUE}. If \code{TRUE},
-#'   simplifies accented letters and
-#'   symbols (\code{é} -> \code{e}, \code{×} -> \code{X}) and removes other non-ASCII special characters (e.g. \code{°}, \code{µ},
-#'   \code{™}) from every data frame input (\code{data}, when
-#'   it is a data frame, and \code{recode.table}) at the start of the call -
-#'   see \code{@details}. A vector \code{data} passes through unchanged.
-#'   Files are always read with a UTF-8/Latin-1 fallback elsewhere in
-#'   \code{batz}, so a stray \code{°} can't stop them loading, whatever this
-#'   is set to (this function itself reads no files).
+#'   prints a table of each repeated key and its count (\code{$value},
+#'   \code{$count}), or \code{"all reference elements are unique"}. The first
+#'   spelling found is shown.
+#' @param match.first Logical, default \code{TRUE}. When a key appears more
+#'   than once in \code{recode.table}, \code{TRUE} uses the first matching
+#'   row's replacement and \code{FALSE} uses the last.
+#' @param headers.rename Logical, default \code{FALSE}. If \code{TRUE}, looks
+#'   up each column header of \code{data} and renames the matched ones; the
+#'   data values are not recoded. Unmatched headers stay as they are. Stops
+#'   with an error if \code{data} is not a data frame.
+#' @param strip.special Logical, default \code{TRUE}. If \code{TRUE}, accented
+#'   letters and common symbols are simplified (accented letters to plain
+#'   letters, the multiplication sign to \code{X}, curly quotes to straight quotes) and other
+#'   non-ASCII characters (e.g. degree, micro and trademark signs) are removed from
+#'   every data frame input (\code{data} when it is a data frame, and
+#'   \code{recode.table}), in values and column names, before matching.
 #'
-#' @return If \code{headers.rename = TRUE}, \code{data} unchanged except for
-#'   its column names. Otherwise: if \code{data} is a data frame, a data
-#'   frame of the same shape and column names, with every value recoded
-#'   (columns are returned as character vectors); if \code{data} is a vector,
-#'   a character vector of the same length, with values recoded. The four
-#'   diagnostic arguments only print to the console - they never change what
-#'   is returned.
+#' @return
+#' \itemize{
+#'   \item \code{headers.rename = TRUE}: \code{data} with renamed column
+#'     headers. Values are not recoded (but may have been cleaned by
+#'     \code{strip.special}).
+#'   \item \code{data} is a data frame: a data frame of the same size and
+#'     column names, every value recoded, every column character.
+#'   \item \code{data} is a vector: a character vector of the same length,
+#'     values recoded.
+#' }
+#' The diagnostic arguments only print to the console; they do not change
+#' what is returned. No files are read or written.
 #'
 #' @details
-#' \strong{Header standardization (per Josh, 2026-09-14 project preference)
-#' - deliberately NOT applied automatically here, flagged for review.} The
-#' project-wide preference is that headers coming from a loaded file or an
-#' externally-supplied data frame are run through \code{standardize.headers()}
-#' (trim whitespace, collapse non-alphanumeric runs to underscores,
-#' lowercase) - but this function's whole job in \code{headers.rename = TRUE}
-#' mode is already an explicit, user-directed header rename, driven by
-#' whatever \code{recode.table} the caller supplies (e.g. \code{"A" ->
-#' "Alpha"}). Auto-standardizing \code{names(data)} before doing that lookup
-#' would actively break it: a raw header like \code{"A"} would already have
-#' become \code{"a"} by the time it's compared against \code{recode.table}'s
-#' literal \code{"A"} entry, so the intended rename would silently fail to
-#' match. For that reason \code{batz.datawrangler_rename()} does NOT run
-#' \code{standardize.headers()} on \code{data} (in either mode) - it is a
-#' generic recode/rename utility that trusts its caller's own
-#' \code{recode.table}, not a file/data-loading step the standardization
-#' preference is aimed at. In practice, headers reaching this function are
-#' typically already standardized upstream (e.g. by
-#' \code{batz.datawrangler_load.files()}, which now standardizes on load -
-#' see its own documentation); if you need standardized headers AND a custom
-#' rename on top, call \code{standardize.headers()} yourself first and build
-#' \code{recode.table}'s first column against the standardized spellings.
+#' \strong{Matching.} Values are compared as text (\code{as.character}) and
+#' letter case is ignored (\code{"Test1"} matches \code{"test1"}). Spaces and
+#' punctuation are not ignored. The replacement is the column 2 value exactly
+#' as written. An unmatched value (or header) is returned unchanged, never
+#' \code{NA}, and never causes an error.
 #'
-#' \strong{Case-insensitive matching against \code{recode.table} (per Josh,
-#' 2026-09-25) - narrower than, and not in conflict with, the header-
-#' standardization note above.} Every comparison this function makes against
-#' \code{recode.table}'s first column - the main value/header recode lookup,
-#' the missing-element diagnostics, and the duplicate-key diagnostics - now
-#' folds case before comparing (\code{"Test1"} in \code{data} now matches a
-#' \code{"test1"} entry in \code{recode.table}, and vice versa). This is
-#' case-folding ONLY: unlike \code{standardize.headers()}, it does not touch
-#' whitespace or punctuation, so it does not reopen the problem described
-#' above - a literal, caller-supplied rename table still means what it says
-#' beyond letter case. The value actually substituted is always
-#' \code{recode.table}'s second-column entry exactly as supplied (its
-#' original casing, never lowercased), matching the pattern already used in
-#' \code{batz.batusa_recode.names()}, \code{batz.batusa_list.species()}, and
-#' \code{batz.treeusa_recode.names()}. One consequence: if
-#' \code{recode.table}'s first column contains two keys that differ only by
-#' case (e.g. \code{"Test1"} and \code{"test1"}), they are now treated as a
-#' duplicate key for \code{match.first}/\code{duplicates.count}/
-#' \code{duplicates.list} purposes, exactly as if they were spelled
-#' identically - this was not previously the case.
+#' \strong{Duplicate keys.} Keys that differ only in case count as the same
+#' key, for \code{match.first} and for the duplicate diagnostics.
 #'
-#' Matching and replacement are done on the character representation of
-#' values (\code{as.character}). A value in \code{data} (or, in
-#' \code{headers.rename} mode, a column header) with no matching entry in
-#' \code{recode.table[[1]]} is left unchanged in the output - it is not set
-#' to \code{NA} and does not raise an error, regardless of whether
-#' \code{missing.count}/\code{missing.list} are on.
+#' \strong{Diagnostics.} For a data frame, \code{missing.count} and
+#' \code{missing.list} look across all columns combined. With
+#' \code{headers.rename = TRUE} they look at the column headers.
 #'
-#' For a data frame input (with \code{headers.rename = FALSE}), the missing-
-#' element diagnostics (\code{missing.count}/\code{missing.list}) are
-#' computed across ALL columns combined, not per column - consistent with how
-#' the recode itself treats every column the same way. With
-#' \code{headers.rename = TRUE}, those same diagnostics instead look at the
-#' column headers themselves (\code{names(data)}), since that's what's being
-#' matched/renamed in that mode.
+#' \strong{Headers are not standardized.} \code{data}'s column names are not
+#' passed through \code{standardize.headers()}, so a header rename matches the
+#' headers as supplied (apart from case). To rename standardized headers, call
+#' \code{standardize.headers()} first and write \code{recode.table} with the
+#' standardized spellings.
 #'
-#' \strong{Follow-up, 2026-09-30, per Josh - special characters.} New last
-#' argument \code{strip.special = TRUE}. At the very start of the call,
-#' \code{data} (if it is a data frame) and \code{recode.table} are passed
-#' through \code{special.strip()}, removing non-ASCII characters (e.g.
-#' \code{°}) from their text columns before any matching, so a lookup key
-#' and a data value that differ only by such a character now match, and
-#' replacement values are substituted without them. Column names are not
-#' changed. Note this means that with \code{headers.rename = TRUE} the
-#' contents of a data-frame \code{data} are also stripped (and any column
-#' that changed is re-typed, e.g. \code{"42.5°"} becomes \code{42.5});
-#' pass \code{strip.special = FALSE} to leave contents exactly as supplied.
-#' A vector \code{data} is NOT stripped, so a vector value containing e.g.
-#' \code{°} will no longer match a \code{recode.table} key that contained
-#' the same character (the key is stripped) - use \code{strip.special =
-#' FALSE} if that matters. No log.
-#'
-#' \strong{Follow-up, 2026-10-02, per Josh - accents simplified.} With
-#' \code{strip.special = TRUE}, accented letters and common symbols are
-#' now simplified instead of dropped (\code{café} -> \code{cafe},
-#' \code{×} -> \code{X}, curly quotes -> straight quotes); characters
-#' with no plain equivalent (e.g. \code{°}, \code{µ}, \code{™}) are still
-#' removed. Column names are cleaned the same way.
+#' \strong{strip.special.} Cleaning happens at the start of the call. A text
+#' column that changed is re-typed (\code{"42.5"} followed by a degree sign becomes 42.5); this also
+#' applies to the contents of \code{data} when \code{headers.rename = TRUE}.
+#' A vector \code{data} is not cleaned, so a vector value containing e.g.
+#' a degree sign will not match a key that contained it (the key is cleaned); use
+#' \code{strip.special = FALSE} if that matters.
 #'
 #' @examples
 #' \dontrun{
@@ -174,10 +103,12 @@
 #' batz.datawrangler_rename("test1", dup.table)                    # "out1"
 #' batz.datawrangler_rename("test1", dup.table, match.first = FALSE) # "coconut"
 #'
-#' # rename column HEADERS instead of recoding values
+#' # rename column headers instead of recoding values
 #' header.table <- data.frame(old = c("A", "B"), new = c("Alpha", "Beta"))
 #' batz.datawrangler_rename(my.dataframe, header.table, headers.rename = TRUE)
 #' }
+#'
+#' @seealso \code{\link{batz.datawrangler_load.files}}
 #'
 #' @export
 batz.datawrangler_rename <- function(data, recode.table,

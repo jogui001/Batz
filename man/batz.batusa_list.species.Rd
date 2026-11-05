@@ -2,7 +2,7 @@
 % Please edit documentation in R/batz.batusa_list.species.R
 \name{batz.batusa_list.species}
 \alias{batz.batusa_list.species}
-\title{List bat species found in given US states/territories, or the states where given bat species are found}
+\title{List bat species in given US states, or the states where given bat species occur}
 \usage{
 batz.batusa_list.species(
   data,
@@ -18,328 +18,134 @@ batz.batusa_list.species(
 )
 }
 \arguments{
-\item{data}{A vector, or a data frame, of bat species identifiers and/or
-US state/territory identifiers, in any mix. A data frame is flattened
-to one combined vector before matching - this function's output is a
-summary table, not an element-wise recode, so (unlike
-\code{batz.batusa_recode.names}) there's no reason to preserve
-\code{data}'s original shape.}
+\item{data}{A vector or data frame of bat species and/or US
+state/territory identifiers, in any mix.}
 
-\item{grammar.dash}{Logical, default \code{TRUE}. Hyphens are ignored
-(treated the same as a space) when MATCHING an input value regardless of
-this flag. This flag only controls OUTPUT labels: \code{TRUE} (default)
-keeps hyphens as written in the reference tables; \code{FALSE} replaces
-every hyphen in an output species/state label with a space instead.}
+\item{grammar.dash}{Logical, default \code{TRUE}. Output labels only:
+\code{TRUE} keeps hyphens as in the reference tables, \code{FALSE}
+replaces them with spaces. Hyphens are always ignored when matching.}
 
-\item{statename.format.out}{Character, default \code{"code2"}. How states are
-labeled in the output: \code{"code2"} (2-letter code), \code{"official.name"},
-or \code{"short.name"}.}
+\item{statename.format.out}{Character, default \code{"code2"}. State label
+in the output: \code{"code2"}, \code{"official.name"} or
+\code{"short.name"}.}
 
-\item{batname.format.out}{Character, default \code{"full"}. How species are
-labeled in the output's \code{"common.name"} field:
-\code{"full"} - \code{"<common name> (<latin name>)<hibernation.strat>"},
-all concatenated with NO separator before \code{hibernation.strat}
-(matches Josh's own model files exactly, cramped join included);
-\code{"both"} - \code{"<common name> (<latin name>)"}, with no
-hibernation.strat suffix; \code{"common"} - common name only;
-\code{"latin"} - latin name only.}
+\item{batname.format.out}{Character, default \code{"full"}. Species label
+in \code{$common.name}: \code{"full"} = \code{"<common> (<latin>)"}
+followed directly (no separator) by the hibernation strategy;
+\code{"both"} = \code{"<common> (<latin>)"}; \code{"common"}; or
+\code{"latin"}.}
 
-\item{bat.code}{Character, default \code{"code4"}. Which code populates
-the separate \code{"species.code"} column: \code{"code4"},
-\code{"code6"}, or \code{"none"} (omits the column entirely).}
+\item{bat.code}{Character, default \code{"code4"}. Code shown in
+\code{$species.code}: \code{"code4"}, \code{"code6"}, or \code{"none"}
+(column left out).}
 
-\item{table.type}{Character, default \code{"state"}. The output table's
-shape:
-\code{"state"} (matches \code{"batlist model1.csv"}) - one row per
-(state, species) PRESENT pair (a species absent from a given state
-simply has no row for that state). Columns, in order: \code{"state"},
-\code{"common.name"}, \code{"species.code"} (if \code{bat.code !=
-  "none"}), \code{"listing.status_federal"}, \code{"state"} (again - see
-Details), \code{"phonic.group"} (if \code{phonic.group = TRUE}).
-\code{"matrix"} (matches \code{"batlist model2.csv"}) - one row per
-requested/implied species, columns \code{"common.name"}, \code{"Species
-  Code"}, \code{"phonic.group"}, \code{"listing.status_federal"}, then one column per
-requested/implied state (named per \code{statename.format.out}), each cell
-per \code{symbol_presence.absence} (see Details).}
+\item{table.type}{Character, default \code{"state"}. \code{"state"} or
+\code{"matrix"}; see Value.}
 
 \item{symbol_presence.absence}{Character vector of length 2, default
-\code{c("*", "-")}. Used for a species that is present in a state but
-not listed there (symbol 1) or absent from a state entirely (symbol
-2). A LISTED species' cell/column shows its listing status instead of
-symbol 1 - see Details.}
+\code{c("*", "-")}: symbol for present-but-not-listed and for absent.
+See Details.}
 
 \item{phonic.group}{Logical, default \code{TRUE}. Adds a
-\code{"phonic.group"} column (one row per species, in both
-\code{table.type} layouts).}
+\code{$phonic.group} column.}
 
-\item{species.extirpated}{Logical, default \code{TRUE}. When \code{TRUE},
-would append \code{"#"} to a status value for any state a species has
-been extirpated from - but the reference database does not yet have an
-extirpation column (per Josh's own note that "this information may not
-be available yet"). If the reference table has no column literally
-named \code{states.extirpated}, this flag has no effect beyond printing
-a one-time notice (not an error).}
+\item{species.extirpated}{Logical, default \code{TRUE}. Appends \code{"#"}
+for extirpated states when the reference table has that information
+(it currently does not; see Details).}
 
-\item{strip.special}{Logical, default \code{TRUE}. If \code{TRUE}, simplifies accented
-letters (\code{é} -> \code{e}) and removes other non-ASCII special
-characters (e.g. \code{°}, \code{µ}) from \code{data} when it is a data frame, before matching - see
-\code{@details}. A plain vector is not stripped. This function reads no
-files.}
+\item{strip.special}{Logical, default \code{TRUE}. Simplify or remove
+special characters in \code{data} when it is a data frame.}
 }
 \value{
-A data frame - one row per (state, species) present pair
-(\code{table.type = "state"}) or one row per species
-(\code{table.type = "matrix"}), with column headers matching Josh's own
-model files literally (not this project's usual \code{$collum.name}
-dot-convention - a deliberate, spec-driven exception) - except for the
-\code{"listing.status_federal"} column (renamed 2026-09-28) and the
-\code{"common.name"} column (renamed 2026-09-29 - see @details below),
-both moved to match this project's usual dot-convention and identically-
-named columns already used elsewhere in this package.
+A data frame (printed WARNING/NOTE lines go to the console;
+nothing is written to disk).
+\describe{
+\item{\code{table.type = "state"}}{One row per state-species pair where
+the species is present. Columns: \code{state}, \code{common.name},
+\code{species.code} (unless \code{bat.code = "none"}),
+\code{listing.status_federal}, \code{state} (a second column with the
+same name, holding the state status), \code{phonic.group} (if
+\code{phonic.group = TRUE}). Stops if no requested species occurs in
+any requested state.}
+\item{\code{table.type = "matrix"}}{One row per species. Columns:
+\code{common.name}, \code{species.code} (unless \code{bat.code =
+    "none"}), \code{phonic.group} (if \code{TRUE}),
+\code{listing.status_federal}, then one column per state, named per
+\code{statename.format.out}, holding the state status.}
+}
 }
 \description{
-Given a vector or data frame containing any mix of bat species identifiers
-(latin name, common name, 4-letter code, 6-letter code) and/or US
+Takes a vector or data frame holding any mix of bat species identifiers
+(latin name, common name, 4-letter or 6-letter code) and US
 state/territory identifiers (official name, short name, 2-letter code),
-returns a table crossing the requested species against the requested
-states, laid out to match Josh's own \code{"batlist model1.csv"}
-(\code{table.type = "state"}) or \code{"batlist model2.csv"}
-(\code{table.type = "matrix"}) template files. If only state identifiers
-are supplied, every species is checked against those states. If only
-species identifiers are supplied, every state/territory is checked for
-that species. If both are supplied, only the specific species x specific
-states combination is returned.
+and returns a table crossing the requested species with the requested
+states, either as one row per state-species pair (\code{table.type =
+"state"}) or as a species x state grid (\code{table.type = "matrix"}).
 }
 \details{
-\strong{Header standardization (per Josh, 2026-09-14 project preference) - does not apply to this function, flagged not silently skipped.} The project-wide preference is that headers coming from a loaded file or an externally-supplied data frame are run through the shared package helper \code{standardize.headers()} (trim whitespace, collapse non-alphanumeric runs to underscores, lowercase). This function has no raw-header step for that preference to attach to: \code{data} is flattened and every element is matched as a VALUE (a species identifier or a state/territory identifier), never as a header - unlike \code{\link{batz.batusa_recode.names}}, this function does not even pass a data frame's column names through to its output (the flattening step, \code{unlist(lapply(data, as.character))}, discards them entirely). The two embedded reference tables' own column names (\code{nabat}'s \code{$latin}/\code{$common}/\code{$code4}/\code{$code6}/\code{$fedstatus}/etc., \code{states}'s \code{$official.name}/\code{$short.name}/\code{$code2}/etc.) are this function's fixed, already-established internal schema - not raw headers copied fresh from a file for this rollout - so neither is run through \code{standardize.headers()}, the same treatment already given to every other \code{batz} function's own output-schema column names. The OUTPUT column headers this function produces (\code{"common.name"}, \code{"species.code"}, \code{"State"}, \code{"listing.status_federal"}, \code{"phonic.group"}, and each requested state's own label in \code{table.type = "matrix"}) are also left untouched by \code{standardize.headers()} - they are a deliberate, spec-driven exception already documented below (matching Josh's own \code{"batlist model1.csv"}/\code{"batlist model2.csv"} template headers literally, including a duplicate \code{"State"} header), and running them through \code{standardize.headers()} would break that literal match.
+\strong{Reference tables.} Species come from the shared bat reference
+table used by \code{\link{batz.batusa_recode.names}} (species rows only;
+category labels such as \code{"HiF"} are skipped). The 56 US
+states/territories (50 states, DC, PR, VI, GU, AS, MP) are embedded in
+the function. No files are read.
 
-(Renamed 2026-08-29, per Josh: \code{presence.absence} ->
-\code{symbol_presence.absence}; \code{statename.format} ->
-\code{statename.format.out}; \code{batname.format} ->
-\code{batname.format.out} - standardizing \code{format}-suffixed
-parameters as \code{.in}/\code{.out} and giving the presence/absence
-symbols argument a clearer name.)
+\strong{Matching.}
+\itemize{
+\item With \code{strip.special = TRUE} and a data frame \code{data},
+accented letters are simplified (e.g. e-acute to \code{e}) and other
+non-ASCII symbols (e.g. degree or micro signs) are removed first. A plain
+vector is not stripped.
+\item A data frame is flattened to one vector; its column names are not
+used.
+\item Every value is compared with both tables (bat: latin, common,
+code4, code6; state: official name, short name, code2), ignoring case,
+extra white space, and treating \code{-} and \code{_} as spaces.
+\item A value matching both tables is treated as a species (a WARNING is
+printed). Values matching neither are listed in a WARNING (first 25
+shown). If nothing matches, the function stops.
+\item If any species matched, only those species are used, otherwise
+all species. Likewise for states. Order follows first appearance in
+\code{data}.
+}
 
-\strong{Rebuilt 2026-08-25 against the real \code{batlist model1.csv} /
-\code{batlist model2.csv} template files}, once Josh granted access to
-the \code{"4 Current  test data"} folder (an earlier same-day version of
-this function had guessed a different, incorrect layout from the prose
-spec alone, before those files were reachable). Confirmed against the
-real templates: \code{table.type = "state"} is one row per
-(state, species) PRESENT pair, not an aggregated per-state list;
-\code{table.type = "matrix"} is one row per species with one column per
-state; \code{batname.format.out = "full"} bakes \code{hibernation.strat}
-directly into the \code{"common.name"} text (called \code{"Bat Species"}
-at the time - see the 2026-09-29 rename entry below); \code{"Species
-Code"} is its own column, not appended onto the species label;
-\code{"Federal"} is always included, abbreviated from \code{$fedstatus}
-(\code{"Not Listed"} -> \code{""}, \code{"Under Review"} -> \code{"UR"},
-\code{"Endangered"} -> \code{"E"}, \code{"Proposed Endangered"} ->
-\code{"PE"}).
+\strong{Cell values} (state status, per species and state):
+\itemize{
+\item \code{"SC"}: the state is in the species' state species-of-concern
+list.
+\item \code{"L"}: the state is in the species' \code{states.listed}
+list (listed, severity not given in the reference table).
+\item \code{symbol_presence.absence[1]}: present, not listed (blank in
+\code{table.type = "state"}, where a row already means present).
+\item \code{symbol_presence.absence[2]}: absent (\code{"matrix"} only;
+\code{"state"} has no row).
+\item \code{"#"} is appended for extirpated states only if the
+reference table has a \code{states.extirpated} column. It does not
+yet, so with \code{species.extirpated = TRUE} a NOTE is printed and no
+marks are added.
+}
 
-\strong{One real gap remains, even with the model files in hand:} both
-models clearly want a per-(species,state) LISTING SEVERITY value (e.g.
-\code{"E"}, \code{"T"}, \code{"SC"}) wherever a species is listed, not
-just a generic symbol - but \code{NAbat.names.csv} only has a flat
-\code{$states.listed} (listed/not, no severity level) and
-\code{$state.soc} (species-of-concern states). This function uses the
-best available proxy: a state in \code{$state.soc} shows \code{"SC"}; a
-state in \code{$states.listed} (and not \code{$state.soc}) shows
-\code{"L"} - a generic placeholder, NOT a real abbreviation from Josh's
-models, standing in for "listed, severity unspecified" until real
-per-state Endangered/Threatened/Special-Concern data is available. A
-state that's neither shows \code{symbol_presence.absence[1]} (matrix) or blank
-(state table.type, where a row already existing implies presence).
-Absent states show \code{symbol_presence.absence[2]} (matrix) or get no row at
-all (state table.type). \strong{If Josh has, or builds, real per-state
-severity data, replace the \code{"L"} placeholder with it.}
-
-Every element of \code{data} is checked against BOTH reference tables
-(bat: \code{latin}/\code{common}/\code{code4}/\code{code6}; state:
-\code{official.name}/\code{short.name}/\code{code2}), ignoring case,
-underscores/dashes (treated as spaces), and leading/trailing/extra
-whitespace. If any element matches the bat reference, ONLY those matched
-species are used (not all 54); otherwise all 54 are used. Symmetrically
-for states (matched subset, or all 56 states/territories). An element
-matching neither reference is reported via \code{"WARNING: X inputs did
-not match either reference table: ..."} (not a literal spec requirement -
-added for consistency with other \code{batz} functions' unmatched-input
-handling). If NOTHING in \code{data} matches either reference table at
-all, that's an error.
-
-The two reference tables (\code{NAbat.names.csv}, 54 species x 15
-columns; \code{NAstates.names.csv}, 56 states/territories x 8 columns -
-confirmed, via a real copy Josh saved into his own
-\code{"reference database files"} folder as \code{"USAstates.names.csv"},
-to be exactly what his spec calls \code{"USAstate.names.database"}) are
-embedded directly in this function - there is no reference-file-path
-argument. To update either list later, replace the corresponding data
-frame inside this function with a fresh \code{dput()} of an updated CSV
-(never hand-retype a wide reference table into R code - generate the
-literal programmatically and splice it in).
-
-\strong{BUGFIX, 2026-09-27, per Josh's request to export the internal
-reference tables to an xlsx workbook - not a runtime error report this
-time, but caught by the same standing safeguard that this project's
-\code{\link{batz.batusa_recode.names}} history already required after
-its own 2026-09-21/2026-09-22 recurrence of this exact bug class:
-\code{stopifnot(all(sapply(<table>, length) == nrow(<table>)))} run
-against every embedded reference table before it ships anywhere.}
-Running that check here for the first time found the embedded
-\code{nabat} table's \code{fedstatus} and \code{states.end} columns each
-one element short (53 instead of 54) - both missing their blank/short
-entry at the same row, \emph{Leptonycteris yerbabuenae} (\code{code4 =
-"leye"}, row 27). \code{structure()} does not validate column lengths at
-creation time, so this shipped silently: it only surfaces once
-\code{nabat[] <- lapply(nabat, function(col) trimws(as.character(col)))}
-runs near the top of the function body, which R's data-frame replacement
-validates against the table's declared 54 rows - and every element from
-\emph{leye} onward in those two columns was silently shifted one row
-early as a result. \strong{This meant every single call to
-\code{batz.batusa_list.species()} was crashing}
-(\code{Error in `[<-.data.frame`(...): replacement element 5 has 53
-rows, need 54}) - reproduced directly before fixing, exactly like the
-\code{batz.batusa_recode.names} incidents. Root-caused by
-cross-checking \code{nabat}'s \code{code4} column (confirmed, position
-by position, to be in the identical species order as
-\code{batz.batusa_recode.names_reference.csv}, itself already verified
-correct) against that file's \code{listing.status_federal} and
-\code{states.endangered} columns to locate exactly where the two short
-vectors diverged. \strong{Fixed} by restoring the missing blank
-\code{"Not Listed"} (\code{fedstatus}) and \code{""} (\code{states.end})
-entries at \emph{leye}'s row. \strong{Verified}: extracted the live
-\code{nabat} table via \code{body(batz.batusa_list.species)}
-introspection (never hand-retyped), confirmed
-\code{all(sapply(nabat, length) == 54)} for every one of its 15
-columns, and re-ran \code{batz.batusa_list.species("epfu")} end to end
-with no error. \strong{Standing safeguard, going forward:} run that same
-\code{stopifnot()} check against \emph{both} embedded tables
-(\code{nabat} and \code{states}) after any future edit to either one,
-before shipping - not only after \code{batz.batusa_recode.names}'s own
-copy of this table. \strong{Superseded 2026-09-29: this fix did not
-catch every affected column - \code{state.soc} had the identical gap at
-the same row and was still missing it; see the 2026-09-29 entry below.}
-
-\strong{Column identifier renamed, 2026-09-28, per Josh: \code{"Federal"}
--> \code{"listing.status_federal"}.} This output column - literally
-named \code{"Federal"} in both \code{table.type} layouts since the
-2026-08-25 rebuild (see above) - had been flagged as a pending rename
-during the 2026-09-27 package-wide column-identifier-renaming round: the
-reference workbook's own \code{Header.names} tab listed this row's
-\code{Change.to} target as \code{"listing status_federal"} (a SPACE,
-not a dot, between \code{"listing"} and \code{"status_federal"}), which
-read as an ambiguous typo rather than a clean identifier, and applying
-it as literally given would also have collided with this same table's
-pre-existing, deliberately-literal duplicate \code{"State"} header (see
-the \code{table.type = "state"} column-order note above) in a way that
-hadn't been confirmed. \strong{Resolved 2026-09-28, per Josh, confirming
-the intended target has a dot, not a space:} \code{Header.names}'
-\code{Change.to} typo is corrected to \code{"listing.status_federal"}
-and the rename is now applied - both \code{table.type} branches'
-\code{out[["Federal"]]}/\code{col.names} construction now produce
-\code{"listing.status_federal"} instead of \code{"Federal"} - matching
-the identical column name already used by
-\code{\link{batz.batusa_recode.names}} and its own
-\code{batz.batusa_recode.names_reference.csv} (see the \code{fedstatus}
-entry in that file's header row). The pre-existing duplicate
-\code{"State"} header (columns 1 and 5 of the \code{table.type =
-"state"} layout) is left completely untouched - Josh's request named
-only the \code{Federal} column, not the \code{State} duplicate, so no
-change was made there; that remains a separate, still-open design note
-from the original 2026-09-27 pending-items list.
-
-\strong{Column identifier renamed, 2026-09-29, per Josh's reference-workbook
-review ("Bat Species" -> "common.name" was flagged as colliding with
-\code{\link{batz.treeusa_recode.names}}'s own \code{common_one} ->
-\code{common.name} pending rename; Josh's follow-up, "These are the same
-things", confirmed this is a single shared, reused identifier - not a
-real naming collision - the same way \code{date.start}/\code{date.end}
-are already reused, with different precise meanings, across several
-sibling functions in this catalog).} This output column - literally
-named \code{"Bat Species"} since the 2026-08-25 rebuild - is renamed to
-\code{"common.name"} in both \code{table.type} layouts
-(\code{out[["Bat Species"]]}/\code{col.names} construction). No other
-behavior changes: the value itself (species common name, optionally with
-latin name/hibernation-strategy suffix per \code{batname.format.out}) is
-unaffected. The reference workbook's two separate pending rows (this
-function's \code{"Bat Species"} and \code{\link{batz.treeusa_recode.names}}'s
-\code{common_one}) are merged into one \code{Header.names} row,
-\code{common.name}, listing both functions.
-
-\strong{BUGFIX, 2026-09-29, found while re-verifying this function end to
-end for the rename above: \code{nabat}'s \code{state.soc} column was ALSO
-one element short (53 instead of 54), missing its blank entry at the same
-row - \emph{Leptonycteris yerbabuenae} (\code{code4 = "leye"}, row 27) -
-already identified as the affected row by the 2026-09-27 \code{fedstatus}/
-\code{states.end} bugfix above (\strong{Superseded 2026-09-29}: that fix
-did not catch every affected column - \code{state.soc} had the identical
-gap and was missed).} Confirmed by the same crash this bug class always
-produces (\code{Error in `[<-.data.frame`(...): replacement element 11
-has 53 rows, need 54}) and by re-deriving \code{state.soc}'s intended
-values positionally once the missing blank was restored: with the gap
-closed, every non-blank entry lines up with a biologically sensible
-species (e.g. \emph{Myotis keenii} (Keen's myotis, a Pacific Northwest/
-Alaska species) now correctly shows \code{"AK,WA"}, where before the gap
-shifted that value onto \emph{Myotis grisescens} (Gray bat), a
-southeastern species with no AK/WA range - clearly wrong).
-\strong{Fixed} by restoring the missing blank entry at \emph{leye}'s row
-(the same row already restored in \code{fedstatus}/\code{states.end}).
-\strong{Verified}: \code{stopifnot(all(sapply(nabat, length) == 54))}
-passes for every one of \code{nabat}'s 15 columns, and
-\code{batz.batusa_list.species("epfu")} and a spot check of
-\code{"myke"}/\code{"mygr"}/\code{"myle"}/\code{"mylu"}/\code{"nyhu"}
-(the rows whose \code{state.soc} values shift with this fix) all ran end
-to end with plausible output.
-
-\strong{Follow-up, 2026-09-30, per Josh - special characters.} New
-argument \code{strip.special} (default \code{TRUE}). When \code{data} is
-a data frame, every non-ASCII character is removed from it (this
-function's local copy only) at the very start of the function, before it
-is flattened and matched, so e.g. \code{"epfu°"} or \code{"Québec"}-style
-stray characters no longer stop a species/state identifier matching.
-When \code{data} is a plain vector it is passed through unchanged (not
-stripped), per the package-wide rule that only data-frame inputs are
-stripped. The embedded \code{nabat}/\code{states} reference tables are
-never stripped (they contain no non-ASCII characters anyway). This
-function reads no files and has no log. Output is unchanged for inputs
-without special characters.
-
-\strong{Follow-up, 2026-10-02, per Josh - accents simplified.} With
-\code{strip.special = TRUE}, accented letters and common symbols are
-now simplified instead of dropped (\code{café} -> \code{cafe},
-\code{×} -> \code{X}, curly quotes -> straight quotes); characters
-with no plain equivalent (e.g. \code{°}, \code{µ}, \code{™}) are still
-removed. Column names are cleaned the same way.
-
-\strong{Follow-up, 2026-10-23, per Josh - shared bat table.} The
-embedded bat table was removed; this function now uses the shared
-\code{bat.names} table (\code{bat.ref.names()},
-\code{R/batz.util_bat.reference.R}) that \code{\link{batz.batusa_recode.names}}
-also uses, species rows only. Checked: output is identical to before. (The
-old embedded copy had used the pre-2026-09-25 column names and differed in
-one cell - Seminole bat \code{states.threatened = "OK"} - which this
-function never reads.)
+\strong{Federal status} (\code{$listing.status_federal}) is abbreviated:
+\code{"Not Listed"} to blank, \code{"Under Review"} to \code{"UR"},
+\code{"Endangered"} to \code{"E"}, \code{"Proposed Endangered"} to
+\code{"PE"}; any other value is kept as written.
 }
 \examples{
 \dontrun{
-# which states have Big brown bat and Little brown bat? (table.type = "state")
+## states where big brown bat and little brown bat occur
 batz.batusa_list.species(c("epfu", "mylu"))
 
-# same species, full species x state grid
+## same species as a species x state grid
 batz.batusa_list.species(c("epfu", "mylu"), table.type = "matrix")
 
-# which species are found in Ohio and Vermont?
+## species found in Ohio and Vermont
 batz.batusa_list.species(c("OH", "VT"))
 
-# a specific species x specific states cross (matches batlist model1/model2's
-# own MA/ME/PA x 9-species test case in structure)
-batz.batusa_list.species(c("epfu", "mylu", "OH", "VT"), table.type = "matrix")
+## given species x given states, full state names, 6-letter codes
+batz.batusa_list.species(c("epfu", "mylu", "OH", "VT"), table.type = "matrix",
+  statename.format.out = "short.name", bat.code = "code6")
 }
 
-\strong{Lower-case headers (2026-11-04, per Josh, Batz_reference_db
-Header.names).} Output headers are lower case with "." for spaces:
-\code{"State"} -> \code{"state"} (both state columns), \code{"Species Code"}
--> \code{"species.code"}, \code{"Phonic Group"} -> \code{"phonic.group"}; the
-embedded \code{states} table column \code{USFWS.Region} -> \code{usfws.region}.
-
+}
+\seealso{
+\code{\link{batz.batusa_recode.names}}
 }

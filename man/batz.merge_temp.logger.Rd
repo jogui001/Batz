@@ -16,322 +16,162 @@ batz.merge_temp.logger(
 )
 }
 \arguments{
-\item{dir.load}{Directory to search for files matching \code{load.pattern}.
-Default: current working directory.}
+\item{dir.load}{Character. Directory to search for files matching
+\code{load.pattern}. Default \code{getwd()}.}
 
 \item{load.pattern}{Character vector of length 2, default
-\code{c("*templog.csv", "*templog.meta.csv")}: the file-name suffix
-patterns (plain wildcard/glob style - \code{"*"} as a leading wildcard,
-everything else literal) that identify, respectively, (1) the raw
-datalogger export files and (2) the station-metadata file(s).}
+\code{c("*templog.csv", "*templog.meta.csv")}. Wildcard (glob) patterns
+for (1) the raw datalogger files and (2) the station-metadata file(s).
+Files matching the second pattern are never treated as raw files.}
 
 \item{dir.sub}{Logical, default \code{FALSE}. If \code{TRUE}, also search
-every subdirectory of \code{dir.load}. \strong{Note:} the real test data
-keeps \code{templog.meta.csv} inside a \code{meta files/} subfolder, so
-with the new \code{FALSE} default that meta file will NOT be found
-unless you explicitly pass \code{dir.sub = TRUE}.}
+every subdirectory of \code{dir.load}. Set it to \code{TRUE} if
+\code{templog.meta.csv} sits in a subfolder (e.g. \code{meta files/}),
+or it will not be found.}
 
-\item{dir.save}{Directory to write \code{templog.merged.csv} and
-\code{templog.notes.csv} into when \code{write.output = TRUE}. Default:
-the current working directory (\code{getwd()}) - set this separately if
-the output should be written somewhere other than where the input
-\verb{*templog.csv} files were loaded from. (Standardized 2026-08-29,
-per Josh: previously defaulted to \code{dir.load}, which silently
-mirrored whatever \code{dir.load} was rather than defaulting to a
-sensible location on its own - the same pattern already fixed as a bug
-in \code{batz.suntimes_generate()}; \code{dir.save} now always
-defaults to \code{getwd()} for consistency across the package.)}
+\item{dir.save}{Character. Directory the two CSVs are written to when
+\code{write.output = TRUE}. Default \code{getwd()}.}
 
-\item{write.output}{If \code{TRUE} (default), also write
-\code{templog.merged.csv} and \code{templog.notes.csv} into
-\code{dir.save} (with \code{$rh} rounded to 3 decimal places in the
-written CSV only). \strong{As of round twenty-two (2026-09-24) these
-two file names are no longer literally \code{"templog.merged.csv"}/
-\code{"templog.notes.csv"} - see \code{@param project.name} below and
-@details, "File naming (round twenty-two)".}}
+\item{write.output}{Logical, default \code{TRUE}. If \code{TRUE}, write
+\code{templog.notes} and \code{templog.merged} to CSV in
+\code{dir.save} (see Value). \code{$rh} is rounded to 3 decimal places
+in the written file only.}
 
-\item{project.name}{Character, default \code{""}. \strong{New in round
-twenty-two (2026-09-24), per Josh's package-wide file-naming request -
-see @details, "File naming (round twenty-two)"; this parameter did not
-exist before this round.} Base project-name token used to build both
-output CSV names when \code{write.output = TRUE}:
-\verb{<project.name>_templog.notes_<daterange>_<timestamp>.csv} and
-\verb{<project.name>_templog.merged_<daterange>_<timestamp>.csv}, where
-\code{<daterange>} is computed from the earliest/latest
-\code{$date.time} in \code{templog.merged} (\code{<DATE1>to<DATE2>},
-\code{\%Y\%m\%d} each, or the literal \code{"nodata"} if none is
-available) and \code{<timestamp>} is \code{format(Sys.time(),
-  "\%Y\%m\%d\%H\%M\%S")}. \code{""} (default) falls back to the literal
-base token \code{"templog"} - a judgment call, please confirm this is
-the right default.}
+\item{project.name}{Character, default \code{""}. First token of both
+output file names. \code{""} uses \code{"templog"}.}
 
-\item{snake_case}{Logical, default \code{FALSE}. Added 2026-09-22, per
-Josh's request to audit and extend the snake_case output option
-package-wide (see \code{\link{batz.generate_plotframe.bat}}, the first
-function this was added to). Controls only \code{templog.merged}'s/
-\code{templog.notes}'s OWN output column names (and, when
-\code{write.output = TRUE}, the columns of the CSVs written to disk),
-applied as the very last step before either is written/returned.
-\code{FALSE} (default) keeps this function's normal dot-separated
-output column names (\code{$date.time}, \code{$temp.dry.c}, ...)
-exactly as always. \code{TRUE} runs every output column name through
-\code{standardize.headers()} instead (e.g. \code{$date.time} ->
-\code{$date_time}, \code{$temp.dry.c} -> \code{$temp_dry_c}) - for a
-caller who specifically wants a snake_case CSV/data frame out of this
-function, without having to convert it themselves afterward.
-\strong{2026-10-30, per Josh:} snake_case now replaces every \code{"."}
-with \code{"_"} and changes nothing else (\code{snake.headers()}), so
-\code{"aru.name"} -> \code{"aru_name"} and \code{"GlobalID"} stays
-\code{"GlobalID"} - matching \code{$name.snake} in the Batz reference db.}
+\item{snake_case}{Logical, default \code{FALSE}. If \code{TRUE}, every
+\code{"."} in the output column names of both tables (and the CSVs) is
+replaced by \code{"_"} (\code{$date.time} -> \code{$date_time}). The
+special-character log columns (\code{$strip.special},
+\code{$accented.letters.header}, ...) keep their names.}
 
-\item{strip.special}{Logical, default \code{TRUE}. If \code{TRUE}, simplifies accented
-letters (\code{é} -> \code{e}) and removes other non-ASCII special
-characters (e.g. \code{°}, \code{µ}) from the data after loading - see \code{@details}. Files are
-always read with a UTF-8/Latin-1 fallback, so a stray \code{°} can't stop
-them loading, whatever this is set to.}
+\item{strip.special}{Logical, default \code{TRUE}. If \code{TRUE},
+accented letters and common symbols are simplified (\code{é} -> \code{e},
+\code{×} -> \code{X}, curly quotes -> straight quotes) and other
+non-ASCII characters (e.g. \code{°}, \code{µ}) are removed, in each
+meta file and raw file right after loading. Files are always read as
+UTF-8 with a Latin-1 fallback, whatever this is set to. Temperature-unit
+detection always uses the original header row, so this never changes
+\code{$temp.type}.}
 }
 \value{
-Invisibly, a list with two data frames:
+Invisibly, a list of two data frames:
 \describe{
-\item{templog.merged}{\code{$observations.count}, \code{$date.time},
-\code{$temp.dry.c}, \code{$temp.wet.c}, \code{$rh},
-\code{$logger.serial}, plus every other column from the matched
-\code{templog.meta.csv} row (standardized names - see "Header
-standardization" above).}
-\item{templog.notes}{\code{$logger.serial}, \code{$date.start},
-\code{$date.end}, \code{$temp.type}, \code{$rows.in},
+\item{templog.merged}{One row per kept record: \code{$observations.count}
+(row number within the file), \code{$date.time} (POSIXct,
+America/New_York), \code{$temp.dry.c}, \code{$temp.wet.c}, \code{$rh},
+\code{$logger.serial}, then every column of the matched meta row
+except the join key (e.g. \code{$logger.serial_short},
+\code{$logger.type}, \code{$station.code}, \code{$date.deployment},
+\code{$time.deployment}, \code{$date.recovery},
+\code{$time.recovery}, \code{$room.code}, \code{$room.name}; other
+meta columns keep their standardized names). Meta columns are
+\code{NA} for a file with no confident meta match.}
+\item{templog.notes}{One row per raw file: \code{$logger.serial},
+\code{$date.start}, \code{$date.end}, \code{$temp.type}
+(\code{"F"}, \code{"C"} or \code{"C.default"}), \code{$rows.in},
 \code{$rows.out}, \code{$rows.trimmed}, \code{$notes},
-\code{$strip.special} (last column): \code{"FALSE"} (not selected),
-\code{"TRUE NONE"} (nothing found), or \code{"TRUE ; <header>; ..."}
-(the headers where characters were removed for that logger file -
-see @details, "Follow-up, 2026-09-30").}
+\code{$strip.special}, \code{$accented.letters.header},
+\code{$removed.symbols.header}, \code{$accented.letters.data},
+\code{$removed.symbols.data}.}
 }
-(or their snake_case equivalents if \code{snake_case = TRUE} - see
-that parameter above).
+With \code{write.output = TRUE}, two files are written to
+\code{dir.save}:
+\verb{<project.name>_templog.notes_<daterange>_<timestamp>.csv} and
+\verb{<project.name>_templog.merged_<daterange>_<timestamp>.csv}.
+\verb{<daterange>} is \verb{<YYYYMMDD>to<YYYYMMDD>} from the earliest and
+latest \code{$date.time} (\code{"nodata"} if there is none);
+\verb{<timestamp>} is \code{format(Sys.time(), "\%Y\%m\%d\%H\%M\%S")}, so
+nothing is overwritten.
 }
 \description{
-Merges raw \verb{*templog.csv} datalogger exports (heterogeneous formats -
-varying header presence, column counts, embedded commas, date formats,
-encodings) into one standardized sheet, joins in station metadata from
-\code{templog.meta.csv}, calculates relative humidity for loggers flagged
-as humidity-capable, and trims records recorded outside each unit's
-deployment/recovery window.
+Merges raw \verb{*templog.csv} datalogger exports (with or without a
+header row, varying column counts, date formats and encodings) into one
+standardized data frame. Joins in station metadata from
+\code{templog.meta.csv}, calculates relative humidity for humidity
+loggers, drops records outside each unit's deployment/recovery window,
+and returns a per-file log. Both tables can be written to CSV.
 }
 \details{
-\strong{Header standardization (per Josh, 2026-09-14 project preference)
+\strong{Meta file.} All files matching \code{load.pattern[2]} are read as
+text, combined, and exact duplicate rows removed. Headers are
+standardized with \code{standardize.headers()} (trimmed, lower case, runs
+of punctuation or spaces become \code{"_"}), then renamed:
 \itemize{
-\item real, documented output-schema change.} \code{templog.meta.csv}'s own
-headers are a literal, uninvented copy of that file's real column text
-(not a \code{batz}-invented shorthand), so they are now run through the
-shared package helper \code{standardize.headers()} (trim whitespace,
-collapse every run of non-alphanumeric characters to a single
-underscore, lowercase) right after loading - this function had no
-header normalization of any kind before this change, so it also newly
-tolerates whitespace/case/punctuation variation in the meta file that
-used to require an exact literal match. Every meta-file column the code
-refers to by name is renamed accordingly: \code{serial#} -> \code{
-serial} (the \code{#} is stripped as a non-alphanumeric character),
-\code{serial.num} -> \code{serial_num}, \code{serial.short} -> \code{
-serial_short}, \code{logger.type} -> \code{logger_type}, \code{
-station.code} -> \code{station_code}, \code{date.deployment} -> \code{
-date_deployment}, \code{time.deployment} -> \code{time_deployment},
-\code{date.recovery} -> \code{date_recovery}, \code{time.recovery} ->
-\code{time_recovery}, \code{room.number} -> \code{room_number}, \code{
-room.name} -> \code{room_name}. Since every OTHER meta column (besides
-the join key) is appended verbatim onto \code{templog.merged} (see
-below), this cascades into a real, visible change in that returned data
-frame's own column names. \strong{This does NOT affect \code{
-templog.merged}'s/\code{templog.notes}'s own \code{$serial.num} column}
-\item that one is this function's own INVENTED identifier, parsed from each
-raw file's NAME (its leading 8-digit serial), not a header loaded from
-any file, so it keeps its existing dot-separated name per this
-project's ordinary output convention. \strong{Anyone with a saved
-templog.meta.csv using the old dotted header spellings should re-save
-it with the new underscore spellings (or simply let it load as-is,
-since \code{standardize.headers()} converts either spelling to the same
-result), and update any downstream script that reads
-\code{templog.merged} by the old dotted meta-column names.}
+\item \code{serial#} (or \code{serial.num}) -> \code{$logger.serial}:
+full 8-digit serial, the preferred join key.
+\item \code{serial.short} -> \code{$logger.serial_short}: last 3-4
+digits; used as the join key only when there is no full serial.
+\item \code{logger.type} (or \code{logger_type}) -> \code{$logger.type}:
+\code{"H"} (temperature + humidity) or \code{"T"} (temperature only).
+If missing, taken from the last letter of \code{$station.code}.
+\item \code{station.code} -> \code{$station.code}.
+\item \code{date.deployment}, \code{time.deployment},
+\code{date.recovery}, \code{time.recovery} -> same names with dots
+(dates \code{m/d/Y}, times \code{H:M:S}).
+\item \code{room.number} -> \code{$room.code}; \code{room.name} ->
+\code{$room.name}.
 }
 
-RH is gated strictly on the matched \code{templog.meta.csv} \code{$logger_type}
+\strong{Raw files.} For each file matching \code{load.pattern[1]}:
 \itemize{
-\item not on header text or any other heuristic:
+\item The logger serial is the first 8 digits of the file name
+(\code{NA} if none).
+\item Empty lines are dropped; columns past the fourth are trimmed
+(noted in \code{$notes}).
+\item A leading \code{"Plot Title"} row is dropped, and rows with both
+temperature columns blank are dropped. \code{$rows.in} and
+\code{$rows.out} count rows before and after this cleanup.
+\item A first row containing \code{"date"} is treated as the header.
+\code{°F}/\code{F}/\code{fahrenheit} in it gives \code{$temp.type =
+    "F"} (values converted to Celsius); \code{°C}/\code{C}/\code{celsius}
+gives \code{"C"}; otherwise, or with no header (\code{"no header
+    present"} in \code{$notes}), \code{"C.default"}.
+\item Column 2 is the date-time. The format (\code{m/d/Y} or
+\code{m/d/y}, 12- or 24-hour, with or without seconds) is taken from
+the first non-blank value. Column 3 is the dry-bulb temperature and
+column 4 the wet-bulb temperature.
+}
+
+\strong{Meta matching.} The file's \code{$logger.serial} is matched
+exactly to \code{$logger.serial} in the meta table. With no full serial
+column, the last 4 digits are matched to \code{$logger.serial_short}
+(digits only), then the last 3 digits; a 3-digit code that also appears
+inside a 4-digit code is skipped as ambiguous. When several meta rows
+match, those whose deployment-recovery dates overlap the file's
+\code{$date.start}-\code{$date.end} are kept. If the remaining rows point
+to more than one \code{$station.code}, the match is ambiguous and no meta
+row is used. The outcome is written to \code{$notes}.
+
+\strong{Relative humidity.} Based only on the matched meta row's
+\code{$logger.type}:
 \itemize{
-\item \code{logger_type == "H"}: \code{$temp.wet.c} keeps the real
-column-4 reading, and \code{$rh} is calculated from dry/wet bulb.
-\item \code{logger_type == "T"}: \code{$temp.wet.c} and \code{$rh} are
-both forced to \code{NA}, even if the raw file has a second
-temperature column.
-\item No confident meta match (missing, ambiguous, or no meta.csv at
-all): treated the same as \code{"T"} (both \code{NA}).
+\item \code{"H"}: \code{$temp.wet.c} keeps column 4 and \code{$rh} is
+calculated from dry and wet bulb (psychrometric formula, 1013.25 hPa,
+clamped to 0-100).
+\item \code{"T"}, or no confident meta match: \code{$temp.wet.c} and
+\code{$rh} are \code{NA}.
 }
-}
+\code{$rh} keeps full precision in the returned object.
 
-The meta join uses ONLY \code{$logger.serial} (the file's real 8-digit
-serial, matched against a standardized \code{serial#} header) plus the
-file's own observed \code{[$date.start, $date.end]} to pick the right
-meta row - \code{$logger.serial_short} and \code{$logger_type} are never
-used to find or disambiguate the match (only as a fallback for older
-meta files with no \code{serial#} column at all). Once a single
-confident meta row is found, every OTHER column from that row
-(\code{logger.serial_short}, \code{date.deployment}, \code{date.recovery},
-\code{room.code}, \code{room.name}, \code{station.code},
-\code{logger_type}) is appended to every record from that file in
-\code{$templog.merged}, not just used internally.
+\strong{Deployment window.} When the matched meta row has all four of
+\code{$date.deployment}, \code{$time.deployment}, \code{$date.recovery}
+and \code{$time.recovery}, records with \code{$date.time} before
+deployment or after recovery are dropped. Records with an unreadable
+\code{$date.time} are kept. The count is in \code{$rows.trimmed} (and in
+\code{$notes} when above 0). Otherwise nothing is trimmed.
 
-Once a meta row is matched, any record whose \code{$date.time} falls
-before \code{$date.deployment}+\code{$time.deployment} or after
-\code{$date.recovery}+\code{$time.recovery} is dropped from
-\code{$templog.merged} (e.g. readings taken during setup before actual
-deployment, or after physical recovery but before the logger stopped
-recording). This only runs when the matched meta row has BOTH date and
-time columns for deployment and recovery - meta files with date-only
-columns (no \code{$time.deployment}/\code{$time.recovery}), or files with
-no confident meta match at all, are left untrimmed. The count of trimmed
-records per file is in \code{$templog.notes$rows.trimmed}, and (when > 0)
-also called out in \code{$templog.notes$notes}.
-
-\code{$rh} is kept at full precision through every internal calculation
-and in the returned object; rounding (3 dp) is applied only when
-\code{write.output = TRUE}, to the CSV written to disk.
-
-This function is \code{batz.merge_temp.logger()}: it merges raw
-\verb{*templog.csv} datalogger exports into one standardized sheet
-(subject = "temp.logger").
-
-See \code{dev-scripts/batz.merge_temp.logger.dev.R} in the package
-source repo for the tested procedural version and the full list of
-assumptions made where the spec was ambiguous (dry/wet column mapping
-when unlabeled, date.end = max(), blank-row cleanup scope, RH formula,
-and the "no confident meta match = treat like T" default). Those
-assumptions apply here unchanged and should be reviewed before relying on
-this in production.
-
-\strong{Follow-up, 2026-09-22, per Josh's request to audit and extend the
-snake_case output option package-wide:} added a \code{snake_case}
-parameter (default \code{FALSE}, matching
-\code{\link{batz.generate_plotframe.bat}}'s own). When \code{TRUE}, both
-\code{templog.merged} and \code{templog.notes} have their own output
-column names run through \code{standardize.headers()} as the very last
-step before they're written to CSV (when \code{write.output = TRUE}) and
-returned - e.g. \code{$date.time} becomes \code{$date_time},
-\code{$temp.dry.c} becomes \code{$temp_dry_c}, \code{$serial.num}
-becomes \code{$serial_num}. This is unrelated to, and does not change,
-the existing \code{templog.meta.csv} header standardization described
-above (which already always runs, regardless of this parameter, on the
-loaded meta file's own real headers before they're matched/joined) -
-\code{snake_case} only affects the final output column names of this
-function's own two returned/written data frames.
-
-\strong{File naming (round twenty-two), 2026-09-24, per Josh's
-package-wide request ("Update all functions that save files or charts:
-... for files follow <project.name>\emph{<filetype.name>}\if{html}{\out{<daterange>}}_
-\if{html}{\out{<timestamp>}}"):} this is the ONE function in this round that needed a
-brand-new parameter rather than just a naming tweak - flagged as the
-single biggest change in this round, please review closely.
-\strong{\code{project.name} did not exist on this function at all
-before this round}; it is added here (default \code{""}, following the
-same blank-default-falls-back-to-a-base-token convention already used by
-\code{\link{batz.generate_suntimes.arulist}}'s own \code{project.name} -
-\code{""} falls back to the literal base token \code{"templog"}, chosen
-as a judgment call since Josh did not specify one; \strong{please
-confirm \code{"templog"} is the right fallback base name}). This
-function also had NO date-range concept anywhere in its output before
-this round - a NEW \code{<daterange>} token is now computed from
-\code{templog.merged$date.time} (the earliest/latest non-\code{NA}
-value, each formatted \code{\%Y\%m\%d}, joined as
-\code{<DATE1>to<DATE2>}), also flagged as a new, previously-nonexistent
-computed field added purely to satisfy the naming convention. If every
-\code{$date.time} value is \code{NA} (or there are zero rows), the
-literal token \code{"nodata"} is used in place of a real date range
-rather than crashing on an empty \code{min()}/\code{max()} - this
-fallback was not specified either and is likewise a judgment call.
-\strong{Both output file names change from the previous hardcoded,
-non-timestamped \code{"templog.notes.csv"}/\code{"templog.merged.csv"}
-to} \verb{<project.name>_templog.notes_<daterange>_<timestamp>.csv} and
-\verb{<project.name>_templog.merged_<daterange>_<timestamp>.csv}
-respectively - using \code{"templog.notes"}/\code{"templog.merged"} as
-each file's \code{<filetype.name>} token (the same names as the two
-returned list elements, for consistency). \strong{This is a real
-behavior change beyond naming}: previously, repeat calls with the same
-\code{dir.save} silently overwrote the same two file names every time;
-now, like every other \code{batz} function that saves output, every
-call produces two freshly timestamped files and nothing is ever
-silently overwritten. \code{<timestamp>} uses the same 14-digit,
-no-separator \code{format(Sys.time(), "\%Y\%m\%d\%H\%M\%S")} shape as
-every other \code{batz} function in this round - see each function's
-own "Timestamp format (round twenty-two)" \code{@details} entry.
-
-\strong{Column identifiers renamed, 2026-09-27, per Josh's
-reference-workbook "Change.to" column.} The following raw/legacy header
-spellings were renamed to their new canonical form throughout this
-function's code and documentation: \code{date_deployment} ->
-\code{date.deployment}, \code{date_recovery} -> \code{date.recovery},
-\code{room_name} -> \code{room.name}, \code{room_number} ->
-\code{room.code}, \code{serial_short} -> \code{logger.serial_short},
-\code{station_code} -> \code{station.code}, \code{time_deployment} ->
-\code{time.deployment}, \code{time_recovery} -> \code{time.recovery}.
-\strong{Two further renames converge on one name:} the meta file's raw
-logger-serial-number input column (standardized from \code{serial#} to
-\code{serial}) is renamed \code{serial} -> \code{logger.serial}, and
-this function's own invented output column (parsed from each raw
-file's leading 8-digit serial) is renamed \code{serial.num} ->
-\code{logger.serial} - the same concept, input alias and output name
-now unified under one identifier. Because \code{standardize.headers()}
-collapses any punctuation in a raw header to an underscore, an
-incoming \code{templog.meta.csv} will still standardize to the legacy
-spellings \code{serial}/\code{serial_num} (from \code{serial#}/
-\code{serial.num}) and \code{serial_short} (from \code{serial.short});
-the header-matching/detection logic below still checks for those
-legacy standardized spellings as input aliases (real incoming files
-will still be named that way), and once a column is matched it is
-renamed internally to its new canonical identifier
-(\code{logger.serial}/\code{logger.serial_short}) for every downstream
-use, including \code{templog.merged}/\code{templog.notes}'s own output
-columns.
-
-\strong{Follow-up, 2026-09-30, per Josh - special characters.} New
-argument \code{strip.special} (default \code{TRUE}). Every
-\code{templog.meta.csv} is now read with the shared
-\code{special.read.csv()} helper and every raw \verb{*templog.csv} with
-\code{special.read.lines()} (the internal BOM-aware line reader now wraps
-it), both of which fall back to Latin-1 when a file isn't valid UTF-8, so
-a degree sign saved by Excel as a single byte no longer breaks loading;
-this always applies. Immediately after each meta file / raw logger file is
-loaded (before de-duplication, header detection, date parsing and meta
-matching), \code{special.strip()} removes non-ASCII characters from its
-text columns when \code{strip.special = TRUE}. \strong{Judgment call:} the
-\code{°F}/\code{°C} unit detection still looks at the file's ORIGINAL
-(unstripped) header row, so stripping the degree sign can never change
-\code{$temp.type} (e.g. a header like \code{"Temp°F"} would otherwise
-lose its unit). \code{templog.notes} gains a last column
-\code{$strip.special}, one label per logger file: raw logger columns are
-positional, so they are reported by their output names (\code{V1} ->
-\code{observations.count}, \code{V2} -> \code{date.time}, \code{V3} -> \code{temp.dry.c},
-\code{V4} -> \code{temp.wet.c}; excess columns keep \code{V5}, ...), and -
-when the file matched a meta row - any \code{templog.meta.csv} headers
-where characters were removed are added as \code{meta:<header>} (the
-canonical, renamed meta header). The column keeps the exact name
-\code{strip.special} even when \code{snake_case = TRUE}.
-
-\strong{Follow-up, 2026-10-02, per Josh - accents simplified, log
-counts.} With \code{strip.special = TRUE}, accented letters and common
-symbols are now simplified instead of dropped (\code{café} ->
-\code{cafe}, \code{Quercus × bebbiana} -> \code{Quercus X bebbiana},
-curly quotes -> straight quotes); characters with no plain equivalent
-(e.g. \code{°}, \code{µ}, \code{™}) are still removed. Column names
-are cleaned the same way. The log gets four new columns right after
-\code{$strip.special}: \code{$accented.letters.header} and
-\code{$removed.symbols.header} (number of unique column names with a
-character simplified / removed), and \code{$accented.letters.data} and
-\code{$removed.symbols.data} (number of unique data values with a
-character simplified / removed - \code{café} in 500 rows counts once;
-\code{café} and \code{French café} count twice). They are \code{NA}
-when \code{strip.special = FALSE}.
-
-\strong{Lower-case headers (2026-11-04, per Josh, Batz_reference_db Header.names).}
-The strip.special log columns are \code{$accented.letters.header} /
-\code{$accented.letters.data} (were Accented.letters.*).
+\strong{Special-character log.} \code{$strip.special} is \code{"FALSE"}
+(not selected), \code{"TRUE NONE"} (nothing found) or
+\code{"TRUE ; <header>; ..."}. Raw columns are named by their output
+names (\code{V1} -> \code{observations.count}, \code{V2} ->
+\code{date.time}, \code{V3} -> \code{temp.dry.c}, \code{V4} ->
+\code{temp.wet.c}; extra columns keep \code{V5}, ...). When the file
+matched a meta row, changed meta headers are added as
+\code{meta:<header>}. The four count columns give the number of unique
+column names / data values with a character simplified or removed
+(\code{NA} when \code{strip.special = FALSE}).
 }
 \examples{
 \dontrun{
@@ -339,10 +179,10 @@ result <- batz.merge_temp.logger(dir.load = "path/to/data", dir.sub = TRUE)
 result$templog.merged
 result$templog.notes
 
-# snake_case output headers instead of this function's usual dot-style
+# snake_case output headers
 result <- batz.merge_temp.logger(dir.load = "path/to/data", snake_case = TRUE)
 
-# custom project.name token in the saved file names (round twenty-two)
+# custom project.name token in the saved file names
 result <- batz.merge_temp.logger(dir.load = "path/to/data", project.name = "siteA")
 }
 

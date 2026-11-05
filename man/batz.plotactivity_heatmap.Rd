@@ -2,7 +2,7 @@
 % Please edit documentation in R/batz.plotactivity_heatmap.R
 \name{batz.plotactivity_heatmap}
 \alias{batz.plotactivity_heatmap}
-\title{Plot a 30-minute-interval bat activity heatmap per monitoring night}
+\title{Plot a bat activity heatmap of monitoring night by time-of-night bin}
 \usage{
 batz.plotactivity_heatmap(
   data,
@@ -11,7 +11,7 @@ batz.plotactivity_heatmap(
   bin.minutes = 30,
   aes.default,
   project.name = "new.project",
-  aes.style = "overide.value",
+  aes.style = "override.value",
   site.label = "",
   dir.save = getwd(),
   strip.special = TRUE,
@@ -19,331 +19,128 @@ batz.plotactivity_heatmap(
 )
 }
 \arguments{
-\item{data}{A data frame with (at least) a monitoring-night date column
-and a time-of-night column - see \code{date.col}/\code{time.col}.
-Header standardization does \strong{not} mechanically apply here (see
-Details) - this is expected to be the already-standardized output of
-an upstream \code{batz} function, most naturally
-\code{\link{batz.plotactivity_daily.count}}'s own \code{$data}.}
+\item{data}{Data frame with a monitoring-night date column and a
+time-of-night column (see \code{date.col}, \code{time.col}).}
 
-\item{date.col}{Character, default \code{"date.monitoringnight"} (renamed
-from \code{"monnight.date"} in round twenty-four, then from
-\code{"date.mon"} to \code{"date.monitoringnight"} in round twenty-five,
-2026-09-25 - see \code{@details}). Name of the column in \code{data} holding the
-monitoring-night date (a \code{Date}, or a string \code{as.Date()}
-can parse in its default ISO form).}
+\item{date.col}{Character, default \code{"date.monitoringnight"}. Column
+of \code{data} with the monitoring-night date (a \code{Date}, or text
+\code{as.Date()} can read, e.g. \code{"2025-06-01"}).}
 
-\item{time.col}{Character, default \code{"time"}. Name of the column in
-\code{data} holding each detection's own clock time, as
-\code{"HH:MM"} or \code{"HH:MM:SS"}.}
+\item{time.col}{Character, default \code{"time"}. Column of \code{data}
+with each detection's clock time, \code{"HH:MM"} or \code{"HH:MM:SS"}.}
 
-\item{bin.minutes}{Single positive number, default \code{30}. Width of
-each time-of-night bin, in minutes - must divide evenly into 1440
-(e.g. 15, 20, 30, 60); an unrecognized value stops with a clear error.}
+\item{bin.minutes}{Single positive number, default \code{30}. Bin width
+in minutes; must divide evenly into 1440 (e.g. 15, 20, 30, 60),
+otherwise the function stops.}
 
-\item{aes.default}{A data frame of default plot settings, one row per
-parameter (e.g. \code{plotopts_heatmap.csv}). Must have
-\code{$category}, \code{$parameter}, \code{$default.value}; an
-\code{$overide.value} column (blank, user-fillable) and \code{$notes}
-are optional - same \code{$aes.style}-driven resolution as this
-package's other plot functions (see Details).}
+\item{aes.default}{Data frame of plot settings, one row per parameter
+(e.g. \code{plotopts_heatmap.csv}), with \code{$category},
+\code{$parameter}, \code{$default.value} and optionally an
+\code{$override.value} column (see Details).}
 
-\item{project.name}{Character, default \code{"new.project"}. The first
-part of every saved file's name:
-\code{"<project.name>_<site>_<daterange>_<timestamp>.png"} - matches
-the unified file-naming convention already used by every other
-\code{batz} plot function with a date range (see \code{@details},
-"File naming (round twenty-three)").}
+\item{project.name}{Character, default \code{"new.project"}. First part
+of the saved file name.}
 
-\item{aes.style}{Character, default \code{"overide.value"}. Names which
-column of \code{aes.default} is checked FIRST for each parameter
-(falling back to \code{$default.value} when that column doesn't exist,
-or is blank for that row).}
+\item{aes.style}{Character, default \code{"override.value"}. Column of
+\code{aes.default} checked first for each parameter; blank cells fall
+back to \code{$default.value}. An old \code{overide.value} column is
+still read when \code{aes.style = "override.value"} and there is no
+\code{override.value} column.}
 
-\item{site.label}{Character, default \code{""} (blank). The \code{<site>}
-token in the saved file name (see \code{project.name} above); falls
-back to the literal \code{"heatmap"} when left blank - same judgment
-call as \code{\link{batz.plotactivity_daily.count}}'s own
-\code{site.label} (see that function's own \code{@details}).}
+\item{site.label}{Character, default \code{""}. Site part of the saved
+file name (\code{"-heatmap"} is appended); blank uses \code{"heatmap"}.}
 
-\item{dir.save}{Character, default \code{getwd()}. Directory the
-generated PNG is saved into.}
+\item{dir.save}{Character, default \code{getwd()}. Directory the PNG is
+saved to.}
 
 \item{strip.special}{Logical, default \code{TRUE}. If \code{TRUE},
-simplifies accented letters and
-symbols (\code{é} -> \code{e}, \code{×} -> \code{X}) and removes other non-ASCII special characters (e.g. \code{°}, \code{µ},
-\code{™}) from the data input(s) (\code{data}; settings tables follow \code{strip.special.plotopts})
-at the very start, before any header check - see \code{@details}.
-This function reads no files itself; inputs loaded with a batz
-reader already get a UTF-8/Latin-1 fallback, so a stray \code{°}
-  can't stop them loading, whatever this is set to.}
+simplify or remove non-ASCII characters in \code{data} (see Details).}
 
-\item{strip.special.plotopts}{Logical, default \code{FALSE}. Added
-2026-10-02, per Josh. Controls special characters in the settings
-table(s) - \code{aes.default} - separately from the data. \code{FALSE} (default)
-leaves them untouched, so plot text such as \code{"Temperature (°C)"}
-  keeps its symbol; if a cell can't be read in this R session (e.g. a
-Latin-1 \code{°} byte), the function stops with an error naming the
-table, the number of incompatible characters, and the first 5 rows per
-header (\code{+} if more). \code{TRUE} simplifies/removes special
-characters in them the same way \code{strip.special} does for data.}
+\item{strip.special.plotopts}{Logical, default \code{FALSE}. If
+\code{TRUE}, clean \code{aes.default} the same way, so a label such as
+"Temperature (degree C)" loses its symbol. If \code{FALSE}, symbols are
+kept and unreadable characters stop the function (see Details).}
 }
 \value{
-Invisibly, a list with \code{data} (the complete night x bin
-grid actually plotted: a column named after \code{date.col} (default
-\code{$date.monitoringnight}), \code{$bin.index},
-\code{$observations.count} - one row per night per bin, zero-filled
-where a night had no detections in that bin) and \code{ggplot} (the
-ggplot object, only populated when \code{ggplot2} is available).
+Invisibly, a list with:
+\describe{
+\item{data}{The complete night x bin grid: a date column named after
+\code{date.col}, \code{$bin.index} (0 = noon), and
+\code{$observations.count} (0 where there were no detections). When
+the plot is made, \code{$n.capped} (the count capped at
+\code{fill.max}, used for the colors) is added.}
+\item{ggplot}{The ggplot object, or \code{NULL} if \code{ggplot2} is
+not installed.}
+}
+A PNG is written to \code{dir.save} when \code{ggplot2} is available.
 }
 \description{
-Given per-detection data with a monitoring-night date and a time-of-night
-(e.g. the \code{$data} returned by
-\code{\link{batz.plotactivity_daily.count}}), bins every detection into
-fixed-width intervals of the monitoring night (noon -> midnight -> the
-following 11:59am) and draws a night-by-bin heatmap of detection counts,
-colored on a sequential scale capped at a fixed maximum. Replaces the ad
-hoc \code{activity_heatmap.R} script this function was converted from -
-see Details for what changed along the way.
+Bins every detection into fixed-width intervals of the monitoring night
+(noon through midnight to 11:59 the next morning) and draws a heatmap of
+detection counts, monitoring night on the X axis and time bin on the Y
+axis, colored on a sequential scale capped at a fixed maximum. The plot
+is saved as a PNG. A natural input is the \code{$data} returned by
+\code{\link{batz.plotactivity_daily.count}}.
 }
 \details{
-\strong{Converted from \code{activity_heatmap.R}, an ad hoc procedural
-script, into a reusable \code{batz} function - not a full from-scratch
-spec.} The original script's actual behavior (re-anchor time-of-night to
-a noon-to-noon monitoring-night axis, bin into 30-minute intervals,
-complete the night x bin grid with zeros, draw a capped sequential-blue
-heatmap with a horizontal colorbar) is preserved; what changed is
-packaging it to match every other \code{batz} plot function's
-conventions - a generalized \code{bin.minutes} instead of a hardcoded 30,
-an \code{aes.default} settings file instead of hardcoded plot constants,
-the unified \code{project.name}/\code{dir.save} file-naming/save
-mechanism, and an X-axis range/labeling scheme generalized to whatever
-date range \code{data} actually covers (see "X-axis range and labels"
-below), rather than the original script's own hardcoded March 2025 -
-January 2026 window.
+\strong{Inputs and checks.} \code{data} must have the \code{date.col} and
+\code{time.col} columns. They are matched with
+\code{canonicalize.headers()} (case and \code{"."}/\code{"_"} differences
+are ignored) and renamed to the given spelling; other columns are not
+renamed. \code{aes.default} must have \code{$category},
+\code{$parameter}, \code{$default.value} and the \code{$parameter} rows
+listed below. Missing headers or parameter rows and duplicate column
+names in either table stop the function with one combined message.
 
-\strong{Header standardization (per Josh, 2026-09-14 project preference)
-does not mechanically apply here, flagged not silently skipped} - same
-reasoning as \code{\link{batz.plotactivity_observations}}/
-\code{\link{batz.plotdetections_first.last}}: \code{data} is expected to
-already be the OUTPUT of an upstream \code{batz} function (most
-naturally \code{\link{batz.plotactivity_daily.count}}'s own \code{$data},
-whose \code{$date.monitoringnight}/\code{$time} columns are this package's own
-invented output schema, not raw external headers) rather than a file
-this function loads itself. \code{date.col}/\code{time.col} are still
-validated by a plain required-header/duplicate-column check, same as
-every other \code{batz} plot function does for its own inputs.
+\strong{Special characters.} With \code{strip.special = TRUE}, accented
+letters and common symbols in \code{data} are simplified (e.g. an accented
+e becomes \code{e}) and other non-ASCII characters are removed before any
+check. \code{aes.default} is only cleaned when
+\code{strip.special.plotopts = TRUE}; otherwise it is checked for
+characters that cannot be read in this R session, and the function stops
+with an error naming the table, the number of such characters and the
+first 5 rows per header (\code{+} if more).
 
-\strong{Monitoring night convention} - unchanged from the original
-script: noon (\code{12:00}) is bin 0, midnight is the bin at the exact
-midpoint (\code{n.bins / 2}), and 11:59 the following morning is the
-last bin - matching how every other \code{batz} plotting function in
-this package treats a "monitoring night" as running noon-to-noon for
-these nocturnal-animal records.
+\strong{Binning.} \code{date.col} is converted with \code{as.Date()};
+rows with an unparseable date or time are dropped with a NOTE. The time
+is re-anchored to the monitoring night: noon is bin 0, midnight is bin
+\code{n.bins / 2}, and the last bin ends at noon the next day
+(\code{n.bins = 1440 / bin.minutes}). Detections are counted per night
+and bin, and every night in \code{data} gets every bin (missing
+combinations are 0).
 
-\strong{Complete night x bin grid, converted from \code{tidyr::complete()}
-to base R} (\code{expand.grid()} + \code{merge()}), matching how this
-package's other plotting functions avoid a \code{dplyr}/\code{tidyr}
-dependency (e.g.
-\code{\link{batz.plotactivity_observations}}/
-\code{\link{batz.plotactivity_daily.count}} both use
-\code{stats::aggregate()} directly) - every night present in \code{data}
-gets a row for every one of the \code{1440 / bin.minutes} bins, with a
-missing night/bin combination filled to \code{0}, same as the original
-script's own \code{tidyr::complete(..., fill = list(n = 0))}.
+\strong{Plot.} Tiles are colored by the count capped at
+\code{fill.max} (legend "Number of Observations", top label
+\verb{<fill.max>+}). The X axis runs from the first to the last night,
+with a tick and month label (e.g. \code{"Jan"}) at the first of every
+month. Y-axis labels are clock times every \code{ybreak.hours} hours.
+Axis titles are "Monitoring Night" and "Hour of Monitoring". If
+\code{ggplot2} is not installed, only the data are returned.
 
-\strong{Fill scale - capped/squished without a new \code{scales}
-dependency.} The original script used
-\code{scales::squish()}/\code{scales::pseudo_log_trans()}-style handling
-to cap the color scale at a fixed maximum with a \code{"100+"} open-ended
-top label. Since a fill scale (unlike a Y-axis position scale) only ever
-needs the color, not the exact value, capping is done by simply clamping
-the plotted value with \code{pmin(observations.count, fill.max)} before
-mapping it to \code{fill} - visually identical to \code{oob =
-scales::squish} for this purpose, and avoids adding a package dependency
-this project doesn't otherwise need. \code{aes.default}'s
-\code{$fill.max} (default \code{100}) and \code{$fill.colors} (a
-semicolon-separated hex list, default the same 7-color sequential blue
-ramp the original script used, credited there as the \code{dataviz}
-skill's default palette) control this.
-
-\strong{Filename collision, found and fixed while testing.} This function
-and \code{\link{batz.plotactivity_daily.count}} share the same
-\code{"<project.name>_<site>_<timestamp>.png"} naming scheme, so calling
-both back-to-back with the same \code{project.name}/\code{site.label}
-within the same whole second (a realistic pattern, since they're commonly
-chained - see \code{@seealso} below) produced identical filenames and one
-PNG silently overwrote the other. Fixed by appending a function-specific
-suffix to the non-blank \code{site.label} token (\code{"-heatmap"} here,
-\code{"-dailycount"} in the sibling function).
-
-\strong{X-axis range and labels - generalized, a real change from the
-original script, flagged.} The original script hardcoded its X-axis
-range (March 2025 - January 2026) and which specific months got a text
-label (only April/June/August/October/December) - both tuned by eye to
-one specific, multi-year, densely-sampled dataset, not a generally
-correct default. This function instead spans whatever date range
-\code{data} actually covers (from the first day of \code{data}'s
-earliest month to the first day of its latest month) and labels EVERY
-month tick by default (\code{"\%b"}) - simpler and safe for any dataset,
-at the cost of a busier X axis on a long, densely-sampled one. A minor
-(unlabeled) tick still marks every month in between, same as the
-original script.
-
-\strong{Header check for \code{data} now canonicalizes casing/separator
-differences (per Josh, 2026-09-22 - auditing and extending the
-2026-09-21 header-canonicalization fix package-wide).} The required-header
-check for \code{data} previously did a literal \code{setdiff()} against
-\code{date.col}/\code{time.col}, which meant a real, present column would
-be falsely reported "missing" if it round-tripped through anything that
-changes case or separator style (e.g. a CSV save/reload, or
-\code{standardize.headers()} itself) before reaching this function - even
-though \code{data} is still expected to be the OUTPUT of an upstream
-\code{batz} function (see "Header standardization" above), just not
-necessarily byte-for-byte identical to it anymore. This now goes through
-the shared \code{canonicalize.headers()} helper instead (the same fix
-already applied to \code{\link{batz.generate_plotframe.bat}}/
-\code{\link{batz.plotdetections_first.last}}/
-\code{\link{batz.plotactivity_observations}} on 2026-09-21): it matches
-\code{data}'s real columns against \code{date.col}/\code{time.col}
-tolerant of case/separator differences, then renames only the MATCHED
-columns of a local copy back to this function's own \code{date.col}/
-\code{time.col} spelling before anything downstream touches them by name -
-\code{data} is deliberately NOT run through \code{standardize.headers()}
-wholesale, since that would rename every column and break this function's
-expectation of specific dot-style names. Separately, when both
-\code{aes.default} and \code{data} are missing headers in the same call,
-the combined error message now joins the two frames' complaints with a
-blank line (\code{"\n\n"}) rather than a single newline, matching the
-blank-line convention already used elsewhere in this package.
-
-\strong{Timestamp format (round twenty-two), 2026-09-24, per Josh's
-package-wide request ("Update all functions that save files or charts:
-... \if{html}{\out{<timestamp>}} format match this format: YYYYMMDDHHHMMSS"):} the
-\code{<timestamp>} token in the saved file name is now built as
-\code{format(Sys.time(), "\%Y\%m\%d\%H\%M\%S")} (14 digits, no separator
-between the date and time halves) instead of \code{"\%Y\%m\%d_\%H\%M\%S"}
+\strong{aes.default parameters} (all required as \code{$parameter} rows;
+matched ignoring case). Each value is taken from the \code{aes.style}
+column when it is not blank, otherwise from \code{$default.value}:
 \itemize{
-\item see \code{\link{batz.plotsm4_heatmap}}'s own \code{@details} entry of
-the same name for the full reasoning (including the \code{"YYYYMMDDHHHMMSS"}
-typo read/flag) and package-wide scope.
+\item \code{fill.max}: count at which the color scale is capped
+(default 100 if blank or invalid).
+\item \code{fill.colors}: semicolon-separated hex colors for the scale
+(a 7-color blue ramp if fewer than 2 are given).
+\item \code{ybreak.hours}: hours between Y-axis labels (default 2 if
+blank or invalid).
+\item \code{plot.title.size}, \code{axis.title.size},
+\code{axis.text.size}, \code{legend.title.size},
+\code{legend.text.size}: text sizes.
+\item \code{panel.border.linewidth}: axis line width.
+\item \code{plot.width}, \code{plot.height}, \code{ggsave.width.pad},
+\code{ggsave.height.pad}, \code{ggsave.units}, \code{ggsave.dpi}: PNG
+size (plot size plus pad), units and resolution.
 }
 
-\strong{File naming (round twenty-three), 2026-09-25, per Josh's
-correction to round twenty-two ("batz.plotactivity_heatmap() does have a
-date range, this is monnight.date"):} round twenty-two's entry
-immediately above originally said this function has no
-\code{date.start}/\code{date.end} parameter and so was left out of the
-"charts that have a date range" bucket - \strong{that was wrong, and is
-corrected here.} \code{data}'s own \code{date.col} column (default
-\code{"monnight.date"}) IS a real date range, it just isn't passed as a
-pair of explicit \code{date.start}/\code{date.end} arguments the way
-\code{\link{batz.plotactivity_daily.count}}'s is. The saved file name is
-now \code{"<project.name>_<site>_<daterange>_<timestamp>.png"}, matching
-every other date-ranged \code{batz} plot function, where
-\code{<daterange>} is built from the actual minimum/maximum
-\code{date.col} value present in \code{data} (\code{format(min(all.nights),
-"\%Y\%m\%d")}/\code{format(max(all.nights), "\%Y\%m\%d")}, reusing the same
-\code{all.nights} vector the night x bin grid itself is built from - see
-"Complete night x bin grid" above) rather than a per-call
-\code{date.start}/\code{date.end} pair, since this function has none of
-its own.
-
-\strong{\code{date.col}'s default renamed \code{"monnight.date"} ->
-\code{"date.mon"} (round twenty-four), 2026-09-25, per Josh's correction
-and follow-up question.} This entry originally (round twenty-three)
-left \code{date.col}'s default as \code{"monnight.date"}, flagging a
-rename to \code{date.mon} as a collision with an already-real,
-differently-scoped \code{date.mon} used elsewhere in the package
-(\code{\link{batz.merge_vetted.acoustics}}/
-\code{\link{batz.generate_plotframe.bat}}/
-\code{\link{batz.plotsm4_heatmap}}). Josh then asked why a collision
-would occur if \code{date.mon} and \code{monnight.date} hold the same
-value per record - and he's right: every one of those other functions'
-\code{date.mon} means exactly the same thing this function's
-\code{monnight.date} always meant (the monitoring-night date a
-detection belongs to), not a different, unrelated concept that happens
-to share a name. \code{date.col}'s default is renamed here to
-\code{"date.mon"}, matching the corresponding rename in
-\code{\link{batz.plotactivity_daily.count}} (see that function's own
-\code{@details}, "Output column renamed"), which keeps the two
-functions' producer/consumer contract intact. See that same entry for
-the one pre-existing (not introduced by this rename), non-blocking
-wrinkle: the various \code{date.mon} columns elsewhere in the package
-don't all share the same R type (raw character, noon-anchored
-\code{POSIXct}, or plain \code{Date}) - this function's own
-\code{date.col} handling coerces its input with \code{as.Date()}
-regardless (see code below), so it accepts any of those representations
-the same way it always has.
-
-\strong{\code{date.col}'s default renamed again, \code{"date.mon"} ->
-\code{"date.monitoringnight"} (round twenty-five), 2026-09-25, per Josh:
-"I changed my mine and want to use date.monitoringnight instead of
-date.mon to be more consistent with collaborators."} This supersedes the
-round twenty-four rename immediately above - \code{date.mon} is now
-itself a retired spelling, folded into the package's header-rename
-reference table (\code{\link{batz.generate_headers.acceptold}}) alongside
-\code{monnight.date}/\code{mon.ngh}/\code{monitoringnight}, all pointing
-at this same new name. Applied consistently, the same day, everywhere
-this concept appears package-wide (see
-\code{\link{batz.plotactivity_daily.count}}'s own \code{@details} for the
-full list of sibling functions updated alongside this one), rather than
-leaving this function and \code{batz.plotactivity_daily.count} on the new
-name while every other function kept \code{date.mon} - which would have
-silently recreated the exact cross-function mismatch this whole
-back-and-forth has been trying to resolve.
-
-\strong{Internal hardcoded \code{"monnight.date"} literals fixed to use
-\code{date.col} dynamically, same round.} While making the rename above,
-a separate, pre-existing latent bug was found and fixed: this function's
-internal night x bin grid (\code{expand.grid()}/\code{merge()}) and its
-\code{ggplot2::aes()} mapping had \code{"monnight.date"} hardcoded
-literally in three places, instead of referencing the \code{date.col}
-variable - so a caller who passed a non-default \code{date.col} would
-have had \code{data[[date.col]]} read correctly everywhere above that
-point, but then hit a "not all arguments have the same length"/missing-
-column error at the grid-building step, since the grid was always keyed
-on the literal name \code{"monnight.date"} no matter what \code{date.col}
-actually was. All three spots now build their column name from
-\code{date.col} itself (\code{stats::setNames()} for the
-\code{aggregate()}/\code{expand.grid()} calls, \code{.data[[date.col]]}
-inside \code{aes()}), so \code{$data}'s own returned date column is
-now genuinely named after whatever \code{date.col} was passed as,
-matching this parameter's own documented contract for the first time.
-
-\strong{Follow-up, 2026-10-02, per Josh - plot settings and accents.}
-\code{strip.special} now applies to the data input(s) only; \code{aes.default}
-are governed by the new \code{strip.special.plotopts} (default
-\code{FALSE}), so symbols in plot labels are kept unless you ask
-otherwise. Accented letters are now simplified rather than dropped
-(\code{café} -> \code{cafe}).
-
-\strong{Column identifiers renamed, 2026-09-27, per Josh's
-reference-workbook "Change.to" column.} In the returned \code{$data}
-grid: \code{n} -> \code{observations.count} (the per-night, per-bin
-detection count). \code{$n.capped} - the internal, already-clamped fill
-value used only for the plotted color scale - keeps its own name; it is
-a distinct column, not the renamed one.
-
-\strong{Follow-up, 2026-09-30, per Josh - special characters.} New
-last argument \code{strip.special = TRUE}. Every data frame input
-(\code{data} and \code{aes.default}) is now passed through the shared internal
-helper \code{special.strip()} as the very first step of the function,
-before any header standardization or required-header check: with
-\code{strip.special = TRUE}, non-ASCII characters (e.g. \code{°},
-\code{µ}, \code{é}, smart quotes) are removed from text/factor
-columns, and a column that had characters removed is re-typed the way
-\code{read.csv()} would (so \code{"42.5°"} becomes the number
-\code{42.5}); column names are not changed. This includes plot-text
-settings in \code{aes.default} (titles, axis/legend labels), so a
-label such as \code{"Temperature (°C)"} is drawn as
-\code{"Temperature (C)"} - pass \code{strip.special = FALSE} to keep
-such characters. This function reads no files and writes no log, so
-there is no \code{$strip.special} log column. Inputs without special
-characters behave exactly as before.
-
-\strong{Lower-case headers (2026-11-04, per Josh, Batz_reference_db Header.names).}
-plotopts parameters are matched ignoring case.
+\strong{Saved file.} The PNG is saved to \code{dir.save} as
+\verb{<project.name>_<site>_<YYYYMMDD>to<YYYYMMDD>_<YYYYMMDDHHMMSS>.png},
+where \verb{<site>} is \verb{<site.label>-heatmap} (or \code{heatmap}
+when \code{site.label} is blank) and the date range is the first and last
+night in \code{data}.
 }
 \examples{
 \dontrun{
@@ -353,13 +150,16 @@ daily.result <- batz.plotactivity_daily.count(
 )
 heatmap.result <- batz.plotactivity_heatmap(
   data = daily.result$data,
-  aes.default = read.csv("plotopts_heatmap.csv", stringsAsFactors = FALSE)
+  aes.default = read.csv("plotopts_heatmap.csv", stringsAsFactors = FALSE),
+  bin.minutes = 30,
+  project.name = "myproject",
+  site.label = "site1"
 )
 heatmap.result$ggplot
 }
 
 }
 \seealso{
-\code{\link{batz.plotactivity_daily.count}}, whose own
-\code{$data} return value is the natural \code{data} input here.
+\code{\link{batz.plotactivity_daily.count}}, whose \code{$data}
+is the natural \code{data} input here.
 }

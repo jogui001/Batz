@@ -13,197 +13,101 @@ batz.merge_aru.meta(
 )
 }
 \arguments{
-\item{dir.load}{Character. Directory to search. Defaults to the current
-working directory (\code{getwd()}).}
+\item{dir.load}{Character, default \code{getwd()}. Folder to search.}
 
-\item{load.pattern}{Character vector, default \code{c("*.csv", "*.xlsx")}:
-the file-name suffix pattern(s) (plain wildcard/glob style - \code{"*"}
-as a leading wildcard, everything else literal) that identify which
-files in \code{dir.load} get scanned/classified.}
+\item{load.pattern}{Character vector, default \code{c("*.csv", "*.xlsx")}.
+File-name patterns (wildcards \code{*} and \code{?}, case ignored) of the
+files to scan. Only \code{.csv} and \code{.xlsx} files are read.}
 
-\item{dir.sub}{Logical, default \code{FALSE}. If \code{TRUE}, also searches
-every subdirectory of \code{dir.load}.}
+\item{dir.sub}{Logical, default \code{FALSE}. \code{TRUE}: also search every
+sub-folder of \code{dir.load}.}
 
-\item{log.file}{Logical, default \code{FALSE}. If \code{TRUE}, an
-additional data frame named \code{arumeta.mergelog} is added to the
-returned list, with one row per deletion/merge action taken while
-cleaning up duplicate rows or columns. Columns: \code{$filename} (the
-source file - or \code{"filename [sheet: sheetname]"} for an xlsx sheet -
-the action happened to), \code{$event.type} (\code{"duplicated row"} or
-\code{"duplicated column"}), \code{$action} (\code{"deletion"} for
-identical duplicates that were just dropped, \code{"merging"} for
-differing duplicates combined into one), \code{$count} (how many extra
-rows/columns - not counting the surviving one - the action was done to).
-Only actions that actually did something are logged; nothing duplicated
-means no log rows at all for that file/category.
-\code{$strip.special} (last column): \code{"FALSE"} (not selected),
-\code{"TRUE NONE"} (nothing found), or \code{"TRUE ; <header>; ..."}
-(the headers, standardized, where characters were removed in the file
-or sheet that row is about).}
+\item{log.file}{Logical, default \code{FALSE}. \code{TRUE}: the returned list
+also has \code{$arumeta.mergelog} (see Value).}
 
-\item{strip.special}{Logical, default \code{TRUE}. If \code{TRUE}, simplifies accented
-letters (\code{é} -> \code{e}) and removes other non-ASCII special
-characters (e.g. \code{°}, \code{µ}) from the data after loading - see \code{@details}. Files are
-always read with a UTF-8/Latin-1 fallback, so a stray \code{°} can't stop
-them loading, whatever this is set to.}
+\item{strip.special}{Logical, default \code{TRUE}. \code{TRUE}: simplifies
+accented letters and common symbols and removes other non-ASCII characters
+from headers and text data after loading (see Details). Files are always
+read with a UTF-8/Latin-1 fallback, so a stray degree sign can't stop
+them loading.}
 }
 \value{
-Invisibly, a named list with three elements: \code{aru.visit},
-\code{aru.quad}, \code{aru.20m}. Each is a merged, de-duplicated data
-frame (character columns throughout), or \code{NULL} if no matching
-files were found for that category. If \code{log.file = TRUE}, a fourth
-element, \code{arumeta.mergelog}, is also included (see \code{log.file}
-above). In addition to being returned, each of these (whichever aren't
-\code{NULL}) is also assigned as its own object - \code{aru.visit},
-\code{aru.quad}, \code{aru.20m}, and (if requested) \code{arumeta.mergelog}
-\itemize{
-\item directly into the environment the function was called from, so calling
-\code{batz.merge_aru.meta(...)} on its own (with no assignment)
-creates those data frames right in your workspace. You can still do
-\code{result <- batz.merge_aru.meta(...)} and access them as
-\code{result$aru.visit} etc. if you'd rather work with the list.
-}
+Invisibly, a named list with \code{$aru.visit}, \code{$aru.quad},
+\code{$aru.20m}: each a merged, de-duplicated data frame. A category with
+no matching files is left out of the list (so \code{result$aru.quad} is
+\code{NULL}). When a category has two or more sources, all its columns
+are character; a single source keeps the column types it was read with.
+
+With \code{log.file = TRUE}, also \code{$arumeta.mergelog}: one row per
+duplicate-row or duplicate-column action, with \code{$filename} (the
+source file, or \code{"filename [sheet: sheetname]"} for a workbook
+sheet), \code{$event.type} (\code{"duplicated row"} or \code{"duplicated
+  column"}), \code{$action} (\code{"deletion"} for identical copies dropped,
+\code{"merging"} for differing copies combined), \code{$count} (number of
+extra rows/columns, not counting the one kept), \code{$strip.special}
+(\code{"FALSE"} when not selected, \code{"TRUE NONE"} when nothing was
+found, else \code{"TRUE ; <header>; ..."}: the standardized headers of
+that file/sheet where characters were changed),
+\code{$accented.letters.header} and \code{$removed.symbols.header}
+(number of unique column names with a character simplified / removed),
+and \code{$accented.letters.data} and \code{$removed.symbols.data}
+(number of unique data values with a character simplified / removed -
+\code{cafe} with an accent in 500 rows counts once). The four counts are
+\code{NA} when \code{strip.special = FALSE}. Only actions that did
+something are logged, so a file with no duplicates has no log rows (even
+if special characters were changed in it).
+
+Each non-\code{NULL} element is also assigned, under its own name, into
+the environment the function was called from.
 }
 \description{
-Scans a directory (and, optionally, its subdirectories) for \code{.csv} and
+Scans a folder (and, optionally, its sub-folders) for \code{.csv} and
 \code{.xlsx} files, sorts them into three categories by file name (or, for
 a workbook whose name ends in \code{"ARUdeployments.xlsx"}, by sheet name),
 merges each category's files into a single data frame, removes duplicate
 rows, and reports how many were removed.
 }
 \details{
-\strong{Header standardization (per Josh, 2026-09-14 project preference)
-\itemize{
-\item REVERSES a prior explicit design decision, flagged for review.} Every
-loaded file/sheet's own column names are now run through the shared
-package helper \code{standardize.headers()} (trim whitespace, collapse
-every run of non-alphanumeric characters to a single underscore,
-lowercase) immediately after the existing BOM-stripping step, before
-within-source duplicate-column resolution. \strong{This is a real reversal
-of this function's own previously-stated behavior}: earlier revisions of
-this function explicitly preserved "raw column names exactly (no automatic
-renaming of names with spaces/punctuation)" as a deliberate choice (see the
-dev script's assumption 5 and revision history) - that choice is
-superseded now, per the project-wide header-standardization preference,
-which applies to headers from every loaded file or externally-supplied
-data frame. A column like \code{"Site Name"} or \code{"ARU Serial Number"}
-is now returned as \code{site_name} / \code{aru_serial_number}; anyone
-with existing code that reads \code{result$aru.visit} (etc.) by the old
-raw/spaced column names will need to update it to the standardized
-snake_case names.
+\strong{Categories.} A file (or sheet) goes to the first category whose
+short, case-insensitive text its name contains: \code{"sitevis"} for
+\code{aru.visit} (this also catches a sheet misspelled \code{"sitevist"}),
+\code{"quad"} for \code{aru.quad} (quadrat habitat assessment), \code{"20m"}
+for \code{aru.20m} (20 m plot habitat assessment). Files that match none
+are skipped. Only a workbook whose name ends in \code{"ARUdeployments.xlsx"}
+(case ignored) is read sheet by sheet and sorted by sheet name; any other
+\code{.xlsx} (first sheet) is sorted by its file name, like a \code{.csv}.
+
+\strong{Each file or sheet, in order:}
+\enumerate{
+\item Read: a \code{.csv} with \code{special.read.csv()} (falls back to
+Latin-1 when a file isn't valid UTF-8); a workbook with \code{readxl}.
+\item With \code{strip.special = TRUE}, \code{special.strip()} cleans the
+headers and the text columns: accented letters and common symbols are
+simplified (an accented "e" becomes "e", the hybrid sign in
+\code{Quercus X bebbiana} becomes "X", curly quotes become straight
+quotes) and characters with no plain equivalent (e.g. degree and micro
+signs) are removed.
+\item A leading UTF-8 byte-order mark is removed from the column names,
+so a column from a CSV and from a workbook line up.
+\item Headers are standardized with \code{standardize.headers()}: trimmed,
+every run of non-alphanumeric characters becomes one underscore, lower
+case (\code{"Site Name"} becomes \code{site_name}).
+\item A column name that now appears more than once (e.g. "Personnel"
+twice on the site-visit form, or two names that differ only in case or
+punctuation) is compared row by row, treating \code{NA} and "" as the
+same: identical copies are dropped; otherwise they are merged into one
+column, taking the non-blank value and joining two different non-blank
+values with \code{"; "}.
 }
 
-\strong{Interaction with within-source duplicate-column resolution.}
-Standardization runs BEFORE \code{resolve.dup.columns()}, not after - two
-raw columns that used to be treated as distinct (because they differed
-only in case, whitespace, or punctuation - e.g. a stray \code{"ARU
-Serial#"} vs. \code{"ARU Serial Number"} typo-variant, purely
-hypothetical) could now collapse to the same standardized name and get
-swept into the existing identical-content-drop / differing-content-merge
-logic that already handles the real \code{"Personnel"}-appears-twice
-case. This is a natural consequence of standardizing before merging, not
-a separate feature, but is called out here since it changes what counts
-as a "duplicate column" for a given source file/sheet.
-
-\strong{The internal \code{.source.file} tracking column is NOT
-standardized and is unaffected.} It is this function's own invented
-bookkeeping field (added after each source is loaded and standardized,
-purely to attribute rows/columns back to their source file for
-\code{log.file = TRUE} reporting) - never a column loaded from any file,
-so the header-standardization preference does not apply to it.
-
-Category matching uses a short, case-insensitive substring rather than an
-exact file-name pattern: \code{"sitevis"} for the site-visit category,
-\code{"quad"} for the quadrat habitat-assessment category, \code{"20m"} for
-the 20m-plot habitat-assessment category. This was necessary because in the
-real test workbook the site-visit sheet is named \code{"sitevist"} (missing
-an "i") rather than containing "SiteVisitARU" - an exact-string match would
-have silently missed it.
-
-Only a file whose name ends in \code{"ARUdeployments.xlsx"} (case
-insensitive) is opened sheet-by-sheet and classified by SHEET name; any
-other \code{.xlsx} file is classified as a single unit by its own file
-name, the same as a \code{.csv}.
-
-Column names have a leading UTF-8 byte-order-mark stripped if present (some
-exported CSVs carry one on their first column), so the same logical column
-from a CSV and an xlsx sheet lines up correctly instead of appearing twice
-\itemize{
-\item this BOM-stripping step runs first, before header standardization.
+\strong{Merging and duplicates.} Within a category, the sources are bound
+together as character columns; a column missing from a source is filled
+with \code{NA}. Column names are never changed by R (\code{check.names =
+FALSE}). Exact full-row duplicates (base \code{duplicated()}) are then
+removed, and the number removed is printed for each category. Each row is
+tagged internally with its source file (not returned) so removed rows can
+be logged against that file.
 }
-
-If a single file or sheet has the same (now-standardized) column name more
-than once (a real issue in the source forms - e.g. "Personnel" appears
-twice on the site-visit form), every duplicate is compared row-by-row
-(treating \code{NA} and "" as equivalent): if all copies agree everywhere,
-the extra copy(ies) are dropped; if they differ anywhere, they are merged
-into ONE column - taking whichever copy is non-blank for a given row, and
-concatenating both with \code{"; "} where they conflict (both non-blank
-and different). This happens before columns are merged across sources.
-
-All columns are then coerced to character before merging multiple sources
-within a category, and combining uses a fill-by-\code{NA} row bind (a
-source missing a column the others have gets that column filled with
-\code{NA} rather than the merge erroring). \code{check.names = FALSE} is
-still used on every read/bind so R itself never mangles a name (e.g. via
-\code{make.names()}) independently of - and before - the explicit
-\code{standardize.headers()} step above. "Duplicate rows" means exact
-full-row duplicates (base \code{duplicated()}) within a category's merged
-data frame; the name of each category and the number of duplicate rows
-removed from it is always printed to the console. Internally every row is
-tagged with which source file it came from before this check, so - when
-\code{log.file = TRUE} - removed duplicate rows can be attributed back to
-the specific file(s) they came from.
-
-\strong{Column identifiers renamed, 2026-09-27, per Josh's
-reference-workbook "Change.to" column.} In \code{arumeta.mergelog} (the
-log data frame returned when \code{log.file = TRUE}): \code{event} ->
-\code{event.type}, and \code{inputfile} -> \code{filename}.
-
-\strong{Follow-up, 2026-09-30, per Josh - special characters.} New
-argument \code{strip.special} (default \code{TRUE}). Every \code{.csv} is
-now read with the shared \code{special.read.csv()} helper, which falls back
-to Latin-1 when a file isn't valid UTF-8 (so a stray Excel degree sign no
-longer fails with "invalid multibyte string"); this always applies.
-Immediately after each csv file or xlsx sheet is loaded (before BOM
-stripping, header standardization and duplicate handling),
-\code{special.strip()} removes non-ASCII characters from its text columns
-when \code{strip.special = TRUE} (\code{readxl} data are already UTF-8
-but are stripped the same way). \code{arumeta.mergelog} gains a last
-column \code{$strip.special} naming, per row, the (standardized) headers
-of that row's file/sheet where characters were removed. As before, the log
-only has rows for duplicate-row/column actions, so a file with special
-characters but no duplicates does not appear in it.
-
-\strong{Follow-up, 2026-10-02, per Josh - accents simplified, log
-counts.} With \code{strip.special = TRUE}, accented letters and common
-symbols are now simplified instead of dropped (\code{café} ->
-\code{cafe}, \code{Quercus × bebbiana} -> \code{Quercus X bebbiana},
-curly quotes -> straight quotes); characters with no plain equivalent
-(e.g. \code{°}, \code{µ}, \code{™}) are still removed. Column names
-are cleaned the same way. The log gets four new columns right after
-\code{$strip.special}: \code{$accented.letters.header} and
-\code{$removed.symbols.header} (number of unique column names with a
-character simplified / removed), and \code{$accented.letters.data} and
-\code{$removed.symbols.data} (number of unique data values with a
-character simplified / removed - \code{café} in 500 rows counts once;
-\code{café} and \code{French café} count twice). They are \code{NA}
-when \code{strip.special = FALSE}.
-
-\strong{Lower-case headers (2026-11-04, per Josh, Batz_reference_db Header.names).}
-The strip.special log columns are \code{$accented.letters.header} /
-\code{$accented.letters.data} (were Accented.letters.*).
-}
-\section{Known open items (not yet resolved - see project notes)}{
-
-\itemize{
-\item No "format" step (date standardization, etc.) has been specified
-yet beyond the header-standardization step documented above - only
-search/merge/de-duplicate (plus header standardization) is
-implemented.
-}
-}
-
 \examples{
 \dontrun{
 result <- batz.merge_aru.meta("path/to/raw/data", dir.sub = TRUE)

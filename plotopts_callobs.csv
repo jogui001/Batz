@@ -1,4 +1,4 @@
-"category","parameter","default.value","overide.value","notes"
+"category","parameter","default.value","override.value","notes"
 "Panel layout","facpan.numcol","3","","Number of columns in the facet_wrap panel grid."
 "Panel layout","panel.spacing.x","5.5","","Horizontal gap between adjacent facet panels, in points. Matches theme_bw()'s own built-in default - batz.plotdetections_first.last()'s own history found that widening this shrinks each panel's own width instead (fixed figure width), so this is left at the plain default rather than repeating that same investigation here."
 "Panel layout","panel.border.linewidth","0.5","","Line width of the border box drawn around each facet panel."

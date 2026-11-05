@@ -1,4 +1,4 @@
-"category","parameter","default.value","overide.value","notes"
+"category","parameter","default.value","override.value","notes"
 "Values","passes.per","sampled","","Black bars = passes per monitoring night: sampled = observation_count / date.monitoringnight_sampled (all site-nights in the community); detected = observation_count / date.monitoringnight_detected (only site-nights with the species)."
 "Axes","yaxe.left.breaks","0;4;20;80;400","","Left (passes per night) axis breaks, semicolon-separated. The axis is log1p-scaled so 0 can be shown."
 "Axes","yaxe.right.breaks","0;5;10;15;20;25","","Right (number of sites) axis breaks. The top right break is drawn level with the top left break."

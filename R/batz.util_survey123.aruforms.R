@@ -1,44 +1,29 @@
 #' Survey123.aruforms_headers.choices - Survey123 ARU form headers and choices
 #' (internal database)
 #'
-#' Added 2026-10-29, per Josh, for \code{\link{batz.merge_sitevisit.acoustics}}
-#' (a database - a list of data frames - not a function). Taken from Josh's
-#' \code{Survey123_aruforms all headers.xlsx}, one data frame per tab:
+#' A list of data frames (not a function) used by
+#' \code{\link{batz.merge_sitevisit.acoustics}} to translate Survey123 ARU form
+#' exports to Batz headers. One data frame per tab of
+#' \code{Survey123_aruforms all headers.xlsx}:
 #' \describe{
-#'   \item{\code{$quad}, \code{$habitat}, \code{$service}}{\code{aru.<tab>_Batz.headers}
-#'     (the tab plus the header, e.g. \code{aru.quad$aru.name} - some tabs share a
+#'   \item{\code{$quad}, \code{$habitat}, \code{$service}}{\code{aru.<tab>_batz.headers}
+#'     (the tab plus the header, e.g. \code{aru.quad$aru.name}; some tabs share a
 #'     header that functions such as \code{batz.generate_aru.appendix} use at
-#'     different times), \code{Batz.headers} (the header used in the Batz
-#'     package), then one column per form version (e.g. \code{forest_2026},
+#'     different times), \code{batz.headers} (the header used in the Batz
+#'     package), then one column per form version (\code{forest_2026},
 #'     \code{inland_2026}, \code{service_2026}) holding that version's
 #'     Survey123 export header.}
 #'   \item{\code{$Choices}}{\code{list_name}, \code{name} (the code
-#'     Survey123 stores) and \code{label} (the cleaned-up text).}
+#'     Survey123 stores) and \code{label} (the display text).}
 #' }
-#' Spaces at the ends of names were trimmed (\code{"quadrant "}); blank rows
-#' and repeated list_name/name pairs were removed. Spelling corrections
-#' (2026-10-29, per Josh): Batz headers \code{measurement.units} (was
-#' \code{measurment.units}) and \code{microphone.calibration_value} (was
-#' \code{microphone.callibration_value}); first columns
-#' \code{aru.habitat_Batz.headers} and \code{aru.service_Batz.headers} (both
-#' were \code{aru.habitat_Batz.headersfull}). The Survey123 export headers
-#' themselves ("Unit of measurment", "Mic callibration value") are left as
-#' the forms write them.
-#' \strong{Lower-case headers (2026-11-04, per Josh, Batz_reference_db
-#' Header.names).} Batz headers are lower case with "." for spaces
-#' (e.g. \code{GlobalID} -> \code{globalid}, \code{vegetation.tree_Tree1.DBH} ->
-#' \code{vegetation.tree_tree1.dbh}), and the columns are \code{batz.headers} /
-#' \code{aru.<tab>_batz.headers} (were \code{Batz.headers} /
-#' \code{aru.<tab>_Batz.headers}). Survey123 form headers are unchanged.
-#'
-#' \strong{Survey123 field names (2026-11-04, per Josh).} Batz headers for the
-#' Survey123 fields that had no Batz name: \code{tree.1/2/3.average.dbh} ->
-#' \code{vegetation.tree_tree1/2/3.dbh_average};
-#' \code{identify.the.species.of.the.3.saplings.closest.to.the.center.mic.point.} ->
-#' \code{vegetation.sapling_species};
-#' \code{select.any.equipment.that.needs.to.be.replaced.} -> \code{equipment.replace};
-#' \code{specify.other.equipment.} -> \code{equipment.replace_other};
-#' \code{specify.other.action.performed} -> \code{action.performed_other}.
+#' Batz headers are lower case with "." for spaces (e.g. \code{globalid},
+#' \code{vegetation.tree_tree1.dbh}, \code{vegetation.sapling_species},
+#' \code{equipment.replace}, \code{action.performed_other},
+#' \code{measurement.units}, \code{microphone.calibration_value}). Survey123
+#' export headers are kept exactly as the forms write them, including their
+#' spelling ("Unit of measurment", "Mic callibration value"). Names are
+#' trimmed; blank rows and repeated \code{list_name}/\code{name} pairs are
+#' not included.
 #'
 #' @keywords internal
 #' @noRd

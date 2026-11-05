@@ -1,135 +1,91 @@
 #' Merge and standardize SM5 ARU activity-log summary files
 #'
-#' SM5 sibling of \code{batz.merge_sm4.logfiles()} (added 2026-09-29, per
-#' Josh). Searches a directory (and, optionally, its subdirectories) for
-#' SM5 activity-log summary files, works out from each file's headers
-#' which SM5 firmware wrote it, and merges each firmware version into its
-#' own data frame: \code{SM5_1.5} (firmware 1.5 or earlier) and
-#' \code{SM5_1.6} (firmware 1.6 or later). The ARU name is taken from the
-#' file name, \code{$date} is normalized to \code{YYYY-MM-DD}, and
-#' \code{$lat}/\code{$ns} and \code{$longitude}/\code{$ew} are converted to
-#' signed decimal degrees (\code{$Y}/\code{$X}).
+#' Searches a directory (and, optionally, its subdirectories) for SM5
+#' activity-log summary files, works out from each file's headers which SM5
+#' firmware wrote it, and merges each firmware version into its own data
+#' frame: \code{SM5_1.5} (firmware 1.5 or earlier) and \code{SM5_1.6}
+#' (firmware 1.6 or later). The ARU name is taken from the file name,
+#' \code{$date} is converted to \code{YYYY-MM-DD}, and signed decimal-degree
+#' coordinates (\code{$X}/\code{$Y}) are added.
 #'
 #' @param dir.load Character. Directory to search for files matching
 #'   \code{load.pattern}. Default \code{getwd()}.
 #' @param dir.sub Logical, default \code{FALSE}. If \code{TRUE}, also search
 #'   subdirectories of \code{dir.load}.
-#' @param load.pattern Character vector of wildcard/glob patterns (converted
-#'   internally to a regex via \code{utils::glob2rx()}, matched
-#'   case-insensitively), default
-#'   \code{c("*_A_Summary*.txt", "*_B_Summary*.txt")} - same as
-#'   \code{batz.merge_sm4.logfiles()}; matches real SM5 names such as
-#'   \code{"NWS01_A_Summary_1.txt"}.
+#' @param load.pattern Character vector of wildcard (glob) patterns, converted
+#'   to a regular expression with \code{utils::glob2rx()} and matched
+#'   case-insensitively. Default
+#'   \code{c("*_A_Summary*.txt", "*_B_Summary*.txt")}; matches SM5 names
+#'   such as \code{"NWS01_A_Summary_1.txt"}.
 #' @param duplicates.remove Logical, default \code{TRUE}. Drop exact
 #'   duplicate rows from each merged data frame.
 #' @param log.file Logical, default \code{FALSE}. If \code{TRUE}, also
-#'   return (and auto-assign) \code{log.file_sm5}: one row per file examined,
-#'   with columns \code{$aru.name}, \code{$filename}, \code{$version},
-#'   \code{$date.start}, \code{$date.end}, \code{$date.unique},
-#'   \code{$date.range}, \code{$records}, \code{$load.status},
-#'   \code{$reason}, \code{$filepath} (same schema as
-#'   \code{log.file_sm4}).
+#'   return (and assign) \code{log.file_sm5}: one row per file examined, with
+#'   the same columns as \code{log.file_sm4} (see
+#'   \code{\link{batz.merge_sm4.logfiles}}).
 #' @param strip.special Logical, default \code{TRUE}. If \code{TRUE},
-#'   simplifies accented letters and
-#'   symbols (\code{é} -> \code{e}, \code{×} -> \code{X}) and removes other non-ASCII special characters (e.g. \code{°}, \code{µ},
-#'   \code{™}) from each file's data after loading. Files are
-#'   always read with a UTF-8/Latin-1 fallback, so a stray \code{°} can't
-#'   stop them loading, whatever this is set to. The log gets a last column
-#'   \code{$strip.special}: \code{"FALSE"} (not selected), \code{"TRUE
-#'   NONE"} (nothing found) or \code{"TRUE ; <header>; ..."} (headers where
-#'   characters were removed).
+#'   accented letters and common symbols are simplified (\code{é} -> \code{e},
+#'   \code{×} -> \code{X}, curly quotes -> straight quotes) and other
+#'   non-ASCII characters (e.g. \code{°}, \code{µ}, \code{™}) are removed,
+#'   in column names and data, right after each file is read. Files are
+#'   always read as UTF-8 with a Latin-1 fallback, whatever this is set to.
+#'   The log columns \code{$strip.special}, \code{$accented.letters.header},
+#'   \code{$removed.symbols.header}, \code{$accented.letters.data} and
+#'   \code{$removed.symbols.data} report what was changed.
 #'
 #' @return Invisibly, a named list: \code{SM5_1.5} and \code{SM5_1.6}
-#'   (always; an empty \code{data.frame()} if no file of that version was
-#'   loaded), plus \code{log.file_sm5} when \code{log.file = TRUE}. Every
-#'   element is also auto-assigned into the calling environment, so a bare
-#'   call creates them directly in your workspace.
+#'   (always; an empty \code{data.frame()} if no file of that version
+#'   loaded), plus \code{log.file_sm5} when \code{log.file = TRUE}. Each
+#'   element is also assigned into the calling environment, so a bare call
+#'   creates them in your workspace.
 #'
 #'   \code{SM5_1.5} columns: \code{$aru.name}, \code{$date}, \code{$time},
-#'   \code{$lat}, \code{$ns}, \code{$longitude}, \code{$ew}, \code{$power_v},
-#'   \code{$temp_c}, \code{$acfiles}, \code{$fs1files}, \code{$fs2files},
-#'   \code{$zc1files}, \code{$zc2files}, \code{$scrub1}, \code{$scrub2},
-#'   \code{$X}, \code{$Y}.
+#'   \code{$lat}, \code{$ns}, \code{$longitude}, \code{$ew}, \code{$power.v},
+#'   \code{$temperature.c}, \code{$acfiles}, \code{$fs1files},
+#'   \code{$fs2files}, \code{$zc1files}, \code{$zc2files}, \code{$scrub1},
+#'   \code{$scrub2}, \code{$X}, \code{$Y}.
 #'
 #'   \code{SM5_1.6} columns: \code{$aru.name}, \code{$date}, \code{$time},
-#'   \code{$lat}, \code{$ns}, \code{$longitude}, \code{$ew}, \code{$power_v},
-#'   \code{$temp_c}, \code{$acfiles}, \code{$acl}, \code{$acr}, \code{$X},
-#'   \code{$Y}.
+#'   \code{$lat}, \code{$ns}, \code{$longitude}, \code{$ew}, \code{$power.v},
+#'   \code{$temperature.c}, \code{$acfiles}, \code{$acl}, \code{$acr},
+#'   \code{$X}, \code{$Y}.
 #'
 #' @details
-#' \strong{Firmware detection.} Raw headers go through
+#' Uses the same internal engine (\code{sm.logfile.merge()},
+#' \code{batz.util_sm.logfile.R}) as \code{\link{batz.merge_sm4.logfiles}}
+#' and \code{\link{batz.merge_sm.logfiles}}, so file search, ARU name, date
+#' and coordinate conversion, duplicate removal and log reasons work the same
+#' way.
+#'
+#' \strong{Firmware detection.} Raw headers are standardized with
 #' \code{standardize.headers()} first (\code{"#ACFILES"} -> \code{acfiles},
-#' \code{"POWER(V)"} -> \code{power_v}, etc.). A file is SM5.1.5 if it has
-#' the firmware-1.5 headers (\code{DATE, TIME, LAT, NS, LON, EW, POWER(V),
+#' \code{"POWER(V)"} -> \code{power_v}). A file is SM5.1.5 if it has the
+#' firmware-1.5 headers (\code{DATE, TIME, LAT, NS, LON, EW, POWER(V),
 #' TEMP(C), #ACFILES, #FS1FILES, #FS2FILES, #ZC1FILES, #ZC2FILES, #SCRUB1,
 #' #SCRUB2}) and SM5.1.6 if it has the firmware-1.6 headers (\code{DATE,
 #' TIME, LAT, NS, LON, EW, POWER(V), TEMP(C), #ACFILES, ACL, ACR}). A file
 #' that is only partly right is assigned the version it most resembles and
-#' fails with \code{"These headers are missing: ..."}. The version logic is
-#' in the shared internal engine (\code{batz.util_sm.logfile.R}), also
-#' used by \code{batz.merge_sm4.logfiles()} and
-#' \code{batz.merge_sm.logfiles()}.
+#' fails with \code{"These headers are missing: ..."}. A file matching no
+#' layout is logged as \code{"unknown"}.
+#'
+#' \strong{Output names.} \code{lon} becomes \code{$longitude},
+#' \code{power_v} \code{$power.v} and \code{temp_c} \code{$temperature.c}.
 #'
 #' \strong{SM4 files are not merged here.} An SM4 file matched by
-#' \code{load.pattern} is logged as a \code{"Failure"} with
+#' \code{load.pattern} is logged as \code{"Failure"} with
 #' \code{$version = "SM4"} and a reason pointing to
 #' \code{batz.merge_sm4.logfiles()} or \code{batz.merge_sm.logfiles()}.
 #'
-#' \strong{SM5.1.6 not yet tested against a real file.} The 1.5 layout was
-#' built and tested from Josh's real NWS01-03 files; the 1.6 layout is
-#' built from the header list Josh supplied (no real 1.6 file yet) and
-#' tested with synthetic files only.
+#' \strong{Not filtered.} Before the unit gets a GPS fix,
+#' \code{$lat}/\code{$longitude} can be recorded as \code{0}, giving
+#' \code{$X}/\code{$Y} of 0. Rows from before a deployment are kept; the log
+#' shows them as a \code{$date.range} much larger than \code{$date.unique}.
 #'
-#' \strong{Things seen in the real 1.5 files, left as-is (not filtered):}
-#' before the unit gets a GPS fix, \code{$lat}/\code{$longitude} are
-#' recorded as \code{0.00000} (6 rows in NWS03), which gives
-#' \code{$X}/\code{$Y} of 0. NWS03 also has a few 2025 rows ahead of its
-#' 2026 deployment, so its \code{$date.range} in the log is much larger
-#' than \code{$date.unique} - that is the log flagging the gap, as
-#' intended.
-#'
-#' \strong{Output names} (per Josh, 2026-09-29): \code{SM5_1.5},
-#' \code{SM5_1.6}, and \code{log.file_sm5}. The log was first named
-#' \code{log.file}, then \code{log.file_sm5}, and finally
-#' \code{log.file_sm5} (all the same day, per Josh) so each SM function
-#' has its own log name: \code{log.file_sm4}
-#' (\code{batz.merge_sm4.logfiles()}), \code{log.file_sm5} (this
-#' function) and \code{log.file_sm5} (\code{batz.merge_sm.logfiles()}).
-#' None of them overwrites another.
-#'
-#' \strong{Follow-up, 2026-09-29, per Josh - function renamed.}
-#' \code{batz.merge_sm5.logfile()} is now \code{batz.merge_sm5.logfiles()}
-#' (file \code{R/batz.merge_sm5.logfiles.R}), matching
-#' \code{batz.merge_sm4.logfiles()} and \code{batz.merge_sm.logfiles()}.
-#' Same inputs and outputs; code calling the old name needs updating.
-#' Earlier paragraphs use the new name.
-#'
-#' \strong{Follow-up, 2026-09-30, per Josh - special characters.} New
-#' input \code{strip.special} (see above); files now load even with a
-#' stray Latin-1 \code{°} byte, and the log has a new last column
-#' \code{$strip.special}.
-#'
-#' \strong{Follow-up, 2026-10-02, per Josh - accents simplified, log
-#' counts.} With \code{strip.special = TRUE}, accented letters and common
-#' symbols are now simplified instead of dropped (\code{café} ->
-#' \code{cafe}, \code{Quercus × bebbiana} -> \code{Quercus X bebbiana},
-#' curly quotes -> straight quotes); characters with no plain equivalent
-#' (e.g. \code{°}, \code{µ}, \code{™}) are still removed. Column names
-#' are cleaned the same way. The log gets four new columns right after
-#' \code{$strip.special}: \code{$accented.letters.header} and
-#' \code{$removed.symbols.header} (number of unique column names with a
-#' character simplified / removed), and \code{$accented.letters.data} and
-#' \code{$removed.symbols.data} (number of unique data values with a
-#' character simplified / removed - \code{café} in 500 rows counts once;
-#' \code{café} and \code{French café} count twice). They are \code{NA}
-#' when \code{strip.special = FALSE}.
+#' \strong{Note.} The SM5.1.6 layout has only been tested with synthetic
+#' files.
 #'
 #' @seealso \code{\link{batz.merge_sm4.logfiles}},
 #'   \code{\link{batz.merge_sm.logfiles}}
-#'
-#' \strong{Lower-case headers (2026-11-04, per Josh, Batz_reference_db Header.names).}
-#' The strip.special log columns are \code{$accented.letters.header} /
-#' \code{$accented.letters.data} (were Accented.letters.*).
 #'
 #' @examples
 #' \dontrun{

@@ -418,3 +418,19 @@ print(batz.batusa_recode.names("40kmyomyvo"))
 cat("\n=== REGRESSION: a genuinely unmatched input is still returned UNCHANGED\n",
     "(not silently 'corrected' to something) and still triggers the warning ===\n", sep = "")
 print(batz.batusa_recode.names("totally_unknown_bat"))
+
+## ---------------------------------------------------------------------------
+## Reference-table fixes (2026-11-04)
+## ---------------------------------------------------------------------------
+print(batz.batusa_recode.names(c("NOISE", "25k", "LAFRPAHE", "LACITABR"), batname.format.out = "code4"))
+# expect: "Noise" "25k" "LAFRPAHE" "LACITABR"
+print(batz.batusa_recode.names(c("25k", "LAFRPAHE", "LACITABR"), batname.format.out = "common_name"))
+# expect: "Unidentifiable Species 15-25 kHz" "Western red bat; canyon bat" "Hoary bat; Mexican free-tailed bat"
+print(batz.batusa_recode.names("25k", batname.format.out = "scientific_name"))
+# expect: "Unidentifiable Species 15-25 kHz"
+
+## ---------------------------------------------------------------------------
+## Species pairs use "; " and LAFR is "Western red bat" (2026-11-04)
+## ---------------------------------------------------------------------------
+print(batz.batusa_recode.names(c("LUSO", "Little brown bat, Indiana bat", "Desert red bat", "LAFR"), batname.format.out = "common_name"))
+# expect: "Little brown bat; Indiana bat" (x2) "Western red bat" (x2)
