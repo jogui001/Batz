@@ -29,6 +29,9 @@
 #'   \code{$parameter}, \code{$default.value}. The custom style column
 #'   (named by \code{aes.style}) and \code{$notes} are optional. See
 #'   "plotopts" in Details.
+#'   Default \code{NULL}: the built-in settings are used (NOTE): the
+#'   \code{PLOTOPTS_plot_bar.bat.group} tab of Batz_reference_db, carried by the
+#'   package. A data frame given here is used instead.
 #' @param project.name Character, default \code{"new.project"}. First part
 #'   of each saved file name.
 #' @param ... Plot settings typed into the call, named as the
@@ -159,7 +162,7 @@
 #' }
 #'
 #' @export
-batz.plot_bar.bat.group <- function(data, fig.list, aes.default,
+batz.plot_bar.bat.group <- function(data, fig.list, aes.default = NULL,
                                     project.name = "new.project",
                                     aes.style = "override.value",
                                     dir.save = getwd(),
@@ -175,6 +178,7 @@ batz.plot_bar.bat.group <- function(data, fig.list, aes.default,
   ## ---- special characters ----------------------------------------------
   objname.fig.list <- paste(deparse(substitute(fig.list)), collapse = "")
   objname.aes.default <- paste(deparse(substitute(aes.default)), collapse = "")
+  if (is.null(aes.default)) aes.default <- plotutil_default_plotopts("batz.plot_bar.bat.group")   # built-in settings
   for (a in c("data", "fig.list", "aes.default")) {
     if (!is.data.frame(get(a))) stop(sprintf("%s: `%s` must be a data frame.", FN, a), call. = FALSE)
   }

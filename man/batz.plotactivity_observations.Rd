@@ -8,7 +8,7 @@ batz.plotactivity_observations(
   data,
   fig.list,
   suntimes,
-  aes.default,
+  aes.default = NULL,
   project.name = "new.project",
   aes.style = "override.value",
   dir.save = getwd(),
@@ -45,7 +45,10 @@ parameter, e.g. \verb{plotopts_callobs.csv} from
 \code{\link{batz.generate_plotopts}}. Required columns:
 \code{$category}, \code{$parameter}, \code{$default.value}. The custom
 style column (named by \code{aes.style}) and \code{$notes} are optional.
-See "plotopts" in Details.}
+See "plotopts" in Details.
+Default \code{NULL}: the built-in settings are used (NOTE): the
+\code{PLOTOPTS_plotact_observations} tab of Batz_reference_db, carried by the
+package. A data frame given here is used instead.}
 
 \item{project.name}{Character, default \code{"new.project"}. Put at the
 start of every saved file name. A blank value leaves it out.}
@@ -187,10 +190,17 @@ FALSE keeps one bar per value, side by side.}
 \item{\code{$date.format}}{X-axis date label format (strftime style,
 e.g. \code{"\%b-\%d/n\%Y"}). A literal "/n" becomes a line break.}
 \item{\code{$date.start}, \code{$date.end}}{Date window of the plot.
-Read as m/d/Y, Y-m-d or m/d/y.}
+Read as m/d/Y, Y-m-d or m/d/y. Several dates separated by ";" (e.g.
+\code{"2026-06-26; 2026-06-28; 2026-06-29; 2026-07-01"} in both) give
+one window per pair (first \code{$date.start} with first
+\code{$date.end}, ...): only the days in the windows are plotted, side
+by side, and the days between them are left out. With the same list
+in both, only those dates are plotted. The two lists must be the same
+length.}
 \item{\code{$xaxe.interval}}{Number of evenly spaced labeled dates on
 the X axis, from \code{$date.start} to \code{$date.end}. An unusable
-value gives 2 labels (NOTE).}
+value gives 2 labels (NOTE). With date windows, every plotted day is
+labelled when there are no more days than \code{$xaxe.interval}.}
 \item{Optional: \code{$plot.group}}{Column of \code{data} to filter and
 group by. Blank or absent = \code{$group}. A name that is not a column
 of \code{data} skips the row (NOTE).}
@@ -284,7 +294,8 @@ title \code{legend.groupval.title}) and 40kHzMyo keeps
 \code{bar.alldetections.fill} and \code{bar.40khzmyo.fill} (legend
 title \code{bar.fill.legend.title}, showing only the 40kHzMyo key).
 \item The X axis runs from \code{$date.start} to \code{$date.end} plus
-\code{xaxe.date.buffer.days} on each side. Facets are laid out in
+\code{xaxe.date.buffer.days} on each side (with date windows: only the
+days in the windows, one slot each). Facets are laid out in
 \code{facpan.numcol} columns.
 \item The PNG size is \code{plot.width} + \code{ggsave.width.pad} by
 \code{plot.height} + \code{ggsave.height.pad}, in \code{ggsave.units},

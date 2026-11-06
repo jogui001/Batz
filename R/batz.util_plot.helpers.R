@@ -464,3 +464,23 @@ plotutil_plot_inputs_check <- function(inputs, known, fn) {
 #' @keywords internal
 #' @noRd
 plotutil_required_left <- function(required, inputs) required[!plotutil_param_key(required) %in% names(inputs)]
+
+
+#' Built-in plot settings (plotopts) of a plot function (internal)
+#'
+#' Every plot function that takes \code{aes.default} uses its built-in
+#' settings table when \code{aes.default} is not given (\code{NULL}). The
+#' tables are kept in Batz_reference_db (tabs \code{PLOTOPTS_*}, listed in
+#' its \code{database.names} tab as \code{plotopts.<function name>}) and
+#' carried by the package in \verb{R/sysdata.rda}
+#' (\code{\link{batz.util_refdb.sync}}). A NOTE says when they are used. A
+#' data frame given as \code{aes.default} is used instead, and the built-in
+#' table is not read.
+#' @param fn Plot function name, e.g. \code{"batz.plotactivity_observations"}.
+#' @keywords internal
+#' @noRd
+plotutil_default_plotopts <- function(fn) {
+  d <- batz.db(paste0("plotopts.", fn))
+  cat(sprintf("NOTE: %s - no aes.default given: the built-in settings (Batz_reference_db) are used.\n", fn))
+  d
+}

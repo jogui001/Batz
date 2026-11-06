@@ -12,7 +12,8 @@ Data frame: \code{$category}, \code{$parameter},
 }
 \description{
 The settings used when neither the function call nor \code{plotopts}
-gives a value. Write it out as a starting \code{plotopts} file with
+gives a value. They are kept in Batz_reference_db (tab \code{PLOTOPTS_plot_veg.species}) and
+carried by the package (\code{\link{batz.util_refdb.sync}}). Write it out as a starting \code{plotopts} file with
 \code{write.csv(batz.plot_vegetation.species.defaults(),
 "plotopts_vegetation.species.csv", row.names = FALSE)}.
 }

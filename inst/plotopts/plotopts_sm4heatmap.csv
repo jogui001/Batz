@@ -1,4 +1,4 @@
-"category","parameter","default.value","overide.value","notes"
+"category","parameter","default.value","override.value","notes"
 "Axes","yaxe.break.interval","3 hours","","Spacing between y-axis breaks, as a time span (passed straight to seq.POSIXct's by= argument, same convention as plotopts_first.last.csv's own $yaxe.break.interval - a plain number here would need as.numeric() and break this string form, so it is NOT wrapped in as.numeric() in the code)."
 "Axes","yaxe.labelformat","%H:%M","","Base 24-hour time format used only as a fallback if $yaxe.break.labels doesn't have exactly one label per break produced by $yaxe.break.interval."
 "Axes","yaxe.break.labels","Noon;15:00;18:00;21:00;Midnight;03:00;06:00;09:00;Noon","","Labels for the y-axis breaks, in order from Noon (start) to Noon (end, 24 hours later); semicolon-separated - matches Josh's target image and plotopts_first.last.csv's own convention exactly."

@@ -8,7 +8,7 @@ batz.plotsm4_heatmap(
   data,
   fig.list,
   suntimes,
-  aes.default,
+  aes.default = NULL,
   project.name = "new.project",
   aes.style = "override.value",
   dir.save = getwd(),
@@ -48,7 +48,10 @@ the night starting on \code{$date}) are used for drawing.}
 parameter, e.g. \verb{plotopts_sm4heatmap.csv}. Required columns:
 \code{$category}, \code{$parameter}, \code{$default.value}. The custom
 style column (named by \code{aes.style}) and \code{$notes} are
-optional. See "plotopts" in Details.}
+optional. See "plotopts" in Details.
+Default \code{NULL}: the built-in settings are used (NOTE): the
+\code{PLOTOPTS_plotsm4_heatmap} tab of Batz_reference_db, carried by the
+package. A data frame given here is used instead.}
 
 \item{project.name}{Character, default \code{"new.project"}. First part
 of each saved file name.}

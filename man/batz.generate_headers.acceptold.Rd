@@ -5,17 +5,19 @@
 \title{Read the reference table of old (deprecated) headers}
 \usage{
 batz.generate_headers.acceptold(
-  dir.load = getwd(),
+  dir.load = NULL,
   file.name = "batz_headers_acceptold.csv",
   strip.special = TRUE
 )
 }
 \arguments{
-\item{dir.load}{Character, default \code{getwd()}. Folder that holds
-\code{file.name}.}
+\item{dir.load}{Character, default \code{NULL}: the table carried by the
+package is used (Batz_reference_db, tab \code{DB_headers.acceptold};
+see \code{\link{batz.util_refdb.sync}}). A folder reads
+\code{file.name} from that folder instead.}
 
 \item{file.name}{Character, default \code{"batz_headers_acceptold.csv"}.
-Name of the reference CSV.}
+Name of the reference CSV when \code{dir.load} is given.}
 
 \item{strip.special}{Logical, default \code{TRUE}. If \code{TRUE},
 accented letters and common symbols in the table are simplified to a
@@ -39,7 +41,7 @@ rename old headers when data are loaded.
 }
 \details{
 \itemize{
-\item The CSV is read as UTF-8; if that fails it is re-read as Latin-1,
+\item With \code{dir.load} given, the CSV is read as UTF-8; if that fails it is re-read as Latin-1,
 so a stray Excel-saved byte (e.g. a degree sign) does not stop it
 loading. All columns are read as character.
 \item With \code{strip.special = TRUE} the table is cleaned straight

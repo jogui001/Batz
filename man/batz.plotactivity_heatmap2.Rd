@@ -34,7 +34,9 @@ batz.plotactivity_heatmap2(
 \item{aes.default}{Optional plot-settings data frame
 (\code{plotopts_heatmap2.csv}) with \code{$category},
 \code{$parameter}, \code{$default.value}, plus the \code{aes.style}
-column. Default \code{NULL}.}
+column. Default \code{NULL}: the built-in settings are used (NOTE): the
+\code{PLOTOPTS_plotact_heatmap2} tab of Batz_reference_db, carried by the
+package. A data frame given here is used instead.}
 
 \item{date.col}{Character, default \code{"date.monitoringnight"}. Date
 column, and the day layout: \code{"date.monitoringnight"} (noon to

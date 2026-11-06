@@ -81,6 +81,9 @@
 #'   (e.g. \code{plotopts_heatmap.csv}), with \code{$category},
 #'   \code{$parameter}, \code{$default.value} and optionally an
 #'   \code{$override.value} column (see Details).
+#'   Default \code{NULL}: the built-in settings are used (NOTE): the
+#'   \code{PLOTOPTS_plotact_heatmap} tab of Batz_reference_db, carried by the
+#'   package. A data frame given here is used instead.
 #' @param project.name Character, default \code{"new.project"}. First part
 #'   of the saved file name.
 #' @param ... Plot settings typed into the call, named as the
@@ -143,7 +146,7 @@ batz.plotactivity_heatmap <- function(data,
                                        date.col = "date.monitoringnight",
                                        time.col = "time",
                                        bin.minutes = 30,
-                                       aes.default,
+                                       aes.default = NULL,
                                        project.name = "new.project",
                                        aes.style = "override.value",
                                        site.label = "",
@@ -159,6 +162,7 @@ batz.plotactivity_heatmap <- function(data,
   ## (header standardization/checks included). special.strip() returns
   ## non-data-frames unchanged and only modifies these local copies.
   objname.aes.default <- paste(deparse(substitute(aes.default)), collapse = "")
+  if (is.null(aes.default)) aes.default <- plotutil_default_plotopts("batz.plotactivity_heatmap")   # built-in settings
   data <- special.strip(data, strip.special)$df
   ## aes.default is a settings table, not data - stripped only when
   ## strip.special.plotopts = TRUE (2026-10-02, per Josh); otherwise checked

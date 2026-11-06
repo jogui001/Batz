@@ -7,7 +7,7 @@
 batz.plotcover_bullseye(
   data,
   mic,
-  aes.default,
+  aes.default = NULL,
   project.name = "new.project",
   aes.style = "override.value",
   dir.save = getwd(),
@@ -48,7 +48,10 @@ and \code{"Vertical Microphone Orientation"} (degrees: 0 = level,
 \code{\link{batz.generate_plotopts}}). Needs \code{$category},
 \code{$parameter} and \code{$default.value}; an \code{$override.value}
 column and \code{$notes} are optional. Its headers are not standardized.
-See Details for the parameters read.}
+See Details for the parameters read.
+Default \code{NULL}: the built-in settings are used (NOTE): the
+\code{PLOTOPTS_plotcover_bullseye} tab of Batz_reference_db, carried by the
+package. A data frame given here is used instead.}
 
 \item{project.name}{Character, default \code{"new.project"}. First part of
 each saved file name.}

@@ -819,3 +819,19 @@ aes.case <- aes.obs; aes.case$parameter <- paste0(" ", toupper(aes.case$paramete
 dir.pn <- file.path(tempdir(), "project_name_test"); dir.create(dir.pn, showWarnings = FALSE)
 r.pn <- batz.plotactivity_observations(mk("EPFU"), fl.luso("call.observations", "EPFU"), st, aes.case, project.name = "SevenIslands", dir.save = dir.pn)
 cat("saved (expect SevenIslands_...png):", list.files(dir.pn), "\n")
+
+## ---------------------------------------------------------------------------
+## several dates in $date.start / $date.end (2026-11-06): only those days are plotted
+## ---------------------------------------------------------------------------
+fl.days <- function(ds, de) { f <- fl.luso("call.observations", "EPFU"); f$myso <- FALSE; f$xaxe.interval <- "8"
+  f$date.start <- ds; f$date.end <- de; f }
+L <- '"2026-07-01"; "2026-07-03"; "2026-07-05"'                       # same list in both = just these days
+r.days <- batz.plotactivity_observations(mk("EPFU"), fl.days(L, L), st, aes.obs, dir.save = tempdir())
+print(sort(unique(format(r.days$plots[[1]]$pd$date.parsed))))          # expect 07-01, 07-03, 07-05 (no 07-02, 07-04)
+stopifnot(identical(sort(unique(format(r.days$plots[[1]]$pd$date.parsed))), c("2026-07-01", "2026-07-03", "2026-07-05")))
+print(r.days$ggplots[[1]])                                            # three bars side by side, no gaps
+## one window per pair: 07-01 to 07-02 and 07-04 to 07-05 (07-03 left out)
+r.win <- batz.plotactivity_observations(mk("EPFU"), fl.days("2026-07-01; 2026-07-04", "2026-07-02; 2026-07-05"), st, aes.obs, dir.save = tempdir())
+stopifnot(!"2026-07-03" %in% format(r.win$plots[[1]]$pd$date.parsed))
+## lists of different length stop with a message
+try(batz.plotactivity_observations(mk("EPFU"), fl.days("2026-07-01; 2026-07-04", "2026-07-05"), st, aes.obs, dir.save = tempdir()))

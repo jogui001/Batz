@@ -26,6 +26,9 @@
 #'   \code{$parameter} and \code{$default.value}; an \code{$override.value}
 #'   column and \code{$notes} are optional. Its headers are not standardized.
 #'   See Details for the parameters read.
+#'   Default \code{NULL}: the built-in settings are used (NOTE): the
+#'   \code{PLOTOPTS_plotcover_bullseye} tab of Batz_reference_db, carried by the
+#'   package. A data frame given here is used instead.
 #' @param project.name Character, default \code{"new.project"}. First part of
 #'   each saved file name.
 #' @param ... Plot settings typed into the call, named as the
@@ -216,7 +219,7 @@
 #'                         sub.plots = c("canopy.bull", "understory.bull"),
 #'                         arrow.panel = "all", panel.labels = c("(a)", "(b)"))
 #' }
-batz.plotcover_bullseye <- function(data, mic, aes.default, project.name = "new.project",
+batz.plotcover_bullseye <- function(data, mic, aes.default = NULL, project.name = "new.project",
                                      aes.style = "override.value",
                                      dir.save = getwd(),
                                      sub.plots = c("canopy.bull", "mic.bar",
@@ -239,6 +242,7 @@ batz.plotcover_bullseye <- function(data, mic, aes.default, project.name = "new.
   ## (header standardization/checks included). special.strip() returns
   ## non-data-frames unchanged and only modifies these local copies.
   objname.aes.default <- paste(deparse(substitute(aes.default)), collapse = "")
+  if (is.null(aes.default)) aes.default <- plotutil_default_plotopts("batz.plotcover_bullseye")   # built-in settings
   data <- special.strip(data, strip.special)$df
   mic <- special.strip(mic, strip.special)$df
   ## aes.default is a settings table, not data - stripped only when

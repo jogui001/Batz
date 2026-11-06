@@ -427,53 +427,12 @@ batz.plot_vegetation.species <- function(data, project.name = "", site.names = N
 #' Built-in plot settings of batz.plot_vegetation.species()
 #'
 #' The settings used when neither the function call nor \code{plotopts}
-#' gives a value. Write it out as a starting \code{plotopts} file with
+#' gives a value. They are kept in Batz_reference_db (tab \code{PLOTOPTS_plot_veg.species}) and
+#' carried by the package (\code{\link{batz.util_refdb.sync}}). Write it out as a starting \code{plotopts} file with
 #' \code{write.csv(batz.plot_vegetation.species.defaults(),
 #' "plotopts_vegetation.species.csv", row.names = FALSE)}.
 #'
 #' @return Data frame: \code{$category}, \code{$parameter},
 #'   \code{$default.value}, \code{$override.value} (blank), \code{$notes}.
 #' @export
-batz.plot_vegetation.species.defaults <- function() {
-  r <- function(category, parameter, default.value, notes)
-    data.frame(category = category, parameter = parameter, default.value = default.value,
-               override.value = "", notes = notes, stringsAsFactors = FALSE)
-  rbind(
-    r("Inputs", "site.names", "", "Sites ($aru.name) to plot, in legend order, separated by ';'. Blank = all sites, sorted."),
-    r("Inputs", "site.colors", "", "One color per site in site.names order, or site=color pairs, separated by ';'. Blank = black to light grey."),
-    r("Inputs", "legend.position", "right", "right, bottom, left, top or none."),
-    r("Inputs", "bar", "stacked", "stacked (sites on top of each other) or grouped (side by side)."),
-    r("Inputs", "DBH", "TRUE", "TRUE prints the mean DBH (diameter at breast height) above each tree / snag bar."),
-    r("Inputs", "size", "page", "page (6 x 7 in), half page (6 x 4), powerpoint (12 x 6), half powerpoint (6 x 6), or <width>x<height> in inches."),
-    r("Data", "site.column", "aru.name", "Column holding the site names."),
-    r("Data", "tree.columns", "vegetation.tree_tree1.species;vegetation.tree_tree2.species;vegetation.tree_tree3.species", "Tree species columns."),
-    r("Data", "sapling.columns", "vegetation.sapling_species1;vegetation.sapling_species2;vegetation.sapling_species3", "Sapling species columns."),
-    r("Data", "snag.include", "TRUE", "TRUE counts every filled snag DBH as one snag in the tree panel."),
-    r("Data", "snag.columns", "vegetation.snag_snag1.dbh;vegetation.snag_snag2.dbh;vegetation.snag_snag3.dbh", "Snag columns (a filled cell = one snag)."),
-    r("Data", "snag.label", "Snag", "X-axis label of the snag bar."),
-    r("Data", "species.titlecase", "TRUE", "TRUE writes species in title case so 'red spruce' and 'Red Spruce' are counted together."),
-    r("Panels", "panel.order", "sapling;tree", "Panel order, top to bottom."),
-    r("Panels", "panel.title.sapling", "Sapling", "Heading of the sapling panel."),
-    r("Panels", "panel.title.tree", "Tree", "Heading of the tree panel."),
-    r("DBH", "dbh.units", "in", "Units of the DBH labels: in or cm (records in the other unit are converted, 1 in = 2.54 cm)."),
-    r("DBH", "units.column", "measurement.units", "Column holding each record's unit (in or cm). Missing = dbh.units."),
-    r("DBH", "dbh.digits", "1", "Decimal places of the DBH labels."),
-    r("DBH", "dbh.label.suffix", "", "Text after each DBH label, e.g. ' in'. Blank = none."),
-    r("DBH", "dbh.text.size", "3", "Size of the DBH labels (mm, ggplot2 text size)."),
-    r("Axes", "xaxe.title", "Species", "X-axis title."),
-    r("Axes", "yaxe.title", "Number of each species", "Y-axis title."),
-    r("Axes", "yaxe.max", "", "Top of the Y axis. Blank = from the data."),
-    r("Axes", "xaxe.text.angle", "auto", "Angle of the species labels: auto (0, or 45 when there are more than 8 species) or a number of degrees."),
-    r("Legend", "legend.title", "", "Legend title. Blank = none."),
-    r("Bars", "bar.width", "0.9", "Bar width (1 = bars touch)."),
-    r("Bars", "bar.outline.color", "", "Bar outline color. Blank = none."),
-    r("Bars", "zero.show", "TRUE", "Grouped bars: TRUE draws a short line at 0 in the site's color where a site has none of that species."),
-    r("Bars", "zero.linewidth", "1", "Thickness of the zero line (grouped bars)."),
-    r("Text", "strip.text.size", "12", "Font size of the panel headings (pt)."),
-    r("Text", "axis.title.size", "13", "Font size of the axis titles (pt)."),
-    r("Text", "axis.text.size", "10", "Font size of the axis labels (pt)."),
-    r("Text", "legend.text.size", "11", "Font size of the legend labels (pt)."),
-    r("Legend", "legend.key.size", "1", "Size of the legend color boxes (lines)."),
-    r("Save", "ggsave.dpi", "300", "Resolution of the PNG.")
-  )
-}
+batz.plot_vegetation.species.defaults <- function() batz.db("plotopts.batz.plot_vegetation.species")   # Batz_reference_db, tab PLOTOPTS_plot_veg.species

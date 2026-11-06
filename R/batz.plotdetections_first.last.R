@@ -34,6 +34,9 @@
 #'   \code{$category}, \code{$parameter}, \code{$default.value}. The custom
 #'   style column (named by \code{aes.style}) and \code{$notes} are optional.
 #'   See "plotopts" in Details.
+#'   Default \code{NULL}: the built-in settings are used (NOTE): the
+#'   \code{PLOTOPTS_plotdet_first.last} tab of Batz_reference_db, carried by the
+#'   package. A data frame given here is used instead.
 #' @param project.name Character, default \code{"new.project"}. Put at the
 #'   start of every saved file name. A blank value leaves it out.
 #' @param ... Plot settings typed into the call, named as the
@@ -261,7 +264,7 @@
 #'
 #' @export
 batz.plotdetections_first.last <- function(data, fig.list, suntimes,
-                                            aes.default, project.name = "new.project",
+                                            aes.default = NULL, project.name = "new.project",
                                             aes.style = "override.value",
                                             dir.save = getwd(),
                                             strip.special = TRUE,
@@ -276,6 +279,7 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
   ## non-data-frames unchanged and only modifies these local copies.
   objname.fig.list <- paste(deparse(substitute(fig.list)), collapse = "")
   objname.aes.default <- paste(deparse(substitute(aes.default)), collapse = "")
+  if (is.null(aes.default)) aes.default <- plotutil_default_plotopts("batz.plotdetections_first.last")   # built-in settings
   data <- special.strip(data, strip.special)$df
   ## fig.list is a settings table, not data - stripped only when
   ## strip.special.plotopts = TRUE (2026-10-02, per Josh); otherwise checked

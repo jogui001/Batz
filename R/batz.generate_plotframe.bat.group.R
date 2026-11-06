@@ -284,29 +284,7 @@ batz.generate_plotframe.bat.group <- function(data,
 #' with \code{stopifnot()} so the two columns can never drift apart.
 #' @keywords internal
 #' @noRd
-bat.group.genus.family <- function() {
-  fam <- list(
-    Vespertilionidae = c("Afronycteris", "Cnephaeus", "Eptesicus", "Glauconycteris", "Hypsugo",
-                         "Kerivoula", "Laephotis", "Mimetillus", "Myotis", "Neoromicia",
-                         "Nycticeinops", "Pipistrellus", "Pseudoromicia", "Scotoecus",
-                         "Scotophilus", "Scotozous"),
-    Molossidae       = c("Chaerephon", "Mops", "Mormopterus", "Otomops", "Platymops", "Tadarida"),
-    Rhinolophidae    = c("Rhinolophus"),
-    Hipposideridae   = c("Asellia", "Doryrhina", "Hipposideros", "Macronycteris"),
-    Rhinonycteridae  = c("Cloeotis", "Paratriaenops", "Triaenops"),
-    Emballonuridae   = c("Coleura", "Saccolaimus", "Taphozous"),
-    Megadermatidae   = c("Cardioderma", "Lavia"),
-    Nycteridae       = c("Nycteris"),
-    Miniopteridae    = c("Miniopterus"),
-    Rhinopomatidae   = c("Rhinopoma"),
-    Pteropodidae     = c("Eidolon", "Epomophorus", "Epomops", "Lissonycteris", "Micropteropus",
-                         "Myonycteris", "Rousettus")
-  )
-  tab <- data.frame(genus = unlist(fam, use.names = FALSE),
-                    family = rep(names(fam), lengths(fam)), stringsAsFactors = FALSE)
-  stopifnot(nrow(tab) == sum(lengths(fam)), !anyDuplicated(tolower(tab$genus)))
-  tab
-}
+bat.group.genus.family <- function() batz.db("bat.group.genus.family")   # table: Batz_reference_db, tab DB_bat.group.genus.family
 
 #' Family of each species: family.ref species, then family.ref genus, then
 #' the built-in genus table; blank ("") when not found (internal)

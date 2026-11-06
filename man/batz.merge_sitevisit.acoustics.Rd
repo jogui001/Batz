@@ -36,7 +36,7 @@ matches any of them (case ignored) and ends in \code{.xlsx} or
 \item{form.list}{\code{NA} (default), the path to a workbook laid out like
 \code{Survey123_aruforms all headers.xlsx}, a data frame, or a named list
 of data frames. New form versions / tabs / choices to add to the internal
-database \code{Survey123.aruforms_headers.choices} for this run (see
+Survey123 forms database for this run (see
 Details, "Adding forms").}
 
 \item{dir.save}{Character, default \code{getwd()}. Folder the merged
@@ -74,7 +74,7 @@ Invisibly, a list: one data frame per form type (\code{$quad},
 \code{form.list}), \code{$log} (one row per sheet read: \code{$file},
 \code{$sheet}, \code{$tab}, \code{$form.version}, \code{$rows},
 \code{$headers.matched}, \code{$headers.not.used}), \code{$headers.db}
-(the \code{Survey123.aruforms_headers.choices} database used, including
+(the Survey123 forms database used, including
 anything added through \code{form.list}) and \code{$file} (the workbook
 written). The form-type tabs are written to \code{file.path(dir.save,
   save.name)}, and the row count of each tab is printed.
@@ -86,8 +86,11 @@ merges them into one Excel file with standardized (Batz) headers - one tab
 per form type (\code{quad}, \code{habitat}, \code{service}).
 }
 \details{
-\strong{Internal database.} \code{Survey123.aruforms_headers.choices} (a
-list of data frames, one per tab) holds \code{Survey123_aruforms all
+\strong{Internal database.} The Survey123 forms database (a list of data
+frames, one per tab; kept in Batz_reference_db, tabs
+\code{DB_s123.forms.quad}, \code{DB_s123.forms.habitat},
+\code{DB_s123.forms.service}, \code{DB_s123.forms.Choices}) holds the same
+content as \code{Survey123_aruforms all
 headers.xlsx}: for tabs \code{quad}, \code{habitat}, \code{service}, the
 Batz header (\code{batz.headers}), the tab-qualified header
 (\code{aru.<tab>_batz.headers}, e.g. \code{aru.quad$aru.name}, since some

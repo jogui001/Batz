@@ -7,10 +7,12 @@
 #' \code{\link{batz.datawrangler_headers.acceptold}} uses this table to
 #' rename old headers when data are loaded.
 #'
-#' @param dir.load Character, default \code{getwd()}. Folder that holds
-#'   \code{file.name}.
+#' @param dir.load Character, default \code{NULL}: the table carried by the
+#'   package is used (Batz_reference_db, tab \code{DB_headers.acceptold};
+#'   see \code{\link{batz.util_refdb.sync}}). A folder reads
+#'   \code{file.name} from that folder instead.
 #' @param file.name Character, default \code{"batz_headers_acceptold.csv"}.
-#'   Name of the reference CSV.
+#'   Name of the reference CSV when \code{dir.load} is given.
 #' @param strip.special Logical, default \code{TRUE}. If \code{TRUE},
 #'   accented letters and common symbols in the table are simplified to a
 #'   plain equivalent and other non-ASCII characters are removed (see
@@ -24,7 +26,7 @@
 #'
 #' @details
 #' \itemize{
-#'   \item The CSV is read as UTF-8; if that fails it is re-read as Latin-1,
+#'   \item With \code{dir.load} given, the CSV is read as UTF-8; if that fails it is re-read as Latin-1,
 #'     so a stray Excel-saved byte (e.g. a degree sign) does not stop it
 #'     loading. All columns are read as character.
 #'   \item With \code{strip.special = TRUE} the table is cleaned straight
@@ -54,10 +56,13 @@
 #' }
 #'
 #' @export
-batz.generate_headers.acceptold <- function(dir.load = getwd(),
+batz.generate_headers.acceptold <- function(dir.load = NULL,
                                              file.name = "batz_headers_acceptold.csv",
                                              strip.special = TRUE) {
 
+  if (is.null(dir.load)) {                  # the package's copy of Batz_reference_db, tab DB_headers.acceptold
+    tbl <- batz.db("headers.acceptold"); path <- "Batz_reference_db (tab DB_headers.acceptold)"
+  } else {
   path <- file.path(dir.load, file.name)
   if (!file.exists(path)) {
     stop("batz.generate_headers.acceptold(): reference file not found at: ", path,
@@ -66,6 +71,7 @@ batz.generate_headers.acceptold <- function(dir.load = getwd(),
 
   tbl <- special.read.csv(path, stringsAsFactors = FALSE, check.names = FALSE,
                           colClasses = "character")
+  }
   s <- special.strip(tbl, strip.special); tbl <- s$df
 
   required <- c("header.old", "header.new", "functions.in", "functions.out")

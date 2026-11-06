@@ -70,8 +70,9 @@
 #'   columns (any case/separator). Used for Figure 5.
 #' @param plotopts.bullseye,plotopts.sm4heatmap Data frame or path to the
 #'   \code{plotopts_bullseye.csv} / \code{plotopts_sm4heatmap.csv} settings
-#'   table, default \code{NULL} (the copy in the package's
-#'   \code{inst/plotopts}, else a copy in the working directory). Passed to
+#'   table, default \code{NULL} (the built-in settings carried by the
+#'   package from Batz_reference_db, tabs \code{PLOTOPTS_plotcover_bullseye}
+#'   and \code{PLOTOPTS_plotsm4_heatmap}). Passed to
 #'   \code{\link{batz.plotcover_bullseye}} and
 #'   \code{\link{batz.plotsm4_heatmap}}.
 #' @param photo.width Numeric, default \code{3}. Photo width in inches
@@ -991,14 +992,12 @@ batz.generate_aru.appendix <- function(data,
   }
 
   ## settings tables for the two plot functions: a data frame or a path;
-  ## default = the copy shipped in inst/plotopts
+  ## default = the built-in settings (Batz_reference_db, carried in R/sysdata.rda)
   load.opts <- function(x, file) {
-    if (is.null(x)) {
-      x <- system.file("plotopts", file, package = "Batz")
-      if (!nzchar(x)) x <- system.file("plotopts", file, package = "batz")
-      if (!nzchar(x) && file.exists(file)) x <- file          # a copy in the working directory
-      if (!nzchar(x)) return(NULL)
-    }
+    if (is.null(x))                                         # built-in settings (Batz_reference_db)
+      return(tryCatch(batz.db(paste0("plotopts.", c(plotopts_bullseye.csv = "batz.plotcover_bullseye",
+                                                     plotopts_sm4heatmap.csv = "batz.plotsm4_heatmap")[[file]])),
+                      error = function(e) NULL))
     if (is.character(x)) x <- utils::read.csv(x, check.names = FALSE, stringsAsFactors = FALSE, encoding = "UTF-8")
     x
   }

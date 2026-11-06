@@ -31,6 +31,9 @@
 #'   \code{$category}, \code{$parameter}, \code{$default.value}. The custom
 #'   style column (named by \code{aes.style}) and \code{$notes} are
 #'   optional. See "plotopts" in Details.
+#'   Default \code{NULL}: the built-in settings are used (NOTE): the
+#'   \code{PLOTOPTS_plot_heat.site.species} tab of Batz_reference_db, carried by the
+#'   package. A data frame given here is used instead.
 #' @param spp.id Character, default \code{"species"}. Name of the species
 #'   column in \code{data}.
 #' @param groupby.date Character, default \code{"date.monitoringnight"}.
@@ -195,7 +198,7 @@
 #' }
 #'
 #' @export
-batz.plot_heat.site.species <- function(data, fig.list, aes.default,
+batz.plot_heat.site.species <- function(data, fig.list, aes.default = NULL,
                                         spp.id = "species",
                                         groupby.date = "date.monitoringnight",
                                         groupby.time = "time",
@@ -215,6 +218,7 @@ batz.plot_heat.site.species <- function(data, fig.list, aes.default,
   ## ---- special characters ----------------------------------------------
   objname.fig.list <- paste(deparse(substitute(fig.list)), collapse = "")
   objname.aes.default <- paste(deparse(substitute(aes.default)), collapse = "")
+  if (is.null(aes.default)) aes.default <- plotutil_default_plotopts("batz.plot_heat.site.species")   # built-in settings
   if (!is.data.frame(data)) stop(FN, ": `data` must be a data frame.")
   if (!is.data.frame(fig.list)) stop(FN, ": `fig.list` must be a data frame.")
   if (!is.data.frame(aes.default)) stop(FN, ": `aes.default` must be a data frame.")

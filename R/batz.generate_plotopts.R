@@ -1,131 +1,89 @@
 #' Generate a project settings ("plotopts") CSV file for Batz plot functions
 #'
-#' Copies the master plot settings CSV of each requested plot function into a
-#' new project-specific file named
-#' \verb{<project.name>_plotopts_<function.name>.csv}. Edit the
-#' \code{$override.value} column of the copy to customise a project's plots
-#' without touching the master file.
+#' Writes the built-in plot settings of each requested plot function to a
+#' new project file named \verb{<project.name>_plotopts_<function.name>.csv}.
+#' Edit the \code{$override.value} column of the copy to customise a
+#' project's plots, then pass it as the function's \code{aes.default}
+#' (or \code{plotopts}).
 #'
-#' @param generate.files Character vector of plot function names to create a
-#'   settings file for. Default
-#'   \code{c("batz.plotcover_bullseye", "batz.plotdetections_first.last",
-#'   "batz.plotactivity_observations")}. Every element must be one of these
-#'   three names.
-#' @param project.name Character, default \code{"new project"}. Leading part of
-#'   each output file name.
-#' @param dir.load Directory that holds the master settings CSV files. Default
-#'   \code{getwd()}.
-#' @param dir.save Directory the new settings files are written to (created if
+#' @param generate.files Character vector of plot function names. Default:
+#'   every plot function with built-in settings:
+#'   \code{"batz.plot_bar.bat.group"}, \code{"batz.plot_heat.site.species"},
+#'   \code{"batz.plotactivity_observations"},
+#'   \code{"batz.plotdetections_first.last"},
+#'   \code{"batz.plotcover_bullseye"}, \code{"batz.plotactivity_daily.count"},
+#'   \code{"batz.plotactivity_heatmap"}, \code{"batz.plotactivity_heatmap2"},
+#'   \code{"batz.plotsm4_heatmap"}, \code{"batz.plot_vegetation.species"},
+#'   \code{"batz.plot_vegetation.dbh"}.
+#' @param project.name Character, default \code{"new project"}. Leading part
+#'   of each output file name.
+#' @param dir.save Directory the settings files are written to (created if
 #'   missing). Default \code{getwd()}.
 #' @param strip.special.plotopts Logical, default \code{FALSE}. \code{FALSE}
-#'   keeps every character (e.g. an axis label \code{"Temperature (degree sign C)"}).
+#'   keeps every character (e.g. an axis label with a degree sign).
 #'   \code{TRUE} simplifies accented letters (e.g. e-acute to \code{"e"}) and
 #'   removes other non-ASCII characters in the copy.
 #'
 #' @details
-#' \strong{Master files.} Each recognised plot function maps to one master file
-#' in \code{dir.load}:
-#' \itemize{
-#'   \item \code{batz.plotcover_bullseye}: \verb{plotopts_bullseye.csv}
-#'   \item \code{batz.plotdetections_first.last}: \verb{plotopts_first.last.csv}
-#'   \item \code{batz.plotactivity_observations}: \verb{plotopts_callobs.csv}
-#' }
-#' Any other name in \code{generate.files} stops the function with an error
-#' that lists the recognised names. A missing master file also stops the
-#' function.
+#' \strong{Source.} The settings come from Batz_reference_db, the one master
+#' copy of the Batz tables: its \code{PLOTOPTS_*} tabs, listed in the
+#' \code{database.names} tab as \code{plotopts.<function name>}. The package
+#' carries a copy of them (\code{\link{batz.util_refdb.sync}}), so the file
+#' written matches the installed version. They are the same settings each
+#' plot function uses when no \code{aes.default} is given.
 #'
-#' \strong{Copy.} The master file is read with \code{special.read.csv()} (UTF-8,
-#' with a Latin-1 fallback, so a stray degree-sign byte does not stop it loading).
-#' All columns are read as character, so values are written back as read
-#' (only the CSV quoting may change). No settings are added, removed or
-#' computed. With \code{strip.special.plotopts = TRUE}, special characters are
-#' simplified or removed first. No log is written.
+#' \strong{Copy.} Every column is written as text, as stored; no settings
+#' are added, removed or computed. With \code{strip.special.plotopts = TRUE},
+#' special characters are simplified or removed first. A name in
+#' \code{generate.files} with no built-in settings stops the function with
+#' an error that lists the recognised names.
 #'
-#' @return Invisibly, a character vector of the file names written (names only,
-#'   not full paths), in the order of \code{generate.files}. Writes one CSV per
-#'   element of \code{generate.files} to \code{dir.save} and prints each saved
-#'   file name to the console.
+#' @return Invisibly, a character vector of the file names written (names
+#'   only, not full paths), in the order of \code{generate.files}. Each saved
+#'   file name is printed.
 #'
 #' @examples
 #' \dontrun{
-#' # Settings files for all three plot functions, into a project sub-folder
-#' batz.generate_plotopts(project.name = "acme.wetlands.2026",
-#'                        dir.save = "acme_project")
+#' # Settings files for every plot function, into a project sub-folder
+#' batz.generate_plotopts(project.name = "acme.wetlands.2026", dir.save = "acme_project")
 #'
 #' # One function only
 #' batz.generate_plotopts(generate.files = "batz.plotcover_bullseye",
 #'                        project.name = "acme.wetlands.2026")
 #' }
 #'
-#' @seealso \code{\link{batz.plotcover_bullseye}},
-#'   \code{\link{batz.plotdetections_first.last}},
-#'   \code{\link{batz.plotactivity_observations}}
+#' @seealso \code{\link{batz.util_refdb.sync}}, \code{\link{batz.generate_figlist}}
 #'
 #' @export
-batz.generate_plotopts <- function(generate.files = c("batz.plotcover_bullseye",
-                                                        "batz.plotdetections_first.last",
-                                                        "batz.plotactivity_observations"),
-                                    project.name = "new project",
-                                    dir.load = getwd(),
-                                    dir.save = getwd(),
-                                    strip.special.plotopts = FALSE) {
+batz.generate_plotopts <- function(generate.files = c("batz.plot_bar.bat.group", "batz.plot_heat.site.species",
+                                                      "batz.plotactivity_observations", "batz.plotdetections_first.last",
+                                                      "batz.plotcover_bullseye", "batz.plotactivity_daily.count",
+                                                      "batz.plotactivity_heatmap", "batz.plotactivity_heatmap2",
+                                                      "batz.plotsm4_heatmap", "batz.plot_vegetation.species",
+                                                      "batz.plot_vegetation.dbh"),
+                                   project.name = "new project",
+                                   dir.save = getwd(),
+                                   strip.special.plotopts = FALSE) {
+  FN <- "batz.generate_plotopts"
+  if (length(generate.files) == 0 || !is.character(generate.files))
+    stop(FN, ": generate.files must be a non-empty character vector of plot function names.", call. = FALSE)
+  db <- get0(".batz.db", envir = asNamespace("Batz"), inherits = FALSE)
+  known <- sub("^plotopts\\.", "", grep("^plotopts\\.", names(db), value = TRUE))
+  unknown <- setdiff(generate.files, known)
+  if (length(unknown) > 0)
+    stop(FN, ": no built-in settings for: ", paste(unknown, collapse = ", "),
+         ". Plot functions with built-in settings: ", paste(known, collapse = ", "), ".", call. = FALSE)
+  if (!dir.exists(dir.save)) dir.create(dir.save, recursive = TRUE)
 
-  ## Round nineteen, per Josh (2026-09-16): fixed mapping of recognized
-  ## plot function name -> its master settings CSV file name. See
-  ## "Recognized plot functions and their master files" in @details for
-  ## why these three (and only these three) are here.
-  MASTER.PLOTOPTS.FILES <- c(
-    batz.plotcover_bullseye        = "plotopts_bullseye.csv",
-    batz.plotdetections_first.last = "plotopts_first.last.csv",
-    batz.plotactivity_observations = "plotopts_callobs.csv"
-  )
-
-  if (length(generate.files) == 0 || !is.character(generate.files)) {
-    stop("batz.generate_plotopts(): generate.files must be a non-empty character vector of plot function names.")
-  }
-
-  unknown <- setdiff(generate.files, names(MASTER.PLOTOPTS.FILES))
-  if (length(unknown) > 0) {
-    stop("batz.generate_plotopts(): unrecognized plot function name(s) in generate.files: ",
-         paste(unknown, collapse = ", "),
-         ". Recognized plot functions are: ",
-         paste(names(MASTER.PLOTOPTS.FILES), collapse = ", "), ".")
-  }
-
-  if (!dir.exists(dir.save)) {
-    dir.create(dir.save, recursive = TRUE)
-  }
-
-  saved.files <- character(0)
-
+  saved <- character(0)
   for (fn.name in generate.files) {
-    master.file <- MASTER.PLOTOPTS.FILES[[fn.name]]
-    master.path <- file.path(dir.load, master.file)
-
-    if (!file.exists(master.path)) {
-      stop("batz.generate_plotopts(): master plotopts file not found for '", fn.name,
-           "' - expected it at: ", master.path)
-    }
-
-    ## Read the master file as-is (check.names = FALSE per this project's
-    ## standing preference against silent column-name mangling - see
-    ## preferences.md, "CRITICAL - check.names") and write it back out
-    ## unchanged under the new project-specific name.
-    opts <- special.read.csv(master.path, stringsAsFactors = FALSE, check.names = FALSE,
-                             colClasses = "character")
-    ## special characters (per Josh, 2026-09-30): strip, then keep every
-    ## column character (as read) so the copy isn't re-typed.
+    opts <- batz.db(paste0("plotopts.", fn.name))
     s <- special.strip(opts, strip.special.plotopts); opts <- s$df
-    for (h in s$headers) opts[[h]] <- as.character(opts[[h]])
-
+    for (h in names(opts)) opts[[h]] <- as.character(opts[[h]])
     out.name <- sprintf("%s_plotopts_%s.csv", project.name, fn.name)
-    out.path <- file.path(dir.save, out.name)
-
-    utils::write.csv(opts, out.path, row.names = FALSE)
-
-    saved.files <- c(saved.files, out.name)
+    utils::write.csv(opts, file.path(dir.save, out.name), row.names = FALSE)
     cat("Saved:", out.name, "\n")
+    saved <- c(saved, out.name)
   }
-
-  invisible(saved.files)
+  invisible(saved)
 }

@@ -22,8 +22,10 @@
 #'   table already read with \code{\link{batz.generate_headers.acceptold}}
 #'   (useful when processing many files in a loop). If \code{NULL}, it is
 #'   read with \code{batz.generate_headers.acceptold(dir.load, file.name)}.
-#' @param dir.load Character, default \code{getwd()}. Folder of the
-#'   reference CSV; used only when \code{headers.table = NULL}.
+#' @param dir.load Character, default \code{NULL}: the old-headers table
+#'   carried by the package (Batz_reference_db, tab \code{DB_headers.acceptold})
+#'   is used. A folder reads the reference CSV from there instead. Used only
+#'   when \code{headers.table = NULL}.
 #' @param file.name Character, default \code{"batz_headers_acceptold.csv"}.
 #'   Reference CSV name; used only when \code{headers.table = NULL}.
 #' @param strip.special Logical, default \code{TRUE}. If \code{TRUE},
@@ -101,7 +103,7 @@ batz.datawrangler_headers.acceptold <- function(data,
                                                  path = NA_character_,
                                                  log.file = FALSE,
                                                  headers.table = NULL,
-                                                 dir.load = getwd(),
+                                                 dir.load = NULL,
                                                  file.name = "batz_headers_acceptold.csv",
                                                  strip.special = TRUE) {
 

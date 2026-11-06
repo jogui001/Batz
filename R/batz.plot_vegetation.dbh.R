@@ -340,46 +340,12 @@ batz.plot_vegetation.dbh <- function(data, project.name = "", site.names = NULL,
 #' Built-in plot settings of batz.plot_vegetation.dbh()
 #'
 #' The settings used when neither the function call nor \code{plotopts}
-#' gives a value. Write it out as a starting \code{plotopts} file with
+#' gives a value. They are kept in Batz_reference_db (tab \code{PLOTOPTS_plot_veg.dbh}) and
+#' carried by the package (\code{\link{batz.util_refdb.sync}}). Write it out as a starting \code{plotopts} file with
 #' \code{write.csv(batz.plot_vegetation.dbh.defaults(),
 #' "plotopts_vegetation.dbh.csv", row.names = FALSE)}.
 #'
 #' @return Data frame: \code{$category}, \code{$parameter},
 #'   \code{$default.value}, \code{$override.value} (blank), \code{$notes}.
 #' @export
-batz.plot_vegetation.dbh.defaults <- function() {
-  r <- function(category, parameter, default.value, notes)
-    data.frame(category = category, parameter = parameter, default.value = default.value,
-               override.value = "", notes = notes, stringsAsFactors = FALSE)
-  rbind(
-    r("Inputs", "site.names", "", "Sites ($aru.name) to plot, in X-axis order, separated by ';'. Blank = all sites, sorted."),
-    r("Inputs", "type.colors", "Snag=grey75;Tree=white", "Box fill: type=color pairs, or two colors (snag;tree)."),
-    r("Inputs", "units", "in", "Units plotted: in or cm. Records in the other unit are converted (1 in = 2.54 cm)."),
-    r("Inputs", "legend.position", "right", "right, bottom, left, top or none."),
-    r("Inputs", "table", "TRUE", "TRUE also saves the summary table (site, type, n, min, median, mean, max) as a CSV."),
-    r("Inputs", "size", "page", "page (6 x 7 in), half page (6 x 4), powerpoint (12 x 6), half powerpoint (6 x 6), or <width>x<height> in inches."),
-    r("Data", "site.column", "aru.name", "Column holding the site names."),
-    r("Data", "units.column", "measurement.units", "Column holding each record's unit (in or cm). Missing = units."),
-    r("Data", "tree.columns", "vegetation.tree_tree1.dbh;vegetation.tree_tree2.dbh;vegetation.tree_tree3.dbh", "Tree DBH columns (their .overall column is used when it exists)."),
-    r("Data", "snag.include", "TRUE", "TRUE plots snags as well as trees."),
-    r("Data", "snag.columns", "vegetation.snag_snag1.dbh;vegetation.snag_snag2.dbh;vegetation.snag_snag3.dbh", "Snag DBH columns (their .overall column is used when it exists)."),
-    r("Data", "tree.label", "Tree", "Legend label of trees."),
-    r("Data", "snag.label", "Snag", "Legend label of snags."),
-    r("Axes", "xaxe.title", "ARU", "X-axis title."),
-    r("Axes", "yaxe.title", "", "Y-axis title. Blank = Diameter at Breast Height (inches) or (cm)."),
-    r("Axes", "yaxe.max", "", "Top of the Y axis. Blank = from the data."),
-    r("Legend", "legend.title", "", "Legend title. Blank = none."),
-    r("Boxes", "box.width", "0.6", "Width of the snag + tree boxes at one site."),
-    r("Boxes", "box.outline.color", "grey20", "Box, whisker and median line color."),
-    r("Boxes", "box.linewidth", "0.6", "Box line thickness."),
-    r("Boxes", "whisker.caps", "TRUE", "TRUE draws a short line across the end of each whisker."),
-    r("Boxes", "outliers.show", "TRUE", "TRUE draws values beyond the whiskers as dots."),
-    r("Boxes", "points.show", "FALSE", "TRUE draws every tree / snag as a dot over its box."),
-    r("Boxes", "point.size", "1.2", "Dot size (points.show)."),
-    r("Text", "axis.title.size", "13", "Font size of the axis titles (pt)."),
-    r("Text", "axis.text.size", "10", "Font size of the axis labels (pt)."),
-    r("Text", "legend.text.size", "11", "Font size of the legend labels (pt)."),
-    r("Legend", "legend.key.size", "1", "Size of the legend boxes (lines)."),
-    r("Save", "ggsave.dpi", "300", "Resolution of the PNG.")
-  )
-}
+batz.plot_vegetation.dbh.defaults <- function() batz.db("plotopts.batz.plot_vegetation.dbh")   # Batz_reference_db, tab PLOTOPTS_plot_veg.dbh

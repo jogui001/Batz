@@ -110,8 +110,9 @@ columns (any case/separator). Used for Figure 5.}
 
 \item{plotopts.bullseye, plotopts.sm4heatmap}{Data frame or path to the
 \code{plotopts_bullseye.csv} / \code{plotopts_sm4heatmap.csv} settings
-table, default \code{NULL} (the copy in the package's
-\code{inst/plotopts}, else a copy in the working directory). Passed to
+table, default \code{NULL} (the built-in settings carried by the
+package from Batz_reference_db, tabs \code{PLOTOPTS_plotcover_bullseye}
+and \code{PLOTOPTS_plotsm4_heatmap}). Passed to
 \code{\link{batz.plotcover_bullseye}} and
 \code{\link{batz.plotsm4_heatmap}}.}
 

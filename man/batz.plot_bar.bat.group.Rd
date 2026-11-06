@@ -7,7 +7,7 @@
 batz.plot_bar.bat.group(
   data,
   fig.list,
-  aes.default,
+  aes.default = NULL,
   project.name = "new.project",
   aes.style = "override.value",
   dir.save = getwd(),
@@ -38,7 +38,10 @@ name. See Details.}
 \verb{plotopts_bar.bat.group.csv}. Required columns: \code{$category},
 \code{$parameter}, \code{$default.value}. The custom style column
 (named by \code{aes.style}) and \code{$notes} are optional. See
-"plotopts" in Details.}
+"plotopts" in Details.
+Default \code{NULL}: the built-in settings are used (NOTE): the
+\code{PLOTOPTS_plot_bar.bat.group} tab of Batz_reference_db, carried by the
+package. A data frame given here is used instead.}
 
 \item{project.name}{Character, default \code{"new.project"}. First part
 of each saved file name.}

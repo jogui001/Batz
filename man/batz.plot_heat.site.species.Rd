@@ -7,7 +7,7 @@
 batz.plot_heat.site.species(
   data,
   fig.list,
-  aes.default,
+  aes.default = NULL,
   spp.id = "species",
   groupby.date = "date.monitoringnight",
   groupby.time = "time",
@@ -43,7 +43,10 @@ parameter with a column of the same name (e.g. \code{$bin.minutes},
 \verb{plotopts_heat.site.species.csv}. Required columns:
 \code{$category}, \code{$parameter}, \code{$default.value}. The custom
 style column (named by \code{aes.style}) and \code{$notes} are
-optional. See "plotopts" in Details.}
+optional. See "plotopts" in Details.
+Default \code{NULL}: the built-in settings are used (NOTE): the
+\code{PLOTOPTS_plot_heat.site.species} tab of Batz_reference_db, carried by the
+package. A data frame given here is used instead.}
 
 \item{spp.id}{Character, default \code{"species"}. Name of the species
 column in \code{data}.}

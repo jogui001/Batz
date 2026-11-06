@@ -105,11 +105,7 @@ canonicalize.headers <- function(df, required) {
 #' \code{schedual2}/\code{schedule2}.
 #' @keywords internal
 #' @noRd
-headers.corrected <- function() {
-  data.frame(header.old = c("schedual1", "schedual2"),
-             header.new = c("schedule1", "schedule2"),
-             stringsAsFactors = FALSE)
-}
+headers.corrected <- function() batz.db("headers.corrected")   # table: Batz_reference_db, tab DB_headers.corrected
 
 #' Convert Batz (dot-style) header names to snake_case (internal helper)
 #'

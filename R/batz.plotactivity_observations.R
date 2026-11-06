@@ -33,6 +33,9 @@
 #'   \code{$category}, \code{$parameter}, \code{$default.value}. The custom
 #'   style column (named by \code{aes.style}) and \code{$notes} are optional.
 #'   See "plotopts" in Details.
+#'   Default \code{NULL}: the built-in settings are used (NOTE): the
+#'   \code{PLOTOPTS_plotact_observations} tab of Batz_reference_db, carried by the
+#'   package. A data frame given here is used instead.
 #' @param project.name Character, default \code{"new.project"}. Put at the
 #'   start of every saved file name. A blank value leaves it out.
 #' @param ... Plot settings typed into the call, named as the
@@ -158,10 +161,17 @@
 #'   \item{\code{$date.format}}{X-axis date label format (strftime style,
 #'     e.g. \code{"\%b-\%d/n\%Y"}). A literal "/n" becomes a line break.}
 #'   \item{\code{$date.start}, \code{$date.end}}{Date window of the plot.
-#'     Read as m/d/Y, Y-m-d or m/d/y.}
+#'     Read as m/d/Y, Y-m-d or m/d/y. Several dates separated by ";" (e.g.
+#'     \code{"2026-06-26; 2026-06-28; 2026-06-29; 2026-07-01"} in both) give
+#'     one window per pair (first \code{$date.start} with first
+#'     \code{$date.end}, ...): only the days in the windows are plotted, side
+#'     by side, and the days between them are left out. With the same list
+#'     in both, only those dates are plotted. The two lists must be the same
+#'     length.}
 #'   \item{\code{$xaxe.interval}}{Number of evenly spaced labeled dates on
 #'     the X axis, from \code{$date.start} to \code{$date.end}. An unusable
-#'     value gives 2 labels (NOTE).}
+#'     value gives 2 labels (NOTE). With date windows, every plotted day is
+#'     labelled when there are no more days than \code{$xaxe.interval}.}
 #'   \item{Optional: \code{$plot.group}}{Column of \code{data} to filter and
 #'     group by. Blank or absent = \code{$group}. A name that is not a column
 #'     of \code{data} skips the row (NOTE).}
@@ -255,7 +265,8 @@
 #'     \code{bar.alldetections.fill} and \code{bar.40khzmyo.fill} (legend
 #'     title \code{bar.fill.legend.title}, showing only the 40kHzMyo key).
 #'   \item The X axis runs from \code{$date.start} to \code{$date.end} plus
-#'     \code{xaxe.date.buffer.days} on each side. Facets are laid out in
+#'     \code{xaxe.date.buffer.days} on each side (with date windows: only the
+#'     days in the windows, one slot each). Facets are laid out in
 #'     \code{facpan.numcol} columns.
 #'   \item The PNG size is \code{plot.width} + \code{ggsave.width.pad} by
 #'     \code{plot.height} + \code{ggsave.height.pad}, in \code{ggsave.units},
@@ -281,7 +292,7 @@
 #'
 #' @export
 batz.plotactivity_observations <- function(data, fig.list, suntimes,
-                                            aes.default, project.name = "new.project",
+                                            aes.default = NULL, project.name = "new.project",
                                             aes.style = "override.value",
                                             dir.save = getwd(),
                                             strip.special = TRUE,
@@ -296,6 +307,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
   ## non-data-frames unchanged and only modifies these local copies.
   objname.fig.list <- paste(deparse(substitute(fig.list)), collapse = "")
   objname.aes.default <- paste(deparse(substitute(aes.default)), collapse = "")
+  if (is.null(aes.default)) aes.default <- plotutil_default_plotopts("batz.plotactivity_observations")   # built-in settings
   data <- special.strip(data, strip.special)$df
   ## fig.list is a settings table, not data - stripped only when
   ## strip.special.plotopts = TRUE (2026-10-02, per Josh); otherwise checked
@@ -503,6 +515,23 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     }
     out
   }
+  ## $date.start / $date.end: one date each (a window), or lists of the same
+  ## length ("2026-06-26; 2026-06-28" / "2026-06-26; 2026-06-28"): each pair is
+  ## a window and only the days in the windows are plotted (gaps left out)
+  resolve.dates <- function(job, job.label) {
+    sp <- function(v) { x <- trimws(gsub('"', "", unlist(strsplit(as.character(v), "[;,]")))); x[nzchar(x)] }
+    ds <- parse.flex.date(sp(get.setting(job, "date.start"))); de <- parse.flex.date(sp(get.setting(job, "date.end")))
+    if (length(ds) <= 1 && length(de) <= 1) return(list(start = ds[1], end = de[1], days = NULL))
+    if (length(ds) != length(de))
+      stop(sprintf("fig.list row '%s': $date.start has %d date(s) and $date.end has %d - give one date each, or the same number (one window per pair).",
+                   job.label, length(ds), length(de)), call. = FALSE)
+    if (any(is.na(ds) | is.na(de) | de < ds))
+      stop(sprintf("fig.list row '%s': a $date.start / $date.end pair is not a date or ends before it starts.", job.label), call. = FALSE)
+    days <- sort(unique(do.call(c, lapply(seq_along(ds), function(i) seq(ds[i], de[i], by = "day")))))
+    cat(sprintf("NOTE: '%s' - %d date window(s) in $date.start/$date.end: only these %d day(s) are plotted.\n",
+                job.label, length(ds), length(days)))
+    list(start = min(days), end = max(days), days = days)
+  }
 
   ## Settings resolution (round nineteen, per Josh's 2026-09-16 follow-up):
   ## $aes.style names a FIXED column to check first (default "override.value"
@@ -638,8 +667,8 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     }
     if (myso.flag) {
       dd <- parse.flex.date(pd$date)
-      in.range <- !is.na(dd) & dd >= parse.flex.date(get.setting(job, "date.start")) &
-        dd <= parse.flex.date(get.setting(job, "date.end"))
+      rd <- resolve.dates(job, job.label)
+      in.range <- !is.na(dd) & dd >= rd$start & dd <= rd$end & (is.null(rd$days) | dd %in% rd$days)
       lu <- plotutil_myso_luso(pd$spp.common, spp.plot, facpan, in.range, "batz.plotactivity_observations", job.label)
       pd$spp.common <- lu$spp.common
       spp.plot <- lu$spp.plot
@@ -647,10 +676,11 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     }
     pd <- pd[tolower(trimws(pd$spp.common)) %in% tolower(spp.plot), , drop = FALSE]
 
-    date.start <- parse.flex.date(get.setting(job, "date.start"))
-    date.end <- parse.flex.date(get.setting(job, "date.end"))
+    rd <- resolve.dates(job, job.label)
+    date.start <- rd$start; date.end <- rd$end; date.days <- rd$days
     pd$date.parsed <- parse.flex.date(pd$date)
     pd <- pd[!is.na(pd$date.parsed) & pd$date.parsed >= date.start & pd$date.parsed <= date.end, , drop = FALSE]
+    if (!is.null(date.days)) pd <- pd[pd$date.parsed %in% date.days, , drop = FALSE]
 
     if (nrow(pd) == 0) {
       cat(sprintf("NOTE: fig.list row for '%s' (plot.group = '%s', plot.set = '%s', %s to %s) matched 0 rows of data - no plot generated. Check that $%s/$date in data actually overlap this row's $plot.set/$date.start/$date.end.\n",
@@ -777,7 +807,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
 
     plots[[job.key]] <- list(
       job.label = job.label, job = job, pd = pd, panel.labels = panel.labels,
-      facpan = facpan, spp.plot = spp.plot, date.start = date.start, date.end = date.end,
+      facpan = facpan, spp.plot = spp.plot, date.start = date.start, date.end = date.end, date.days = date.days,
       khz.flag = khz.flag, break.pos = break.pos, break.labels = break.labels,
       y.upper.plot = trans.fn(y.upper), group.col = group.col,
       plot.sets.vals = plot.sets.vals, pool.flag = pool.flag,
@@ -823,6 +853,9 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
         xaxe.n.labels <- 2
       }
       xaxe.breaks <- seq(p$date.start, p$date.end, length.out = round(xaxe.n.labels))
+      ## date windows: the X axis holds only the listed days, side by side
+      p$pd$x.val <- if (is.null(p$date.days)) p$pd$date.parsed else
+        factor(format(p$pd$date.parsed, "%Y-%m-%d"), levels = format(p$date.days, "%Y-%m-%d"))
       xaxe.buffer <- suppressWarnings(as.numeric(get.default("xaxe.date.buffer.days")))
       if (is.na(xaxe.buffer)) xaxe.buffer <- 0.5
 
@@ -879,7 +912,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
         fill.values <- c(groupval.colors, `40kHzMyo` = get.default("bar.40khzmyo.fill"))
         fill.breaks <- if (isTRUE(p$khz.flag)) c(groupval.levels, "40kHzMyo") else groupval.levels
 
-        g <- ggplot2::ggplot(pd.fill, ggplot2::aes(x = date.parsed)) +
+        g <- ggplot2::ggplot(pd.fill, ggplot2::aes(x = x.val)) +
           ggplot2::geom_col(data = pd.fill[pd.fill$bar.type == "All detections", , drop = FALSE],
                              ggplot2::aes(y = obs.plot, fill = fill.val, group = group.val),
                              width = bar.width.val, position = bar.position) +
@@ -889,7 +922,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
           ggplot2::scale_fill_manual(name = get.default("legend.groupval.title"),
                                       breaks = fill.breaks, limits = names(fill.values), values = fill.values)
       } else {
-        g <- ggplot2::ggplot(p$pd, ggplot2::aes(x = date.parsed)) +
+        g <- ggplot2::ggplot(p$pd, ggplot2::aes(x = x.val)) +
           ggplot2::geom_col(data = p$pd[p$pd$bar.type == "All detections", , drop = FALSE],
                              ggplot2::aes(y = obs.plot, fill = bar.type, group = group.val),
                              width = bar.width.val, position = bar.position) +
@@ -905,9 +938,18 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
       g <- g +
         ggplot2::scale_y_continuous(limits = c(0, p$y.upper.plot), breaks = p$break.pos, labels = p$break.labels,
           name = paste0("\n", get.setting(p$job, "yaxe.title"))) +
-        ggplot2::scale_x_date(limits = c(p$date.start - xaxe.buffer, p$date.end + xaxe.buffer),
-          breaks = xaxe.breaks, date_labels = xaxe.date.labels.fmt,
-          name = paste0("\n", get.setting(p$job, "xaxe.title"))) +
+        (if (is.null(p$date.days))
+          ggplot2::scale_x_date(limits = c(p$date.start - xaxe.buffer, p$date.end + xaxe.buffer),
+            breaks = xaxe.breaks, date_labels = xaxe.date.labels.fmt,
+            name = paste0("\n", get.setting(p$job, "xaxe.title")))
+        else {
+          lv <- format(p$date.days, "%Y-%m-%d")
+          br <- if (length(lv) <= round(xaxe.n.labels) || round(xaxe.n.labels) < 2) lv else
+            lv[unique(round(seq(1, length(lv), length.out = round(xaxe.n.labels))))]
+          ggplot2::scale_x_discrete(limits = lv, breaks = br, drop = FALSE,
+            labels = stats::setNames(format(p$date.days, xaxe.date.labels.fmt), lv),
+            name = paste0("\n", get.setting(p$job, "xaxe.title")))
+        }) +
         ggplot2::facet_wrap(~facet.panel.value, ncol = as.numeric(get.default("facpan.numcol")), drop = FALSE) +
         ggplot2::labs(title = job.label) +
         ggplot2::theme_bw() +

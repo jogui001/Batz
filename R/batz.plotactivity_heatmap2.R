@@ -141,7 +141,9 @@
 #' @param aes.default Optional plot-settings data frame
 #'   (\code{plotopts_heatmap2.csv}) with \code{$category},
 #'   \code{$parameter}, \code{$default.value}, plus the \code{aes.style}
-#'   column. Default \code{NULL}.
+#'   column. Default \code{NULL}: the built-in settings are used (NOTE): the
+#'   \code{PLOTOPTS_plotact_heatmap2} tab of Batz_reference_db, carried by the
+#'   package. A data frame given here is used instead.
 #' @param date.col Character, default \code{"date.monitoringnight"}. Date
 #'   column, and the day layout: \code{"date.monitoringnight"} (noon to
 #'   noon) or \code{"date.calendar"} (midnight to midnight).
@@ -256,6 +258,7 @@ batz.plotactivity_heatmap2 <- function(data,
     strip.text.size = "10", legend.title.size = "11", legend.text.size = "10",
     date.format = "%d %b", xaxe.interval = "", xaxe.title = "", yaxe.title = "Time of Day"
   )
+  if (is.null(aes.default)) aes.default <- plotutil_default_plotopts(FN)   # built-in settings
   if (!is.null(aes.default)) {
     if (!is.data.frame(aes.default)) stop("`aes.default` must be a data frame (e.g. read.csv(\"plotopts_heatmap2.csv\")).")
     ad.canon <- canonicalize.headers(aes.default, c("category", "parameter", "default.value"))

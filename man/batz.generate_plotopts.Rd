@@ -5,72 +5,68 @@
 \title{Generate a project settings ("plotopts") CSV file for Batz plot functions}
 \usage{
 batz.generate_plotopts(
-  generate.files = c("batz.plotcover_bullseye", "batz.plotdetections_first.last",
-    "batz.plotactivity_observations"),
+  generate.files = c("batz.plot_bar.bat.group", "batz.plot_heat.site.species",
+    "batz.plotactivity_observations", "batz.plotdetections_first.last",
+    "batz.plotcover_bullseye", "batz.plotactivity_daily.count",
+    "batz.plotactivity_heatmap", "batz.plotactivity_heatmap2", "batz.plotsm4_heatmap",
+    "batz.plot_vegetation.species", "batz.plot_vegetation.dbh"),
   project.name = "new project",
-  dir.load = getwd(),
   dir.save = getwd(),
   strip.special.plotopts = FALSE
 )
 }
 \arguments{
-\item{generate.files}{Character vector of plot function names to create a
-settings file for. Default
-\code{c("batz.plotcover_bullseye", "batz.plotdetections_first.last",
-  "batz.plotactivity_observations")}. Every element must be one of these
-three names.}
+\item{generate.files}{Character vector of plot function names. Default:
+every plot function with built-in settings:
+\code{"batz.plot_bar.bat.group"}, \code{"batz.plot_heat.site.species"},
+\code{"batz.plotactivity_observations"},
+\code{"batz.plotdetections_first.last"},
+\code{"batz.plotcover_bullseye"}, \code{"batz.plotactivity_daily.count"},
+\code{"batz.plotactivity_heatmap"}, \code{"batz.plotactivity_heatmap2"},
+\code{"batz.plotsm4_heatmap"}, \code{"batz.plot_vegetation.species"},
+\code{"batz.plot_vegetation.dbh"}.}
 
-\item{project.name}{Character, default \code{"new project"}. Leading part of
-each output file name.}
+\item{project.name}{Character, default \code{"new project"}. Leading part
+of each output file name.}
 
-\item{dir.load}{Directory that holds the master settings CSV files. Default
-\code{getwd()}.}
-
-\item{dir.save}{Directory the new settings files are written to (created if
+\item{dir.save}{Directory the settings files are written to (created if
 missing). Default \code{getwd()}.}
 
 \item{strip.special.plotopts}{Logical, default \code{FALSE}. \code{FALSE}
-keeps every character (e.g. an axis label \code{"Temperature (degree sign C)"}).
+keeps every character (e.g. an axis label with a degree sign).
 \code{TRUE} simplifies accented letters (e.g. e-acute to \code{"e"}) and
 removes other non-ASCII characters in the copy.}
 }
 \value{
-Invisibly, a character vector of the file names written (names only,
-not full paths), in the order of \code{generate.files}. Writes one CSV per
-element of \code{generate.files} to \code{dir.save} and prints each saved
-file name to the console.
+Invisibly, a character vector of the file names written (names
+only, not full paths), in the order of \code{generate.files}. Each saved
+file name is printed.
 }
 \description{
-Copies the master plot settings CSV of each requested plot function into a
-new project-specific file named
-\verb{<project.name>_plotopts_<function.name>.csv}. Edit the
-\code{$override.value} column of the copy to customise a project's plots
-without touching the master file.
+Writes the built-in plot settings of each requested plot function to a
+new project file named \verb{<project.name>_plotopts_<function.name>.csv}.
+Edit the \code{$override.value} column of the copy to customise a
+project's plots, then pass it as the function's \code{aes.default}
+(or \code{plotopts}).
 }
 \details{
-\strong{Master files.} Each recognised plot function maps to one master file
-in \code{dir.load}:
-\itemize{
-\item \code{batz.plotcover_bullseye}: \verb{plotopts_bullseye.csv}
-\item \code{batz.plotdetections_first.last}: \verb{plotopts_first.last.csv}
-\item \code{batz.plotactivity_observations}: \verb{plotopts_callobs.csv}
-}
-Any other name in \code{generate.files} stops the function with an error
-that lists the recognised names. A missing master file also stops the
-function.
+\strong{Source.} The settings come from Batz_reference_db, the one master
+copy of the Batz tables: its \code{PLOTOPTS_*} tabs, listed in the
+\code{database.names} tab as \code{plotopts.<function name>}. The package
+carries a copy of them (\code{\link{batz.util_refdb.sync}}), so the file
+written matches the installed version. They are the same settings each
+plot function uses when no \code{aes.default} is given.
 
-\strong{Copy.} The master file is read with \code{special.read.csv()} (UTF-8,
-with a Latin-1 fallback, so a stray degree-sign byte does not stop it loading).
-All columns are read as character, so values are written back as read
-(only the CSV quoting may change). No settings are added, removed or
-computed. With \code{strip.special.plotopts = TRUE}, special characters are
-simplified or removed first. No log is written.
+\strong{Copy.} Every column is written as text, as stored; no settings
+are added, removed or computed. With \code{strip.special.plotopts = TRUE},
+special characters are simplified or removed first. A name in
+\code{generate.files} with no built-in settings stops the function with
+an error that lists the recognised names.
 }
 \examples{
 \dontrun{
-# Settings files for all three plot functions, into a project sub-folder
-batz.generate_plotopts(project.name = "acme.wetlands.2026",
-                       dir.save = "acme_project")
+# Settings files for every plot function, into a project sub-folder
+batz.generate_plotopts(project.name = "acme.wetlands.2026", dir.save = "acme_project")
 
 # One function only
 batz.generate_plotopts(generate.files = "batz.plotcover_bullseye",
@@ -79,7 +75,5 @@ batz.generate_plotopts(generate.files = "batz.plotcover_bullseye",
 
 }
 \seealso{
-\code{\link{batz.plotcover_bullseye}},
-\code{\link{batz.plotdetections_first.last}},
-\code{\link{batz.plotactivity_observations}}
+\code{\link{batz.util_refdb.sync}}, \code{\link{batz.generate_figlist}}
 }

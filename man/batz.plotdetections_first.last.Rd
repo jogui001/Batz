@@ -8,7 +8,7 @@ batz.plotdetections_first.last(
   data,
   fig.list,
   suntimes,
-  aes.default,
+  aes.default = NULL,
   project.name = "new.project",
   aes.style = "override.value",
   dir.save = getwd(),
@@ -46,7 +46,10 @@ parameter, e.g. \verb{plotopts_first.last.csv} from
 \code{\link{batz.generate_plotopts}}. Required columns:
 \code{$category}, \code{$parameter}, \code{$default.value}. The custom
 style column (named by \code{aes.style}) and \code{$notes} are optional.
-See "plotopts" in Details.}
+See "plotopts" in Details.
+Default \code{NULL}: the built-in settings are used (NOTE): the
+\code{PLOTOPTS_plotdet_first.last} tab of Batz_reference_db, carried by the
+package. A data frame given here is used instead.}
 
 \item{project.name}{Character, default \code{"new.project"}. Put at the
 start of every saved file name. A blank value leaves it out.}

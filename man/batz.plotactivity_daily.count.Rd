@@ -12,7 +12,7 @@ batz.plotactivity_daily.count(
   trim.noid = FALSE,
   date.start = NULL,
   date.end = NULL,
-  aes.default,
+  aes.default = NULL,
   project.name = "new.project",
   aes.style = "override.value",
   site.label = "",
@@ -52,7 +52,10 @@ monitoring night in \code{data}.}
 \item{aes.default}{Data frame of plot settings (a plotopts table, e.g.
 \verb{plotopts_dailycount.csv}), one row per parameter. Required columns:
 \code{$category}, \code{$parameter}, \code{$default.value}. Optional:
-the column named by \code{aes.style}, \code{$notes}. No default.}
+the column named by \code{aes.style}, \code{$notes}.
+Default \code{NULL}: the built-in settings are used (NOTE): the
+\code{PLOTOPTS_plotact_daily.count} tab of Batz_reference_db, carried by the
+package. A data frame given here is used instead.}
 
 \item{project.name}{Character, default \code{"new.project"}. First part of
 each saved file name.}
