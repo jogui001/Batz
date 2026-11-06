@@ -19,7 +19,8 @@ batz.plotactivity_heatmap2(
   time.interval = "1 hour",
   project.name = "new.project",
   aes.style = "override.value",
-  dir.save = getwd()
+  dir.save = getwd(),
+  ...
 )
 }
 \arguments{
@@ -79,6 +80,12 @@ old \code{overide.value} column is still read when
 
 \item{dir.save}{Character, default \code{getwd()}. Folder the PNG(s) are
 saved in (created if needed).}
+
+\item{...}{Plotopts settings typed into the call (e.g.
+\code{legend.position = "top"}, \code{plot.width = 8}); a vector is
+joined with ";". Used before the fig.list row and \code{aes.default}
+(see "Where each setting comes from"). A NOTE lists the settings used
+and any name the function does not use.}
 }
 \value{
 Invisibly, a list:
@@ -110,10 +117,12 @@ per facet (see \strong{fig.list} below).
 
 \strong{Where each setting comes from.} Every setting (\code{date.col}
 through \code{time.interval}, plus plotopts-only settings such as
-\code{plot.width}) is taken from, in order: (1) the fig.list row's
-column of that name, if filled; (2) the function argument, if you passed
-it; (3) \code{aes.default} (its \code{aes.style} column, then
-\code{$default.value}); (4) the argument's default. Plotopts-only
+\code{plot.width}) is taken from, in order: (1) the function call: the
+argument, if you passed it, or a plotopts setting typed into \code{...}
+(e.g. \code{legend.position = "top"}); (2) the fig.list row's column of
+that name, if filled; (3) \code{aes.default} (its \code{aes.style}
+column, then \code{$default.value}); (4) the argument's default or the
+built-in default below. Plotopts-only
 settings and their built-in defaults: \code{legend.title}
 ("Number of Observations"), \code{legend.position} ("bottom"),
 \code{midline.color} ("black"), \code{midline.linewidth} (0.6),

@@ -16,10 +16,12 @@
 #'
 #' \strong{Where each setting comes from.} Every setting (\code{date.col}
 #' through \code{time.interval}, plus plotopts-only settings such as
-#' \code{plot.width}) is taken from, in order: (1) the fig.list row's
-#' column of that name, if filled; (2) the function argument, if you passed
-#' it; (3) \code{aes.default} (its \code{aes.style} column, then
-#' \code{$default.value}); (4) the argument's default. Plotopts-only
+#' \code{plot.width}) is taken from, in order: (1) the function call: the
+#' argument, if you passed it, or a plotopts setting typed into \code{...}
+#' (e.g. \code{legend.position = "top"}); (2) the fig.list row's column of
+#' that name, if filled; (3) \code{aes.default} (its \code{aes.style}
+#' column, then \code{$default.value}); (4) the argument's default or the
+#' built-in default below. Plotopts-only
 #' settings and their built-in defaults: \code{legend.title}
 #' ("Number of Observations"), \code{legend.position} ("bottom"),
 #' \code{midline.color} ("black"), \code{midline.linewidth} (0.6),
@@ -166,6 +168,11 @@
 #' @param project.name Character, default \code{"new.project"}. First part
 #'   of the file name when \code{fig.list = NULL} (fig.list plots are named
 #'   from \code{$plot.name}).
+#' @param ... Plotopts settings typed into the call (e.g.
+#'   \code{legend.position = "top"}, \code{plot.width = 8}); a vector is
+#'   joined with ";". Used before the fig.list row and \code{aes.default}
+#'   (see "Where each setting comes from"). A NOTE lists the settings used
+#'   and any name the function does not use.
 #' @param aes.style Character, default \code{"override.value"}. Column of
 #'   \code{aes.default} that overrides \code{$default.value} when filled. An
 #'   old \code{overide.value} column is still read when
@@ -220,15 +227,17 @@ batz.plotactivity_heatmap2 <- function(data,
                                        time.interval = "1 hour",
                                        project.name = "new.project",
                                        aes.style = "override.value",
-                                       dir.save = getwd()) {
+                                       dir.save = getwd(), ...) {
 
   FN <- "batz.plotactivity_heatmap2"
+  ## settings typed into the call: used before fig.list and plotopts
+  plot.inputs <- plotutil_plot_inputs(list(...), FN)
   PLOT.TYPE <- "activity.heatmap"
   if (!is.data.frame(data)) stop("`data` must be a data frame.")
   if (nrow(data) == 0) stop("`data` has 0 rows - nothing to plot.")
   if (!requireNamespace("ggplot2", quietly = TRUE)) stop("ggplot2 is required - install.packages(\"ggplot2\").")
 
-  ## ---- settings: fig.list row > explicit argument > aes.default > argument default
+  ## ---- settings: function call (argument or ...) > fig.list row > aes.default > argument / built-in default
   arg.names <- c("date.col", "time.col", "bin.intervals", "bin.values", "bin.colors", "bin.scale",
                  "time.start", "time.end", "time.interval")
   arg.given <- c(date.col = !missing(date.col), time.col = !missing(time.col),
@@ -267,16 +276,19 @@ batz.plotactivity_heatmap2 <- function(data,
     if (is.na(v) || !nzchar(trimws(as.character(v)))) NA_character_ else as.character(v)
   }
   setting <- function(job, param) {
+    if (param %in% arg.names && arg.given[[param]]) return(arg.vals[[param]])
+    if (!is.null(v.in <- plotutil_input_get(plot.inputs, param))) return(v.in)
     if (!is.null(job) && param %in% names(job)) {
       v <- job[[param]]
       if (length(v) == 1 && !is.na(v) && nzchar(trimws(as.character(v)))) return(trimws(as.character(v)))
     }
-    if (param %in% arg.names && arg.given[[param]]) return(arg.vals[[param]])
     v <- opt.lookup(param)
     if (!is.na(v)) return(v)
     if (param %in% arg.names) return(arg.vals[[param]])
     OPT.DEFAULTS[[param]]
   }
+  plotutil_plot_inputs_check(plot.inputs, c(names(OPT.DEFAULTS), arg.names, if (!is.null(aes.default)) aes.default$parameter,
+                                             if (is.data.frame(fig.list)) names(fig.list)), FN)
   num.opt <- function(job, param) {
     v <- suppressWarnings(as.numeric(setting(job, param)))
     if (length(v) != 1 || is.na(v)) as.numeric(OPT.DEFAULTS[[param]]) else v

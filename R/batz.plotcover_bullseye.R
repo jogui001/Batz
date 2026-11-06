@@ -28,6 +28,14 @@
 #'   See Details for the parameters read.
 #' @param project.name Character, default \code{"new.project"}. First part of
 #'   each saved file name.
+#' @param ... Plot settings typed into the call, named as the
+#'   \code{aes.default} \code{$parameter} rows (or fig.list setting
+#'   columns), e.g. \code{legend.position = "bottom"},
+#'   \code{plot.width = 8}. A vector is joined with ";". Each setting is
+#'   taken from the function call, then \code{aes.default} (its custom-style column, then
+#'   \code{$default.value}). A setting given here does not need a row in
+#'   \code{aes.default}. A NOTE lists the settings used and any name the
+#'   function does not use.
 #' @param aes.style Character, default \code{"override.value"}. Column of
 #'   \code{aes.default} checked first for each parameter; \code{$default.value}
 #'   is used when that column is missing or blank for the row. An old
@@ -221,7 +229,10 @@ batz.plotcover_bullseye <- function(data, mic, aes.default, project.name = "new.
                                      subplot.size.height = 3,
                                      subplot.size.width = 2,
                                      strip.special = TRUE,
-                                     strip.special.plotopts = FALSE) {
+                                     strip.special.plotopts = FALSE, ...) {
+
+  ## settings typed into the call: used before fig.list and plotopts
+  plot.inputs <- plotutil_plot_inputs(list(...), "batz.plotcover_bullseye")
 
   ## strip.special (2026-09-30, per Josh - see @details): remove non-ASCII
   ## special characters from every data-frame input before anything else
@@ -403,7 +414,7 @@ batz.plotcover_bullseye <- function(data, mic, aes.default, project.name = "new.
     check.headers(data, DATA.REQUIRED, "data"),
     check.headers(mic, MIC.REQUIRED, "mic"),
     check.headers(aes.default, AES.DEFAULT.REQUIRED, "aes.default"),
-    check.parameters(aes.default, AES.DEFAULT.REQUIRED.PARAMETERS, "aes.default"),
+    check.parameters(aes.default, plotutil_required_left(AES.DEFAULT.REQUIRED.PARAMETERS, plot.inputs), "aes.default"),
     check.duplicates(data, "data"),
     check.duplicates(mic, "mic"),
     check.duplicates(aes.default, "aes.default")
@@ -419,6 +430,7 @@ batz.plotcover_bullseye <- function(data, mic, aes.default, project.name = "new.
   ## no longer has any role in settings resolution, only in the saved file
   ## name (see the main loop below).
   get.default <- function(param) {
+    if (!is.null(v.in <- plotutil_input_get(plot.inputs, param))) return(v.in)   # function call first
     row.idx <- which(plotutil_param_key(aes.default$parameter) == plotutil_param_key(param))
     if (length(row.idx) == 0) return(NA_character_)
     val <- as.character(aes.default$default.value[row.idx[1]])
@@ -430,6 +442,7 @@ batz.plotcover_bullseye <- function(data, mic, aes.default, project.name = "new.
     }
     val
   }
+  plotutil_plot_inputs_check(plot.inputs, c(AES.DEFAULT.REQUIRED.PARAMETERS, aes.default$parameter), "batz.plotcover_bullseye")
 
   ## "Take the midpoint for each category, e.g. 25-50 would be 37.5, if
   ## there is a single number use that number." Real data uses underscore-

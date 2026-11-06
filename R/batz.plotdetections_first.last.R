@@ -36,6 +36,14 @@
 #'   See "plotopts" in Details.
 #' @param project.name Character, default \code{"new.project"}. Put at the
 #'   start of every saved file name. A blank value leaves it out.
+#' @param ... Plot settings typed into the call, named as the
+#'   \code{aes.default} \code{$parameter} rows (or fig.list setting
+#'   columns), e.g. \code{legend.position = "bottom"},
+#'   \code{plot.width = 8}. A vector is joined with ";". Each setting is
+#'   taken from the function call, then the fig.list row, then \code{aes.default} (its custom-style column, then
+#'   \code{$default.value}). A setting given here does not need a row in
+#'   \code{aes.default}. A NOTE lists the settings used and any name the
+#'   function does not use.
 #' @param aes.style Character, default \code{"override.value"}. Name of the
 #'   \code{aes.default} column checked first for each parameter. When that
 #'   column does not exist, or its cell is blank, \code{$default.value} is
@@ -257,7 +265,10 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
                                             aes.style = "override.value",
                                             dir.save = getwd(),
                                             strip.special = TRUE,
-                                            strip.special.plotopts = FALSE) {
+                                            strip.special.plotopts = FALSE, ...) {
+
+  ## settings typed into the call: used before fig.list and plotopts
+  plot.inputs <- plotutil_plot_inputs(list(...), "batz.plotdetections_first.last")
 
   ## strip.special (2026-09-30, per Josh - see @details): remove non-ASCII
   ## special characters from every data-frame input before anything else
@@ -444,7 +455,7 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
     missing.msg(suntimes.canon, "suntimes"),
     missing.msg(fig.list.canon, "fig.list"),
     missing.msg(aes.default.canon, "aes.default"),
-    check.parameters(aes.default.canon$df, AES.DEFAULT.REQUIRED.PARAMETERS, "aes.default"),
+    check.parameters(aes.default.canon$df, plotutil_required_left(AES.DEFAULT.REQUIRED.PARAMETERS, plot.inputs), "aes.default"),
     check.duplicates(data, "data"),
     check.duplicates(suntimes, "suntimes"),
     check.duplicates(fig.list, "fig.list"),
@@ -515,6 +526,7 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
   ## no longer has any role in settings resolution, only in the saved file
   ## name (see the main loop below).
   get.default <- function(param) {
+    if (!is.null(v.in <- plotutil_input_get(plot.inputs, param))) return(v.in)   # function call first
     row.idx <- which(plotutil_param_key(aes.default$parameter) == plotutil_param_key(param))
     if (length(row.idx) == 0) return(NA_character_)
     val <- as.character(aes.default$default.value[row.idx[1]])
@@ -526,8 +538,10 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
     }
     val
   }
+  plotutil_plot_inputs_check(plot.inputs, c(AES.DEFAULT.REQUIRED.PARAMETERS, aes.default$parameter, names(fig.list)), "batz.plotdetections_first.last")
 
   get.setting <- function(job, param) {
+    if (!is.null(v.in <- plotutil_input_get(plot.inputs, param))) return(v.in)   # function call, then fig.list, then plotopts
     if (param %in% names(job)) {
       v <- job[[param]]
       if (!is.null(v) && !is.na(v) && nzchar(trimws(as.character(v)))) {

@@ -30,6 +30,14 @@
 #'   the column named by \code{aes.style}, \code{$notes}. No default.
 #' @param project.name Character, default \code{"new.project"}. First part of
 #'   each saved file name.
+#' @param ... Plot settings typed into the call, named as the
+#'   \code{aes.default} \code{$parameter} rows (or fig.list setting
+#'   columns), e.g. \code{legend.position = "bottom"},
+#'   \code{plot.width = 8}. A vector is joined with ";". Each setting is
+#'   taken from the function call, then \code{aes.default} (its custom-style column, then
+#'   \code{$default.value}). A setting given here does not need a row in
+#'   \code{aes.default}. A NOTE lists the settings used and any name the
+#'   function does not use.
 #' @param aes.style Character, default \code{"override.value"}. Column of
 #'   \code{aes.default} checked first for each parameter; a blank cell (or a
 #'   missing column) falls back to \code{$default.value}. An old
@@ -183,7 +191,10 @@ batz.plotactivity_daily.count <- function(data,
                                            dir.save = getwd(),
                                            snake_case = FALSE,
                                            strip.special = TRUE,
-                                           strip.special.plotopts = FALSE) {
+                                           strip.special.plotopts = FALSE, ...) {
+
+  ## settings typed into the call: used before fig.list and plotopts
+  plot.inputs <- plotutil_plot_inputs(list(...), "batz.plotactivity_daily.count")
 
   ## strip.special (2026-09-30, per Josh - see @details): remove non-ASCII
   ## special characters from every data-frame input before anything else
@@ -237,7 +248,7 @@ batz.plotactivity_daily.count <- function(data,
 
   problems <- c(
     check.headers(aes.default, AES.DEFAULT.REQUIRED, "aes.default"),
-    check.parameters(aes.default, AES.DEFAULT.REQUIRED.PARAMETERS, "aes.default"),
+    check.parameters(aes.default, plotutil_required_left(AES.DEFAULT.REQUIRED.PARAMETERS, plot.inputs), "aes.default"),
     check.duplicates(aes.default, "aes.default")
   )
   if (length(problems) > 0) stop(paste(problems, collapse = "\n"))
@@ -271,6 +282,7 @@ batz.plotactivity_daily.count <- function(data,
   if (!is.null(dup.problem)) stop(dup.problem)
 
   get.default <- function(param) {
+    if (!is.null(v.in <- plotutil_input_get(plot.inputs, param))) return(v.in)   # function call first
     row.idx <- which(plotutil_param_key(aes.default$parameter) == plotutil_param_key(param))
     if (length(row.idx) == 0) return(NA_character_)
     val <- as.character(aes.default$default.value[row.idx[1]])
@@ -282,6 +294,7 @@ batz.plotactivity_daily.count <- function(data,
     }
     val
   }
+  plotutil_plot_inputs_check(plot.inputs, c(AES.DEFAULT.REQUIRED.PARAMETERS, aes.default$parameter), "batz.plotactivity_daily.count")
 
   # --- trim.noid: same $spp.id-blank-handling/removal behavior as
   # batz.generate_plotframe.bat() - see @details, "trim.noid matched to

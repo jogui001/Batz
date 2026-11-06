@@ -45,6 +45,14 @@
 #'   dropped).
 #' @param project.name Character, default \code{"new.project"}. First part
 #'   of each saved file name.
+#' @param ... Plot settings typed into the call, named as the
+#'   \code{aes.default} \code{$parameter} rows (or fig.list setting
+#'   columns), e.g. \code{legend.position = "bottom"},
+#'   \code{plot.width = 8}. A vector is joined with ";". Each setting is
+#'   taken from the function call, then the fig.list row, then \code{aes.default} (its custom-style column, then
+#'   \code{$default.value}). A setting given here does not need a row in
+#'   \code{aes.default}. A NOTE lists the settings used and any name the
+#'   function does not use.
 #' @param aes.style Character, default \code{"override.value"}. Name of the
 #'   \code{aes.default} column checked first for each parameter. When that
 #'   column does not exist, or its cell is blank, \code{$default.value} is
@@ -196,7 +204,10 @@ batz.plot_heat.site.species <- function(data, fig.list, aes.default,
                                         aes.style = "override.value",
                                         dir.save = getwd(),
                                         strip.special = TRUE,
-                                        strip.special.plotopts = FALSE) {
+                                        strip.special.plotopts = FALSE, ...) {
+
+  ## settings typed into the call: used before fig.list and plotopts
+  plot.inputs <- plotutil_plot_inputs(list(...), "batz.plot_heat.site.species")
 
   FN <- "batz.plot_heat.site.species"
   PLOT.TYPE <- "heat.site.species"
@@ -246,7 +257,8 @@ batz.plot_heat.site.species <- function(data, fig.list, aes.default,
                 missing.msg(fig.canon, "fig.list"),
                 missing.msg(aes.canon, "aes.default"))
   if ("parameter" %in% names(aes.canon$df)) {
-    miss.par <- AES.DEFAULT.REQUIRED.PARAMETERS[!plotutil_param_key(AES.DEFAULT.REQUIRED.PARAMETERS) %in% plotutil_param_key(aes.canon$df$parameter)]
+    req.par <- plotutil_required_left(AES.DEFAULT.REQUIRED.PARAMETERS, plot.inputs)
+    miss.par <- req.par[!plotutil_param_key(req.par) %in% plotutil_param_key(aes.canon$df$parameter)]
     if (length(miss.par) > 0) {
       problems <- c(problems, sprintf(
         "aes.default is missing these required $parameter rows: %s - it may be an older copy of plotopts_heat.site.species.csv",
@@ -275,6 +287,7 @@ batz.plot_heat.site.species <- function(data, fig.list, aes.default,
   }
   key <- function(v) tolower(trimws(as.character(v)))
   get.default <- function(param) {
+    if (!is.null(v.in <- plotutil_input_get(plot.inputs, param))) return(v.in)   # function call first
     i <- which(plotutil_param_key(aes.default$parameter) == plotutil_param_key(param))[1]
     if (is.na(i)) return(NA_character_)
     val <- as.character(aes.default$default.value[i])
@@ -284,7 +297,9 @@ batz.plot_heat.site.species <- function(data, fig.list, aes.default,
     }
     if (is.na(val)) "" else val
   }
+  plotutil_plot_inputs_check(plot.inputs, c(AES.DEFAULT.REQUIRED.PARAMETERS, aes.default$parameter, names(fig.list)), "batz.plot_heat.site.species")
   get.setting <- function(job, param) {
+    if (!is.null(v.in <- plotutil_input_get(plot.inputs, param))) return(v.in)   # function call, then fig.list, then plotopts
     if (param %in% names(job) && !blank(job[[param]])) return(as.character(job[[param]]))
     get.default(param)
   }

@@ -22,7 +22,8 @@ batz.plotcover_bullseye(
   subplot.size.height = 3,
   subplot.size.width = 2,
   strip.special = TRUE,
-  strip.special.plotopts = FALSE
+  strip.special.plotopts = FALSE,
+  ...
 )
 }
 \arguments{
@@ -114,6 +115,15 @@ and \code{mic}, headers included, before anything else.}
 labels keep symbols such as \code{°}), but the function stops with an
 error naming the rows if it holds characters that cannot be read in this
 R session.}
+
+\item{...}{Plot settings typed into the call, named as the
+\code{aes.default} \code{$parameter} rows (or fig.list setting
+columns), e.g. \code{legend.position = "bottom"},
+\code{plot.width = 8}. A vector is joined with ";". Each setting is
+taken from the function call, then \code{aes.default} (its custom-style column, then
+\code{$default.value}). A setting given here does not need a row in
+\code{aes.default}. A NOTE lists the settings used and any name the
+function does not use.}
 }
 \value{
 Invisibly, a list with \code{$plots} (one entry per ARU plotted,

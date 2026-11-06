@@ -20,7 +20,8 @@ batz.plotactivity_daily.count(
   dir.save = getwd(),
   snake_case = FALSE,
   strip.special = TRUE,
-  strip.special.plotopts = FALSE
+  strip.special.plotopts = FALSE,
+  ...
 )
 }
 \arguments{
@@ -89,6 +90,15 @@ degree and micro signs), before any header check.}
 session (e.g. a Latin-1 degree-sign byte) stops the function with an error
 naming the table, the number of bad characters and the first 5 rows per
 column.}
+
+\item{...}{Plot settings typed into the call, named as the
+\code{aes.default} \code{$parameter} rows (or fig.list setting
+columns), e.g. \code{legend.position = "bottom"},
+\code{plot.width = 8}. A vector is joined with ";". Each setting is
+taken from the function call, then \code{aes.default} (its custom-style column, then
+\code{$default.value}). A setting given here does not need a row in
+\code{aes.default}. A NOTE lists the settings used and any name the
+function does not use.}
 }
 \value{
 Invisibly, a list:

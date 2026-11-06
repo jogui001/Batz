@@ -13,7 +13,8 @@ batz.plotactivity_observations(
   aes.style = "override.value",
   dir.save = getwd(),
   strip.special = TRUE,
-  strip.special.plotopts = FALSE
+  strip.special.plotopts = FALSE,
+  ...
 )
 }
 \arguments{
@@ -69,6 +70,15 @@ clean-up for the settings tables \code{fig.list} and
 symbols), but a cell that cannot be read in this R session stops the
 function with an error naming the table, the number of bad characters
 and the first rows per header. TRUE strips them instead.}
+
+\item{...}{Plot settings typed into the call, named as the
+\code{aes.default} \code{$parameter} rows (or fig.list setting
+columns), e.g. \code{legend.position = "bottom"},
+\code{plot.width = 8}. A vector is joined with ";". Each setting is
+taken from the function call, then the fig.list row, then \code{aes.default} (its custom-style column, then
+\code{$default.value}). A setting given here does not need a row in
+\code{aes.default}. A NOTE lists the settings used and any name the
+function does not use.}
 }
 \value{
 Invisibly, a list with \code{$plots} and \code{$ggplots}, keyed by

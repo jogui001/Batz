@@ -15,7 +15,8 @@ batz.plotactivity_heatmap(
   site.label = "",
   dir.save = getwd(),
   strip.special = TRUE,
-  strip.special.plotopts = FALSE
+  strip.special.plotopts = FALSE,
+  ...
 )
 }
 \arguments{
@@ -60,6 +61,15 @@ simplify or remove non-ASCII characters in \code{data} (see Details).}
 \code{TRUE}, clean \code{aes.default} the same way, so a label such as
 "Temperature (degree C)" loses its symbol. If \code{FALSE}, symbols are
 kept and unreadable characters stop the function (see Details).}
+
+\item{...}{Plot settings typed into the call, named as the
+\code{aes.default} \code{$parameter} rows (or fig.list setting
+columns), e.g. \code{legend.position = "bottom"},
+\code{plot.width = 8}. A vector is joined with ";". Each setting is
+taken from the function call, then \code{aes.default} (its custom-style column, then
+\code{$default.value}). A setting given here does not need a row in
+\code{aes.default}. A NOTE lists the settings used and any name the
+function does not use.}
 }
 \value{
 Invisibly, a list with:

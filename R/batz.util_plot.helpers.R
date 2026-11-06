@@ -412,3 +412,55 @@ plotutil_myso_luso <- function(spp.common, spp.plot, facpan, present, fn.name, j
 #' @keywords internal
 #' @noRd
 plotutil_param_key <- function(x) tolower(gsub("\\s+", "", as.character(x)))
+
+
+#' Settings typed into a plot function call (internal)
+#'
+#' Every Batz plot function takes plot settings in \code{...}
+#' (e.g. \code{legend.position = "bottom"}). They are used before fig.list
+#' and plotopts. \code{plotutil_plot_inputs()} turns \code{list(...)} into a
+#' named list of text values (a vector becomes one ";"-separated string),
+#' keyed by \code{plotutil_param_key()}; \code{plotutil_input_get()} returns
+#' one value or \code{NULL}; \code{plotutil_plot_inputs_check()} prints a
+#' NOTE naming the settings used and any the function does not know;
+#' \code{plotutil_required_left()} drops required plotopts rows given in
+#' the call.
+#' @keywords internal
+#' @noRd
+plotutil_plot_inputs <- function(dots, fn) {
+  if (!length(dots)) return(list())
+  nm <- names(dots)
+  if (is.null(nm) || any(is.na(nm) | !nzchar(nm)))
+    stop(fn, ': settings given in the function call must be named, e.g. legend.position = "bottom".', call. = FALSE)
+  out <- lapply(dots, function(v) if (is.null(v) || length(v) == 0) NA_character_ else paste(as.character(v), collapse = ";"))
+  names(out) <- plotutil_param_key(nm)
+  attr(out, "given") <- nm
+  out
+}
+
+#' @rdname plotutil_plot_inputs
+#' @keywords internal
+#' @noRd
+plotutil_input_get <- function(inputs, param) {
+  if (!length(inputs)) return(NULL)
+  v <- inputs[[plotutil_param_key(param)]]
+  if (is.null(v) || is.na(v)) NULL else v
+}
+
+#' @keywords internal
+#' @noRd
+plotutil_plot_inputs_check <- function(inputs, known, fn) {
+  if (!length(inputs)) return(invisible(NULL))
+  nm <- attr(inputs, "given")
+  bad <- nm[!plotutil_param_key(nm) %in% plotutil_param_key(known)]
+  ok <- setdiff(nm, bad)
+  if (length(ok)) cat(sprintf("NOTE: %s - settings from the function call (used before fig.list and plotopts): %s\n",
+                              fn, paste(ok, collapse = ", ")))
+  if (length(bad)) cat(sprintf("NOTE: %s - setting(s) in the function call that this function does not use: %s\n",
+                               fn, paste(bad, collapse = ", ")))
+  invisible(NULL)
+}
+
+#' @keywords internal
+#' @noRd
+plotutil_required_left <- function(required, inputs) required[!plotutil_param_key(required) %in% names(inputs)]
