@@ -23,9 +23,17 @@
 #'   Details, "Adding forms").
 #' @param dir.save Character, default \code{getwd()}. Folder the merged
 #'   workbook is written to (created if needed).
-#' @param save.name Character, default \code{"mergedsurvey123.xlsx"}. Name of
-#'   the merged workbook (a name without an \code{.xlsx} ending gets
+#' @param save.name Character, default \code{NULL}: the workbook is named
+#'   \verb{<project.name>_metadata_deployment&habitat_<YYYYMMDD>to<YYYYMMDD>_<YYYYMMDDHHMMSS>.xlsx}
+#'   (first and last \code{$date} in the merged tabs, then the time of the
+#'   run; no project part when \code{project.name} is blank). A name given
+#'   here is used instead (a name without an \code{.xlsx} ending gets
 #'   \code{.xlsx} in place of its extension).
+#' @param project.name Character, default \code{""}. Project to keep when the
+#'   files hold records of several projects: only records whose
+#'   \code{$project.name} matches (case and spaces ignored) are merged.
+#'   Blank = every project. Also the first part of the file name (spelled
+#'   as in the data, spaces as "-").
 #' @param header.combo Character, default \code{c("project.name", "aru.name")}.
 #'   Headers whose unique combinations define a site: used for the
 #'   deployment date (Details) and passed to
@@ -101,7 +109,10 @@
 #'     \code{$form.version} = the version name (e.g. \code{inland_2026}); a
 #'     sheet that already has Batz headers keeps its own \code{$form.version}
 #'     (else \code{"batz.headers"}).
-#'   \item Project names are filled in, blank deployment dates are filled,
+#'   \item Project names are filled in; with \code{project.name}, records of
+#'     other projects (including \code{"unknown.check"}) are left out (a line
+#'     per tab gives how many), and a name not in the files stops the run
+#'     listing the projects found. Blank deployment dates are filled,
 #'     the habitat \code{$date} is set and the consolidated GlobalID is
 #'     added (below). A column whose type differs between files becomes text.
 #'   \item DBH of trees and snags with more than one trunk (below).
@@ -203,7 +214,8 @@ batz.merge_sitevisit.acoustics <- function(dir.load = getwd(),
                                            dir.sub = TRUE,
                                            form.list = NA,
                                            dir.save = getwd(),
-                                           save.name = "mergedsurvey123.xlsx",
+                                           save.name = NULL,
+                                           project.name = "",
                                            header.combo = c("project.name", "aru.name"),
                                            header.uniqueid = c("globalid"),
                                            header.dates = c("date.habitat.assessment", "date.deployment", "date")) {
@@ -514,6 +526,25 @@ batz.merge_sitevisit.acoustics <- function(dir.load = getwd(),
     data.frame(file = character(0), sheet = character(0), tab = character(0), form.version = character(0),
                rows = integer(0), headers.matched = integer(0), headers.not.used = character(0))
 
+  ## --- 5-. keep only project.name ------------------------------------------
+  if (!is.null(project.name) && length(project.name) && !is.na(project.name[1]) && nzchar(trimws(project.name[1]))) {
+    pk <- function(x) gsub("\\s+", "", tolower(as.character(x)))
+    found <- unique(unlist(lapply(tabs, function(t) if ("project.name" %in% names(out[[t]])) out[[t]]$project.name)))
+    found <- sort(unique(found[!is.na(found) & nzchar(found)]))
+    if (!pk(project.name[1]) %in% pk(found))
+      stop('project.name = "', project.name[1], '" is not in the files. Projects found: ',
+           paste(found, collapse = ", "), call. = FALSE)
+    project.name <- found[pk(found) == pk(project.name[1])][1]          # spelled as in the data (file name)
+    for (t in tabs) {
+      d <- out[[t]]
+      if (!"project.name" %in% names(d) || nrow(d) == 0) next
+      keep <- pk(d$project.name) == pk(project.name[1])
+      if (any(!keep)) cat(t, ": ", sum(!keep), " record(s) of other projects left out\n", sep = "")
+      out[[t]] <- d[keep, , drop = FALSE]; rownames(out[[t]]) <- NULL
+    }
+    n.unknown <- sum(vapply(tabs, function(t) sum(out[[t]]$project.name %in% "unknown.check"), numeric(1)))
+  }
+
   ## --- 5a. deployment date from the habitat assessment date -----------------
   out[tabs] <- sitevisit.deploy.date(out[tabs], header.combo = header.combo, header.dates = header.dates)
 
@@ -531,6 +562,14 @@ batz.merge_sitevisit.acoustics <- function(dir.load = getwd(),
   for (t in tabs) out[[t]] <- sitevisit.dbh.merge(out[[t]])
 
   ## --- 6. write -------------------------------------------------------------
+  if (is.null(save.name) || !length(save.name) || is.na(save.name[1]) || !nzchar(trimws(save.name[1]))) {
+    dts <- as.Date(unlist(lapply(tabs, function(t) if ("date" %in% names(out[[t]])) as.numeric(sitevisit.to.date(out[[t]]$date)))), origin = "1970-01-01")
+    dts <- dts[!is.na(dts)]
+    rng <- if (length(dts)) paste0(format(min(dts), "%Y%m%d"), "to", format(max(dts), "%Y%m%d")) else "nodates"
+    pj.part <- if (!is.null(project.name) && length(project.name) && !is.na(project.name[1]) && nzchar(trimws(project.name[1])))
+      paste0(gsub("\\s+", "-", gsub('[\\\\/:*?"<>|]+', "", trimws(project.name[1]))), "_") else ""
+    save.name <- paste0(pj.part, "metadata_deployment&habitat_", rng, "_", format(Sys.time(), "%Y%m%d%H%M%S"), ".xlsx")
+  }
   if (!grepl("\\.xlsx$", save.name, ignore.case = TRUE)) save.name <- paste0(sub("\\.[^.]*$", "", save.name), ".xlsx")
   if (!dir.exists(dir.save)) dir.create(dir.save, recursive = TRUE)
   path <- file.path(dir.save, save.name)

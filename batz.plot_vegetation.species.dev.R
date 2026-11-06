@@ -36,6 +36,12 @@ r3 <- batz.plot_vegetation.species(q, project.name = "Falmouth", bar = "grouped"
                                    site.colors = "Falmouth1=darkgreen;Falmouth2=orange", size = "half page",
                                    dir.save = dir.out)
 print(r3$plot)
+## grouped: every site has its place under every species; a short line at 0 where a site has none
+pdat <- r3$plot$data
+stopifnot(nrow(pdat) == 2 * length(unique(pdat$species)) * 2,                 # 2 panels x species x 2 sites
+          any(pdat$count == 0))
+r3b <- batz.plot_vegetation.species(q, project.name = "Falmouth", bar = "grouped", dir.save = NULL,
+                                    plotopts = data.frame(parameter = "zero.show", default.value = "FALSE"))   # no zero lines
 
 ## 4. Settings priority: function input > plotopts > built-in default
 po <- batz.plot_vegetation.species.defaults()
@@ -50,6 +56,18 @@ stopifnot(r4$settings$value[r4$settings$parameter == "bar"] == "stacked",       
 r5 <- batz.plot_vegetation.species(q, site.names = c("Falmouth2", "Falmouth1"), dir.save = NULL,
                                    plotopts = data.frame(parameter = "snag.include", default.value = "FALSE"))
 stopifnot(!"Snag" %in% r5$counts$species)
+
+## 5b. DBH = TRUE (default): mean DBH printed above each tree / snag bar
+q$vegetation.tree_tree1.dbh <- c("8", "14", "20;5", NA, "10", "12", "9;4", "16", "18", "7", "11", "13")
+q$vegetation.tree_tree2.dbh <- c(NA, NA, NA, NA, "6", "8", "5", NA, NA, NA, NA, NA)
+q$measurement.units <- "in"
+r5b <- batz.plot_vegetation.species(q, project.name = "Falmouth", dir.save = dir.out)                     # per species
+print(r5b$dbh.mean)
+stopifnot(r5b$dbh.mean$dbh.mean[r5b$dbh.mean$species == "Spruce"] == 20.6,                             # sqrt(20^2 + 5^2)
+          r5b$dbh.mean$dbh.mean[r5b$dbh.mean$species == "Snag"] == 8.2)                                 # mean of 10,12,8,5,6
+r5c <- batz.plot_vegetation.species(q, project.name = "Falmouth", bar = "grouped", dir.save = dir.out)  # per species and site
+print(r5c$dbh.mean)
+r5d <- batz.plot_vegetation.species(q, DBH = FALSE, dir.save = NULL); stopifnot(is.null(r5d$dbh.mean))
 
 ## 6. Starting plotopts file (edit it, then pass it as plotopts = "<file>.csv")
 write.csv(batz.plot_vegetation.species.defaults(), file.path(dir.out, "plotopts_vegetation.species.csv"), row.names = FALSE)

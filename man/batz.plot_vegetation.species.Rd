@@ -12,9 +12,11 @@ batz.plot_vegetation.species(
   legend.position = c("right", "bottom", "left", "top"),
   bar = c("stacked", "grouped"),
   size = c("page", "half page", "powerpoint", "half powerpoint"),
+  DBH = TRUE,
   dir.save = getwd(),
   plotopts = NULL,
-  aes.style = "override.value"
+  aes.style = "override.value",
+  ...
 )
 }
 \arguments{
@@ -42,12 +44,20 @@ black to light grey (two sites = black and grey75, as in the example).}
 \code{"left"}, \code{"top"} (or \code{"none"}). Where the legend goes.}
 
 \item{bar}{\code{"stacked"} (default) or \code{"grouped"}. Stacked puts
-the sites' bars on top of each other; grouped puts them side by side.}
+the sites' bars on top of each other; grouped puts them side by side,
+every site in the same place under every species, with a 0 (a short
+line in the site's color, \code{zero.show}) where a site has none of
+that species.}
 
 \item{size}{\code{"page"} (default), \code{"half page"},
 \code{"powerpoint"}, \code{"half powerpoint"}, or \code{"<width>x<height>"}
 in inches (e.g. \code{"8x5"}). PNG size, width x height: page 6 x 7,
 half page 6 x 4, powerpoint 12 x 6, half powerpoint 6 x 6.}
+
+\item{DBH}{Logical, default \code{TRUE}. TRUE prints the mean DBH
+(diameter at breast height) above each bar in the tree panel: of that
+species at all plotted sites (stacked bars) or at that site (grouped
+bars). See "DBH labels" in Details.}
 
 \item{dir.save}{Character, default \code{getwd()}. Folder the PNG is
 saved in (created if needed). \code{NULL} = no PNG.}
@@ -62,11 +72,16 @@ out uses the built-in default. See "Settings" in Details.}
 \item{aes.style}{Character, default \code{"override.value"}. Name of the
 \code{plotopts} column read before \code{$default.value} (an old
 \code{$overide.value} column is still read).}
+
+\item{...}{Any other setting listed in Details ("Settings"), typed into
+the call by name (e.g. \code{yaxe.max = 20}); used before
+\code{plotopts}.}
 }
 \value{
 Invisibly, a list: \code{$plot} (the ggplot), \code{$counts} (one
 row per panel, species and site: \code{$panel}, \code{$species},
-\code{$site}, \code{$count}), \code{$settings} (the value used for
+\code{$site}, \code{$count}), \code{$dbh.mean} (mean DBH per species,
+and per site for grouped bars; \code{NULL} when \code{DBH = FALSE}), \code{$settings} (the value used for
 every setting and where it came from: \code{"input"}, \code{"plotopts"}
 or \code{"default"}) and \code{$file} (the PNG, or \code{NA}).
 }
@@ -88,7 +103,7 @@ is saved.
 \enumerate{
 \item the value typed into the function call in this R session
 (\code{site.names}, \code{site.colors}, \code{legend.position},
-\code{bar}, \code{size});
+\code{bar}, \code{size}, \code{DBH}, or any other setting by name in \code{...});
 \item \code{plotopts}: \code{$override.value} (\code{aes.style}) when
 filled, else \code{$default.value};
 \item the built-in default (\code{batz.plot_vegetation.species.defaults()}).
@@ -97,12 +112,15 @@ filled, else \code{$default.value};
 as well as these: \code{tree.columns}, \code{sapling.columns},
 \code{snag.columns}, \code{snag.include} (TRUE/FALSE), \code{snag.label},
 \code{site.column}, \code{species.titlecase} (TRUE/FALSE),
+\code{dbh.units}, \code{units.column}, \code{dbh.digits},
+\code{dbh.label.suffix}, \code{dbh.text.size},
 \code{panel.order} ("sapling;tree"), \code{panel.title.sapling},
 \code{panel.title.tree}, \code{xaxe.title}, \code{yaxe.title},
 \code{legend.title}, \code{yaxe.max} (blank = from the data),
 \code{xaxe.text.angle} ("auto" = 45 degrees when there are more than 8
 species),
-\code{bar.width}, \code{bar.outline.color}, \code{strip.text.size},
+\code{bar.width}, \code{bar.outline.color}, \code{zero.show},
+\code{zero.linewidth}, \code{strip.text.size},
 \code{axis.title.size}, \code{axis.text.size}, \code{legend.text.size},
 \code{legend.key.size}, \code{ggsave.dpi}. Lists are separated by ";".
 
@@ -113,6 +131,18 @@ and, with \code{species.titlecase = TRUE}, written in title case so
 \code{snag.include = TRUE} every filled snag DBH adds 1 to the
 \code{snag.label} bar in the tree panel. Both panels show the same
 species (alphabetical) and the same Y axis.
+
+\strong{DBH labels} (\code{DBH = TRUE}). Each tree's DBH is its
+\code{$vegetation.tree_treeN.dbh.overall} (the DBH of all its trunks
+combined, made by \code{\link{batz.merge_sitevisit.acoustics}}; worked out
+from \code{$vegetation.tree_treeN.dbh} when there is no \code{.overall}
+column), matched to the species in \code{$vegetation.tree_treeN.species};
+snags use \code{$vegetation.snag_snagN.dbh.overall}. The mean is printed
+above the bar with \code{dbh.digits} decimals, in \code{dbh.units}
+(records in the other unit, from \code{$measurement.units}, are
+converted). Bars with no DBH (all saplings, and trees with no DBH entered)
+have no label. The Y axis gets a little extra room for the labels.
+\code{$dbh.mean} in the result holds the values.
 
 \strong{File name.}
 \verb{[<project.name>_]vegetation.species_<YYYYMMDDHHMMSS>.png}.

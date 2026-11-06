@@ -31,11 +31,18 @@
 #' @param legend.position \code{"right"} (default), \code{"bottom"},
 #'   \code{"left"}, \code{"top"} (or \code{"none"}). Where the legend goes.
 #' @param bar \code{"stacked"} (default) or \code{"grouped"}. Stacked puts
-#'   the sites' bars on top of each other; grouped puts them side by side.
+#'   the sites' bars on top of each other; grouped puts them side by side,
+#'   every site in the same place under every species, with a 0 (a short
+#'   line in the site's color, \code{zero.show}) where a site has none of
+#'   that species.
 #' @param size \code{"page"} (default), \code{"half page"},
 #'   \code{"powerpoint"}, \code{"half powerpoint"}, or \code{"<width>x<height>"}
 #'   in inches (e.g. \code{"8x5"}). PNG size, width x height: page 6 x 7,
 #'   half page 6 x 4, powerpoint 12 x 6, half powerpoint 6 x 6.
+#' @param DBH Logical, default \code{TRUE}. TRUE prints the mean DBH
+#'   (diameter at breast height) above each bar in the tree panel: of that
+#'   species at all plotted sites (stacked bars) or at that site (grouped
+#'   bars). See "DBH labels" in Details.
 #' @param dir.save Character, default \code{getwd()}. Folder the PNG is
 #'   saved in (created if needed). \code{NULL} = no PNG.
 #' @param plotopts Plot settings: \code{NULL} (default; built-in defaults),
@@ -44,13 +51,17 @@
 #'   \code{$category}, \code{$parameter}, \code{$default.value}, and
 #'   optionally \code{$override.value} and \code{$notes}. A parameter left
 #'   out uses the built-in default. See "Settings" in Details.
+#' @param ... Any other setting listed in Details ("Settings"), typed into
+#'   the call by name (e.g. \code{yaxe.max = 20}); used before
+#'   \code{plotopts}.
 #' @param aes.style Character, default \code{"override.value"}. Name of the
 #'   \code{plotopts} column read before \code{$default.value} (an old
 #'   \code{$overide.value} column is still read).
 #'
 #' @return Invisibly, a list: \code{$plot} (the ggplot), \code{$counts} (one
 #'   row per panel, species and site: \code{$panel}, \code{$species},
-#'   \code{$site}, \code{$count}), \code{$settings} (the value used for
+#'   \code{$site}, \code{$count}), \code{$dbh.mean} (mean DBH per species,
+#'   and per site for grouped bars; \code{NULL} when \code{DBH = FALSE}), \code{$settings} (the value used for
 #'   every setting and where it came from: \code{"input"}, \code{"plotopts"}
 #'   or \code{"default"}) and \code{$file} (the PNG, or \code{NA}).
 #'
@@ -59,7 +70,7 @@
 #' \enumerate{
 #'   \item the value typed into the function call in this R session
 #'     (\code{site.names}, \code{site.colors}, \code{legend.position},
-#'     \code{bar}, \code{size});
+#'     \code{bar}, \code{size}, \code{DBH}, or any other setting by name in \code{...});
 #'   \item \code{plotopts}: \code{$override.value} (\code{aes.style}) when
 #'     filled, else \code{$default.value};
 #'   \item the built-in default (\code{batz.plot_vegetation.species.defaults()}).
@@ -68,12 +79,15 @@
 #' as well as these: \code{tree.columns}, \code{sapling.columns},
 #' \code{snag.columns}, \code{snag.include} (TRUE/FALSE), \code{snag.label},
 #' \code{site.column}, \code{species.titlecase} (TRUE/FALSE),
+#' \code{dbh.units}, \code{units.column}, \code{dbh.digits},
+#' \code{dbh.label.suffix}, \code{dbh.text.size},
 #' \code{panel.order} ("sapling;tree"), \code{panel.title.sapling},
 #' \code{panel.title.tree}, \code{xaxe.title}, \code{yaxe.title},
 #' \code{legend.title}, \code{yaxe.max} (blank = from the data),
 #' \code{xaxe.text.angle} ("auto" = 45 degrees when there are more than 8
 #' species),
-#' \code{bar.width}, \code{bar.outline.color}, \code{strip.text.size},
+#' \code{bar.width}, \code{bar.outline.color}, \code{zero.show},
+#' \code{zero.linewidth}, \code{strip.text.size},
 #' \code{axis.title.size}, \code{axis.text.size}, \code{legend.text.size},
 #' \code{legend.key.size}, \code{ggsave.dpi}. Lists are separated by ";".
 #'
@@ -84,6 +98,18 @@
 #' \code{snag.include = TRUE} every filled snag DBH adds 1 to the
 #' \code{snag.label} bar in the tree panel. Both panels show the same
 #' species (alphabetical) and the same Y axis.
+#'
+#' \strong{DBH labels} (\code{DBH = TRUE}). Each tree's DBH is its
+#' \code{$vegetation.tree_treeN.dbh.overall} (the DBH of all its trunks
+#' combined, made by \code{\link{batz.merge_sitevisit.acoustics}}; worked out
+#' from \code{$vegetation.tree_treeN.dbh} when there is no \code{.overall}
+#' column), matched to the species in \code{$vegetation.tree_treeN.species};
+#' snags use \code{$vegetation.snag_snagN.dbh.overall}. The mean is printed
+#' above the bar with \code{dbh.digits} decimals, in \code{dbh.units}
+#' (records in the other unit, from \code{$measurement.units}, are
+#' converted). Bars with no DBH (all saplings, and trees with no DBH entered)
+#' have no label. The Y axis gets a little extra room for the labels.
+#' \code{$dbh.mean} in the result holds the values.
 #'
 #' \strong{File name.}
 #' \verb{[<project.name>_]vegetation.species_<YYYYMMDDHHMMSS>.png}.
@@ -104,7 +130,7 @@ batz.plot_vegetation.species <- function(data, project.name = "", site.names = N
                                          legend.position = c("right", "bottom", "left", "top"),
                                          bar = c("stacked", "grouped"),
                                          size = c("page", "half page", "powerpoint", "half powerpoint"),
-                                         dir.save = getwd(), plotopts = NULL, aes.style = "override.value") {
+                                         DBH = TRUE, dir.save = getwd(), plotopts = NULL, aes.style = "override.value", ...) {
   FN <- "batz.plot_vegetation.species"
   blank <- function(v) is.null(v) || length(v) == 0 || all(is.na(v)) || all(!nzchar(trimws(as.character(v))))
   split.list <- function(v) {
@@ -137,7 +163,17 @@ batz.plot_vegetation.species <- function(data, project.name = "", site.names = N
   if (!missing(site.colors)) inputs$site.colors <- site.colors
   if (!missing(legend.position)) inputs$legend.position <- legend.position
   if (!missing(bar)) inputs$bar <- bar
+  if (!missing(DBH)) inputs$DBH <- as.character(DBH)
   if (!missing(size)) inputs$size <- size
+  dots <- list(...)                                  # any other plotopts setting typed into the call
+  if (length(dots)) {
+    if (is.null(names(dots)) || any(!nzchar(names(dots)))) stop(FN, ': settings in the call must be named, e.g. yaxe.max = 20.', call. = FALSE)
+    for (nm in names(dots)) {
+      p <- defs$parameter[plotutil_param_key(defs$parameter) == plotutil_param_key(nm)][1]
+      if (is.na(p)) cat(sprintf("NOTE: %s - setting in the call not used by this function: %s\n", FN, nm))
+      else inputs[[p]] <- paste(as.character(dots[[nm]]), collapse = ";")
+    }
+  }
   source.of <- list()
   setting <- function(p) {
     if (!is.null(inputs[[p]]) && !blank(inputs[[p]])) { source.of[[p]] <<- "input"; return(inputs[[p]]) }
@@ -240,6 +276,41 @@ batz.plot_vegetation.species <- function(data, project.name = "", site.names = N
   counts <- counts[order(match(counts$panel, panels), counts$species, match(counts$site, sites)), ]
   rownames(counts) <- NULL
 
+  ## ---- mean DBH of each tree species (and snags) --------------------------------
+  dbh.mean <- NULL
+  if (flag("DBH")) {
+    dbh.units <- key(setting("dbh.units"))
+    ucol <- tolower(setting("units.column"))
+    ru <- if (ucol %in% names(data)) key(data[[ucol]]) else rep(NA_character_, nrow(data))
+    ru[!ru %in% c("in", "cm")] <- dbh.units
+    fac <- ifelse(ru == dbh.units, 1, if (dbh.units == "in") 1 / 2.54 else 2.54)
+    dbh.of <- function(cl) {                       # .overall column, else worked out from "a;b;c"
+      ov <- paste0(cl, ".overall")
+      v <- if (ov %in% names(data)) suppressWarnings(as.numeric(as.character(data[[ov]])))
+           else if (cl %in% names(data)) vapply(as.character(data[[cl]]), function(x) {
+             n <- suppressWarnings(as.numeric(trimws(strsplit(x, ";", fixed = TRUE)[[1]]))); n <- n[!is.na(n)]
+             if (length(n)) sqrt(sum(n^2)) else NA_real_ }, numeric(1), USE.NAMES = FALSE)
+           else rep(NA_real_, nrow(data))
+      v * fac
+    }
+    dr <- list()
+    for (cl in intersect(tolower(split.list(setting("tree.columns"))), names(data))) {
+      sp <- clean(data[[cl]]); v <- dbh.of(sub("\\.species$", ".dbh", cl)); ok <- !is.na(sp) & !is.na(v)
+      if (any(ok)) dr[[length(dr) + 1]] <- data.frame(species = sp[ok], site = data$.site[ok], dbh = v[ok], stringsAsFactors = FALSE)
+    }
+    if (flag("snag.include")) for (cl in intersect(tolower(split.list(setting("snag.columns"))), names(data))) {
+      v <- dbh.of(cl); ok <- !is.na(v)
+      if (any(ok)) dr[[length(dr) + 1]] <- data.frame(species = setting("snag.label"), site = data$.site[ok], dbh = v[ok], stringsAsFactors = FALSE)
+    }
+    if (length(dr)) {
+      dr <- do.call(rbind, dr)
+      by <- if (key(setting("bar")) == "grouped") dr[c("species", "site")] else dr["species"]
+      dbh.mean <- stats::aggregate(dr["dbh"], by = by, FUN = mean)
+      names(dbh.mean)[names(dbh.mean) == "dbh"] <- "dbh.mean"
+      dbh.mean$dbh.mean <- round(dbh.mean$dbh.mean, num("dbh.digits"))
+    } else cat(sprintf("NOTE: %s - DBH = TRUE but no tree / snag DBH values found - no DBH labels.\n", FN))
+  }
+
   ## ---- colors ------------------------------------------------------------------
   cols.in <- split.list(setting("site.colors"))
   if (length(cols.in) && all(grepl("=", cols.in))) {
@@ -263,19 +334,26 @@ batz.plot_vegetation.species <- function(data, project.name = "", site.names = N
     stop(FN, ': size = "', sz, '" - use "page", "half page", "powerpoint", "half powerpoint" or "<width>x<height>" (inches).', call. = FALSE)
 
   pd <- counts
+  if (bar == "grouped") {        # every site gets its place under every species; 0 where it was not found
+    grid <- expand.grid(panel = panels, species = spp, site = sites, stringsAsFactors = FALSE)
+    pd <- merge(grid, counts, all.x = TRUE)
+    pd$count[is.na(pd$count)] <- 0L
+  }
   pd$panel <- factor(titles[pd$panel], levels = titles[panels])
   pd$species <- factor(pd$species, levels = spp)
   pd$site <- factor(pd$site, levels = sites)
   tot <- stats::aggregate(pd["count"], by = pd[c("panel", "species")], FUN = sum)
   ymax.data <- if (bar == "stacked") max(tot$count) else max(pd$count)
+  if (!is.null(dbh.mean)) ymax.data <- ymax.data * 1.12           # room for the DBH labels
   ymax <- suppressWarnings(as.numeric(setting("yaxe.max")))
   if (is.na(ymax)) ymax <- max(pretty(c(0, ymax.data), n = 3))
   brks <- pretty(c(0, ymax), n = 3); brks <- brks[brks <= ymax]
-  pos <- if (bar == "stacked") ggplot2::position_stack(reverse = TRUE) else ggplot2::position_dodge(preserve = "single")
+  bw <- num("bar.width")
+  pos <- if (bar == "stacked") ggplot2::position_stack(reverse = TRUE) else ggplot2::position_dodge(width = bw)
   outline <- setting("bar.outline.color")
 
   g <- ggplot2::ggplot(pd, ggplot2::aes(x = species, y = count, fill = site)) +
-    ggplot2::geom_col(position = pos, width = num("bar.width"),
+    ggplot2::geom_col(position = pos, width = bw,
                       colour = if (blank(outline) || key(outline) == "none") NA else outline) +
     ggplot2::facet_wrap(~panel, ncol = 1, drop = FALSE) +
     ggplot2::scale_x_discrete(drop = FALSE) +
@@ -291,6 +369,34 @@ batz.plot_vegetation.species <- function(data, project.name = "", site.names = N
                    legend.text = ggplot2::element_text(size = num("legend.text.size")),
                    legend.key.size = ggplot2::unit(num("legend.key.size"), "lines"),
                    legend.position = legend.position)
+  if (bar == "grouped" && flag("zero.show") && any(pd$count == 0)) {
+    z <- pd[pd$count == 0, , drop = FALSE]
+    n.s <- length(sites); i <- as.integer(z$site)
+    z$x <- as.integer(z$species) + (i - (n.s + 1) / 2) * bw / n.s
+    z$x0 <- z$x - bw / n.s / 2 * 0.9; z$x1 <- z$x + bw / n.s / 2 * 0.9
+    g <- g + ggplot2::geom_segment(data = z, ggplot2::aes(x = x0, xend = x1, y = 0, yend = 0, colour = site),
+                                   linewidth = num("zero.linewidth"), inherit.aes = FALSE, show.legend = FALSE) +
+      ggplot2::scale_colour_manual(values = fills, guide = "none")
+  }
+  if (!is.null(dbh.mean)) {                      # mean DBH printed above the tree-panel bars
+    lab <- dbh.mean
+    lab$panel <- factor(titles["tree"], levels = titles[panels])
+    fmt <- function(v) paste0(formatC(v, format = "f", digits = num("dbh.digits")), setting("dbh.label.suffix"))
+    if (bar == "stacked") {
+      top <- tot[tot$panel == titles["tree"], c("species", "count")]
+      lab$y <- top$count[match(lab$species, as.character(top$species))]
+      lab$x <- match(lab$species, spp)
+    } else {
+      cc <- pd[pd$panel == titles["tree"], ]
+      lab$y <- cc$count[match(paste(lab$species, lab$site), paste(cc$species, cc$site))]
+      n.s <- length(sites)
+      lab$x <- match(lab$species, spp) + (match(lab$site, sites) - (n.s + 1) / 2) * bw / n.s
+    }
+    lab <- lab[!is.na(lab$y) & !is.na(lab$x), , drop = FALSE]
+    lab$label <- fmt(lab$dbh.mean)
+    g <- g + ggplot2::geom_text(data = lab, ggplot2::aes(x = x, y = y, label = label), inherit.aes = FALSE,
+                                vjust = -0.4, size = num("dbh.text.size"))
+  }
   ang <- key(setting("xaxe.text.angle"))
   ang <- if (ang == "auto") (if (length(spp) > 8) 45 else 0) else suppressWarnings(as.numeric(ang))
   if (is.na(ang)) stop(FN, ': xaxe.text.angle must be "auto" or a number.', call. = FALSE)
@@ -309,12 +415,12 @@ batz.plot_vegetation.species <- function(data, project.name = "", site.names = N
     cat("Saved:", file, "\n")
   }
 
-  used <- c("site.names", "site.colors", "legend.position", "bar", "size", defs$parameter)
+  used <- c("site.names", "site.colors", "legend.position", "bar", "size", "DBH", defs$parameter)
   used <- unique(used[used %in% names(source.of)])
   settings <- data.frame(parameter = used,
                          value = vapply(used, function(p) paste(setting(p), collapse = ";"), character(1)),
                          source = unlist(source.of[used]), row.names = NULL, stringsAsFactors = FALSE)
-  invisible(list(plot = g, counts = counts, settings = settings, file = file))
+  invisible(list(plot = g, counts = counts, dbh.mean = dbh.mean, settings = settings, file = file))
 }
 
 
@@ -337,6 +443,7 @@ batz.plot_vegetation.species.defaults <- function() {
     r("Inputs", "site.colors", "", "One color per site in site.names order, or site=color pairs, separated by ';'. Blank = black to light grey."),
     r("Inputs", "legend.position", "right", "right, bottom, left, top or none."),
     r("Inputs", "bar", "stacked", "stacked (sites on top of each other) or grouped (side by side)."),
+    r("Inputs", "DBH", "TRUE", "TRUE prints the mean DBH (diameter at breast height) above each tree / snag bar."),
     r("Inputs", "size", "page", "page (6 x 7 in), half page (6 x 4), powerpoint (12 x 6), half powerpoint (6 x 6), or <width>x<height> in inches."),
     r("Data", "site.column", "aru.name", "Column holding the site names."),
     r("Data", "tree.columns", "vegetation.tree_tree1.species;vegetation.tree_tree2.species;vegetation.tree_tree3.species", "Tree species columns."),
@@ -348,6 +455,11 @@ batz.plot_vegetation.species.defaults <- function() {
     r("Panels", "panel.order", "sapling;tree", "Panel order, top to bottom."),
     r("Panels", "panel.title.sapling", "Sapling", "Heading of the sapling panel."),
     r("Panels", "panel.title.tree", "Tree", "Heading of the tree panel."),
+    r("DBH", "dbh.units", "in", "Units of the DBH labels: in or cm (records in the other unit are converted, 1 in = 2.54 cm)."),
+    r("DBH", "units.column", "measurement.units", "Column holding each record's unit (in or cm). Missing = dbh.units."),
+    r("DBH", "dbh.digits", "1", "Decimal places of the DBH labels."),
+    r("DBH", "dbh.label.suffix", "", "Text after each DBH label, e.g. ' in'. Blank = none."),
+    r("DBH", "dbh.text.size", "3", "Size of the DBH labels (mm, ggplot2 text size)."),
     r("Axes", "xaxe.title", "Species", "X-axis title."),
     r("Axes", "yaxe.title", "Number of each species", "Y-axis title."),
     r("Axes", "yaxe.max", "", "Top of the Y axis. Blank = from the data."),
@@ -355,11 +467,13 @@ batz.plot_vegetation.species.defaults <- function() {
     r("Legend", "legend.title", "", "Legend title. Blank = none."),
     r("Bars", "bar.width", "0.9", "Bar width (1 = bars touch)."),
     r("Bars", "bar.outline.color", "", "Bar outline color. Blank = none."),
+    r("Bars", "zero.show", "TRUE", "Grouped bars: TRUE draws a short line at 0 in the site's color where a site has none of that species."),
+    r("Bars", "zero.linewidth", "1", "Thickness of the zero line (grouped bars)."),
     r("Text", "strip.text.size", "12", "Font size of the panel headings (pt)."),
     r("Text", "axis.title.size", "13", "Font size of the axis titles (pt)."),
     r("Text", "axis.text.size", "10", "Font size of the axis labels (pt)."),
     r("Text", "legend.text.size", "11", "Font size of the legend labels (pt)."),
-    r("Legend", "legend.key.size", "2", "Size of the legend color boxes (lines)."),
+    r("Legend", "legend.key.size", "1", "Size of the legend color boxes (lines)."),
     r("Save", "ggsave.dpi", "300", "Resolution of the PNG.")
   )
 }

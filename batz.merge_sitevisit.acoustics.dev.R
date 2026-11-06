@@ -132,3 +132,17 @@ stopifnot(identical(r9$date, c("2026-05-10", "2026-05-11", "2026-05-20", NA)))  
 ## on the real exports
 print(head(m$habitat[, c("aru.name", "date.habitat.assessment", "date.deployment", "date")], 10))
 stopifnot(all(is.na(m$habitat$date) | grepl("^\\d{4}-\\d{2}-\\d{2}$", m$habitat$date)))
+
+## ---- TEST 10: project.name - keep one project; automatic file name ----------
+## blank: every project, file "metadata_deployment&habitat_<first date>to<last date>_<timestamp>.xlsx"
+print(basename(m$file))
+stopifnot(grepl("^metadata_deployment&habitat_\\d{8}to\\d{8}_\\d{14}\\.xlsx$", basename(m$file)))
+projects <- sort(unique(m$habitat$project.name)); print(projects)
+m10 <- batz.merge_sitevisit.acoustics(dir.load = dir.data, dir.sub = TRUE, dir.save = dir.out,
+                                      project.name = tolower(projects[1]))   # case / spaces ignored
+print(basename(m10$file))                                                   # <project>_metadata_deployment&habitat_...
+stopifnot(all(unlist(lapply(m10[c("quad", "habitat", "service")], function(d) d$project.name)) == projects[1]),
+          startsWith(basename(m10$file), paste0(gsub("\\s+", "-", projects[1]), "_metadata_deployment&habitat_")))
+try(batz.merge_sitevisit.acoustics(dir.load = dir.data, dir.save = dir.out, project.name = "no such project"))  # stops, lists projects
+m10b <- batz.merge_sitevisit.acoustics(dir.load = dir.data, dir.save = dir.out, save.name = "mergedsurvey123")   # own name
+stopifnot(basename(m10b$file) == "mergedsurvey123.xlsx")

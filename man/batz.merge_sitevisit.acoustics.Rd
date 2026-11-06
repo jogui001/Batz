@@ -11,7 +11,8 @@ batz.merge_sitevisit.acoustics(
   dir.sub = TRUE,
   form.list = NA,
   dir.save = getwd(),
-  save.name = "mergedsurvey123.xlsx",
+  save.name = NULL,
+  project.name = "",
   header.combo = c("project.name", "aru.name"),
   header.uniqueid = c("globalid"),
   header.dates = c("date.habitat.assessment", "date.deployment", "date")
@@ -41,9 +42,18 @@ Details, "Adding forms").}
 \item{dir.save}{Character, default \code{getwd()}. Folder the merged
 workbook is written to (created if needed).}
 
-\item{save.name}{Character, default \code{"mergedsurvey123.xlsx"}. Name of
-the merged workbook (a name without an \code{.xlsx} ending gets
+\item{save.name}{Character, default \code{NULL}: the workbook is named
+\verb{<project.name>_metadata_deployment&habitat_<YYYYMMDD>to<YYYYMMDD>_<YYYYMMDDHHMMSS>.xlsx}
+(first and last \code{$date} in the merged tabs, then the time of the
+run; no project part when \code{project.name} is blank). A name given
+here is used instead (a name without an \code{.xlsx} ending gets
 \code{.xlsx} in place of its extension).}
+
+\item{project.name}{Character, default \code{""}. Project to keep when the
+files hold records of several projects: only records whose
+\code{$project.name} matches (case and spaces ignored) are merged.
+Blank = every project. Also the first part of the file name (spelled
+as in the data, spaces as "-").}
 
 \item{header.combo}{Character, default \code{c("project.name", "aru.name")}.
 Headers whose unique combinations define a site: used for the
@@ -129,7 +139,10 @@ non-blank value is used, and \code{"other"} is replaced by the
 \code{$form.version} = the version name (e.g. \code{inland_2026}); a
 sheet that already has Batz headers keeps its own \code{$form.version}
 (else \code{"batz.headers"}).
-\item Project names are filled in, blank deployment dates are filled,
+\item Project names are filled in; with \code{project.name}, records of
+other projects (including \code{"unknown.check"}) are left out (a line
+per tab gives how many), and a name not in the files stops the run
+listing the projects found. Blank deployment dates are filled,
 the habitat \code{$date} is set and the consolidated GlobalID is
 added (below). A column whose type differs between files becomes text.
 \item DBH of trees and snags with more than one trunk (below).
