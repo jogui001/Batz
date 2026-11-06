@@ -901,8 +901,8 @@ batz.plotcover_bullseye <- function(data, mic, aes.default, project.name = "new.
       ## transparent) content can still visually sit on top of the bar's
       ## own top edge again. Flagged: if this looks like the original
       ## problem once rendered, this is the section to revert.
-      icon.img <- png::readPNG(icon.file)
-      ## dim() is (height.px, width.px, channels) - used to keep the icon
+      icon.img <- grDevices::as.raster(magick::image_read(icon.file))   # keeps the PNG transparency
+      ## dim() is (height.px, width.px) - used to keep the icon
       ## undistorted (see function-level comment above).
       icon.aspect <- dim(icon.img)[2] / dim(icon.img)[1]
       icon.width.x <- icon.aspect * icon.height.m * (x.range / y.max)

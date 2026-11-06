@@ -27,14 +27,15 @@
 #'   the merged workbook (a name without an \code{.xlsx} ending gets
 #'   \code{.xlsx} in place of its extension).
 #' @param header.combo Character, default \code{c("project.name", "aru.name")}.
-#'   Passed to \code{\link{batz.datawrangler_consolidate.globalID}}: headers
-#'   whose unique combinations define a site.
+#'   Headers whose unique combinations define a site: used for the
+#'   deployment date (Details) and passed to
+#'   \code{\link{batz.datawrangler_consolidate.globalID}}.
 #' @param header.uniqueid Character, default \code{c("globalid")}. Passed to
 #'   \code{batz.datawrangler_consolidate.globalID()}: the unique-ID header.
 #' @param header.dates Character, default \code{c("date.habitat.assessment",
 #'   "date.deployment", "date")}. Passed to
 #'   \code{batz.datawrangler_consolidate.globalID()}: date headers used to find
-#'   each site's earliest record.
+#'   each site's earliest record (also for the deployment date, Details).
 #'
 #' @return Invisibly, a list: one data frame per form type (\code{$quad},
 #'   \code{$habitat}, \code{$service}, plus any tab added through
@@ -100,10 +101,12 @@
 #'     \code{$form.version} = the version name (e.g. \code{inland_2026}); a
 #'     sheet that already has Batz headers keeps its own \code{$form.version}
 #'     (else \code{"batz.headers"}).
-#'   \item Project names are filled in and the consolidated GlobalID is added
-#'     (below). A column whose type differs between files becomes text.
+#'   \item Project names are filled in, blank deployment dates are filled,
+#'     the habitat \code{$date} is set and the consolidated GlobalID is
+#'     added (below). A column whose type differs between files becomes text.
+#'   \item DBH of trees and snags with more than one trunk (below).
 #'   \item One tab per form type is written with the \code{openxlsx}
-#'     package, else \code{writexl}.
+#'     package.
 #' }
 #' Values are copied as they are; Survey123 codes are not changed to their
 #' Choices labels.
@@ -132,6 +135,21 @@
 #' project names match, the most common is used. Records with no match get
 #' \code{"unknown.check"}, and the run prints how many there are.
 #'
+#' \strong{Deployment date.} A record with \code{$date.habitat.assessment}
+#' but a blank \code{$date.deployment} gets \code{$date.deployment} =
+#' \code{$date.habitat.assessment} when no other record of the same site
+#' (the \code{header.combo} headers, e.g. project and ARU, in any tab) has an
+#' earlier date (the first non-blank of \code{header.dates}). A NOTE gives
+#' the number of records filled. This is done before the consolidated
+#' GlobalID, so the copied date counts there.
+#'
+#' \strong{Habitat date.} In the \code{habitat} tab, \code{$date} is
+#' always set to the earlier of \code{$date.habitat.assessment} and
+#' \code{$date.deployment} (after the deployment date above is filled),
+#' with the time removed, as text \code{"YYYY-MM-DD"} (e.g.
+#' \code{"2026-05-10"}); blank when both are blank. Any value from the
+#' Survey123 field \code{Date_YYYYMMDD} is replaced.
+#'
 #' \strong{Consolidated GlobalID.} After the merge,
 #' \code{batz.datawrangler_consolidate.globalID()} is run on the merged tabs
 #' that have rows, with \code{header.combo}, \code{header.uniqueid} and
@@ -140,9 +158,27 @@
 #' \code{$globalid_consolidate}, just after \code{$globalid}. A tab without all
 #' the \code{header.combo} headers is left unchanged (NOTE).
 #'
+#' \strong{DBH of trees and snags.} For \code{$vegetation.tree_tree1.dbh},
+#' \code{$vegetation.tree_tree2.dbh}, \code{$vegetation.tree_tree3.dbh},
+#' \code{$vegetation.snag_snag1.dbh}, \code{$vegetation.snag_snag2.dbh} and
+#' \code{$vegetation.snag_snag3.dbh}, any column with the same name plus a
+#' number (e.g. \code{$vegetation.tree_tree1.dbh2},
+#' \code{$vegetation.tree_tree1.dbh3}) or \code{_other}
+#' (\code{$vegetation.tree_tree1.dbh_other}) is merged into it: the
+#' non-blank values, in the order dbh, dbh2, dbh3, ..., dbh_other, separated
+#' by ";" (e.g. \code{"6;8;10"}), and the extra columns are removed. A new
+#' column \code{<name>.overall} (e.g. \code{$vegetation.tree_tree1.dbh.overall})
+#' is placed right after each one: the square root of the sum of the squared
+#' DBH values, to 3 decimals (6, 8 and 10 give
+#' \eqn{\sqrt{6^2 + 8^2 + 10^2}} = 14.142; one value gives that value).
+#' Values that are not numbers are left out of \code{.overall}.
+#' Survey123's own average columns (\code{$vegetation.tree_tree1.dbh_average},
+#' \code{tree2}, \code{tree3}) are removed.
+#'
 #' \strong{Survey123 field names.} Batz headers for some long Survey123
 #' fields: \code{tree.1/2/3.average.dbh} become
-#' \code{vegetation.tree_tree1/2/3.dbh_average};
+#' \code{vegetation.tree_tree1/2/3.dbh_average} (removed from the output,
+#' see "DBH of trees and snags");
 #' \code{identify.the.species.of.the.3.saplings.closest.to.the.center.mic.point.}
 #' becomes \code{vegetation.sapling_species};
 #' \code{select.any.equipment.that.needs.to.be.replaced.} becomes
@@ -478,6 +514,12 @@ batz.merge_sitevisit.acoustics <- function(dir.load = getwd(),
     data.frame(file = character(0), sheet = character(0), tab = character(0), form.version = character(0),
                rows = integer(0), headers.matched = integer(0), headers.not.used = character(0))
 
+  ## --- 5a. deployment date from the habitat assessment date -----------------
+  out[tabs] <- sitevisit.deploy.date(out[tabs], header.combo = header.combo, header.dates = header.dates)
+
+  ## --- 5a2. habitat $date = the earlier of the two dates, as YYYY-MM-DD ------
+  if ("habitat" %in% tabs) out$habitat <- sitevisit.habitat.date(out$habitat)
+
   ## --- 5b. consolidated GlobalID (2026-10-30, per Josh) ---------------------
   has.rows <- tabs[vapply(tabs, function(t) nrow(out[[t]]) > 0, logical(1))]
   if (length(has.rows) > 0) {
@@ -485,20 +527,158 @@ batz.merge_sitevisit.acoustics <- function(dir.load = getwd(),
                                                             header.uniqueid = header.uniqueid, header.dates = header.dates)
   }
 
+  ## --- 5c. DBH: extra trunks merged into one column + overall DBH -----------
+  for (t in tabs) out[[t]] <- sitevisit.dbh.merge(out[[t]])
+
   ## --- 6. write -------------------------------------------------------------
   if (!grepl("\\.xlsx$", save.name, ignore.case = TRUE)) save.name <- paste0(sub("\\.[^.]*$", "", save.name), ".xlsx")
   if (!dir.exists(dir.save)) dir.create(dir.save, recursive = TRUE)
   path <- file.path(dir.save, save.name)
-  if (requireNamespace("openxlsx", quietly = TRUE)) {
-    openxlsx::write.xlsx(out, path, overwrite = TRUE)
-  } else if (requireNamespace("writexl", quietly = TRUE)) {
-    writexl::write_xlsx(out, path)
-  } else {
-    stop("Writing .xlsx needs the openxlsx (or writexl) package: install.packages(\"openxlsx\")", call. = FALSE)
-  }
+  openxlsx::write.xlsx(out, path, overwrite = TRUE)
   for (t in tabs) cat(t, ": ", nrow(out[[t]]), " row(s)\n", sep = "")
   cat("Saved:", path, "\n")
   if (n.unknown > 0) cat(n.unknown, ' have no associated project name, the value  "unknown.check"\n', sep = "")
 
   invisible(c(out, list(log = log, headers.db = db, file = path)))
+}
+
+
+#' Merge extra-trunk DBH columns and add the overall DBH (internal)
+#'
+#' For each of \code{vegetation.tree_tree1.dbh} ... \code{tree3.dbh} and
+#' \code{vegetation.snag_snag1.dbh} ... \code{snag3.dbh}: columns with the
+#' same name plus a number (\code{...dbh2}, \code{...dbh3}) or
+#' \code{_other} (\code{...dbh_other}) are merged into it, values separated
+#' by ";", and removed. \code{<column>.overall} = square root of the sum of
+#' the squared DBH values, placed right after the column. \code{<column>_average}
+#' (Survey123's average) is removed.
+#' @keywords internal
+#' @noRd
+sitevisit.dbh.merge <- function(d) {
+  if (is.null(d) || ncol(d) == 0) return(d)
+  bases <- c(paste0("vegetation.tree_tree", 1:3, ".dbh"), paste0("vegetation.snag_snag", 1:3, ".dbh"))
+  txt <- function(v) { v <- if (inherits(v, "POSIXct")) format(v) else as.character(v); v <- trimws(v); v[is.na(v)] <- ""; v }
+  d <- d[, setdiff(names(d), paste0(bases, "_average")), drop = FALSE]   # Survey123's own averages
+  for (b in bases) {
+    if (!b %in% names(d)) next
+    rx <- paste0("^", gsub(".", "\\.", b, fixed = TRUE), "(\\d+|_other)$")
+    extra <- grep(rx, names(d), value = TRUE)
+    ## order: dbh, dbh2, dbh3, ..., dbh_other
+    num <- suppressWarnings(as.integer(sub(".*dbh", "", extra)))
+    extra <- extra[order(is.na(num), num)]
+    if (length(extra)) {
+      vals <- lapply(c(b, extra), function(cl) txt(d[[cl]]))
+      d[[b]] <- vapply(seq_len(nrow(d)), function(i) {
+        v <- vapply(vals, `[`, character(1), i); v <- v[nzchar(v)]
+        if (length(v)) paste(v, collapse = ";") else NA_character_
+      }, character(1))
+      d <- d[, setdiff(names(d), extra), drop = FALSE]
+    }
+    ov <- vapply(txt(d[[b]]), function(x) {
+      v <- suppressWarnings(as.numeric(trimws(strsplit(x, ";", fixed = TRUE)[[1]])))
+      v <- v[!is.na(v)]
+      if (length(v)) round(sqrt(sum(v^2)), 3) else NA_real_
+    }, numeric(1), USE.NAMES = FALSE)
+    nm <- paste0(b, ".overall")
+    d[[nm]] <- NULL
+    at <- match(b, names(d))
+    d <- cbind(d[seq_len(at)], stats::setNames(data.frame(ov), nm), d[-seq_len(at)])
+  }
+  d
+}
+
+
+#' Fill a blank deployment date from the habitat assessment date (internal)
+#'
+#' A record with \code{$date.habitat.assessment} but no
+#' \code{$date.deployment} gets \code{$date.deployment} =
+#' \code{$date.habitat.assessment} when no other record of the same site
+#' (\code{header.combo}, any tab) has an earlier date (first non-blank of
+#' \code{header.dates}). \code{tabs} is a named list of data frames.
+#' @keywords internal
+#' @noRd
+sitevisit.deploy.date <- function(tabs, header.combo = c("project.name", "aru.name"),
+                                  header.dates = c("date.habitat.assessment", "date.deployment", "date")) {
+  ha <- "date.habitat.assessment"; dp <- "date.deployment"
+  to.date <- sitevisit.to.date
+  blank <- function(x) is.na(x) | !nzchar(trimws(as.character(x)))
+  key <- function(d) {
+    if (!all(header.combo %in% names(d))) return(rep(NA_character_, nrow(d)))
+    k <- do.call(paste, c(lapply(header.combo, function(h) tolower(trimws(as.character(d[[h]])))), sep = "\r"))
+    k[Reduce(`|`, lapply(header.combo, function(h) blank(d[[h]])))] <- NA
+    k
+  }
+  ## every record's date (first non-blank of header.dates) and site, across tabs
+  recs <- do.call(rbind, lapply(names(tabs), function(t) {
+    d <- tabs[[t]]
+    if (!is.data.frame(d) || nrow(d) == 0) return(NULL)
+    dt <- rep(as.Date(NA), nrow(d))
+    for (h in intersect(header.dates, names(d))) { f <- is.na(dt); dt[f] <- to.date(d[[h]])[f] }
+    data.frame(tab = t, row = seq_len(nrow(d)), key = key(d), date = dt, stringsAsFactors = FALSE)
+  }))
+  if (is.null(recs)) return(tabs)
+  recs <- recs[!is.na(recs$key) & !is.na(recs$date), , drop = FALSE]
+  n <- 0
+  for (t in names(tabs)) {
+    d <- tabs[[t]]
+    if (!is.data.frame(d) || nrow(d) == 0 || !all(c(ha, dp) %in% names(d))) next
+    k <- key(d); hd <- to.date(d[[ha]])
+    cand <- which(!blank(d[[ha]]) & !is.na(hd) & blank(d[[dp]]) & !is.na(k))
+    for (i in cand) {
+      other <- recs[recs$key == k[i] & !(recs$tab == t & recs$row == i), , drop = FALSE]
+      if (any(other$date < hd[i])) next                              # an earlier record of this site
+      v <- d[[ha]][i]
+      if (inherits(d[[dp]], "POSIXct") && !inherits(v, "POSIXct")) v <- as.POSIXct(format(hd[i]), tz = "UTC")
+      else if (!inherits(d[[dp]], "POSIXct") && inherits(v, "POSIXct")) {
+        if (is.logical(d[[dp]]) && all(is.na(d[[dp]]))) d[[dp]] <- as.POSIXct(d[[dp]], tz = "UTC")
+        else v <- format(v, "%Y-%m-%d %H:%M:%S")
+      }
+      if (inherits(d[[dp]], "POSIXct") && inherits(v, "POSIXct")) attr(d[[dp]], "tzone") <- attr(v, "tzone")   # same clock time
+      d[[dp]][i] <- v; n <- n + 1
+    }
+    tabs[[t]] <- d
+  }
+  if (n > 0) cat("NOTE: batz.merge_sitevisit.acoustics - ", n, " record(s) had no date.deployment and no earlier record ",
+                 "for that site: date.habitat.assessment copied to date.deployment.\n", sep = "")
+  tabs
+}
+
+
+#' Date (no time) from a date / date-time / text / Excel-serial column (internal)
+#' @keywords internal
+#' @noRd
+sitevisit.to.date <- function(v) {
+  if (inherits(v, "Date")) return(v)
+  if (inherits(v, "POSIXt")) return(as.Date(format(v, "%Y-%m-%d")))
+  v <- trimws(as.character(v)); out <- rep(as.Date(NA), length(v))
+  for (fm in c("%Y-%m-%d", "%Y/%m/%d", "%m/%d/%Y", "%m-%d-%Y", "%Y%m%d")) {
+    todo <- is.na(out) & !is.na(v) & nzchar(v)
+    if (any(todo)) out[todo] <- as.Date(substr(v[todo], 1, if (fm == "%Y%m%d") 8 else 10), format = fm, optional = TRUE)
+  }
+  todo <- is.na(out) & grepl("^[0-9]{5}(\\.[0-9]+)?$", v)               # Excel serial number
+  if (any(todo)) out[todo] <- as.Date(floor(as.numeric(v[todo])), origin = "1899-12-30")
+  out
+}
+
+
+#' Habitat tab $date from the habitat assessment and deployment dates (internal)
+#'
+#' \code{$date} = the earlier of \code{$date.habitat.assessment} and
+#' \code{$date.deployment} (time removed), as text \code{"YYYY-MM-DD"};
+#' blank when both are blank. Always replaces the existing value.
+#' @keywords internal
+#' @noRd
+sitevisit.habitat.date <- function(d) {
+  if (!is.data.frame(d) || nrow(d) == 0) return(d)
+  src <- intersect(c("date.habitat.assessment", "date.deployment"), names(d))
+  if (!length(src)) return(d)
+  dts <- lapply(src, function(h) sitevisit.to.date(d[[h]]))
+  dt <- do.call(pmin, c(dts, na.rm = TRUE))
+  val <- ifelse(is.na(dt), NA_character_, format(dt, "%Y-%m-%d"))
+  if ("date" %in% names(d)) d$date <- val
+  else {                                                     # add it after the last source column
+    at <- max(match(src, names(d)))
+    d <- cbind(d[seq_len(at)], data.frame(date = val, stringsAsFactors = FALSE), d[-seq_len(at)])
+  }
+  d
 }

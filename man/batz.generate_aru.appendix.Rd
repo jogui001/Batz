@@ -282,10 +282,10 @@ view comes from the file name: \code{Detector_Setup},
 \code{Microphone_View}, \code{North}, \code{East}, \code{South},
 \code{West}. Files with a \code{New} part are used only when there is no
 other photo of that view; with several matches the first (sorted) is
-used (NOTE). With the \pkg{magick} package every photo is turned upright,
-shrunk to at most 1600 px and saved as JPEG (HEIC needs \pkg{magick});
-without it JPEG/PNG are used as they are and other formats get a message
-in the cell. A view with no photo reads \code{"No photo found"}.
+used (NOTE). Every photo is turned upright, shrunk to at most 1600 px and
+saved as JPEG (\pkg{magick}; HEIC photos are read too). A photo that
+cannot be read gets a message in the cell. A view with no photo reads
+\code{"No photo found"}.
 
 \strong{Figure 4} (\code{\link{batz.plotcover_bullseye}}). Built from the
 quadrant form (\code{$quadrant}, \code{$canopy.cover},
@@ -298,7 +298,7 @@ column (\code{override.value}, or an old \code{overide.value}) is blank,
 vertical orientation", "Direction and Understory Clutter" and "Canopy
 Cover". When \code{icon.dir} is not found, the icons in the package's
 \code{inst/img} are used. Half of the blank margin under the panels is
-cut (needs \pkg{png}). Shown at most 3.0 in tall.
+cut. Shown at most 3.0 in tall.
 
 \strong{Figure 5} (\code{\link{batz.plotsm4_heatmap}}). Each SM4 log line
 is one minute of recording; lines are counted per 15-minute interval of

@@ -175,7 +175,9 @@ above the top value get the top colour; legend ticks are at
 ONE palette name from \pkg{viridis}/\pkg{viridisLite} (\code{"magma"},
 \code{"viridis"}, ...), \pkg{scico} (\code{"batlow"}, \code{"lajolla"},
 ...), \pkg{RColorBrewer} (\code{"YlOrRd"}, ...), \code{"Okabe-Ito"}
-(base R) or \pkg{colorspace} (\code{"Heat"}, \code{"Sunset"}, ...). Name
+(base R) or the colorspace HCL palettes (\code{"Heat"}, \code{"Sunset"},
+...; drawn with base R's \code{grDevices::hcl.colors()}, which gives the
+same colours as the \pkg{colorspace} package). Name
 the package to be exact (\code{"scico::batlow"},
 \code{"colorspace::YlOrRd"}); put \code{"-"} in front to reverse
 (\code{"-magma"}). The right number of colours is taken from the
@@ -183,7 +185,8 @@ palette (9 for a continuous scale). colorspace has its own versions of
 many viridis, scico and RColorBrewer palettes under the same names; a
 bare name uses the first match in the order viridis, scico,
 RColorBrewer, Okabe-Ito, colorspace and prints a NOTE when it clashes.
-Only the package a palette comes from has to be installed.
+Only \pkg{scico} palettes need an extra package (\code{install.packages("scico")});
+the others come with Batz.
 
 \strong{fig.list.} Same format as the other batz fig.list plot
 functions. Required columns:

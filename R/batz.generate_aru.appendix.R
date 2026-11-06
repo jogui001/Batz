@@ -231,10 +231,10 @@
 #' \code{Microphone_View}, \code{North}, \code{East}, \code{South},
 #' \code{West}. Files with a \code{New} part are used only when there is no
 #' other photo of that view; with several matches the first (sorted) is
-#' used (NOTE). With the \pkg{magick} package every photo is turned upright,
-#' shrunk to at most 1600 px and saved as JPEG (HEIC needs \pkg{magick});
-#' without it JPEG/PNG are used as they are and other formats get a message
-#' in the cell. A view with no photo reads \code{"No photo found"}.
+#' used (NOTE). Every photo is turned upright, shrunk to at most 1600 px and
+#' saved as JPEG (\pkg{magick}; HEIC photos are read too). A photo that
+#' cannot be read gets a message in the cell. A view with no photo reads
+#' \code{"No photo found"}.
 #'
 #' \strong{Figure 4} (\code{\link{batz.plotcover_bullseye}}). Built from the
 #' quadrant form (\code{$quadrant}, \code{$canopy.cover},
@@ -247,7 +247,7 @@
 #' vertical orientation", "Direction and Understory Clutter" and "Canopy
 #' Cover". When \code{icon.dir} is not found, the icons in the package's
 #' \code{inst/img} are used. Half of the blank margin under the panels is
-#' cut (needs \pkg{png}). Shown at most 3.0 in tall.
+#' cut. Shown at most 3.0 in tall.
 #'
 #' \strong{Figure 5} (\code{\link{batz.plotsm4_heatmap}}). Each SM4 log line
 #' is one minute of recording; lines are counted per 15-minute interval of
@@ -953,9 +953,7 @@ batz.generate_aru.appendix <- function(data,
   }
   img.dims <- function(f) {
     d <- tryCatch({
-      if (has.magick) { info <- magick::image_info(magick::image_read(f)); c(info$width, info$height) }
-      else if (grepl("\\.png$", f, ignore.case = TRUE)) dim(png::readPNG(f))[2:1]
-      else dim(jpeg::readJPEG(f))[2:1]
+      info <- magick::image_info(magick::image_read(f)); c(info$width, info$height)
     }, error = function(e) c(4, 3))
     as.numeric(d)
   }
@@ -1040,14 +1038,20 @@ batz.generate_aru.appendix <- function(data,
 
   ## 2026-10-28, per Josh: halve the blank margin under the Figure 4 panels
   trim.bottom <- function(f) {
-    if (!requireNamespace("png", quietly = TRUE)) return(invisible(FALSE))
     tryCatch({
-      a <- png::readPNG(f, info = TRUE); dpi <- attr(a, "info")$dpi
-      rgb <- a[, , 1:3, drop = FALSE]
-      used <- which(apply(rgb, 1, function(r) any(r < 0.98)))
-      blank <- dim(a)[1] - max(used)
-      if (blank > 1) png::writePNG(a[seq_len(dim(a)[1] - floor(blank / 2)), , , drop = FALSE], f,
-                                   dpi = dpi)
+      im <- magick::image_read(f); info <- magick::image_info(im)
+      rgb <- as.integer(magick::image_data(im, "rgb"))            # height x width x 3, 0-255
+      used <- which(apply(rgb, 1, function(r) any(r < 0.98 * 255)))
+      blank <- info$height - max(used)
+      if (blank > 1) {
+        ## keep the saved resolution (PNG pHYs is pixels per metre) and the colour type
+        ph <- magick::image_attributes(im); ph <- ph$value[ph$property == "png:pHYs"]
+        xr <- suppressWarnings(as.numeric(sub(".*x_res=([0-9.]+).*", "\\1", ph)))
+        dpi <- if (length(xr) == 1 && !is.na(xr) && grepl("units=1", ph)) round(xr * 0.0254) else NA
+        im <- magick::image_crop(im, magick::geometry_area(info$width, info$height - floor(blank / 2), 0, 0))
+        magick::image_write(im, f, format = "png", density = if (is.na(dpi)) NULL else paste0(dpi, "x", dpi),
+                            defines = c("png:color-type" = if (isTRUE(info$matte)) "6" else "2"))
+      }
       invisible(TRUE)
     }, error = function(e) invisible(FALSE))
   }

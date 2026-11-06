@@ -1,21 +1,35 @@
 Package: Batz
-Title: What the Package Does (One Line, Title Case)
-Version: 0.0.0.9005
-Authors@R: 
+Title: Bat Acoustic Data Processing and Reporting
+Version: 0.0.0.9006
+Authors@R:
     person("Joshua", "Guilbert", , "josh.guilbert@gmail.com", role = c("aut", "cre"))
-Description: What the package does (Simplifies collecting, organizing, processing and presenting data collected in wildlife research for reports and presentation  ).
-License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
-    license
+Description: Streamlines the conversion of outputs from various programs
+    (Sonobat, Kpro and Survey123) and acoustic recording devices (Wildlife
+    Acoustics) in CSV, text or Excel format, and processes the data into
+    the standardized forms and charts for reporting.
+License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 Config/roxygen2/version: 8.1.1
+Depends:
+    R (>= 4.0.0)
 Imports:
+    ggplot2,
+    readxl,
+    xml2,
     jsonlite,
-    officer,
-    openxlsx,
-    xml2
-Suggests:
-    colorspace,
+    scales,
     RColorBrewer,
+    viridisLite,
+    officer,
+    magick,
+    openxlsx,
+    patchwork,
+    grid,
+    grDevices,
+    stats,
+    tools,
+    utils
+Suggests:
     scico,
-    viridisLite
+    doconv

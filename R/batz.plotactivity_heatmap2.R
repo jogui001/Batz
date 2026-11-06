@@ -81,7 +81,9 @@
 #' ONE palette name from \pkg{viridis}/\pkg{viridisLite} (\code{"magma"},
 #' \code{"viridis"}, ...), \pkg{scico} (\code{"batlow"}, \code{"lajolla"},
 #' ...), \pkg{RColorBrewer} (\code{"YlOrRd"}, ...), \code{"Okabe-Ito"}
-#' (base R) or \pkg{colorspace} (\code{"Heat"}, \code{"Sunset"}, ...). Name
+#' (base R) or the colorspace HCL palettes (\code{"Heat"}, \code{"Sunset"},
+#' ...; drawn with base R's \code{grDevices::hcl.colors()}, which gives the
+#' same colours as the \pkg{colorspace} package). Name
 #' the package to be exact (\code{"scico::batlow"},
 #' \code{"colorspace::YlOrRd"}); put \code{"-"} in front to reverse
 #' (\code{"-magma"}). The right number of colours is taken from the
@@ -89,7 +91,8 @@
 #' many viridis, scico and RColorBrewer palettes under the same names; a
 #' bare name uses the first match in the order viridis, scico,
 #' RColorBrewer, Okabe-Ito, colorspace and prints a NOTE when it clashes.
-#' Only the package a palette comes from has to be installed.
+#' Only \pkg{scico} palettes need an extra package (\code{install.packages("scico")});
+#' the others come with Batz.
 #'
 #' \strong{fig.list.} Same format as the other batz fig.list plot
 #' functions. Required columns:
@@ -718,12 +721,8 @@ heatmap2.palette.names <- function() {
       "buda", "bukavu", "cork", "corkO", "davos", "devon", "fes", "glasgow", "grayC", "hawaii", "imola",
       "lajolla", "lapaz", "lipari", "lisbon", "managua", "navia", "naviaW", "nuuk", "oleron", "oslo",
       "roma", "romaO", "tofino", "tokyo", "turku", "vanimo", "vik", "vikO")
-  brewer.names <- if (requireNamespace("RColorBrewer", quietly = TRUE)) rownames(RColorBrewer::brewer.pal.info) else
-    c("BrBG", "PiYG", "PRGn", "PuOr", "RdBu", "RdGy", "RdYlBu", "RdYlGn", "Spectral", "Accent", "Dark2",
-      "Paired", "Pastel1", "Pastel2", "Set1", "Set2", "Set3", "Blues", "BuGn", "BuPu", "GnBu", "Greens",
-      "Greys", "Oranges", "OrRd", "PuBu", "PuBuGn", "PuRd", "Purples", "RdPu", "Reds", "YlGn", "YlGnBu",
-      "YlOrBr", "YlOrRd")
-  cs.names <- if (requireNamespace("colorspace", quietly = TRUE)) rownames(colorspace::hcl_palettes()) else character(0)
+  brewer.names <- rownames(RColorBrewer::brewer.pal.info)
+  cs.names <- grDevices::hcl.pals()   # base R's copy of the colorspace HCL palettes
   list(viridis = c("magma", "inferno", "plasma", "viridis", "cividis", "rocket", "mako", "turbo"),
        scico = scico.names, RColorBrewer = brewer.names, `Okabe-Ito` = "Okabe-Ito", colorspace = cs.names)
 }
@@ -761,9 +760,6 @@ heatmap2.resolve.colors <- function(x, n, scale.mode, fn.name) {
     if (!is.na(pkg)) {
       p2 <- pkg.alias[simple(pkg)]
       if (is.na(p2)) stop(sprintf("%s: bin.colors = '%s' - '%s' is not one of viridis, scico, RColorBrewer, colorspace, Okabe-Ito.", fn.name, x, pkg))
-      if (p2 == "colorspace" && !requireNamespace("colorspace", quietly = TRUE)) {
-        stop(sprintf("%s: bin.colors palette '%s' needs the colorspace package - install.packages(\"colorspace\").", fn.name, x))
-      }
       if (!(p2 %in% hits)) stop(sprintf("%s: bin.colors = '%s' - no palette '%s' in %s.", fn.name, x, spec, p2))
       use <- p2
     } else {
@@ -784,7 +780,6 @@ heatmap2.resolve.colors <- function(x, n, scale.mode, fn.name) {
       viridis = viridisLite::viridis(k, option = name),
       scico = { need("scico"); scico::scico(k, palette = name) },
       RColorBrewer = {
-        need("RColorBrewer")
         mx <- RColorBrewer::brewer.pal.info[name, "maxcolors"]
         base <- RColorBrewer::brewer.pal(max(3, min(k, mx)), name)
         if (k > mx) grDevices::colorRampPalette(base)(k) else base[seq_len(k)]
@@ -796,14 +791,7 @@ heatmap2.resolve.colors <- function(x, n, scale.mode, fn.name) {
           grDevices::colorRampPalette(base)(k)
         } else base[seq_len(k)]
       },
-      colorspace = {
-        need("colorspace")
-        type <- tolower(as.character(colorspace::hcl_palettes()[name, "type"]))
-        if (grepl("qualitative", type)) colorspace::qualitative_hcl(k, palette = name)
-        else if (grepl("flexible", type)) colorspace::divergingx_hcl(k, palette = name)
-        else if (grepl("diverging", type)) colorspace::diverging_hcl(k, palette = name)
-        else colorspace::sequential_hcl(k, palette = name)
-      })
+      colorspace = grDevices::hcl.colors(k, palette = name))
     cols <- unname(as.character(cols))
     if (rev.flag) cols <- rev(cols)
     return(cols)

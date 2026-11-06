@@ -45,9 +45,9 @@ The log columns \code{$strip.special}, \code{$accented.letters.header},
 \code{$removed.symbols.data} report what was changed.}
 }
 \value{
-Invisibly, a named list: \code{SM4}, \code{SM5_1.5},
-\code{SM5_1.6} (always; an empty \code{data.frame()} for a version with
-no files), plus \code{log.file_sm} when \code{log.file = TRUE}. Each
+Invisibly, a named list: \code{SM4}, \code{SM5_1.5} and
+\code{SM5_1.6}, each only when that version has data (a NOTE names any
+left out), plus \code{log.file_sm} when \code{log.file = TRUE}. Each
 element is also assigned into the calling environment.
 
 \code{SM4} has the same columns as \code{sm4logs.merged}:
@@ -61,7 +61,8 @@ element is also assigned into the calling environment.
 Loads every summary file matching \code{load.pattern}, works out from each
 file's headers whether an SM4 or an SM5 (firmware 1.5 or earlier, or 1.6
 or later) wrote it, and merges each version into its own data frame:
-\code{SM4}, \code{SM5_1.5}, \code{SM5_1.6}. Inputs, conversions and log
+\code{SM4}, \code{SM5_1.5}, \code{SM5_1.6}. A version with no data is
+not created. Inputs, conversions and log
 columns are the same as in \code{\link{batz.merge_sm4.logfiles}} and
 \code{\link{batz.merge_sm5.logfiles}}.
 }
@@ -80,7 +81,7 @@ Each SM merge function has its own log name (\code{log.file_sm4},
 \examples{
 \dontrun{
 batz.merge_sm.logfiles(dir.sub = TRUE, log.file = TRUE)
-# SM4, SM5_1.5, SM5_1.6 and log.file_sm are now in your workspace
+# SM4, SM5_1.5, SM5_1.6 (those with data) and log.file_sm are now in your workspace
 table(log.file_sm$version, log.file_sm$load.status)
 }
 

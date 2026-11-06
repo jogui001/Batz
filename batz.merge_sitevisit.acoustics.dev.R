@@ -4,7 +4,7 @@
 #
 # Merges Survey123 ARU site-visit exports (habitat assessment / deployment,
 # quadrant, maintenance & retrieval) into one workbook with Batz headers.
-# Needs: readxl, openxlsx (or writexl).
+# Needs: readxl, openxlsx.
 # =============================================================================
 
 ## ---- paths: edit these ------------------------------------------------------
@@ -90,3 +90,45 @@ d6 <- file.path(dir.out, "data6"); dir.create(d6, showWarnings = FALSE)
 openxlsx::write.xlsx(list(q = readxl::read_excel(f.ha, 2)[1:6, ]), file.path(d6, "quadonly_deployments.xlsx"), overwrite = TRUE)
 m6 <- batz.merge_sitevisit.acoustics(d6, dir.save = d6)   # prints: 6 have no associated project name, the value  "unknown.check"
 stopifnot(all(m6$quad$project.name == "unknown.check"))
+
+## ---- TEST 7: DBH - extra trunks merged with ";" + .overall --------------------
+q <- m$quad
+dbh <- grep("dbh", names(q), value = TRUE); print(dbh)
+stopifnot(!any(grepl("\\.dbh(\\d+|_other|_average)$", names(q))),              # dbh2 / dbh_other / dbh_average columns removed
+          names(q)[match("vegetation.tree_tree1.dbh", names(q)) + 1] == "vegetation.tree_tree1.dbh.overall",
+          names(q)[match("vegetation.snag_snag3.dbh", names(q)) + 1] == "vegetation.snag_snag3.dbh.overall")
+print(head(q[!is.na(q$vegetation.tree_tree1.dbh), c("vegetation.tree_tree1.dbh", "vegetation.tree_tree1.dbh.overall")], 10))
+## the helper on its own: 6, 8, 10 -> sqrt(6^2 + 8^2 + 10^2) = 14.142
+x <- data.frame(vegetation.tree_tree1.dbh = c("6", "12", NA), vegetation.tree_tree1.dbh2 = c("8", NA, "5"),
+                vegetation.tree_tree1.dbh_other = c("10", NA, NA))
+y <- sitevisit.dbh.merge(x); print(y)
+stopifnot(identical(y$vegetation.tree_tree1.dbh, c("6;8;10", "12", "5")),
+          isTRUE(all.equal(y$vegetation.tree_tree1.dbh.overall, c(14.142, 12, 5))),
+          identical(names(y), c("vegetation.tree_tree1.dbh", "vegetation.tree_tree1.dbh.overall")))
+
+## ---- TEST 8: date.deployment filled from date.habitat.assessment -------------
+## only when date.deployment is blank and no other record of that project/ARU is earlier
+h <- data.frame(project.name = c("P", "P", "P", "Q"), aru.name = c("A1", "A2", "A3", "A1"),
+                date.habitat.assessment = as.POSIXct(c("2026-05-10", "2026-05-10", "2026-05-10", "2026-05-12"), tz = "UTC"),
+                date.deployment = as.POSIXct(c(NA, NA, "2026-05-11", NA), tz = "UTC"))
+sv <- data.frame(project.name = c("P", "P"), aru.name = c("A2", "A1"),
+                 date = as.POSIXct(c("2026-05-01", "2026-06-01"), tz = "UTC"))   # A2 has an earlier service visit
+r8 <- sitevisit.deploy.date(list(habitat = h, service = sv))                     # NOTE: 2 record(s) ...
+print(r8$habitat)
+stopifnot(format(r8$habitat$date.deployment[1]) == "2026-05-10",   # P/A1: copied (service visit is later)
+          is.na(r8$habitat$date.deployment[2]),                     # P/A2: earlier service record -> not copied
+          format(r8$habitat$date.deployment[3]) == "2026-05-11",   # already had a deployment date
+          format(r8$habitat$date.deployment[4]) == "2026-05-12")   # Q/A1: its own site -> copied
+## on the real exports: habitat records where the two dates are now the same
+print(m$habitat[which(format(m$habitat$date.habitat.assessment) == format(m$habitat$date.deployment)),
+                c("project.name", "aru.name", "date.habitat.assessment", "date.deployment")])
+
+## ---- TEST 9: habitat $date = earlier of the two dates, as "YYYY-MM-DD" -------
+h9 <- data.frame(date.habitat.assessment = as.POSIXct(c("2026-05-10 14:32", "2026-05-12 09:00", NA, NA), tz = "UTC"),
+                 date.deployment         = as.POSIXct(c("2026-05-11 08:00", "2026-05-11 17:45", "2026-05-20 10:00", NA), tz = "UTC"),
+                 date = c("20260101", "x", NA, "20260505"))
+r9 <- sitevisit.habitat.date(h9); print(r9)
+stopifnot(identical(r9$date, c("2026-05-10", "2026-05-11", "2026-05-20", NA)))   # earlier date, time removed; old values replaced
+## on the real exports
+print(head(m$habitat[, c("aru.name", "date.habitat.assessment", "date.deployment", "date")], 10))
+stopifnot(all(is.na(m$habitat$date) | grepl("^\\d{4}-\\d{2}-\\d{2}$", m$habitat$date)))

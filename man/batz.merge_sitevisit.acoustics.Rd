@@ -46,8 +46,9 @@ the merged workbook (a name without an \code{.xlsx} ending gets
 \code{.xlsx} in place of its extension).}
 
 \item{header.combo}{Character, default \code{c("project.name", "aru.name")}.
-Passed to \code{\link{batz.datawrangler_consolidate.globalID}}: headers
-whose unique combinations define a site.}
+Headers whose unique combinations define a site: used for the
+deployment date (Details) and passed to
+\code{\link{batz.datawrangler_consolidate.globalID}}.}
 
 \item{header.uniqueid}{Character, default \code{c("globalid")}. Passed to
 \code{batz.datawrangler_consolidate.globalID()}: the unique-ID header.}
@@ -55,7 +56,7 @@ whose unique combinations define a site.}
 \item{header.dates}{Character, default \code{c("date.habitat.assessment",
   "date.deployment", "date")}. Passed to
 \code{batz.datawrangler_consolidate.globalID()}: date headers used to find
-each site's earliest record.}
+each site's earliest record (also for the deployment date, Details).}
 }
 \value{
 Invisibly, a list: one data frame per form type (\code{$quad},
@@ -128,10 +129,12 @@ non-blank value is used, and \code{"other"} is replaced by the
 \code{$form.version} = the version name (e.g. \code{inland_2026}); a
 sheet that already has Batz headers keeps its own \code{$form.version}
 (else \code{"batz.headers"}).
-\item Project names are filled in and the consolidated GlobalID is added
-(below). A column whose type differs between files becomes text.
+\item Project names are filled in, blank deployment dates are filled,
+the habitat \code{$date} is set and the consolidated GlobalID is
+added (below). A column whose type differs between files becomes text.
+\item DBH of trees and snags with more than one trunk (below).
 \item One tab per form type is written with the \code{openxlsx}
-package, else \code{writexl}.
+package.
 }
 Values are copied as they are; Survey123 codes are not changed to their
 Choices labels.
@@ -160,6 +163,21 @@ order: a GlobalID (any header containing "globalid", so a quadrant's
 project names match, the most common is used. Records with no match get
 \code{"unknown.check"}, and the run prints how many there are.
 
+\strong{Deployment date.} A record with \code{$date.habitat.assessment}
+but a blank \code{$date.deployment} gets \code{$date.deployment} =
+\code{$date.habitat.assessment} when no other record of the same site
+(the \code{header.combo} headers, e.g. project and ARU, in any tab) has an
+earlier date (the first non-blank of \code{header.dates}). A NOTE gives
+the number of records filled. This is done before the consolidated
+GlobalID, so the copied date counts there.
+
+\strong{Habitat date.} In the \code{habitat} tab, \code{$date} is
+always set to the earlier of \code{$date.habitat.assessment} and
+\code{$date.deployment} (after the deployment date above is filled),
+with the time removed, as text \code{"YYYY-MM-DD"} (e.g.
+\code{"2026-05-10"}); blank when both are blank. Any value from the
+Survey123 field \code{Date_YYYYMMDD} is replaced.
+
 \strong{Consolidated GlobalID.} After the merge,
 \code{batz.datawrangler_consolidate.globalID()} is run on the merged tabs
 that have rows, with \code{header.combo}, \code{header.uniqueid} and
@@ -168,9 +186,27 @@ all tabs) is added to every record of that site as
 \code{$globalid_consolidate}, just after \code{$globalid}. A tab without all
 the \code{header.combo} headers is left unchanged (NOTE).
 
+\strong{DBH of trees and snags.} For \code{$vegetation.tree_tree1.dbh},
+\code{$vegetation.tree_tree2.dbh}, \code{$vegetation.tree_tree3.dbh},
+\code{$vegetation.snag_snag1.dbh}, \code{$vegetation.snag_snag2.dbh} and
+\code{$vegetation.snag_snag3.dbh}, any column with the same name plus a
+number (e.g. \code{$vegetation.tree_tree1.dbh2},
+\code{$vegetation.tree_tree1.dbh3}) or \code{_other}
+(\code{$vegetation.tree_tree1.dbh_other}) is merged into it: the
+non-blank values, in the order dbh, dbh2, dbh3, ..., dbh_other, separated
+by ";" (e.g. \code{"6;8;10"}), and the extra columns are removed. A new
+column \code{<name>.overall} (e.g. \code{$vegetation.tree_tree1.dbh.overall})
+is placed right after each one: the square root of the sum of the squared
+DBH values, to 3 decimals (6, 8 and 10 give
+\eqn{\sqrt{6^2 + 8^2 + 10^2}} = 14.142; one value gives that value).
+Values that are not numbers are left out of \code{.overall}.
+Survey123's own average columns (\code{$vegetation.tree_tree1.dbh_average},
+\code{tree2}, \code{tree3}) are removed.
+
 \strong{Survey123 field names.} Batz headers for some long Survey123
 fields: \code{tree.1/2/3.average.dbh} become
-\code{vegetation.tree_tree1/2/3.dbh_average};
+\code{vegetation.tree_tree1/2/3.dbh_average} (removed from the output,
+see "DBH of trees and snags");
 \code{identify.the.species.of.the.3.saplings.closest.to.the.center.mic.point.}
 becomes \code{vegetation.sapling_species};
 \code{select.any.equipment.that.needs.to.be.replaced.} becomes
