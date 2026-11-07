@@ -7,8 +7,7 @@
 # (never saved in a script that goes to GitHub):
 #   Sys.setenv(WU_API_KEY = "<key>")
 # =============================================================================
-dir.repo <- "C:/Users/josh.guilbert/OneDrive - Biodiversity Research Institute/Documents/GitHub/Batz"
-for (f in c("batz.util_standardize.headers.R", "batz.generate_weatherstation.list.R")) source(file.path(dir.repo, "R", f))
+library(Batz)                    # install the current version first: pak::pak("jogui001/Batz")
 
 ## test data as sent 2026-11-03 had latitude/longitude swapped - corrected here
 test.data <- data.frame(site = c("bri", "cumberland"),
@@ -45,3 +44,8 @@ t7 <- batz.generate_weatherstation.list(test.data)                         # 50 
 t7[, c("site", "station.code", "station.distance", "sample.interval")]
 t7b <- batz.generate_weatherstation.list(test.data, sample.interval_min = 10)  # only stations recording every <= 10 min
 stopifnot(all(t7b$sample.interval <= 10, na.rm = TRUE))
+
+## ---- TEST 8: alternative headers $aru.name / $latitude / $longitude (2026-11-06) ----
+alt.data <- setNames(test.data, c("aru.name", "latitude", "longitude"))
+t8 <- batz.generate_weatherstation.list(alt.data, station.max = 2)
+stopifnot(identical(unique(t8$site), test.data$site))

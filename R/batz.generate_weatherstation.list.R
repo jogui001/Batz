@@ -9,7 +9,11 @@
 #'
 #' @param data A data frame with one row per site: \code{$site},
 #'   \code{$site.latitude}, \code{$site.longitude} (decimal degrees). Headers
-#'   are matched ignoring case and "." / "_" / spaces.
+#'   are matched ignoring case and "." / "_" / spaces. \code{$aru.name},
+#'   \code{$latitude} and \code{$longitude} are accepted in their place
+#'   (e.g. an ARU list from \code{\link{batz.merge_sitevisit.acoustics}});
+#'   when both are present, \code{$site}, \code{$site.latitude} and
+#'   \code{$site.longitude} are used.
 #' @param distance.max Numeric, default \code{50}. How far from the site to
 #'   look, in km. Several distances (e.g. \code{c(5, 10, 25, 50)}) also count
 #'   the stations within each one.
@@ -140,6 +144,13 @@ batz.generate_weatherstation.list <- function(data,
 wu.check.inputs <- function(data, distance.max, station.max, station.type, api.key, FN, sample.interval_min) {
   if (!requireNamespace("jsonlite", quietly = TRUE)) stop(FN, ' needs the jsonlite package: install.packages("jsonlite")', call. = FALSE)
   if (!is.data.frame(data)) stop(FN, ": data must be a data frame with $site, $site.latitude, $site.longitude.", call. = FALSE)
+  ## alternative headers (2026-11-06, per Josh): $aru.name / $latitude / $longitude
+  alt <- c(site = "aru.name", site.latitude = "latitude", site.longitude = "longitude")
+  for (h in names(alt)) {
+    std <- standardize.headers(names(data))
+    j <- which(std == standardize.headers(alt[[h]]))
+    if (!standardize.headers(h) %in% std && length(j) > 0) names(data)[j[1]] <- h
+  }
   ch <- canonicalize.headers(data, c("site", "site.latitude", "site.longitude"))
   if (length(ch$missing) > 0) stop(FN, ": data is missing ", paste0("$", ch$missing, collapse = ", "), call. = FALSE)
   data <- ch$df

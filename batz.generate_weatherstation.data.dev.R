@@ -8,9 +8,7 @@
 # script that goes to GitHub):  Sys.setenv(WU_API_KEY = "<key>")
 # Every API call is spaced 2 s apart - keep the date range short while testing.
 # =============================================================================
-dir.repo <- "C:/Users/josh.guilbert/OneDrive - Biodiversity Research Institute/Documents/GitHub/Batz"
-for (f in c("batz.util_standardize.headers.R", "batz.generate_weatherstation.list.R",
-            "batz.generate_weatherstation.data.R")) source(file.path(dir.repo, "R", f))
+library(Batz)                    # install the current version first: pak::pak("jogui001/Batz")
 
 test.data <- data.frame(site = c("bri", "cumberland"),
                         site.latitude  = c(43.687683883908406, 43.809682493532925),
@@ -72,6 +70,21 @@ chk <- do.call(rbind, lapply(split(p7, list(p7$station.code, p7$day), drop = TRU
              last.total = round(utils::tail(x$precipitation.mm[!is.na(x$precipitation.mm)], 1), 2),
              sum.interval = round(sum(x$precipitation.mm_interval, na.rm = TRUE), 2))))
 print(chk)                                    # last.total and sum.interval should match
+
+## ---- TEST 8: alternative headers $aru.name / $latitude / $longitude (2026-11-06) ----
+## e.g. the ARU list written by batz.merge_sitevisit.acoustics(generate.arulist = TRUE)
+alt.data <- data.frame(aru.name = c("bri", "cumberland"),
+                       latitude  = c(43.687683883908406, 43.809682493532925),
+                       longitude = c(-70.28145797545827, -70.32403651749544))
+w8 <- batz.generate_weatherstation.data(alt.data, station.max = 1,
+                                        date.start = "2026-07-01", date.end = "2026-07-01")
+stopifnot(identical(sort(unique(w8$weatherstation.list$site)), c("bri", "cumberland")),
+          all(c("site", "site.latitude", "site.longitude") %in% names(w8$weatherstation.list)))
+## both present: $site / $site.latitude / $site.longitude are used
+both <- cbind(test.data, aru.name = "other", latitude = 0, longitude = 0)
+w8b <- batz.generate_weatherstation.list(both, station.max = 1)
+stopifnot(identical(unique(w8b$site), test.data$site))
+# arulist <- read.csv("bristol.arulist.csv"); batz.generate_weatherstation.list(arulist)
 
 ## ---- save ------------------------------------------------------------------
 # write.csv(w1$weatherstation.data, "weatherstation.data.csv", row.names = FALSE)

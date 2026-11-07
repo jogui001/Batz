@@ -17,7 +17,11 @@ batz.generate_weatherstation.list(
 \arguments{
 \item{data}{A data frame with one row per site: \code{$site},
 \code{$site.latitude}, \code{$site.longitude} (decimal degrees). Headers
-are matched ignoring case and "." / "_" / spaces.}
+are matched ignoring case and "." / "_" / spaces. \code{$aru.name},
+\code{$latitude} and \code{$longitude} are accepted in their place
+(e.g. an ARU list from \code{\link{batz.merge_sitevisit.acoustics}});
+when both are present, \code{$site}, \code{$site.latitude} and
+\code{$site.longitude} are used.}
 
 \item{distance.max}{Numeric, default \code{50}. How far from the site to
 look, in km. Several distances (e.g. \code{c(5, 10, 25, 50)}) also count
