@@ -1,7 +1,9 @@
 #' Generate sunrise/sunset times for an ARU deployment list
 #'
 #' For every ARU in an \verb{*arulist.csv} deployment list and every date in
-#' its \code{$date.start} to \code{$date.end} range (inclusive), calculates
+#' its \code{$sunregion_date.start} to \code{$sunregion_date.end} range
+#' (inclusive; \code{$date.start} to \code{$date.end} when those are absent
+#' or blank), calculates
 #' sunset on that date, sunrise on that date, and sunrise on the following
 #' day. Sunset on \code{$date} through sunrise on \code{$date + 1} is that
 #' night's monitoring window.
@@ -37,18 +39,34 @@
 #'   \item \code{$sunregion.longitude}, \code{$sunregion.latitude}:
 #'     coordinates used for the solar calculation of every row.
 #'   \item \code{$date.start}, \code{$date.end}: deployment dates
-#'     (m/d/Y, Y-m-d or m/d/y).
+#'     (m/d/Y, Y-m-d or m/d/y). Sun times are calculated for these dates
+#'     unless \code{$sunregion_date.start}/\code{$sunregion_date.end} are
+#'     given.
 #'   \item \code{$time.zone}: time zone name (e.g.
 #'     \code{"America/New_York"}) used for local times. A \code{time_zone}
 #'     column is also accepted.
+#' }
+#' If any of these is missing, the function stops with
+#' \code{"input file is missing these headers: ..."}.
+#'
+#' \strong{Optional headers} (e.g. an ARU list written by
+#' \code{\link{batz.merge_sitevisit.acoustics}} with
+#' \code{generate.arulist = TRUE}):
+#' \itemize{
 #'   \item \code{$sunregion.type}: \code{"fixed.unique"} or
+#'     \code{"fixed.pooled"}. When the column is absent, or a cell is blank,
+#'     it is \code{"fixed.unique"} where \code{$sunregion} equals
+#'     \code{$aru.name} (case and spaces ignored), otherwise
 #'     \code{"fixed.pooled"}.
 #'   \item \code{$schedule1}, \code{$schedule2}: recording schedules, copied
-#'     to the output only. The old spellings \code{schedual1}/\code{schedual2}
-#'     are still accepted.
+#'     to the output only; blank when absent. The old spellings
+#'     \code{schedual1}/\code{schedual2} are still accepted.
+#'   \item \code{$sunregion_date.start}, \code{$sunregion_date.end}: the
+#'     dates sun times are calculated for (m/d/Y, Y-m-d or m/d/y). A row with
+#'     either one blank uses its \code{$date.start} to \code{$date.end}. The
+#'     output's \code{$date.start}/\code{$date.end} stay the deployment
+#'     dates.
 #' }
-#' If any header is missing, the function stops with
-#' \code{"input file is missing these headers: ..."}.
 #'
 #' \strong{Checks.} \code{$sunregion.type} is trimmed and lower-cased. Rows
 #' that are not \code{"fixed.unique"} or \code{"fixed.pooled"} (e.g.
@@ -302,13 +320,29 @@ batz.generate_suntimes.arulist <- function(dir.load = getwd(),
   ## Change.to pass".
   ## ===========================================================================
   required.headers <- c("aru.name", "longitude", "latitude", "sunregion", "sunregion.longitude",
-                         "sunregion.latitude", "date.start", "date.end", "time.zone",
-                         "sunregion.type", "schedule1", "schedule2")
+                         "sunregion.latitude", "date.start", "date.end", "time.zone")
   canon <- canonicalize.headers(aru.list, required.headers)
   if (length(canon$missing) > 0) {
     stop("input file is missing these headers: ", paste(canon$missing, collapse = ", "))
   }
   aru.list <- canon$df
+  ## optional headers (2026-11-06, per Josh): blank when absent
+  optional.headers <- c("sunregion.type", "schedule1", "schedule2", "sunregion_date.start", "sunregion_date.end")
+  aru.list <- canonicalize.headers(aru.list, optional.headers)$df
+  for (h in optional.headers) {
+    if (!h %in% names(aru.list)) aru.list[[h]] <- rep("", nrow(aru.list))
+    v <- aru.list[[h]]; v[is.na(v)] <- ""; aru.list[[h]] <- v
+  }
+  ## $sunregion.type absent/blank: "fixed.unique" when $sunregion = $aru.name, else "fixed.pooled"
+  rk <- function(x) gsub("\\s+", "", tolower(as.character(x)))
+  no.type <- !nzchar(trimws(aru.list$sunregion.type))
+  if (any(no.type)) {
+    aru.list$sunregion.type[no.type] <- ifelse(rk(aru.list$sunregion[no.type]) == rk(aru.list$aru.name[no.type]),
+                                               "fixed.unique", "fixed.pooled")
+    cat("NOTE: $sunregion.type set from $sunregion for", sum(no.type), "row(s) (fixed.unique =",
+        sum(aru.list$sunregion.type[no.type] == "fixed.unique"), ", fixed.pooled =",
+        sum(aru.list$sunregion.type[no.type] == "fixed.pooled"), ").\n")
+  }
 
   aru.list$latitude  <- as.numeric(aru.list$latitude)
   aru.list$longitude <- as.numeric(aru.list$longitude)
@@ -316,6 +350,19 @@ batz.generate_suntimes.arulist <- function(dir.load = getwd(),
   aru.list$sunregion.latitude  <- as.numeric(aru.list$sunregion.latitude)
   aru.list$date.start <- parse.simple.date(aru.list$date.start)
   aru.list$date.end   <- parse.simple.date(aru.list$date.end)
+  ## dates sun times are calculated for: $sunregion_date.start/end, else $date.start/end
+  rs <- parse.simple.date(aru.list$sunregion_date.start)
+  re <- parse.simple.date(aru.list$sunregion_date.end)
+  use.r <- !is.na(rs) & !is.na(re)
+  aru.list$calc.start <- aru.list$date.start; aru.list$calc.end <- aru.list$date.end
+  aru.list$calc.start[use.r] <- rs[use.r]; aru.list$calc.end[use.r] <- re[use.r]
+  bad <- is.na(aru.list$calc.start) | is.na(aru.list$calc.end) | aru.list$calc.end < aru.list$calc.start
+  if (any(bad)) {
+    cat("NOTE:", sum(bad), "row(s) excluded - no usable date range:",
+        paste(aru.list$aru.name[bad], collapse = ", "), "\n\n")
+    aru.list <- aru.list[!bad, , drop = FALSE]
+    if (nrow(aru.list) == 0) stop("No rows have a usable date range - nothing to generate.")
+  }
 
   ## ===========================================================================
   ## $sunregion.type (renamed from $sunregion_type, 2026-09-29 - see @details,
@@ -387,7 +434,7 @@ batz.generate_suntimes.arulist <- function(dir.load = getwd(),
   ## ===========================================================================
   expand.one <- function(i) {
     row <- aru.list[i, ]
-    dates <- seq(row$date.start, row$date.end, by = "day")
+    dates <- seq(row$calc.start, row$calc.end, by = "day")
     data.frame(
       aru.name = row$aru.name, sunregion = row$sunregion,
       sunregion.type = row$sunregion.type,

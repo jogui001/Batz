@@ -23,18 +23,27 @@
 #'   Survey123 forms database for this run (see
 #'   Details, "Adding forms").
 #' @param dir.save Character, default \code{getwd()}. Folder the merged
-#'   workbook is written to (created if needed).
-#' @param save.name Character, default \code{NULL}: the workbook is named
-#'   \verb{<project.name>_metadata_deployment&habitat_<YYYYMMDD>to<YYYYMMDD>_<YYYYMMDDHHMMSS>.xlsx}
-#'   (first and last \code{$date} in the merged tabs, then the time of the
-#'   run; no project part when \code{project.name} is blank). A name given
-#'   here is used instead (a name without an \code{.xlsx} ending gets
-#'   \code{.xlsx} in place of its extension).
-#' @param project.name Character, default \code{""}. Project to keep when the
-#'   files hold records of several projects: only records whose
-#'   \code{$project.name} matches (case and spaces ignored) are merged.
-#'   Blank = every project. Also the first part of the file name (spelled
-#'   as in the data, spaces as "-").
+#'   workbooks are written to (created if needed).
+#' @param save.name Character, default \code{NULL}: each workbook is named
+#'   \verb{<project.name>_aru.site.metadata_<YYYYMMDDHHMMSS>.xlsx}, and the
+#'   all-projects workbook \verb{Multipleprojects_aru.site.metadata_<YYYYMMDDHHMMSS>.xlsx}
+#'   (\verb{<YYYYMMDDHHMMSS>} = time of the run). A name given here replaces
+#'   the \verb{aru.site.metadata_<YYYYMMDDHHMMSS>} part:
+#'   \verb{<project.name>_<save.name>.xlsx} and
+#'   \verb{Multipleprojects_<save.name>.xlsx} (a name without an
+#'   \code{.xlsx} ending gets \code{.xlsx} in place of its extension).
+#' @param project.name Character, default \code{""}. The projects placed
+#'   into the output files: one or more project names (a vector, or one text
+#'   with names separated by ";"), matched to \code{$project.name} ignoring
+#'   case and spaces. Records of other projects are left out. Blank = every
+#'   project in the files (including \code{"unknown.check"}). A name not in
+#'   the files stops the run, listing the projects found.
+#' @param project.merged \code{FALSE} (default), \code{TRUE} or
+#'   \code{"BOTH"}. \code{FALSE}: one workbook for each project.
+#'   \code{TRUE}: one workbook with all the projects.
+#'   \code{"BOTH"}: one workbook for each project and one with all the
+#'   projects. In file names, a project's name is spelled as in the data,
+#'   with spaces as "-" and characters Windows does not allow removed.
 #' @param header.combo Character, default \code{c("project.name", "aru.name")}.
 #'   Headers whose unique combinations define a site: used for the
 #'   deployment date (Details) and passed to
@@ -45,6 +54,32 @@
 #'   "date.deployment", "date")}. Passed to
 #'   \code{batz.datawrangler_consolidate.globalID()}: date headers used to find
 #'   each site's earliest record (also for the deployment date, Details).
+#' @param generate.arulist Logical, default \code{FALSE}. \code{TRUE} also
+#'   writes an ARU list (\verb{*.arulist.csv}) of the sites kept (Details,
+#'   "ARU list"), following \code{project.merged}:
+#'   \verb{<project.name>_<YYYYMMDDHHMMSS>.arulist.csv} for each project and
+#'   \verb{Multipleprojects_<YYYYMMDDHHMMSS>.arulist.csv} for all of them
+#'   (with \code{save.name}: \verb{<project.name>_<save.name>.arulist.csv}).
+#' @param sunregion \code{"discrete"} (default) or \code{"pooled"}. The ARU
+#'   list's sun regions. \code{"discrete"}: \code{$sunregion},
+#'   \code{$sunregion.longitude} and \code{$sunregion.latitude} are the
+#'   site's \code{$aru.name}, \code{$longitude} and \code{$latitude}.
+#'   \code{"pooled"}: \code{$sunregion} is the project name, and its
+#'   coordinates are the central point (mean longitude and latitude) of all
+#'   the project's sites.
+#' @param date.buffer \code{"1 month"} (default), \code{"none"},
+#'   \code{"<N> month"} (e.g. \code{"2 month"}; \code{"month"} = \code{"1
+#'   month"}) or \code{"year"}. Sets \code{$sunregion_date.start} and
+#'   \code{$sunregion_date.end} of the ARU list. \code{"none"}: the site's
+#'   own \code{$date.start} and \code{$date.end}. \code{"1 month"}: the
+#'   first day of the month of the project's earliest \code{$date.start}, and
+#'   the last day of the month of its latest \code{$date.end}. \code{"<N>
+#'   month"}: as \code{"1 month"}, extended by N - 1 more months at each end.
+#'   \code{"year"}: January 1 of the year of the project's earliest
+#'   \code{$date.start} and December 31 of the year of its latest
+#'   \code{$date.end}.
+#' @param time.zone Character, default \code{"America/New_York"}. The ARU
+#'   list's \code{$time.zone} for every site.
 #'
 #' @return Invisibly, a list: one data frame per form type (\code{$quad},
 #'   \code{$habitat}, \code{$service}, plus any tab added through
@@ -52,9 +87,14 @@
 #'   \code{$sheet}, \code{$tab}, \code{$form.version}, \code{$rows},
 #'   \code{$headers.matched}, \code{$headers.not.used}), \code{$headers.db}
 #'   (the Survey123 forms database used, including
-#'   anything added through \code{form.list}) and \code{$file} (the workbook
-#'   written). The form-type tabs are written to \code{file.path(dir.save,
-#'   save.name)}, and the row count of each tab is printed.
+#'   anything added through \code{form.list}) and \code{$file} (the
+#'   workbooks written, named by project, \code{"Multipleprojects"} for the
+#'   all-projects workbook). The data frames hold every project kept; each
+#'   workbook holds its project's records. The row count of each tab of each
+#'   workbook is printed. With \code{generate.arulist = TRUE}, also
+#'   \code{$arulist} (the ARU list of every project kept, with
+#'   \code{$project.name} first) and \code{$file.arulist} (the ARU list
+#'   files written, named like \code{$file}).
 #'
 #' @details
 #' \strong{Internal database.} The Survey123 forms database (a list of data
@@ -121,8 +161,8 @@
 #'     the habitat \code{$date} is set and the consolidated GlobalID is
 #'     added (below). A column whose type differs between files becomes text.
 #'   \item DBH of trees and snags with more than one trunk (below).
-#'   \item One tab per form type is written with the \code{openxlsx}
-#'     package.
+#'   \item The workbooks set by \code{project.merged} are written, one tab
+#'     per form type, with the \code{openxlsx} package.
 #' }
 #' Values are copied as they are; Survey123 codes are not changed to their
 #' Choices labels.
@@ -182,6 +222,31 @@
 #' \code{$globalid_consolidate}, just after \code{$globalid}. A tab without all
 #' the \code{header.combo} headers is left unchanged (NOTE).
 #'
+#' \strong{ARU list.} With \code{generate.arulist = TRUE}, one row per site
+#' (\code{header.combo}: project name + \code{$aru.name}) with the headers
+#' \code{$aru.name}, \code{$longitude}, \code{$latitude},
+#' \code{$date.start}, \code{$date.end}, \code{$time.zone},
+#' \code{$sunregion}, \code{$sunregion.longitude},
+#' \code{$sunregion.latitude}, \code{$sunregion_date.start},
+#' \code{$sunregion_date.end} (dates as m/d/Y, e.g. \code{6/26/2026}). Sites
+#' are listed in the order of the habitat tab, then sites found only in the
+#' service tab.
+#' \itemize{
+#'   \item \code{$longitude}, \code{$latitude}: the site's habitat
+#'     record; a site with none takes them from its latest service record.
+#'   \item \code{$date.start}: the site's earliest habitat
+#'     \code{$date.deployment}.
+#'   \item \code{$date.end}: the site's latest service record with
+#'     \code{$visit.reason} \code{"retrieval"}.
+#' }
+#' Coordinates are rounded to 8 decimals.
+#' A site with no coordinates, deployment date or retrieval record keeps
+#' that cell blank and is named in a NOTE. The files hold no project-name
+#' column; the returned \code{$arulist} has one.
+#' \code{\link{batz.generate_suntimes.arulist}} reads these files and
+#' calculates sun times over \code{$sunregion_date.start} to
+#' \code{$sunregion_date.end}.
+#'
 #' \strong{DBH of trees and snags.} For \code{$vegetation.tree_tree1.dbh},
 #' \code{$vegetation.tree_tree2.dbh}, \code{$vegetation.tree_tree3.dbh},
 #' \code{$vegetation.snag_snag1.dbh}, \code{$vegetation.snag_snag2.dbh} and
@@ -235,12 +300,25 @@ batz.merge_sitevisit.acoustics <- function(dir.load = getwd(),
                                            dir.save = getwd(),
                                            save.name = NULL,
                                            project.name = "",
+                                           project.merged = FALSE,
                                            header.combo = c("project.name", "aru.name"),
                                            header.uniqueid = c("globalid"),
-                                           header.dates = c("date.habitat.assessment", "date.deployment", "date")) {
+                                           header.dates = c("date.habitat.assessment", "date.deployment", "date"),
+                                           generate.arulist = FALSE,
+                                           sunregion = "discrete",
+                                           date.buffer = "1 month",
+                                           time.zone = "America/New_York") {
 
   if (!requireNamespace("readxl", quietly = TRUE)) stop("The readxl package is needed: install.packages(\"readxl\")", call. = FALSE)
   if (!dir.exists(dir.load)) stop("dir.load not found: ", dir.load, call. = FALSE)
+  pm <- if (length(project.merged) == 1 && !is.na(project.merged)) toupper(trimws(as.character(project.merged))) else ""
+  if (!pm %in% c("FALSE", "TRUE", "BOTH"))
+    stop('project.merged must be FALSE, TRUE or "BOTH".', call. = FALSE)
+  if (isTRUE(generate.arulist)) {
+    sunregion <- tolower(trimws(as.character(sunregion[1])))
+    if (!sunregion %in% c("discrete", "pooled")) stop('sunregion must be "discrete" or "pooled".', call. = FALSE)
+    sitevisit.date.buffer(date.buffer)              # stops on an unusable value, before any work
+  }
   key <- function(x) tolower(gsub("[^A-Za-z0-9]", "", x))
   is.blank <- function(x) is.na(x) | !nzchar(trimws(as.character(x))) | tolower(trimws(as.character(x))) %in% c("na", "n/a")
 
@@ -548,19 +626,21 @@ batz.merge_sitevisit.acoustics <- function(dir.load = getwd(),
     data.frame(file = character(0), sheet = character(0), tab = character(0), form.version = character(0),
                rows = integer(0), headers.matched = integer(0), headers.not.used = character(0))
 
-  ## --- 5-. keep only project.name ------------------------------------------
-  if (!is.null(project.name) && length(project.name) && !is.na(project.name[1]) && nzchar(trimws(project.name[1]))) {
-    pk <- function(x) gsub("\\s+", "", tolower(as.character(x)))
+  ## --- 5-. keep only the projects in project.name ---------------------------
+  pk <- function(x) gsub("\\s+", "", tolower(as.character(x)))
+  pj.want <- if (is.null(project.name)) character(0) else trimws(unlist(strsplit(as.character(project.name), ";")))
+  pj.want <- pj.want[!is.na(pj.want) & nzchar(pj.want)]
+  if (length(pj.want) > 0) {
     found <- unique(unlist(lapply(tabs, function(t) if ("project.name" %in% names(out[[t]])) out[[t]]$project.name)))
     found <- sort(unique(found[!is.na(found) & nzchar(found)]))
-    if (!pk(project.name[1]) %in% pk(found))
-      stop('project.name = "', project.name[1], '" is not in the files. Projects found: ',
+    miss <- pj.want[!pk(pj.want) %in% pk(found)]
+    if (length(miss) > 0)
+      stop('project.name "', paste(miss, collapse = '", "'), '" not in the files. Projects found: ',
            paste(found, collapse = ", "), call. = FALSE)
-    project.name <- found[pk(found) == pk(project.name[1])][1]          # spelled as in the data (file name)
     for (t in tabs) {
       d <- out[[t]]
       if (!"project.name" %in% names(d) || nrow(d) == 0) next
-      keep <- pk(d$project.name) == pk(project.name[1])
+      keep <- pk(d$project.name) %in% pk(pj.want)
       if (any(!keep)) cat(t, ": ", sum(!keep), " record(s) of other projects left out\n", sep = "")
       out[[t]] <- d[keep, , drop = FALSE]; rownames(out[[t]]) <- NULL
     }
@@ -583,24 +663,58 @@ batz.merge_sitevisit.acoustics <- function(dir.load = getwd(),
   ## --- 5c. DBH: extra trunks merged into one column + overall DBH -----------
   for (t in tabs) out[[t]] <- sitevisit.dbh.merge(out[[t]])
 
-  ## --- 6. write -------------------------------------------------------------
-  if (is.null(save.name) || !length(save.name) || is.na(save.name[1]) || !nzchar(trimws(save.name[1]))) {
-    dts <- as.Date(unlist(lapply(tabs, function(t) if ("date" %in% names(out[[t]])) as.numeric(sitevisit.to.date(out[[t]]$date)))), origin = "1970-01-01")
-    dts <- dts[!is.na(dts)]
-    rng <- if (length(dts)) paste0(format(min(dts), "%Y%m%d"), "to", format(max(dts), "%Y%m%d")) else "nodates"
-    pj.part <- if (!is.null(project.name) && length(project.name) && !is.na(project.name[1]) && nzchar(trimws(project.name[1])))
-      paste0(gsub("\\s+", "-", gsub('[\\\\/:*?"<>|]+', "", trimws(project.name[1]))), "_") else ""
-    save.name <- paste0(pj.part, "metadata_deployment&habitat_", rng, "_", format(Sys.time(), "%Y%m%d%H%M%S"), ".xlsx")
-  }
-  if (!grepl("\\.xlsx$", save.name, ignore.case = TRUE)) save.name <- paste0(sub("\\.[^.]*$", "", save.name), ".xlsx")
+  ## --- 6. write (2026-11-06, per Josh: project.merged) -----------------------
+  ## projects kept, spelled as in the data (first spelling of each)
+  pj.all <- unlist(lapply(tabs, function(t) if ("project.name" %in% names(out[[t]])) as.character(out[[t]]$project.name)))
+  pj.all <- pj.all[!is.na(pj.all) & nzchar(trimws(pj.all))]
+  pj.all <- pj.all[!duplicated(pk(pj.all))]
+  pj.all <- pj.all[order(tolower(pj.all))]
+  stamp <- format(Sys.time(), "%Y%m%d%H%M%S")
+  tail.name <- if (is.null(save.name) || !length(save.name) || is.na(save.name[1]) || !nzchar(trimws(save.name[1])))
+    paste0("aru.site.metadata_", stamp, ".xlsx") else trimws(save.name[1])
+  if (!grepl("\\.xlsx$", tail.name, ignore.case = TRUE)) tail.name <- paste0(sub("\\.[^.]*$", "", tail.name), ".xlsx")
+  clean <- function(x) gsub("\\s+", "-", gsub('[\\\\/:*?"<>|]+', "", trimws(x)))
   if (!dir.exists(dir.save)) dir.create(dir.save, recursive = TRUE)
-  path <- file.path(dir.save, save.name)
-  openxlsx::write.xlsx(out, path, overwrite = TRUE)
-  for (t in tabs) cat(t, ": ", nrow(out[[t]]), " row(s)\n", sep = "")
-  cat("Saved:", path, "\n")
+  write.one <- function(tabs.out, lead) {
+    path <- file.path(dir.save, paste0(clean(lead), "_", tail.name))
+    openxlsx::write.xlsx(tabs.out, path, overwrite = TRUE)
+    cat("Saved:", path, "\n")
+    for (t in tabs) cat("  ", t, ": ", nrow(tabs.out[[t]]), " row(s)\n", sep = "")
+    path
+  }
+  path <- character(0)
+  if (pm %in% c("FALSE", "BOTH")) {
+    if (length(pj.all) == 0) cat("NOTE: no project names in the files - no per-project workbook written.\n")
+    for (p in pj.all) {
+      one <- lapply(out[tabs], function(d) {
+        if (!"project.name" %in% names(d)) return(d[0, , drop = FALSE])
+        d <- d[pk(d$project.name) %in% pk(p), , drop = FALSE]; rownames(d) <- NULL; d
+      })
+      path[p] <- write.one(one, p)
+    }
+  }
+  if (pm %in% c("TRUE", "BOTH") || length(pj.all) == 0) path["Multipleprojects"] <- write.one(out[tabs], "Multipleprojects")
   if (n.unknown > 0) cat(n.unknown, ' have no associated project name, the value  "unknown.check"\n', sep = "")
 
-  invisible(c(out, list(log = log, headers.db = db, file = path)))
+  ## --- 7. ARU list (2026-11-06, per Josh) -------------------------------------
+  if (!isTRUE(generate.arulist)) return(invisible(c(out, list(log = log, headers.db = db, file = path))))
+  al <- sitevisit.arulist(out, sunregion = sunregion, date.buffer = date.buffer, time.zone = time.zone)
+  al.tail <- if (is.null(save.name) || !length(save.name) || is.na(save.name[1]) || !nzchar(trimws(save.name[1])))
+    paste0(stamp, ".arulist.csv") else paste0(sub("\\.[^.]*$", "", trimws(save.name[1])), ".arulist.csv")
+  write.al <- function(d, lead) {
+    f <- file.path(dir.save, paste0(clean(lead), "_", al.tail))
+    d <- d[, setdiff(names(d), "project.name"), drop = FALSE]
+    utils::write.csv(d, f, row.names = FALSE, na = "")
+    cat("Saved:", f, "(", nrow(d), "site(s) )\n")
+    f
+  }
+  path.al <- character(0)
+  al.pj <- unique(al$project.name)
+  al.pj <- al.pj[order(tolower(al.pj))]
+  if (pm %in% c("FALSE", "BOTH")) for (p in al.pj) path.al[p] <- write.al(al[al$project.name == p, , drop = FALSE], p)
+  if (pm %in% c("TRUE", "BOTH") || length(al.pj) == 0) path.al["Multipleprojects"] <- write.al(al, "Multipleprojects")
+
+  invisible(c(out, list(log = log, headers.db = db, file = path, arulist = al, file.arulist = path.al)))
 }
 
 
@@ -792,4 +906,113 @@ sitevisit.read.csv <- function(f) {
     d[[j]] <- if (all(!is.na(num)) && !any(grepl("^0[0-9]", v[ok]))) suppressWarnings(as.numeric(v)) else v
   }
   d
+}
+
+
+#' date.buffer as months (internal): 0 = "none", N = "N month", -1 = "year"
+#' @keywords internal
+#' @noRd
+sitevisit.date.buffer <- function(date.buffer) {
+  b <- tolower(trimws(as.character(date.buffer[1])))
+  if (is.na(b)) b <- ""
+  if (b == "none") return(0)
+  if (b == "year") return(-1)
+  if (grepl("^([0-9]+)?\\s*months?$", b)) {
+    n <- suppressWarnings(as.integer(sub("^([0-9]*).*$", "\\1", b)))
+    if (is.na(n)) n <- 1L
+    if (n >= 1) return(n)
+  }
+  stop('date.buffer must be "none", "1 month" (or "<N> month", e.g. "2 month") or "year" - got "',
+       date.buffer[1], '".', call. = FALSE)
+}
+
+
+#' ARU list from the merged site-visit tabs (internal)
+#'
+#' One row per site (project.name + aru.name): coordinates from habitat
+#' (else the latest service record), date.start = earliest habitat
+#' date.deployment, date.end = latest service "retrieval" date; sun region
+#' "discrete" (the site) or "pooled" (project name, mean coordinates);
+#' sun-region dates from date.buffer. Returns a data frame with
+#' $project.name first; dates as m/d/Y text.
+#' @keywords internal
+#' @noRd
+sitevisit.arulist <- function(out, sunregion = "discrete", date.buffer = "1 month", time.zone = "America/New_York") {
+  nb <- sitevisit.date.buffer(date.buffer)
+  txt <- function(v) { v <- trimws(as.character(v)); v[is.na(v)] <- ""; v }
+  num <- function(v) suppressWarnings(as.numeric(as.character(v)))
+  key <- function(p, a) paste(tolower(gsub("\\s+", "", txt(p))), tolower(gsub("\\s+", "", txt(a))), sep = "|")
+  get <- function(d, h) if (!is.null(d) && h %in% names(d)) d[[h]] else rep(NA, if (is.null(d)) 0 else nrow(d))
+  h <- out$habitat; sv <- out$service
+  hk <- if (!is.null(h) && nrow(h)) key(get(h, "project.name"), get(h, "aru.name")) else character(0)
+  sk <- if (!is.null(sv) && nrow(sv)) key(get(sv, "project.name"), get(sv, "aru.name")) else character(0)
+  sites <- unique(c(hk, sk))
+  sites <- sites[!grepl("\\|$", sites)]                          # no aru.name
+  mdy <- function(d) ifelse(is.na(d), "", sprintf("%d/%d/%s", as.integer(format(d, "%m")), as.integer(format(d, "%d")), format(d, "%Y")))
+  rows <- lapply(sites, function(k) {
+    ih <- which(hk == k); is <- which(sk == k)
+    src <- if (length(ih)) h[ih[1], ] else sv[is[1], ]
+    lon <- num(get(h, "longitude")[ih]); lat <- num(get(h, "latitude")[ih])
+    lon <- lon[!is.na(lon)]; lat <- lat[!is.na(lat)]
+    if (!length(lon) || !length(lat)) {                           # latest service record with coordinates
+      sl <- num(get(sv, "longitude")[is]); sa <- num(get(sv, "latitude")[is]); sd <- sitevisit.to.date(get(sv, "date")[is])
+      ok <- !is.na(sl) & !is.na(sa)
+      if (any(ok)) { o <- which(ok)[order(sd[ok], decreasing = TRUE, na.last = TRUE)][1]; lon <- sl[o]; lat <- sa[o] }
+    }
+    ds <- sitevisit.to.date(get(h, "date.deployment")[ih]); ds <- ds[!is.na(ds)]
+    rr <- is[grepl("retriev", tolower(txt(get(sv, "visit.reason")[is])))]
+    de <- sitevisit.to.date(get(sv, "date")[rr]); de <- de[!is.na(de)]
+    data.frame(project.name = txt(src$project.name), aru.name = txt(src$aru.name),
+               longitude = if (length(lon)) lon[1] else NA_real_, latitude = if (length(lat)) lat[1] else NA_real_,
+               date.start = if (length(ds)) min(ds) else as.Date(NA), date.end = if (length(de)) max(de) else as.Date(NA),
+               stringsAsFactors = FALSE)
+  })
+  al <- if (length(rows)) do.call(rbind, rows) else
+    data.frame(project.name = character(0), aru.name = character(0), longitude = numeric(0), latitude = numeric(0),
+               date.start = as.Date(character(0)), date.end = as.Date(character(0)))
+  al$longitude <- round(al$longitude, 8); al$latitude <- round(al$latitude, 8)   # as in Survey123 (8 decimals)
+  al$time.zone <- rep(time.zone[1], nrow(al))
+  ## sun region
+  if (sunregion == "pooled") {
+    al$sunregion <- al$project.name
+    al$sunregion.longitude <- stats::ave(al$longitude, al$project.name, FUN = function(v) mean(v, na.rm = TRUE))
+    al$sunregion.latitude  <- stats::ave(al$latitude,  al$project.name, FUN = function(v) mean(v, na.rm = TRUE))
+    al$sunregion.longitude[is.nan(al$sunregion.longitude)] <- NA
+    al$sunregion.latitude[is.nan(al$sunregion.latitude)] <- NA
+    al$sunregion.longitude <- round(al$sunregion.longitude, 8); al$sunregion.latitude <- round(al$sunregion.latitude, 8)
+  } else {
+    al$sunregion <- al$aru.name; al$sunregion.longitude <- al$longitude; al$sunregion.latitude <- al$latitude
+  }
+  ## sun-region dates
+  mfirst <- function(d) as.Date(format(d, "%Y-%m-01"))
+  madd <- function(d, n) { if (is.na(d) || n == 0) return(d); seq(d, by = paste(n, "months"), length.out = 2)[2] }
+  sds <- rep(as.Date(NA), nrow(al)); sde <- rep(as.Date(NA), nrow(al))
+  if (nb == 0) { sds <- al$date.start; sde <- al$date.end }
+  else for (p in unique(al$project.name)) {
+    i <- al$project.name == p
+    a <- suppressWarnings(min(al$date.start[i], na.rm = TRUE)); b <- suppressWarnings(max(al$date.end[i], na.rm = TRUE))
+    if (!is.finite(a)) a <- as.Date(NA); if (!is.finite(b)) b <- as.Date(NA)
+    if (nb == -1) {
+      if (!is.na(a)) a <- as.Date(paste0(format(a, "%Y"), "-01-01"))
+      if (!is.na(b)) b <- as.Date(paste0(format(b, "%Y"), "-12-31"))
+    } else {
+      if (!is.na(a)) a <- madd(mfirst(a), -(nb - 1))
+      if (!is.na(b)) b <- madd(mfirst(b), nb) - 1                 # last day of the month, + (N - 1) months
+    }
+    sds[i] <- a; sde[i] <- b
+  }
+  al$sunregion_date.start <- mdy(sds); al$sunregion_date.end <- mdy(sde)
+  al$date.start <- mdy(al$date.start); al$date.end <- mdy(al$date.end)
+  ## sites missing a value
+  for (h2 in c("longitude", "latitude", "date.start", "date.end")) {
+    miss <- is.na(al[[h2]]) | (is.character(al[[h2]]) & !nzchar(al[[h2]]))
+    if (any(miss)) cat("NOTE: ARU list - no ", switch(h2, longitude = "longitude", latitude = "latitude",
+                                                      date.start = "deployment date (date.start)",
+                                                      date.end = "retrieval record (date.end)"),
+                       " for ", sum(miss), " site(s): ", paste(al$project.name[miss], "/", al$aru.name[miss], collapse = "; "),
+                       " - left blank.\n", sep = "")
+  }
+  rownames(al) <- NULL
+  al[, c("project.name", "aru.name", "longitude", "latitude", "date.start", "date.end", "time.zone", "sunregion",
+         "sunregion.longitude", "sunregion.latitude", "sunregion_date.start", "sunregion_date.end")]
 }

@@ -14,9 +14,14 @@ batz.merge_sitevisit.acoustics(
   dir.save = getwd(),
   save.name = NULL,
   project.name = "",
+  project.merged = FALSE,
   header.combo = c("project.name", "aru.name"),
   header.uniqueid = c("globalid"),
-  header.dates = c("date.habitat.assessment", "date.deployment", "date")
+  header.dates = c("date.habitat.assessment", "date.deployment", "date"),
+  generate.arulist = FALSE,
+  sunregion = "discrete",
+  date.buffer = "1 month",
+  time.zone = "America/New_York"
 )
 }
 \arguments{
@@ -42,20 +47,30 @@ Survey123 forms database for this run (see
 Details, "Adding forms").}
 
 \item{dir.save}{Character, default \code{getwd()}. Folder the merged
-workbook is written to (created if needed).}
+workbooks are written to (created if needed).}
 
-\item{save.name}{Character, default \code{NULL}: the workbook is named
-\verb{<project.name>_metadata_deployment&habitat_<YYYYMMDD>to<YYYYMMDD>_<YYYYMMDDHHMMSS>.xlsx}
-(first and last \code{$date} in the merged tabs, then the time of the
-run; no project part when \code{project.name} is blank). A name given
-here is used instead (a name without an \code{.xlsx} ending gets
-\code{.xlsx} in place of its extension).}
+\item{save.name}{Character, default \code{NULL}: each workbook is named
+\verb{<project.name>_aru.site.metadata_<YYYYMMDDHHMMSS>.xlsx}, and the
+all-projects workbook \verb{Multipleprojects_aru.site.metadata_<YYYYMMDDHHMMSS>.xlsx}
+(\verb{<YYYYMMDDHHMMSS>} = time of the run). A name given here replaces
+the \verb{aru.site.metadata_<YYYYMMDDHHMMSS>} part:
+\verb{<project.name>_<save.name>.xlsx} and
+\verb{Multipleprojects_<save.name>.xlsx} (a name without an
+\code{.xlsx} ending gets \code{.xlsx} in place of its extension).}
 
-\item{project.name}{Character, default \code{""}. Project to keep when the
-files hold records of several projects: only records whose
-\code{$project.name} matches (case and spaces ignored) are merged.
-Blank = every project. Also the first part of the file name (spelled
-as in the data, spaces as "-").}
+\item{project.name}{Character, default \code{""}. The projects placed
+into the output files: one or more project names (a vector, or one text
+with names separated by ";"), matched to \code{$project.name} ignoring
+case and spaces. Records of other projects are left out. Blank = every
+project in the files (including \code{"unknown.check"}). A name not in
+the files stops the run, listing the projects found.}
+
+\item{project.merged}{\code{FALSE} (default), \code{TRUE} or
+\code{"BOTH"}. \code{FALSE}: one workbook for each project.
+\code{TRUE}: one workbook with all the projects.
+\code{"BOTH"}: one workbook for each project and one with all the
+projects. In file names, a project's name is spelled as in the data,
+with spaces as "-" and characters Windows does not allow removed.}
 
 \item{header.combo}{Character, default \code{c("project.name", "aru.name")}.
 Headers whose unique combinations define a site: used for the
@@ -69,6 +84,36 @@ deployment date (Details) and passed to
   "date.deployment", "date")}. Passed to
 \code{batz.datawrangler_consolidate.globalID()}: date headers used to find
 each site's earliest record (also for the deployment date, Details).}
+
+\item{generate.arulist}{Logical, default \code{FALSE}. \code{TRUE} also
+writes an ARU list (\verb{*.arulist.csv}) of the sites kept (Details,
+"ARU list"), following \code{project.merged}:
+\verb{<project.name>_<YYYYMMDDHHMMSS>.arulist.csv} for each project and
+\verb{Multipleprojects_<YYYYMMDDHHMMSS>.arulist.csv} for all of them
+(with \code{save.name}: \verb{<project.name>_<save.name>.arulist.csv}).}
+
+\item{sunregion}{\code{"discrete"} (default) or \code{"pooled"}. The ARU
+list's sun regions. \code{"discrete"}: \code{$sunregion},
+\code{$sunregion.longitude} and \code{$sunregion.latitude} are the
+site's \code{$aru.name}, \code{$longitude} and \code{$latitude}.
+\code{"pooled"}: \code{$sunregion} is the project name, and its
+coordinates are the central point (mean longitude and latitude) of all
+the project's sites.}
+
+\item{date.buffer}{\code{"1 month"} (default), \code{"none"},
+\code{"<N> month"} (e.g. \code{"2 month"}; \code{"month"} = \code{"1
+  month"}) or \code{"year"}. Sets \code{$sunregion_date.start} and
+\code{$sunregion_date.end} of the ARU list. \code{"none"}: the site's
+own \code{$date.start} and \code{$date.end}. \code{"1 month"}: the
+first day of the month of the project's earliest \code{$date.start}, and
+the last day of the month of its latest \code{$date.end}. \code{"<N>
+  month"}: as \code{"1 month"}, extended by N - 1 more months at each end.
+\code{"year"}: January 1 of the year of the project's earliest
+\code{$date.start} and December 31 of the year of its latest
+\code{$date.end}.}
+
+\item{time.zone}{Character, default \code{"America/New_York"}. The ARU
+list's \code{$time.zone} for every site.}
 }
 \value{
 Invisibly, a list: one data frame per form type (\code{$quad},
@@ -77,9 +122,14 @@ Invisibly, a list: one data frame per form type (\code{$quad},
 \code{$sheet}, \code{$tab}, \code{$form.version}, \code{$rows},
 \code{$headers.matched}, \code{$headers.not.used}), \code{$headers.db}
 (the Survey123 forms database used, including
-anything added through \code{form.list}) and \code{$file} (the workbook
-written). The form-type tabs are written to \code{file.path(dir.save,
-  save.name)}, and the row count of each tab is printed.
+anything added through \code{form.list}) and \code{$file} (the
+workbooks written, named by project, \code{"Multipleprojects"} for the
+all-projects workbook). The data frames hold every project kept; each
+workbook holds its project's records. The row count of each tab of each
+workbook is printed. With \code{generate.arulist = TRUE}, also
+\code{$arulist} (the ARU list of every project kept, with
+\code{$project.name} first) and \code{$file.arulist} (the ARU list
+files written, named like \code{$file}).
 }
 \description{
 Reads every Survey123 export used for ARU site deployments (habitat
@@ -152,8 +202,8 @@ listing the projects found. Blank deployment dates are filled,
 the habitat \code{$date} is set and the consolidated GlobalID is
 added (below). A column whose type differs between files becomes text.
 \item DBH of trees and snags with more than one trunk (below).
-\item One tab per form type is written with the \code{openxlsx}
-package.
+\item The workbooks set by \code{project.merged} are written, one tab
+per form type, with the \code{openxlsx} package.
 }
 Values are copied as they are; Survey123 codes are not changed to their
 Choices labels.
@@ -212,6 +262,31 @@ that have rows, with \code{header.combo}, \code{header.uniqueid} and
 all tabs) is added to every record of that site as
 \code{$globalid_consolidate}, just after \code{$globalid}. A tab without all
 the \code{header.combo} headers is left unchanged (NOTE).
+
+\strong{ARU list.} With \code{generate.arulist = TRUE}, one row per site
+(\code{header.combo}: project name + \code{$aru.name}) with the headers
+\code{$aru.name}, \code{$longitude}, \code{$latitude},
+\code{$date.start}, \code{$date.end}, \code{$time.zone},
+\code{$sunregion}, \code{$sunregion.longitude},
+\code{$sunregion.latitude}, \code{$sunregion_date.start},
+\code{$sunregion_date.end} (dates as m/d/Y, e.g. \code{6/26/2026}). Sites
+are listed in the order of the habitat tab, then sites found only in the
+service tab.
+\itemize{
+\item \code{$longitude}, \code{$latitude}: the site's habitat
+record; a site with none takes them from its latest service record.
+\item \code{$date.start}: the site's earliest habitat
+\code{$date.deployment}.
+\item \code{$date.end}: the site's latest service record with
+\code{$visit.reason} \code{"retrieval"}.
+}
+Coordinates are rounded to 8 decimals.
+A site with no coordinates, deployment date or retrieval record keeps
+that cell blank and is named in a NOTE. The files hold no project-name
+column; the returned \code{$arulist} has one.
+\code{\link{batz.generate_suntimes.arulist}} reads these files and
+calculates sun times over \code{$sunregion_date.start} to
+\code{$sunregion_date.end}.
 
 \strong{DBH of trees and snags.} For \code{$vegetation.tree_tree1.dbh},
 \code{$vegetation.tree_tree2.dbh}, \code{$vegetation.tree_tree3.dbh},

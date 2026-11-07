@@ -76,7 +76,9 @@ a CSV (see Details).
 }
 \description{
 For every ARU in an \verb{*arulist.csv} deployment list and every date in
-its \code{$date.start} to \code{$date.end} range (inclusive), calculates
+its \code{$sunregion_date.start} to \code{$sunregion_date.end} range
+(inclusive; \code{$date.start} to \code{$date.end} when those are absent
+or blank), calculates
 sunset on that date, sunrise on that date, and sunrise on the following
 day. Sunset on \code{$date} through sunrise on \code{$date + 1} is that
 night's monitoring window.
@@ -112,18 +114,34 @@ rows it should equal \code{$aru.name}.
 \item \code{$sunregion.longitude}, \code{$sunregion.latitude}:
 coordinates used for the solar calculation of every row.
 \item \code{$date.start}, \code{$date.end}: deployment dates
-(m/d/Y, Y-m-d or m/d/y).
+(m/d/Y, Y-m-d or m/d/y). Sun times are calculated for these dates
+unless \code{$sunregion_date.start}/\code{$sunregion_date.end} are
+given.
 \item \code{$time.zone}: time zone name (e.g.
 \code{"America/New_York"}) used for local times. A \code{time_zone}
 column is also accepted.
+}
+If any of these is missing, the function stops with
+\code{"input file is missing these headers: ..."}.
+
+\strong{Optional headers} (e.g. an ARU list written by
+\code{\link{batz.merge_sitevisit.acoustics}} with
+\code{generate.arulist = TRUE}):
+\itemize{
 \item \code{$sunregion.type}: \code{"fixed.unique"} or
+\code{"fixed.pooled"}. When the column is absent, or a cell is blank,
+it is \code{"fixed.unique"} where \code{$sunregion} equals
+\code{$aru.name} (case and spaces ignored), otherwise
 \code{"fixed.pooled"}.
 \item \code{$schedule1}, \code{$schedule2}: recording schedules, copied
-to the output only. The old spellings \code{schedual1}/\code{schedual2}
-are still accepted.
+to the output only; blank when absent. The old spellings
+\code{schedual1}/\code{schedual2} are still accepted.
+\item \code{$sunregion_date.start}, \code{$sunregion_date.end}: the
+dates sun times are calculated for (m/d/Y, Y-m-d or m/d/y). A row with
+either one blank uses its \code{$date.start} to \code{$date.end}. The
+output's \code{$date.start}/\code{$date.end} stay the deployment
+dates.
 }
-If any header is missing, the function stops with
-\code{"input file is missing these headers: ..."}.
 
 \strong{Checks.} \code{$sunregion.type} is trimmed and lower-cased. Rows
 that are not \code{"fixed.unique"} or \code{"fixed.pooled"} (e.g.

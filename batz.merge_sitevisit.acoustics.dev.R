@@ -38,7 +38,7 @@ q.old <- m$quad; names(q.old)[names(q.old) == "measurement.units"] <- "measurmen
 openxlsx::write.xlsx(list(quad = q.old), file.path(dir.out, "old.spelling_deployments.xlsx"), overwrite = TRUE)
 m1b <- batz.merge_sitevisit.acoustics(dir.out, load.pattern = "old.spelling*", dir.save = file.path(dir.out, "1b"))
 stopifnot(all(m1b$quad$measurement.units == m$quad$measurement.units, na.rm = TRUE))
-openxlsx::getSheetNames(m$file)                                     # quad, habitat, service
+openxlsx::getSheetNames(m$file[1])                                   # quad, habitat, service
 
 ## ---- TEST 2: form.list adds a form version and a new tab -------------------
 h <- Batz:::survey123.forms()$habitat
@@ -135,19 +135,22 @@ stopifnot(identical(r9$date, c("2026-05-10", "2026-05-11", "2026-05-20", NA)))  
 print(head(m$habitat[, c("aru.name", "date.habitat.assessment", "date.deployment", "date")], 10))
 stopifnot(all(is.na(m$habitat$date) | grepl("^\\d{4}-\\d{2}-\\d{2}$", m$habitat$date)))
 
-## ---- TEST 10: project.name - keep one project; automatic file name ----------
-## blank: every project, file "metadata_deployment&habitat_<first date>to<last date>_<timestamp>.xlsx"
+## ---- TEST 10: project.name - keep some projects; automatic file names -------
+## blank project.name: every project; project.merged = FALSE (default): one file per project,
+## "<project.name>_aru.site.metadata_<timestamp>.xlsx"
 print(basename(m$file))
-stopifnot(grepl("^metadata_deployment&habitat_\\d{8}to\\d{8}_\\d{14}\\.xlsx$", basename(m$file)))
 projects <- sort(unique(m$habitat$project.name)); print(projects)
+stopifnot(all(grepl("^.+_aru\\.site\\.metadata_\\d{14}\\.xlsx$", basename(m$file))))
 m10 <- batz.merge_sitevisit.acoustics(load.pattern = old.pattern, dir.load = dir.data, dir.sub = TRUE, dir.save = dir.out,
                                       project.name = tolower(projects[1]))   # case / spaces ignored
-print(basename(m10$file))                                                   # <project>_metadata_deployment&habitat_...
+print(basename(m10$file))                                                   # <project>_aru.site.metadata_<timestamp>.xlsx
 stopifnot(all(unlist(lapply(m10[c("quad", "habitat", "service")], function(d) d$project.name)) == projects[1]),
-          startsWith(basename(m10$file), paste0(gsub("\\s+", "-", projects[1]), "_metadata_deployment&habitat_")))
+          length(m10$file) == 1,
+          startsWith(basename(m10$file), paste0(gsub("\\s+", "-", projects[1]), "_aru.site.metadata_")))
 try(batz.merge_sitevisit.acoustics(load.pattern = old.pattern, dir.load = dir.data, dir.save = dir.out, project.name = "no such project"))  # stops, lists projects
-m10b <- batz.merge_sitevisit.acoustics(load.pattern = old.pattern, dir.load = dir.data, dir.save = dir.out, save.name = "mergedsurvey123")   # own name
-stopifnot(basename(m10b$file) == "mergedsurvey123.xlsx")
+m10b <- batz.merge_sitevisit.acoustics(load.pattern = old.pattern, dir.load = dir.data, dir.save = dir.out,
+                                       project.name = projects[1], save.name = "mergedsurvey123")   # own name
+stopifnot(basename(m10b$file) == paste0(gsub("\\s+", "-", projects[1]), "_mergedsurvey123.xlsx"))
 
 ## ---- TEST 11: default load.pattern - .xlsx and .csv exports (2026-11-06) ----
 ## Copies of the FY26 exports named like the new exports (aruHabitat / aruRetrieval);
@@ -179,3 +182,51 @@ stopifnot(inherits(m11c$service$date, "POSIXct"),                          # CSV
           !any(m11c$quad$project.name == "unknown.check"),                 # quadrant CSV finds the habitat CSV's project
           is.na(m11c$log$tab[grepl("repeat_photo", m11c$log$file)]))       # photo repeat CSV skipped
 cat("TEST 11 passed\n")
+
+## ---- TEST 12: project.merged = FALSE / TRUE / "BOTH" (2026-11-06) ------------
+## Two projects: the TEST 11 CSV exports, with the retrieval records renamed to a second project
+d12 <- file.path(dir.out, "12"); dir.create(d12, showWarnings = FALSE)
+for (f in list.files(file.path(d11, "csv"), full.names = TRUE)) {
+  d <- read.csv(f, check.names = FALSE, colClasses = "character")
+  if (grepl("aruRetrieval", basename(f)) && "Project" %in% names(d)) d$Project <- "Second Project"
+  write.csv(d, file.path(d12, basename(f)), row.names = FALSE, na = "")
+}
+p12 <- function(pm, ...) batz.merge_sitevisit.acoustics(d12, dir.save = file.path(d12, "out"), project.merged = pm, ...)
+r.f <- p12(FALSE); r.t <- p12(TRUE); r.b <- p12("BOTH")
+n.pj <- length(unique(unlist(lapply(r.f[c("quad", "habitat", "service")], function(d) d$project.name))))
+print(basename(r.b$file))
+stopifnot(n.pj >= 2, length(r.f$file) == n.pj, !"Multipleprojects" %in% names(r.f$file),
+          length(r.t$file) == 1, grepl("^Multipleprojects_aru\\.site\\.metadata_\\d{14}\\.xlsx$", basename(r.t$file)),
+          length(r.b$file) == n.pj + 1,
+          sum(sapply(names(r.f$file), function(p) nrow(openxlsx::read.xlsx(r.f$file[[p]], "service")))) ==
+            nrow(openxlsx::read.xlsx(r.t$file[[1]], "service")))
+r.2 <- p12("both", project.name = "second project")                       # one project kept: its file + Multipleprojects
+stopifnot(identical(names(r.2$file), c("Second Project", "Multipleprojects")))
+try(p12("yes"))                                                            # project.merged must be FALSE, TRUE or "BOTH"
+cat("TEST 12 passed\n")
+
+## ---- TEST 13: generate.arulist / sunregion / date.buffer (2026-11-06) --------
+AL.HEADERS <- c("aru.name", "longitude", "latitude", "date.start", "date.end", "time.zone", "sunregion",
+                "sunregion.longitude", "sunregion.latitude", "sunregion_date.start", "sunregion_date.end")
+a13 <- function(...) batz.merge_sitevisit.acoustics(d12, dir.save = file.path(d12, "out13"), generate.arulist = TRUE, ...)
+r13 <- a13(project.merged = "BOTH")                                     # discrete, "1 month"
+print(basename(r13$file.arulist)); print(r13$arulist)
+f13 <- read.csv(r13$file.arulist[["Multipleprojects"]], check.names = FALSE, colClasses = "character")
+stopifnot(identical(names(f13), AL.HEADERS),                                       # same headers as bristol.arulist.csv
+          length(r13$file.arulist) == length(r13$file),
+          all(grepl("\\.arulist\\.csv$", r13$file.arulist)),
+          identical(r13$arulist$sunregion, r13$arulist$aru.name),                    # discrete: the site itself
+          all(grepl("^\\d{1,2}/1/\\d{4}$", r13$arulist$sunregion_date.start[nzchar(r13$arulist$sunregion_date.start)])))
+p13 <- a13(project.merged = TRUE, sunregion = "pooled", date.buffer = "year")$arulist
+one <- p13[p13$project.name == p13$project.name[1], ]
+stopifnot(all(one$sunregion == one$project.name),                                  # pooled: project name
+          isTRUE(all.equal(one$sunregion.longitude[1], round(mean(one$longitude, na.rm = TRUE), 8))),
+          all(grepl("^1/1/\\d{4}$", one$sunregion_date.start[nzchar(one$sunregion_date.start)])),
+          all(grepl("^12/31/\\d{4}$", one$sunregion_date.end[nzchar(one$sunregion_date.end)])))
+n13 <- a13(project.merged = TRUE, date.buffer = "none")$arulist
+stopifnot(identical(n13$sunregion_date.start, n13$date.start), identical(n13$sunregion_date.end, n13$date.end))
+m13 <- a13(project.merged = TRUE, date.buffer = "2 month")$arulist
+print(unique(m13[, c("date.start", "date.end", "sunregion_date.start", "sunregion_date.end")]))   # one more month at each end
+try(a13(date.buffer = "week"))                                                   # stops: must be "none", "<N> month" or "year"
+try(a13(sunregion = "mixed"))                                                    # stops: must be "discrete" or "pooled"
+cat("TEST 13 passed\n")
