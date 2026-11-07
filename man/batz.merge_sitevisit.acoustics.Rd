@@ -6,8 +6,9 @@
 \usage{
 batz.merge_sitevisit.acoustics(
   dir.load = getwd(),
-  load.pattern = c("*SiteMaintenance*Retrieval*.xlsx", "*HabitatAssessment*.xlsx",
-    "*deployments*.xlsx"),
+  load.pattern = c("*aruHabitat*.xlsx", "*aruRetrieval*.xlsx", "*aruDeployment*.xlsx",
+    "*aruMaintenance*.xlsx", "*aruHabitat*.csv", "*aruRetrieval*.csv",
+    "*aruDeployment*.csv", "*aruMaintenance*.csv"),
   dir.sub = TRUE,
   form.list = NA,
   dir.save = getwd(),
@@ -20,15 +21,16 @@ batz.merge_sitevisit.acoustics(
 }
 \arguments{
 \item{dir.load}{Character, default \code{getwd()}. Folder searched for the
-Survey123 export workbooks.}
+Survey123 exports (Excel workbooks or CSV files).}
 
 \item{load.pattern}{Character vector of file-name patterns (wildcards
-\code{*} and \code{?}), default \code{c("*SiteMaintenance*Retrieval*.xlsx",
-  "*HabitatAssessment*.xlsx", "*deployments*.xlsx")} (e.g.
-\code{..._SiteMaintenanceRetrieval_Final.xlsx},
-\code{..._HabitatAssessments_Final.xlsx}). A file is read when its name
-matches any of them (case ignored) and ends in \code{.xlsx} or
-\code{.xls}. Excel lock files (\code{~$...}) are skipped.}
+\code{*} and \code{?}), default \code{c("*aruHabitat*.xlsx",
+  "*aruRetrieval*.xlsx", "*aruDeployment*.xlsx", "*aruMaintenance*.xlsx",
+  "*aruHabitat*.csv", "*aruRetrieval*.csv", "*aruDeployment*.csv",
+  "*aruMaintenance*.csv")}. A file is read when its name matches any of
+them (case ignored) and ends in \code{.xlsx}, \code{.xls} or
+\code{.csv}. Excel lock files (\code{~$...}) are skipped. Each sheet of
+a workbook, and each CSV file, is one table.}
 
 \item{dir.sub}{Logical, default \code{TRUE}. Also search sub-folders of
 \code{dir.load}.}
@@ -123,7 +125,8 @@ The package's own copy is not changed.
 \enumerate{
 \item One empty data frame per form type, with \code{$form.version}
 first, then each Batz header once (in the database's order).
-\item Every sheet of every matching file is compared with each form
+\item Every sheet of every matching workbook, and every matching CSV
+file, is compared with each form
 version's Survey123 headers (and with the Batz headers themselves),
 ignoring case, spaces and punctuation. Survey123's own system fields
 (ObjectID, GlobalID, ParentGlobalID, CreationDate, Creator, EditDate,
@@ -154,6 +157,14 @@ package.
 }
 Values are copied as they are; Survey123 codes are not changed to their
 Choices labels.
+
+\strong{CSV files.} A CSV file is read as text (UTF-8, with a Latin-1
+fallback) and treated like one sheet; its \code{$log$sheet} is the file
+name without \code{.csv}. A column whose values are all dates or
+date-times (e.g. \code{6/26/2026 3:45:12 PM}, \code{2026-06-26 15:45:12})
+is read as a date-time, like the same column in a workbook. For the
+project name (below), the CSV files in one folder count as one file, so a
+quadrant CSV finds its project name in the habitat CSV beside it.
 
 \strong{Workbooks that can't be opened.} Each file is checked before it is
 read, and the run stops with a plain message when it is:

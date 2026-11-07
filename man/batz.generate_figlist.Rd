@@ -37,10 +37,12 @@ workbook, or \code{NA}).
 Writes one Excel workbook with two tabs:
 \describe{
 \item{\code{fig.list}}{Every fig.list heading used by the Batz plot
-functions, as columns, with one starter row per plot function
-(\code{$plot.type} filled in). Fill in the rows you need and delete
+functions, as columns in the same order for every plot type, with one
+starter row per plot function (\code{$plot.type} filled in). A
+heading that plot type does not use holds \code{"NA"}; the headings it
+uses are blank, ready to fill in. Fill in the rows you need and delete
 the others; each plot function only plots rows of its own
-\code{$plot.type}.}
+\code{$plot.type}, and treats \code{"NA"} cells as blank.}
 \item{\code{descriptions}}{One row per heading: \code{$header},
 \code{$required.in} and \code{$optional.in} (the plot functions that
 need or can use it) and \code{$description}.}

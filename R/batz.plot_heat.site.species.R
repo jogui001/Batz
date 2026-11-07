@@ -26,6 +26,8 @@
 #'   \code{$site.bold}. A row can also override any \code{aes.default}
 #'   parameter with a column of the same name (e.g. \code{$bin.minutes},
 #'   \code{$time.start}). See Details.
+#'   Cells holding "NA" (a heading not used by this plot type, as in
+#'   \code{\link{batz.generate_figlist}}) are treated as blank.
 #' @param aes.default Data frame of plot settings (plotopts), normally
 #'   \verb{plotopts_heat.site.species.csv}. Required columns:
 #'   \code{$category}, \code{$parameter}, \code{$default.value}. The custom
@@ -210,7 +212,7 @@ batz.plot_heat.site.species <- function(data, fig.list, aes.default = NULL,
                                         strip.special.plotopts = FALSE, ...) {
 
   ## settings typed into the call: used before fig.list and plotopts
-  plot.inputs <- plotutil_plot_inputs(list(...), "batz.plot_heat.site.species")
+  plot.inputs <- plotutil_plot_inputs(plotutil_dots(...), "batz.plot_heat.site.species")
 
   FN <- "batz.plot_heat.site.species"
   PLOT.TYPE <- "heat.site.species"
@@ -218,6 +220,7 @@ batz.plot_heat.site.species <- function(data, fig.list, aes.default = NULL,
   ## ---- special characters ----------------------------------------------
   objname.fig.list <- paste(deparse(substitute(fig.list)), collapse = "")
   objname.aes.default <- paste(deparse(substitute(aes.default)), collapse = "")
+  fig.list <- plotutil_figlist_na(fig.list)       # "NA" = heading not used by this plot type
   if (is.null(aes.default)) aes.default <- plotutil_default_plotopts("batz.plot_heat.site.species")   # built-in settings
   if (!is.data.frame(data)) stop(FN, ": `data` must be a data frame.")
   if (!is.data.frame(fig.list)) stop(FN, ": `fig.list` must be a data frame.")

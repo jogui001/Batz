@@ -76,7 +76,7 @@ suntimes.synth <- data.frame(
   stringsAsFactors = FALSE
 )
 
-aes.default.synth <- read.csv("plotopts_sm4heatmap.csv", stringsAsFactors = FALSE)
+aes.default.synth <- Batz:::batz.db("plotopts.batz.plotsm4_heatmap")   # built-in settings (Batz_reference_db)
 
 fig.list.synth <- data.frame(
   plot.type     = "sm4.heatmap",

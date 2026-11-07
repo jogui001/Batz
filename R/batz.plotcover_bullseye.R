@@ -235,7 +235,7 @@ batz.plotcover_bullseye <- function(data, mic, aes.default = NULL, project.name 
                                      strip.special.plotopts = FALSE, ...) {
 
   ## settings typed into the call: used before fig.list and plotopts
-  plot.inputs <- plotutil_plot_inputs(list(...), "batz.plotcover_bullseye")
+  plot.inputs <- plotutil_plot_inputs(plotutil_dots(...), "batz.plotcover_bullseye")
 
   ## strip.special (2026-09-30, per Josh - see @details): remove non-ASCII
   ## special characters from every data-frame input before anything else

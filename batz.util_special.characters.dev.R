@@ -291,12 +291,11 @@ lg <- n$env[[grep("log", names(n$env))[1]]]; print(lg)
 ok(same(o$ret, transform(n$ret, date.monitoringnight = paste0(date.monitoringnight, "°"))) || TRUE, "datawrangler_headers.acceptold: ran")
 ok(all(grepl("^TRUE ; mon.ngh", lg$strip.special)), "datawrangler_headers.acceptold: log 'TRUE ; mon.ngh'")
 cat("   filename recorded:", unique(lg[[intersect(c("filename","file.name"), names(lg))[1]]]), "\n")
-## 6. generate_plotopts (real plotopts_heatmap.csv as all three masters)
-pd <- file.path(tempdir(), "po"); dir.create(pd, showWarnings = FALSE); so <- file.path(tempdir(),"poo"); so2 <- file.path(tempdir(),"pon"); dir.create(so); dir.create(so2)
-for (m in c("plotopts_bullseye.csv","plotopts_first.last.csv","plotopts_callobs.csv")) file.copy("/home/claude/ss/vt/plotopts_heatmap.csv", file.path(pd, m), overwrite = TRUE)
-run(OLD, "batz.generate_plotopts", dir.load = pd, dir.save = so, project.name = "t"); run(NEW, "batz.generate_plotopts", dir.load = pd, dir.save = so2, project.name = "t")
-fo <- sort(list.files(so, full.names = TRUE)); fn2 <- sort(list.files(so2, full.names = TRUE))
-ok(length(fo) == 3 && all(mapply(function(a, b) identical(readLines(a), readLines(b)), fo, fn2)), "generate_plotopts: copies identical to before")
+## 6. generate_plotopts: writes the built-in settings (Batz_reference_db), no master files
+so2 <- file.path(tempdir(),"pon"); dir.create(so2, showWarnings = FALSE)
+f6 <- batz.generate_plotopts(c("batz.plotcover_bullseye", "batz.plotdetections_first.last", "batz.plotactivity_observations"), dir.save = so2, project.name = "t")
+ok(length(f6) == 3 && identical(read.csv(file.path(so2, f6[1]), check.names = FALSE, colClasses = "character", na.strings = character(0))$parameter,
+                                Batz:::batz.db("plotopts.batz.plotcover_bullseye")$parameter), "generate_plotopts: written from the built-in settings")
 ## 7. treeusa (helper's reference file)
 td <- "/home/claude/ss/tests_agentC/tree"
 o <- tryCatch(run(OLD, "batz.treeusa_recode.names", c("x"), dir.load = td, dir.sub = FALSE), error = function(e) conditionMessage(e))
@@ -348,13 +347,12 @@ ok(is.null(NEW$special.check.plotopts(good, "aes.default", "good", "f")), "valid
 ## 5. daily.count: degree in aes.default label kept by default
 src <- readLines("/home/claude/ss/tests_agentD/test1.R")
 ## 6. generate_plotopts: default keeps the degree sign; TRUE simplifies
-pd <- mk("po"); for (m in c("plotopts_bullseye.csv","plotopts_first.last.csv","plotopts_callobs.csv")) writeLines(c("category,parameter,default.value,overide.value,notes", "Text,y.title,Temperature (°C),,café"), file.path(pd, m))
+## (the built-in settings come from Batz_reference_db; special characters there are kept by default)
 s1 <- mk("po1"); s2 <- mk("po2")
-run(NEW, "batz.generate_plotopts", dir.load = pd, dir.save = s1, project.name = "t")
-run(NEW, "batz.generate_plotopts", dir.load = pd, dir.save = s2, project.name = "t", strip.special.plotopts = TRUE)
-a <- read.csv(list.files(s1, full.names = TRUE)[1]); b <- read.csv(list.files(s2, full.names = TRUE)[1])
-ok(a$default.value == "Temperature (°C)" && a$notes == "café", "generate_plotopts default: copy keeps degree and accent")
-ok(b$default.value == "Temperature (C)" && b$notes == "cafe", "generate_plotopts strip.special.plotopts = TRUE: simplified/removed")
+batz.generate_plotopts("batz.plotactivity_observations", dir.save = s1, project.name = "t")
+batz.generate_plotopts("batz.plotactivity_observations", dir.save = s2, project.name = "t", strip.special.plotopts = TRUE)
+b <- readLines(list.files(s2, full.names = TRUE)[1], encoding = "UTF-8")
+ok(!any(grepl("[^\\x01-\\x7F]", b, perl = TRUE)), "generate_plotopts strip.special.plotopts = TRUE: ASCII only")
 cat("\nFAILURES:", length(FAILS), "\n"); if (length(FAILS)) print(FAILS)
 
 
@@ -437,8 +435,8 @@ Sys.setenv(BATZ_OLD = "/home/claude/ss/R_v2")
 source("/home/claude/ss/vt/harness.R")
 mk <- function(name) { d <- file.path(tempdir(), name); unlink(d, TRUE); dir.create(d); d }
 U <- "/mnt/user-data/uploads/Batz"
-callobs <- read.csv(file.path(U, "plotopts_callobs.csv"), stringsAsFactors = FALSE, check.names = FALSE)
-firstlast <- read.csv(file.path(U, "plotopts_first.last.csv"), stringsAsFactors = FALSE, check.names = FALSE); firstlast <- rbind(firstlast, data.frame(category = "Save", parameter = c("plot.width","plot.height"), default.value = c("8","6"), overide.value = "", notes = "", check.names = FALSE))
+callobs <- Batz:::batz.db("plotopts.batz.plotactivity_observations")   # built-in settings (Batz_reference_db)
+firstlast <- Batz:::batz.db("plotopts.batz.plotdetections_first.last"); firstlast <- rbind(firstlast, data.frame(category = "Save", parameter = c("plot.width","plot.height"), default.value = c("8","6"), override.value = "", notes = "", check.names = FALSE))
 ## recode aliases
 r <- function(f) suppressWarnings(capture.output(x <- NEW$batz.batusa_recode.names(c("EPFU", "Big brown bat", "All detections"), f))) ; 
 rr <- function(f) { capture.output(x <- NEW$batz.batusa_recode.names(c("EPFU", "Big brown bat", "All detections"), f)); x }
@@ -493,7 +491,7 @@ for (fn in c("batz.plotactivity_observations", "batz.plotdetections_first.last")
   ok(is.list(w) && length(w$ggplots) == 1, paste(fn, ": 7 day pools plot"))
 }
 ## daily.count with MONITORINGNIGHT / DATE-12 header
-dc <- read.csv(file.path(U, "plotopts_dailycount.csv"), stringsAsFactors = FALSE, check.names = FALSE)
+dc <- Batz:::batz.db("plotopts.batz.plotactivity_daily.count")   # built-in settings (Batz_reference_db)
 for (h in c("MONITORINGNIGHT", "DATE-12")) {
   raw <- data.frame(a = c("2026-06-01","2026-06-01","2026-06-02"), KPAUTO = c("EPFU","MYLU","NoID"), FILENAME = c("NWS01_20260601_203000_0.wav","NWS02_A_20260601_213000_1.wav","NWS02_B_20260602_013000.wav"), stringsAsFactors = FALSE)
   names(raw)[1] <- h

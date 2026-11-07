@@ -85,7 +85,7 @@ stopifnot(any(grepl("status: Retired", r1e$serial.check$issue)))
 
 ## ---- TEST 1f: new model (2026-10-28) - habitat table, photos, Fig 4 and 5 -
 ## HEIC photos need install.packages("magick")
-plotopts.bull <- file.path(dir.repo, "inst", "plotopts", "plotopts_bullseye.csv")
+plotopts.bull <- NULL                       # NULL = built-in settings (Batz_reference_db)
 r1f <- batz.generate_aru.appendix(file.data, client = "Wildlife Management Institute",
                                   client.contact = "Meghan Gilbart", project.name = "NA Bat",
                                   project.label = "Maine NABAT", project.code = "MAMM-NG26-007",
@@ -95,7 +95,7 @@ r1f <- batz.generate_aru.appendix(file.data, client = "Wildlife Management Insti
                                   equipment.inventory = file.inventory,
                                   photo.dir = dir.photos, sm4.data = file.sm4,
                                   plotopts.bullseye = plotopts.bull,
-                                  plotopts.sm4heatmap = file.path(dir.repo, "inst", "plotopts", "plotopts_sm4heatmap.csv"))
+                                  plotopts.sm4heatmap = NULL)   # NULL = built-in settings
 ## species: each once, most often recorded first
 se1f <- r1f$sites[r1f$sites$aru.name == "5175-SE1", ]
 hab.se1 <- r1f$habitat[r1f$habitat$aru.name == "5175-SE1", ]

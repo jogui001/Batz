@@ -18,6 +18,8 @@
 #'   as \code{$observations.count}, with a WARNING).
 #' @param fig.list Data frame, one row per plot. See "fig.list columns" in
 #'   Details. Column names must be unique.
+#'   Cells holding "NA" (a heading not used by this plot type, as in
+#'   \code{\link{batz.generate_figlist}}) are treated as blank.
 #' @param suntimes Data frame of sunrise and sunset times, e.g. the output of
 #'   \code{\link{batz.generate_suntimes.arulist}}. Required columns:
 #'   \code{$aru.name}, \code{$date}, \code{$date.monitoringnight},
@@ -271,7 +273,7 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
                                             strip.special.plotopts = FALSE, ...) {
 
   ## settings typed into the call: used before fig.list and plotopts
-  plot.inputs <- plotutil_plot_inputs(list(...), "batz.plotdetections_first.last")
+  plot.inputs <- plotutil_plot_inputs(plotutil_dots(...), "batz.plotdetections_first.last")
 
   ## strip.special (2026-09-30, per Josh - see @details): remove non-ASCII
   ## special characters from every data-frame input before anything else
@@ -279,6 +281,7 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
   ## non-data-frames unchanged and only modifies these local copies.
   objname.fig.list <- paste(deparse(substitute(fig.list)), collapse = "")
   objname.aes.default <- paste(deparse(substitute(aes.default)), collapse = "")
+  fig.list <- plotutil_figlist_na(fig.list)       # "NA" = heading not used by this plot type
   if (is.null(aes.default)) aes.default <- plotutil_default_plotopts("batz.plotdetections_first.last")   # built-in settings
   data <- special.strip(data, strip.special)$df
   ## fig.list is a settings table, not data - stripped only when
@@ -707,10 +710,10 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
     # to $sunset/$sunrise.monitoringnight - see @details, "Follow-up,
     # 2026-09-25...round twenty-six".)
     dawn.real <- parse.flex.datetime(sdb$sunrise.monitoringnight, tz)
-    local.noon <- as.POSIXct(paste(sdb$date.parsed, "12:00:00"), tz = tz)
+    local.noon <- as.POSIXct(paste(format(sdb$date.parsed), rep("12:00:00", nrow(sdb))), tz = tz)
     sdb$dusk.time     <- y.ref.noon + as.numeric(difftime(dusk.real, local.noon, units = "secs"))
     sdb$dawn.time     <- y.ref.noon + as.numeric(difftime(dawn.real, local.noon, units = "secs"))
-    sdb$midnight.time <- y.ref.noon + 12 * 3600
+    sdb$midnight.time <- y.ref.noon + rep(12 * 3600, nrow(sdb))
 
     # ---- facet panel labels, via batz.batusa_recode.names() ----
     # Every panel in facpan is shown even with 0 matching detections (see

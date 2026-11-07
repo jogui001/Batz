@@ -806,7 +806,7 @@ fl.luso <- function(type, facet.set) data.frame(plot.type = type, plot.name = pa
   plot.set = "A1", pool = FALSE, date.format = "%b-%d", date.start = "2026-07-01", date.end = "2026-07-05",
   xaxe.interval = "1 day", xaxe.title = "Date", check.names = FALSE)
 facets.of <- function(r) unique(as.character(r$ggplots[[1]]$data$facet.panel.value))
-aes.obs <- read.csv("plotopts_callobs.csv", stringsAsFactors = FALSE, check.names = FALSE)
+aes.obs <- Batz:::batz.db("plotopts.batz.plotactivity_observations")   # built-in settings (Batz_reference_db)
 r.luso <- batz.plotactivity_observations(mk(c("MYLU", "MYSO", "EPFU")), fl.luso("call.observations", "MYLU;EPFU"), st, aes.obs, dir.save = tempdir())
 cat("MYLU present -> facets (expect LUSO, epfu):", facets.of(r.luso), "\n")
 r.myso <- batz.plotactivity_observations(mk(c("MYSO", "EPFU")), fl.luso("call.observations", "EPFU"), st, aes.obs, dir.save = tempdir())

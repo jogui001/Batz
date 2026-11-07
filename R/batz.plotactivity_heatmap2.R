@@ -138,6 +138,8 @@
 #'   \code{$group} and \code{$spp.id} are used to split and select plots.
 #' @param fig.list Optional data frame, one row per plot (see Details).
 #'   \code{NULL} (default) = one plot per group x spp.id.
+#'   Cells holding "NA" (a heading not used by this plot type, as in
+#'   \code{\link{batz.generate_figlist}}) are treated as blank.
 #' @param aes.default Optional plot-settings data frame
 #'   (\code{plotopts_heatmap2.csv}) with \code{$category},
 #'   \code{$parameter}, \code{$default.value}, plus the \code{aes.style}
@@ -233,7 +235,8 @@ batz.plotactivity_heatmap2 <- function(data,
 
   FN <- "batz.plotactivity_heatmap2"
   ## settings typed into the call: used before fig.list and plotopts
-  plot.inputs <- plotutil_plot_inputs(list(...), FN)
+  plot.inputs <- plotutil_plot_inputs(plotutil_dots(...), FN)
+  fig.list <- plotutil_figlist_na(fig.list)       # "NA" = heading not used by this plot type
   PLOT.TYPE <- "activity.heatmap"
   if (!is.data.frame(data)) stop("`data` must be a data frame.")
   if (nrow(data) == 0) stop("`data` has 0 rows - nothing to plot.")

@@ -24,6 +24,8 @@
 #'   \code{$community.exclude}, \code{$yaxe.title.right}. A row can also
 #'   override any \code{aes.default} parameter with a column of the same
 #'   name. See Details.
+#'   Cells holding "NA" (a heading not used by this plot type, as in
+#'   \code{\link{batz.generate_figlist}}) are treated as blank.
 #' @param aes.default Data frame of plot settings (plotopts), normally
 #'   \verb{plotopts_bar.bat.group.csv}. Required columns: \code{$category},
 #'   \code{$parameter}, \code{$default.value}. The custom style column
@@ -170,7 +172,7 @@ batz.plot_bar.bat.group <- function(data, fig.list, aes.default = NULL,
                                     strip.special.plotopts = FALSE, ...) {
 
   ## settings typed into the call: used before fig.list and plotopts
-  plot.inputs <- plotutil_plot_inputs(list(...), "batz.plot_bar.bat.group")
+  plot.inputs <- plotutil_plot_inputs(plotutil_dots(...), "batz.plot_bar.bat.group")
 
   FN <- "batz.plot_bar.bat.group"
   PLOT.TYPE <- "bar.bat.group"
@@ -178,6 +180,7 @@ batz.plot_bar.bat.group <- function(data, fig.list, aes.default = NULL,
   ## ---- special characters ----------------------------------------------
   objname.fig.list <- paste(deparse(substitute(fig.list)), collapse = "")
   objname.aes.default <- paste(deparse(substitute(aes.default)), collapse = "")
+  fig.list <- plotutil_figlist_na(fig.list)       # "NA" = heading not used by this plot type
   if (is.null(aes.default)) aes.default <- plotutil_default_plotopts("batz.plot_bar.bat.group")   # built-in settings
   for (a in c("data", "fig.list", "aes.default")) {
     if (!is.data.frame(get(a))) stop(sprintf("%s: `%s` must be a data frame.", FN, a), call. = FALSE)

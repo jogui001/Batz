@@ -30,7 +30,9 @@ is no \code{aru.name} column.}
 \code{$date.format}, \code{$date.start}, \code{$date.end},
 \code{$xaxe.interval}, \code{$xaxe.title}, \code{$yaxe.title}. Other
 columns (species and facet columns of a shared fig.list) are ignored.
-See Details.}
+See Details.
+Cells holding "NA" (a heading not used by this plot type, as in
+\code{\link{batz.generate_figlist}}) are treated as blank.}
 
 \item{suntimes}{Data frame of sunrise and sunset times, e.g. the output of
 \code{\link{batz.generate_suntimes.arulist}}. Required columns:

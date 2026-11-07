@@ -145,7 +145,7 @@ batz.plot_vegetation.dbh <- function(data, project.name = "", site.names = NULL,
   if (!missing(table)) inputs$table <- as.character(table)
   if (!missing(legend.position)) inputs$legend.position <- legend.position
   if (!missing(size)) inputs$size <- size
-  dots <- list(...)                                  # any other plotopts setting typed into the call
+  dots <- plotutil_dots(...)                                # any other plotopts setting typed into the call
   if (length(dots)) {
     if (is.null(names(dots)) || any(!nzchar(names(dots)))) stop(FN, ': settings in the call must be named, e.g. yaxe.max = 20.', call. = FALSE)
     for (nm in names(dots)) {

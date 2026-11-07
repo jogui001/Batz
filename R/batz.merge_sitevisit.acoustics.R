@@ -6,14 +6,15 @@
 #' per form type (\code{quad}, \code{habitat}, \code{service}).
 #'
 #' @param dir.load Character, default \code{getwd()}. Folder searched for the
-#'   Survey123 export workbooks.
+#'   Survey123 exports (Excel workbooks or CSV files).
 #' @param load.pattern Character vector of file-name patterns (wildcards
-#'   \code{*} and \code{?}), default \code{c("*SiteMaintenance*Retrieval*.xlsx",
-#'   "*HabitatAssessment*.xlsx", "*deployments*.xlsx")} (e.g.
-#'   \code{..._SiteMaintenanceRetrieval_Final.xlsx},
-#'   \code{..._HabitatAssessments_Final.xlsx}). A file is read when its name
-#'   matches any of them (case ignored) and ends in \code{.xlsx} or
-#'   \code{.xls}. Excel lock files (\code{~$...}) are skipped.
+#'   \code{*} and \code{?}), default \code{c("*aruHabitat*.xlsx",
+#'   "*aruRetrieval*.xlsx", "*aruDeployment*.xlsx", "*aruMaintenance*.xlsx",
+#'   "*aruHabitat*.csv", "*aruRetrieval*.csv", "*aruDeployment*.csv",
+#'   "*aruMaintenance*.csv")}. A file is read when its name matches any of
+#'   them (case ignored) and ends in \code{.xlsx}, \code{.xls} or
+#'   \code{.csv}. Excel lock files (\code{~$...}) are skipped. Each sheet of
+#'   a workbook, and each CSV file, is one table.
 #' @param dir.sub Logical, default \code{TRUE}. Also search sub-folders of
 #'   \code{dir.load}.
 #' @param form.list \code{NA} (default), the path to a workbook laid out like
@@ -93,7 +94,8 @@
 #' \enumerate{
 #'   \item One empty data frame per form type, with \code{$form.version}
 #'     first, then each Batz header once (in the database's order).
-#'   \item Every sheet of every matching file is compared with each form
+#'   \item Every sheet of every matching workbook, and every matching CSV
+#'     file, is compared with each form
 #'     version's Survey123 headers (and with the Batz headers themselves),
 #'     ignoring case, spaces and punctuation. Survey123's own system fields
 #'     (ObjectID, GlobalID, ParentGlobalID, CreationDate, Creator, EditDate,
@@ -124,6 +126,14 @@
 #' }
 #' Values are copied as they are; Survey123 codes are not changed to their
 #' Choices labels.
+#'
+#' \strong{CSV files.} A CSV file is read as text (UTF-8, with a Latin-1
+#' fallback) and treated like one sheet; its \code{$log$sheet} is the file
+#' name without \code{.csv}. A column whose values are all dates or
+#' date-times (e.g. \code{6/26/2026 3:45:12 PM}, \code{2026-06-26 15:45:12})
+#' is read as a date-time, like the same column in a workbook. For the
+#' project name (below), the CSV files in one folder count as one file, so a
+#' quadrant CSV finds its project name in the habitat CSV beside it.
 #'
 #' \strong{Workbooks that can't be opened.} Each file is checked before it is
 #' read, and the run stops with a plain message when it is:
@@ -212,8 +222,14 @@
 #'
 #' @export
 batz.merge_sitevisit.acoustics <- function(dir.load = getwd(),
-                                           load.pattern = c("*SiteMaintenance*Retrieval*.xlsx", "*HabitatAssessment*.xlsx",
-                                                            "*deployments*.xlsx"),
+                                           load.pattern = c("*aruHabitat*.xlsx",
+                                                            "*aruRetrieval*.xlsx",
+                                                            "*aruDeployment*.xlsx",
+                                                            "*aruMaintenance*.xlsx",
+                                                            "*aruHabitat*.csv",
+                                                            "*aruRetrieval*.csv",
+                                                            "*aruDeployment*.csv",
+                                                            "*aruMaintenance*.csv"),
                                            dir.sub = TRUE,
                                            form.list = NA,
                                            dir.save = getwd(),
@@ -375,7 +391,7 @@ batz.merge_sitevisit.acoustics <- function(dir.load = getwd(),
   all.f <- list.files(dir.load, recursive = isTRUE(dir.sub), full.names = TRUE)
   rx <- vapply(load.pattern, utils::glob2rx, character(1))
   files <- all.f[vapply(basename(all.f), function(b) any(grepl(paste(rx, collapse = "|"), b, ignore.case = TRUE)), logical(1))]
-  files <- files[!grepl("^~\\$", basename(files)) & grepl("\\.xlsx?$", files, ignore.case = TRUE)]
+  files <- files[!grepl("^~\\$", basename(files)) & grepl("\\.(xlsx?|csv)$", files, ignore.case = TRUE)]
   if (length(files) == 0) {
     stop("No files in ", dir.load, " match load.pattern: ", paste(load.pattern, collapse = ", "), call. = FALSE)
   }
@@ -384,8 +400,10 @@ batz.merge_sitevisit.acoustics <- function(dir.load = getwd(),
   log <- list()
   versions <- unique(hdr[, c("tab", "version")])
   for (f in files) {
-    for (s in xl.sheets(f)) {
-      d <- as.data.frame(readxl::read_excel(f, s, .name_repair = "minimal"), check.names = FALSE, stringsAsFactors = FALSE)
+    is.csv <- grepl("\\.csv$", f, ignore.case = TRUE)
+    for (s in if (is.csv) sitevisit.csv.name(f) else xl.sheets(f)) {
+      d <- if (is.csv) sitevisit.read.csv(f) else
+        as.data.frame(readxl::read_excel(f, s, .name_repair = "minimal"), check.names = FALSE, stringsAsFactors = FALSE)
       if (ncol(d) == 0) next
       src <- key(names(d))
       ## Survey123's own system fields (ObjectID, GlobalID, Creator, x, y ...)
@@ -447,7 +465,8 @@ batz.merge_sitevisit.acoustics <- function(dir.load = getwd(),
         new[[tg]] <- v
       }
       parts[[t]][[length(parts[[t]]) + 1]] <- new
-      parts.file[[t]] <- c(parts.file[[t]], f)
+      ## CSV exports have one table per file: the CSV files of one folder count as one file
+      parts.file[[t]] <- c(parts.file[[t]], if (is.csv) file.path(dirname(f), "*.csv") else f)
       log[[length(log) + 1]] <- data.frame(file = basename(f), sheet = s, tab = t, form.version = fv[1], rows = nrow(d),
                                            headers.matched = best$matched, headers.not.used = paste(unused, collapse = "; "),
                                            stringsAsFactors = FALSE)
@@ -721,6 +740,56 @@ sitevisit.habitat.date <- function(d) {
   else {                                                     # add it after the last source column
     at <- max(match(src, names(d)))
     d <- cbind(d[seq_len(at)], data.frame(date = val, stringsAsFactors = FALSE), d[-seq_len(at)])
+  }
+  d
+}
+
+
+#' Table name of a CSV file: the file name without .csv (internal)
+#' @keywords internal
+#' @noRd
+sitevisit.csv.name <- function(f) sub("\\.csv$", "", basename(f), ignore.case = TRUE)
+
+
+#' Read one Survey123 CSV export like a workbook sheet (internal)
+#'
+#' Text read with special.read.csv() (UTF-8, Latin-1 fallback); blanks as
+#' NA; a column whose non-blank values are all dates or date-times becomes
+#' POSIXct (UTC clock time, as readxl reads Excel dates); a column of
+#' numbers becomes numeric.
+#' @keywords internal
+#' @noRd
+sitevisit.read.csv <- function(f) {
+  nm <- basename(f)
+  sz <- file.size(f)
+  if (is.na(sz) || sz == 0) {
+    stop(nm, " is empty (0 bytes) - if it is in OneDrive, it may not have finished downloading. ",
+         "Open the folder, wait for the file to sync, and re-run code.", call. = FALSE)
+  }
+  d <- tryCatch(special.read.csv(f, check.names = FALSE, stringsAsFactors = FALSE, colClasses = "character",
+                                 na.strings = c("", "NA")),
+                error = function(e) stop(nm, " could not be read: ", conditionMessage(e), call. = FALSE))
+  d <- as.data.frame(d, check.names = FALSE, stringsAsFactors = FALSE)
+  rx.date <- "^[0-9]{1,4}[/-][0-9]{1,2}[/-][0-9]{1,4}([ T][0-9]{1,2}:[0-9]{2}(:[0-9]{2}(\\.[0-9]+)?)?( ?[AaPp][Mm])?)?$"
+  fmts <- c("%m/%d/%Y %I:%M:%S %p", "%m/%d/%Y %I:%M %p", "%m/%d/%Y %H:%M:%S", "%m/%d/%Y %H:%M", "%m/%d/%Y",
+            "%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d", "%Y/%m/%d %H:%M:%S", "%Y/%m/%d")
+  for (j in seq_along(d)) {
+    v <- trimws(d[[j]]); v[!is.na(v) & !nzchar(v)] <- NA
+    ok <- !is.na(v)
+    if (!any(ok)) { d[[j]] <- v; next }
+    if (all(grepl(rx.date, v[ok]))) {
+      out <- as.POSIXct(rep(NA_real_, length(v)), origin = "1970-01-01", tz = "UTC")
+      for (fm in fmts) {
+        todo <- ok & is.na(out)
+        if (!any(todo)) break
+        p <- as.POSIXct(strptime(v[todo], fm, tz = "UTC"))
+        good <- !is.na(p)
+        out[which(todo)[good]] <- p[good]
+      }
+      if (!any(ok & is.na(out))) { d[[j]] <- out; next }
+    }
+    num <- suppressWarnings(as.numeric(v[ok]))
+    d[[j]] <- if (all(!is.na(num)) && !any(grepl("^0[0-9]", v[ok]))) suppressWarnings(as.numeric(v)) else v
   }
   d
 }

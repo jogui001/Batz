@@ -29,7 +29,9 @@ batz.plotactivity_heatmap2(
 \code{$group} and \code{$spp.id} are used to split and select plots.}
 
 \item{fig.list}{Optional data frame, one row per plot (see Details).
-\code{NULL} (default) = one plot per group x spp.id.}
+\code{NULL} (default) = one plot per group x spp.id.
+Cells holding "NA" (a heading not used by this plot type, as in
+\code{\link{batz.generate_figlist}}) are treated as blank.}
 
 \item{aes.default}{Optional plot-settings data frame
 (\code{plotopts_heatmap2.csv}) with \code{$category},

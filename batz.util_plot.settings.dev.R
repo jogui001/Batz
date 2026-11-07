@@ -108,4 +108,8 @@ po.h <- opts("batz.plotactivity_heatmap"); po.h$default.value[po.h$parameter == 
 h5 <- batz.plotactivity_heatmap(c4$data, aes.default = po.h, dir.save = dir.out, date.col = "monnight")
 ok(h5$ggplot$theme$plot.title$size == 31, "given aes.default replaces the built-in settings")
 
+## a trailing comma in the call (empty argument) is skipped, not an error
+h6 <- batz.plotactivity_heatmap(c4$data, dir.save = dir.out, date.col = "monnight", )
+ok(!is.null(h6$ggplot), "trailing comma in the call is ignored")
+
 cat("\nALL TESTS PASSED - PNGs in", dir.out, "\n")

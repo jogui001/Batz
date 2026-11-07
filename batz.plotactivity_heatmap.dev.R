@@ -17,8 +17,8 @@ source("batz.util_standardize.headers.R")
 source("batz.plotactivity_daily.count.R")
 source("batz.plotactivity_heatmap.R")
 
-aes.default.heatmap <- read.csv("plotopts_heatmap.csv", stringsAsFactors = FALSE, check.names = FALSE)
-aes.default.daily   <- read.csv("plotopts_dailycount.csv", stringsAsFactors = FALSE, check.names = FALSE)
+aes.default.heatmap <- Batz:::batz.db("plotopts.batz.plotactivity_heatmap")   # built-in settings (Batz_reference_db)
+aes.default.daily   <- Batz:::batz.db("plotopts.batz.plotactivity_daily.count")   # built-in settings (Batz_reference_db)
 
 set.seed(7)
 n.rows <- 500

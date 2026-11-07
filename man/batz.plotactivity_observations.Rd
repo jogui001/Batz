@@ -28,7 +28,9 @@ grouping column named by the row's \code{$plot.group} (default
 as 40kHzMyo.}
 
 \item{fig.list}{Data frame, one row per plot. See "fig.list columns" in
-Details. Column names must be unique.}
+Details. Column names must be unique.
+Cells holding "NA" (a heading not used by this plot type, as in
+\code{\link{batz.generate_figlist}}) are treated as blank.}
 
 \item{suntimes}{Data frame of sunrise and sunset times, e.g. the output of
 \code{\link{batz.generate_suntimes.arulist}}. Its headers are checked

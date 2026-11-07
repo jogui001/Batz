@@ -32,7 +32,9 @@ skipped (NOTE).}
 \code{$plot.year}, \code{$plot.group}, \code{$group.labels},
 \code{$community.exclude}, \code{$yaxe.title.right}. A row can also
 override any \code{aes.default} parameter with a column of the same
-name. See Details.}
+name. See Details.
+Cells holding "NA" (a heading not used by this plot type, as in
+\code{\link{batz.generate_figlist}}) are treated as blank.}
 
 \item{aes.default}{Data frame of plot settings (plotopts), normally
 \verb{plotopts_bar.bat.group.csv}. Required columns: \code{$category},

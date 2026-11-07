@@ -155,7 +155,7 @@ batz.plotactivity_heatmap <- function(data,
                                        strip.special.plotopts = FALSE, ...) {
 
   ## settings typed into the call: used before fig.list and plotopts
-  plot.inputs <- plotutil_plot_inputs(list(...), "batz.plotactivity_heatmap")
+  plot.inputs <- plotutil_plot_inputs(plotutil_dots(...), "batz.plotactivity_heatmap")
 
   ## strip.special (2026-09-30, per Josh - see @details): remove non-ASCII
   ## special characters from every data-frame input before anything else

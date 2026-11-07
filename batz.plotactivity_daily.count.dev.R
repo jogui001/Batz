@@ -20,7 +20,7 @@ source("batz.util_standardize.headers.R")
 source("batz.plotactivity_daily.count.R")
 
 make.aes.default <- function() {
-  df <- read.csv("plotopts_dailycount.csv", stringsAsFactors = FALSE, check.names = FALSE)
+  df <- Batz:::batz.db("plotopts.batz.plotactivity_daily.count")   # built-in settings (Batz_reference_db)
   df
 }
 aes.default.synth <- make.aes.default()

@@ -18,6 +18,8 @@
 #'   as 40kHzMyo.
 #' @param fig.list Data frame, one row per plot. See "fig.list columns" in
 #'   Details. Column names must be unique.
+#'   Cells holding "NA" (a heading not used by this plot type, as in
+#'   \code{\link{batz.generate_figlist}}) are treated as blank.
 #' @param suntimes Data frame of sunrise and sunset times, e.g. the output of
 #'   \code{\link{batz.generate_suntimes.arulist}}. Its headers are checked
 #'   (\code{$aru.name}, \code{$date}, \code{$date.monitoringnight},
@@ -299,7 +301,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
                                             strip.special.plotopts = FALSE, ...) {
 
   ## settings typed into the call: used before fig.list and plotopts
-  plot.inputs <- plotutil_plot_inputs(list(...), "batz.plotactivity_observations")
+  plot.inputs <- plotutil_plot_inputs(plotutil_dots(...), "batz.plotactivity_observations")
 
   ## strip.special (2026-09-30, per Josh - see @details): remove non-ASCII
   ## special characters from every data-frame input before anything else
@@ -307,6 +309,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
   ## non-data-frames unchanged and only modifies these local copies.
   objname.fig.list <- paste(deparse(substitute(fig.list)), collapse = "")
   objname.aes.default <- paste(deparse(substitute(aes.default)), collapse = "")
+  fig.list <- plotutil_figlist_na(fig.list)       # "NA" = heading not used by this plot type
   if (is.null(aes.default)) aes.default <- plotutil_default_plotopts("batz.plotactivity_observations")   # built-in settings
   data <- special.strip(data, strip.special)$df
   ## fig.list is a settings table, not data - stripped only when

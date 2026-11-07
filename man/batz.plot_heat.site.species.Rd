@@ -37,7 +37,9 @@ row is skipped (NOTE).}
 \code{$plot.group}, \code{$group.labels}, \code{$site.exclude},
 \code{$site.bold}. A row can also override any \code{aes.default}
 parameter with a column of the same name (e.g. \code{$bin.minutes},
-\code{$time.start}). See Details.}
+\code{$time.start}). See Details.
+Cells holding "NA" (a heading not used by this plot type, as in
+\code{\link{batz.generate_figlist}}) are treated as blank.}
 
 \item{aes.default}{Data frame of plot settings (plotopts), normally
 \verb{plotopts_heat.site.species.csv}. Required columns:

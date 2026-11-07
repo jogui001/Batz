@@ -414,6 +414,29 @@ plotutil_myso_luso <- function(spp.common, spp.plot, facpan, present, fn.name, j
 plotutil_param_key <- function(x) tolower(gsub("\\s+", "", as.character(x)))
 
 
+#' Collect the \code{...} settings of a plot function call (internal)
+#'
+#' Like \code{list(...)}, but empty arguments (e.g. from a trailing comma,
+#' \code{f(x = 1, )}) are skipped instead of stopping with
+#' "argument is missing, with no default".
+#' @keywords internal
+#' @noRd
+plotutil_dots <- function(...) {
+  n <- ...length()
+  if (n == 0) return(list())
+  ex <- as.list(substitute(list(...)))[-1]
+  nm <- names(ex); if (is.null(nm)) nm <- rep("", n)
+  out <- list()
+  for (i in seq_len(n)) {
+    if (identical(ex[[i]], quote(expr = ))) next          # empty argument (trailing comma)
+    v <- list(...elt(i)); names(v) <- nm[i]
+    out <- c(out, v)
+  }
+  if (all(!nzchar(names(out)))) names(out) <- NULL
+  out
+}
+
+
 #' Settings typed into a plot function call (internal)
 #'
 #' Every Batz plot function takes plot settings in \code{...}
@@ -483,4 +506,26 @@ plotutil_default_plotopts <- function(fn) {
   d <- batz.db(paste0("plotopts.", fn))
   cat(sprintf("NOTE: %s - no aes.default given: the built-in settings (Batz_reference_db) are used.\n", fn))
   d
+}
+
+
+#' fig.list cells "NA" (heading not used by that plot type) become NA (internal)
+#'
+#' A fig.list made with \code{batz.generate_figlist()} has every heading for
+#' every plot type, with \code{"NA"} where a heading is not used by that
+#' row's plot type. Text cells that are \code{"NA"} (any case, spaces
+#' trimmed) are set to \code{NA}, so they are treated as blank: the setting
+#' then comes from plotopts.
+#' @keywords internal
+#' @noRd
+plotutil_figlist_na <- function(fig.list) {
+  if (!is.data.frame(fig.list)) return(fig.list)
+  for (cl in names(fig.list)) {
+    v <- fig.list[[cl]]
+    if (is.character(v) || is.factor(v)) {
+      v <- as.character(v); v[!is.na(v) & toupper(trimws(v)) == "NA"] <- NA
+      fig.list[[cl]] <- v
+    }
+  }
+  fig.list
 }

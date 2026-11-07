@@ -21,6 +21,8 @@
 #'   \code{$xaxe.interval}, \code{$xaxe.title}, \code{$yaxe.title}. Other
 #'   columns (species and facet columns of a shared fig.list) are ignored.
 #'   See Details.
+#'   Cells holding "NA" (a heading not used by this plot type, as in
+#'   \code{\link{batz.generate_figlist}}) are treated as blank.
 #' @param suntimes Data frame of sunrise and sunset times, e.g. the output of
 #'   \code{\link{batz.generate_suntimes.arulist}}. Required columns:
 #'   \code{$aru.name}, \code{$date}, \code{$date.monitoringnight},
@@ -204,7 +206,7 @@ batz.plotsm4_heatmap <- function(data, fig.list, suntimes,
                                   strip.special.plotopts = FALSE, ...) {
 
   ## settings typed into the call: used before fig.list and plotopts
-  plot.inputs <- plotutil_plot_inputs(list(...), "batz.plotsm4_heatmap")
+  plot.inputs <- plotutil_plot_inputs(plotutil_dots(...), "batz.plotsm4_heatmap")
 
   ## strip.special (2026-09-30, per Josh - see @details): remove non-ASCII
   ## special characters from every data-frame input before anything else
@@ -212,6 +214,7 @@ batz.plotsm4_heatmap <- function(data, fig.list, suntimes,
   ## non-data-frames unchanged and only modifies these local copies.
   objname.fig.list <- paste(deparse(substitute(fig.list)), collapse = "")
   objname.aes.default <- paste(deparse(substitute(aes.default)), collapse = "")
+  fig.list <- plotutil_figlist_na(fig.list)       # "NA" = heading not used by this plot type
   if (is.null(aes.default)) aes.default <- plotutil_default_plotopts("batz.plotsm4_heatmap")   # built-in settings
   data <- special.strip(data, strip.special)$df
   ## fig.list is a settings table, not data - stripped only when
@@ -460,10 +463,10 @@ batz.plotsm4_heatmap <- function(data, fig.list, suntimes,
     # PREVIOUS night) - same reasoning as
     # batz.plotdetections_first.last()'s own BUGFIX for this.
     dawn.real <- parse.flex.datetime(sdb$sunrise.monitoringnight, tz)
-    local.noon <- as.POSIXct(paste(sdb$date.parsed, "12:00:00"), tz = tz)
+    local.noon <- as.POSIXct(paste(format(sdb$date.parsed), rep("12:00:00", nrow(sdb))), tz = tz)
     sdb$dusk.time     <- y.ref.noon + as.numeric(difftime(dusk.real, local.noon, units = "secs"))
     sdb$dawn.time     <- y.ref.noon + as.numeric(difftime(dawn.real, local.noon, units = "secs"))
-    sdb$midnight.time <- y.ref.noon + 12 * 3600
+    sdb$midnight.time <- y.ref.noon + rep(12 * 3600, nrow(sdb))
 
     # Extend the Dawn/Dusk/Midnight lines flat out to the true panel edges
     # (date.start - 0.5 / date.end + 0.5, the same half-day pad
