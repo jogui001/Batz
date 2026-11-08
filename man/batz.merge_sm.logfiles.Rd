@@ -51,10 +51,10 @@ left out), plus \code{log.file_sm} when \code{log.file = TRUE}. Each
 element is also assigned into the calling environment.
 
 \code{SM4} has the same columns as \code{sm4logs.merged}:
-\code{$aru.name}, \code{$date}, \code{$time}, \code{$lat}, \code{$ns},
+\code{$aru.name}, \code{$date}, \code{$time}, \code{$latitude}, \code{$ns},
 \code{$longitude}, \code{$ew}, \code{$power.v}, \code{$temperature.c},
-\code{$files}, \code{$scrubbed}, \code{$mic0.type}, \code{$X},
-\code{$Y}. \code{SM5_1.5}/\code{SM5_1.6} are as described in
+\code{$files}, \code{$scrubbed}, \code{$mic0.type} (\code{$latitude} /
+\code{$longitude} signed decimal degrees). \code{SM5_1.5}/\code{SM5_1.6} are as described in
 \code{\link{batz.merge_sm5.logfiles}}.
 }
 \description{

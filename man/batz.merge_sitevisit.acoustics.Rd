@@ -118,7 +118,9 @@ list's \code{$time.zone} for every site.}
 \value{
 Invisibly, a list: one data frame per form type (\code{$quad},
 \code{$habitat}, \code{$service}, plus any tab added through
-\code{form.list}), \code{$log} (one row per sheet read: \code{$file},
+\code{form.list}), \code{$deployment.history} and
+\code{$aru.scheduals} (Details, "Deployment history"), \code{$log} (one
+row per sheet read: \code{$file},
 \code{$sheet}, \code{$tab}, \code{$form.version}, \code{$rows},
 \code{$headers.matched}, \code{$headers.not.used}), \code{$headers.db}
 (the Survey123 forms database used, including
@@ -202,6 +204,9 @@ listing the projects found. Blank deployment dates are filled,
 the habitat \code{$date} is set and the consolidated GlobalID is
 added (below). A column whose type differs between files becomes text.
 \item DBH of trees and snags with more than one trunk (below).
+\item \code{"_other"} values go into their base header (below).
+\item The deployment history and recording schedules are added
+(below).
 \item The workbooks set by \code{project.merged} are written, one tab
 per form type, with the \code{openxlsx} package.
 }
@@ -262,6 +267,59 @@ that have rows, with \code{header.combo}, \code{header.uniqueid} and
 all tabs) is added to every record of that site as
 \code{$globalid_consolidate}, just after \code{$globalid}. A tab without all
 the \code{header.combo} headers is left unchanged (NOTE).
+
+\strong{"_other" headers.} For every header ending in \code{"_other"}
+(e.g. \code{$equipment.replace_other}, \code{$action.performed_other}),
+its value goes into the base header: the name without \code{"_other"}, or
+one differing only by a plural "s" (\code{$action.performed_other} goes
+into \code{$actions.performed}). An \code{"other"} entry in the base
+value is replaced by it; a blank base takes it; otherwise it is added
+after \code{"; "} (or \code{","} when the base list uses commas). The
+\code{"_other"} column is then removed. A NOTE names the headers merged.
+
+\strong{Deployment history.} Each workbook gets two more tabs:
+\itemize{
+\item \code{deployment history} (\code{$deployment.history} in R): one
+row per deployment (each habitat record: \code{$visit.reason}
+\code{"deployment"}, \code{$date} = \code{$date.deployment},
+\code{$actions.performed} \code{"Deployment; Habitat Assessment"}) and
+per site visit (each service record; a blank
+\code{$actions.performed} takes \code{$visit.reason}), ordered by
+project, site and date, with the headers \code{$form.version},
+\code{$objectid}, \code{$globalid}, \code{$globalid_consolidate},
+\code{$date}, \code{$time}, \code{$project.name},
+\code{$aru.name}, \code{$site} (\code{$aru.name} when the form has
+no site), \code{$longitude}, \code{$latitude}, \code{$state},
+\code{$visit.reason}, \code{$personnel.bri}, \code{$notes},
+\code{$aru.serial}, \code{$microphone.serial},
+\code{$aru.schedule}, \code{$power.serial}, \code{$hobo.serial},
+\code{$actions.performed}, \code{$equipment.replace},
+\code{$aru.serial_new}, \code{$microphone.serial_new},
+\code{$aru.schedule_new}, \code{$aru.moved},
+\code{$hobo.serial_new}, \code{$microphone.calibration_value},
+\code{$power.serial_new}, \code{$personnel.other},
+\code{$creationdate}, \code{$creator}, \code{$editdate},
+\code{$editor}. Headers a form doesn't have are blank.
+\item \code{aru.scheduals}: the rows of the \code{aru.scheduals} tab of
+Batz_reference_db for the schedules in the deployment history (the
+project's own, in a project's workbook): \code{$survey123.name},
+\code{$header.name}, \code{$header.value}, \code{$aru.schedule},
+\code{$aru.schedule_divisions}, \code{$frequencey},
+\code{$time.on}, \code{$time.off}, \code{$recording.type},
+\code{$recording.interval}.
+}
+A record's schedule comes from the \code{aru.scheduals} tab: a row
+applies when its \code{$survey123.name} (without the
+\code{"survey123."} / \code{"survey123_"} start) is the tab name (e.g.
+\code{habitat}) or the record's \code{$form.version}, its
+\code{$header.name} is one of the record's headers, and its
+\code{$header.value} is the record's value (or one entry of a list),
+ignoring case, spaces and dash type (so \code{"Summer - Acoustic"} gives
+\code{USFWS.compliance}). A record's own \code{$aru.schedule} naming a
+schedule is used when no row matches. \code{$aru.schedule} of every row
+is the schedule in effect at the site (set at deployment); a site visit
+whose own schedule differs gives the new one in \code{$aru.schedule_new}.
+Rows with no schedule are named in a NOTE.
 
 \strong{ARU list.} With \code{generate.arulist = TRUE}, one row per site
 (\code{header.combo}: project name + \code{$aru.name}) with the headers

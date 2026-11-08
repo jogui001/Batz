@@ -230,3 +230,42 @@ print(unique(m13[, c("date.start", "date.end", "sunregion_date.start", "sunregio
 try(a13(date.buffer = "week"))                                                   # stops: must be "none", "<N> month" or "year"
 try(a13(sunregion = "mixed"))                                                    # stops: must be "discrete" or "pooled"
 cat("TEST 13 passed\n")
+
+## ---- TEST 14: "_other" headers, deployment history, aru.scheduals (2026-11-07) ----
+r14 <- batz.merge_sitevisit.acoustics(load.pattern = old.pattern, dir.load = dir.data, dir.sub = TRUE,
+                                      dir.save = file.path(dir.out, "14"), project.merged = TRUE)
+dh <- r14$deployment.history
+print(dh[, c("date", "site", "visit.reason", "aru.schedule", "aru.schedule_new", "actions.performed")])
+print(r14$aru.scheduals)
+DH.HEADERS <- c("form.version", "objectid", "globalid", "globalid_consolidate", "date", "time", "project.name",
+                "aru.name", "site", "longitude", "latitude", "state", "visit.reason", "personnel.bri", "notes",
+                "aru.serial", "microphone.serial", "aru.schedule", "power.serial", "hobo.serial", "actions.performed",
+                "equipment.replace", "aru.serial_new", "microphone.serial_new", "aru.schedule_new", "aru.moved",
+                "hobo.serial_new", "microphone.calibration_value", "power.serial_new", "personnel.other",
+                "creationdate", "creator", "editdate", "editor")
+stopifnot(identical(names(dh), DH.HEADERS),
+          nrow(dh) == nrow(r14$habitat) + nrow(r14$service),                      # one row per deployment and visit
+          sum(dh$visit.reason == "deployment") == nrow(r14$habitat),
+          !any(grepl("_other$", unlist(lapply(r14[c("quad", "habitat", "service")], names)))),   # merged and removed
+          all(c("deployment history", "aru.scheduals") %in% openxlsx::getSheetNames(r14$file[[1]])),
+          all(r14$aru.scheduals$aru.schedule %in% c(dh$aru.schedule, dh$aru.schedule_new)))
+## "_other" rules on a small table
+x <- data.frame(actions.performed = c("retrieval,other", "", "battery_swap"),
+                action.performed_other = c("mic cleaned", "reset clock", "reset clock"),
+                equipment.replace = "other", equipment.replace_other = c("mic", "", ""))
+y <- Batz:::sitevisit.other.merge(x, "service")
+print(y)
+stopifnot(y$actions.performed == c("retrieval,mic cleaned", "reset clock", "battery_swap; reset clock"),
+          y$equipment.replace == c("mic", "other", "other"), !any(grepl("_other$", names(y))))
+## schedule from a form value: "Summer - Acoustic" (any dash) -> USFWS.compliance
+h <- data.frame(form.version = "inland_2026", survey.type = c("Summer – Acoustic", "Cave/Mine - Acoustic", "Winter"))
+s14 <- Batz:::sitevisit.schedule.of(h, "habitat", Batz:::sitevisit.schedules())
+print(s14)                                                  # USFWS.compliance USFWS.compliance NA
+stopifnot(s14[2] == "USFWS.compliance", is.na(s14[3]))
+cat("TEST 14 passed\n")
+
+## ---- TEST 15: dates like 7/1/2026 are July 1 (not year 7) (2026-11-07) ---------
+td <- Batz:::sitevisit.to.date(c("6/30/2026", "7/1/2026", "2026-07-01 12:00:00", "2026/7/1", "20260701", "7-1-2026"))
+print(td)
+stopifnot(all(td[-1] == as.Date("2026-07-01")), td[1] == as.Date("2026-06-30"))
+cat("TEST 15 passed\n")

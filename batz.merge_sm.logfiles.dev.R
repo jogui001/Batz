@@ -43,10 +43,23 @@ d3 <- file.path(tempdir(), "sm_logs_empty"); dir.create(d3, showWarnings = FALSE
 r3 <- batz.merge_sm.logfiles(d3, log.file = TRUE)
 ok(identical(names(r3), "log.file_sm"), "empty folder: only log.file_sm")
 
-## ---- 4. output columns -------------------------------------------------------
-print(names(SM4))      # aru.name, date, time, lat, ns, longitude, ew, power.v, temperature.c, files, scrubbed, mic0.type, X, Y
-print(names(SM5_1.6))  # aru.name, date, time, lat, ns, longitude, ew, power.v, temperature.c, acfiles, acl, acr, X, Y
-ok(all(SM4$X < 0) && all(grepl("^\\d{4}-\\d{2}-\\d{2}$", SM4$date)), "W longitude -> negative X; dates YYYY-MM-DD")
+## ---- 4. output columns: $latitude / $longitude signed, no $X/$Y (2026-11-06) ----
+print(names(SM4))      # aru.name, date, time, latitude, ns, longitude, ew, power.v, temperature.c, files, scrubbed, mic0.type
+print(names(SM5_1.6))  # aru.name, date, time, latitude, ns, longitude, ew, power.v, temperature.c, acfiles, acl, acr
+ok(identical(names(SM4), c("aru.name", "date", "time", "latitude", "ns", "longitude", "ew", "power.v",
+                           "temperature.c", "files", "scrubbed", "mic0.type")), "SM4 headers")
+ok(!any(c("X", "Y", "lat") %in% c(names(SM4), names(SM5_1.6))), "no $X, $Y or $lat")
+ok(all(SM4$longitude == -70.6) && all(SM4$latitude == 44.5), "EW = W -> negative longitude; NS = N -> positive latitude")
+ok(all(grepl("^\\d{4}-\\d{2}-\\d{2}$", SM4$date)), "dates YYYY-MM-DD")
+
+## ---- 5. south / east coordinates -------------------------------------------
+d5 <- file.path(tempdir(), "sm_logs_se"); dir.create(d5, showWarnings = FALSE)
+writeLines(c("DATE,TIME,LAT,NS,LON,EW,POWER(V),TEMP(C),#FILES,#SCRUBBED,MIC0 TYPE",
+             "2026-Jun-05,20:00:00,33.9,S,151.2,E,12.1,18.5,10,0,U2"),
+           file.path(d5, "SYD_A_Summary.txt"))
+r5 <- batz.merge_sm.logfiles(d5)
+ok(r5$SM4$latitude == -33.9 && r5$SM4$longitude == 151.2, "NS = S -> negative latitude; EW = E -> positive longitude")
+## the merged logs go straight into batz.summarize_aruloc.coordinates() (needs $latitude/$longitude)
 
 cat("\nALL TESTS PASSED\n")
 

@@ -40,10 +40,12 @@
 #' headers are missing, or it has no rows.
 #'
 #' \strong{Output columns.} \code{$aru.name}, then the version's headers
-#' with \code{lon} -> \code{$longitude}, \code{power_v} -> \code{$power.v},
+#' with \code{lat} -> \code{$latitude}, \code{lon} -> \code{$longitude},
+#' \code{power_v} -> \code{$power.v},
 #' \code{temp_c} -> \code{$temperature.c}, \code{mic0_type} ->
-#' \code{$mic0.type}, then \code{$X} (longitude, negative when \code{ew =
-#' "W"}) and \code{$Y} (latitude, negative when \code{ns = "S"}). Dates such
+#' \code{$mic0.type}. \code{$latitude} is negative when \code{ns = "S"} and
+#' \code{$longitude} negative when \code{ew = "W"} (signed decimal degrees;
+#' \code{$ns}/\code{$ew} are kept). Dates such
 #' as \code{2026-Jun-05} are converted to \code{2026-06-05}. With
 #' \code{duplicates.remove = TRUE}, exact duplicate rows are dropped per
 #' version.
@@ -206,6 +208,7 @@ sm.logfile.merge <- function(dir.load, dir.sub, load.pattern, duplicates.remove,
     }
 
     output <- expected
+    output[output == "lat"] <- "latitude"
     output[output == "lon"] <- "longitude"
     output[output == "power_v"] <- "power.v"
     output[output == "temp_c"] <- "temperature.c"
@@ -219,10 +222,13 @@ sm.logfile.merge <- function(dir.load, dir.sub, load.pattern, duplicates.remove,
 
     ns <- tolower(trimws(tmp$ns))
     ew <- tolower(trimws(tmp$ew))
-    tmp$Y <- ifelse(ns == "s", -as.numeric(tmp$lat), as.numeric(tmp$lat))
-    tmp$X <- ifelse(ew == "w", -as.numeric(tmp$longitude), as.numeric(tmp$longitude))
+    ## signed decimal degrees (2026-11-06, per Josh: replaces $X/$Y)
+    lat <- suppressWarnings(abs(as.numeric(tmp$latitude)))
+    lon <- suppressWarnings(abs(as.numeric(tmp$longitude)))
+    tmp$latitude  <- ifelse(ns == "s", -lat, lat)
+    tmp$longitude <- ifelse(ew == "w", -lon, lon)
 
-    tmp <- tmp[c("aru.name", output, "X", "Y")]
+    tmp <- tmp[c("aru.name", output)]
 
     date.vals <- tmp$date
     date.unique.n <- length(unique(date.vals))

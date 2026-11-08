@@ -89,7 +89,9 @@ Invisibly, a list of two data frames:
 \code{batz.generate_weatherstation.list()} (\code{$station.total} counts
 only picked stations; \code{$sample.interval} is measured over the
 downloaded dates), and \code{$weatherstation.data} - their
-observations: \code{$site}, \code{$station.name}, \code{$station.code},
+observations: \code{$site} (every site the record was picked for,
+separated by ";", e.g. \code{"Clerk;SugarHill"} - see Details),
+\code{$station.name}, \code{$station.code},
 \code{$station.area}, \code{$station.latitude}, \code{$station.longitude},
 then \code{$date.time} (station local time), \code{$date.time_utc} and one
 column per weather type (all 12 types, named for \code{units}), with the
@@ -124,6 +126,13 @@ within \code{distance.max} km, and downloads their observations
 from \code{date.start} to \code{date.end}.
 }
 \details{
+\strong{Stations shared by several sites.} A station picked for more than
+one site is downloaded once. Its records (same station and date-time) are
+listed once in \code{$weatherstation.data}, with all those sites in
+\code{$site} separated by ";" (in the order of \code{data}), and a NOTE
+names the shared stations. \code{$weatherstation.list} still has one row
+per site and station.
+
 \strong{Which stations count.} Stations are tried nearest first. A quick
 check of the station's current data types (see
 \code{batz.generate_weatherstation.list()}) skips one that clearly lacks a

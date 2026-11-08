@@ -23,7 +23,9 @@
 #'   See Details.
 #'   Cells holding "NA" (a heading not used by this plot type, as in
 #'   \code{\link{batz.generate_figlist}}) are treated as blank.
-#' @param suntimes Data frame of sunrise and sunset times, e.g. the output of
+#' @param suntimes Optional, default \code{NULL}: no Dawn and Dusk lines are
+#'   drawn (the Midnight line still is). Otherwise a data frame of sunrise
+#'   and sunset times, e.g. the output of
 #'   \code{\link{batz.generate_suntimes.arulist}}. Required columns:
 #'   \code{$aru.name}, \code{$date}, \code{$date.monitoringnight},
 #'   \code{$sunregion}, \code{$time.zone}, \code{$sunregion.type},
@@ -198,7 +200,7 @@
 #' }
 #'
 #' @export
-batz.plotsm4_heatmap <- function(data, fig.list, suntimes,
+batz.plotsm4_heatmap <- function(data, fig.list, suntimes = NULL,
                                   aes.default = NULL, project.name = "new.project",
                                   aes.style = "override.value",
                                   dir.save = getwd(),
@@ -225,7 +227,8 @@ batz.plotsm4_heatmap <- function(data, fig.list, suntimes,
   } else {
     special.check.plotopts(fig.list, "fig.list", objname.fig.list, "batz.plotsm4_heatmap")
   }
-  suntimes <- special.strip(suntimes, strip.special)$df
+  has.sun <- !is.null(suntimes)                  # no suntimes: no Dawn / Dusk lines
+  if (has.sun) suntimes <- special.strip(suntimes, strip.special)$df
   ## aes.default is a settings table, not data - stripped only when
   ## strip.special.plotopts = TRUE (2026-10-02, per Josh); otherwise checked
   ## for characters that can't be read, with a readable error.
@@ -274,7 +277,7 @@ batz.plotsm4_heatmap <- function(data, fig.list, suntimes,
   )
 
   data.canon        <- canonicalize.headers(data, DATA.REQUIRED)
-  suntimes.canon    <- canonicalize.headers(suntimes, SUNTIMES.REQUIRED)
+  suntimes.canon    <- if (has.sun) canonicalize.headers(suntimes, SUNTIMES.REQUIRED) else list(df = NULL, missing = character(0))
   fig.list.canon    <- canonicalize.headers(fig.list, FIG.LIST.REQUIRED)
   aes.default.canon <- canonicalize.headers(aes.default, AES.DEFAULT.REQUIRED)
 
@@ -310,7 +313,7 @@ batz.plotsm4_heatmap <- function(data, fig.list, suntimes,
     missing.msg(aes.default.canon, "aes.default"),
     check.parameters(aes.default.canon$df, plotutil_required_left(AES.DEFAULT.REQUIRED.PARAMETERS, plot.inputs), "aes.default"),
     check.duplicates(data, "data"),
-    check.duplicates(suntimes, "suntimes"),
+    if (has.sun) check.duplicates(suntimes, "suntimes"),
     check.duplicates(fig.list, "fig.list"),
     check.duplicates(aes.default, "aes.default")
   )
@@ -414,6 +417,12 @@ batz.plotsm4_heatmap <- function(data, fig.list, suntimes,
       next
     }
 
+    if (!has.sun) {                               # Midnight line only
+      tz <- "UTC"
+      y.ref.noon <- as.POSIXct(paste(y.ref.date, "12:00:00"), tz = tz)
+      sdb <- data.frame(date.parsed = c(date.start - 0.5, date.end + 0.5))
+      sdb$midnight.time <- y.ref.noon + rep(12 * 3600, nrow(sdb))
+    } else {
     sdb <- suntimes
     sdb$date.parsed <- parse.flex.date(sdb$date)
     if (nzchar(plot.set.val)) {
@@ -428,6 +437,7 @@ batz.plotsm4_heatmap <- function(data, fig.list, suntimes,
 
     tz <- if (nrow(sdb) > 0 && "time.zone" %in% names(sdb) && nzchar(trimws(sdb$time.zone[1]))) sdb$time.zone[1] else "UTC"
     y.ref.noon <- as.POSIXct(paste(y.ref.date, "12:00:00"), tz = tz)
+    }
 
     pd$tile.time <- y.ref.noon + pd$mins2.noon.mon * 60
 
@@ -457,6 +467,7 @@ batz.plotsm4_heatmap <- function(data, fig.list, suntimes,
     # Round twenty-six, 2026-09-25 (per Josh's package-wide suntimes header
     # rename): $suns/$sunr.mon are now $sunset/$sunrise.monitoringnight -
     # see @details, "suntimes's $suns/$sunr-family columns renamed".
+    if (has.sun) {
     dusk.real <- parse.flex.datetime(sdb$sunset, tz)
     # Dawn ending THIS monitoring night is $sunrise.monitoringnight (sunrise
     # the FOLLOWING day), not $sunrise (sunrise ON $date, ending the
@@ -467,6 +478,7 @@ batz.plotsm4_heatmap <- function(data, fig.list, suntimes,
     sdb$dusk.time     <- y.ref.noon + as.numeric(difftime(dusk.real, local.noon, units = "secs"))
     sdb$dawn.time     <- y.ref.noon + as.numeric(difftime(dawn.real, local.noon, units = "secs"))
     sdb$midnight.time <- y.ref.noon + rep(12 * 3600, nrow(sdb))
+    }
 
     # Extend the Dawn/Dusk/Midnight lines flat out to the true panel edges
     # (date.start - 0.5 / date.end + 0.5, the same half-day pad
@@ -478,7 +490,7 @@ batz.plotsm4_heatmap <- function(data, fig.list, suntimes,
     # both ends. Flat-extended (not extrapolated) from the nearest real
     # row's own value, so this only changes how far the line reaches, not
     # its slope/shape.
-    if (nrow(sdb) > 0) {
+    if (has.sun && nrow(sdb) > 0) {
       sdb <- sdb[order(sdb$date.parsed), , drop = FALSE]
       left.pad  <- sdb[1, , drop = FALSE]
       right.pad <- sdb[nrow(sdb), , drop = FALSE]
@@ -498,8 +510,9 @@ batz.plotsm4_heatmap <- function(data, fig.list, suntimes,
       plot.set.val = plot.set.val
     )
 
-    cat(sprintf("Prepared plot data for '%s': %d tile(s), bin width %g minute(s), %d suntimes row(s).\n",
-                 job.label, nrow(pd), bin.minutes, nrow(sdb)))
+    cat(sprintf("Prepared plot data for '%s': %d tile(s), bin width %g minute(s), %s.\n",
+                 job.label, nrow(pd), bin.minutes,
+                 if (has.sun) sprintf("%d suntimes row(s)", nrow(sdb)) else "no suntimes (no Dawn / Dusk lines)"))
   }
 
   if (length(plots) == 0) {
@@ -569,15 +582,15 @@ batz.plotsm4_heatmap <- function(data, fig.list, suntimes,
         ggplot2::geom_tile(ggplot2::aes(fill = mins.oper), width = 1,
                              height = p$bin.minutes * 60,
                              color = tile.color, linewidth = tile.lw) +
-        ggplot2::geom_line(data = p$sdb, ggplot2::aes(x = date.parsed, y = dusk.time, color = "Dusk"),
-                             linetype = get.default("dusk.linetype"), inherit.aes = FALSE) +
+        (if (has.sun) ggplot2::geom_line(data = p$sdb, ggplot2::aes(x = date.parsed, y = dusk.time, color = "Dusk"),
+                             linetype = get.default("dusk.linetype"), inherit.aes = FALSE)) +
         ggplot2::geom_line(data = p$sdb, ggplot2::aes(x = date.parsed, y = midnight.time, color = "Midnight"),
                              linetype = get.default("midnight.linetype"), linewidth = midnight.render.lw,
                              inherit.aes = FALSE) +
-        ggplot2::geom_line(data = p$sdb, ggplot2::aes(x = date.parsed, y = dawn.time, color = "Dawn"),
-                             linetype = get.default("dawn.linetype"), inherit.aes = FALSE) +
+        (if (has.sun) ggplot2::geom_line(data = p$sdb, ggplot2::aes(x = date.parsed, y = dawn.time, color = "Dawn"),
+                             linetype = get.default("dawn.linetype"), inherit.aes = FALSE)) +
         ggplot2::scale_color_manual(name = get.default("reference.line.legend.title"),
-                                      breaks = c("Dawn", "Dusk", "Midnight"),
+                                      breaks = if (has.sun) c("Dawn", "Dusk", "Midnight") else "Midnight",
                                       values = c("Dawn" = get.default("dawn.color"),
                                                  "Dusk" = get.default("dusk.color"),
                                                  "Midnight" = get.default("midnight.color"))) +

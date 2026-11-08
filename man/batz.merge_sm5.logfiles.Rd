@@ -52,15 +52,14 @@ element is also assigned into the calling environment, so a bare call
 creates them in your workspace.
 
 \code{SM5_1.5} columns: \code{$aru.name}, \code{$date}, \code{$time},
-\code{$lat}, \code{$ns}, \code{$longitude}, \code{$ew}, \code{$power.v},
+\code{$latitude}, \code{$ns}, \code{$longitude}, \code{$ew}, \code{$power.v},
 \code{$temperature.c}, \code{$acfiles}, \code{$fs1files},
 \code{$fs2files}, \code{$zc1files}, \code{$zc2files}, \code{$scrub1},
-\code{$scrub2}, \code{$X}, \code{$Y}.
+\code{$scrub2}.
 
 \code{SM5_1.6} columns: \code{$aru.name}, \code{$date}, \code{$time},
-\code{$lat}, \code{$ns}, \code{$longitude}, \code{$ew}, \code{$power.v},
-\code{$temperature.c}, \code{$acfiles}, \code{$acl}, \code{$acr},
-\code{$X}, \code{$Y}.
+\code{$latitude}, \code{$ns}, \code{$longitude}, \code{$ew}, \code{$power.v},
+\code{$temperature.c}, \code{$acfiles}, \code{$acl}, \code{$acr}.
 }
 \description{
 Searches a directory (and, optionally, its subdirectories) for SM5
@@ -68,8 +67,9 @@ activity-log summary files, works out from each file's headers which SM5
 firmware wrote it, and merges each firmware version into its own data
 frame: \code{SM5_1.5} (firmware 1.5 or earlier) and \code{SM5_1.6}
 (firmware 1.6 or later). The ARU name is taken from the file name,
-\code{$date} is converted to \code{YYYY-MM-DD}, and signed decimal-degree
-coordinates (\code{$X}/\code{$Y}) are added.
+\code{$date} is converted to \code{YYYY-MM-DD}, and \code{$latitude} /
+\code{$longitude} are signed decimal degrees (negative when \code{$ns} is
+\code{"S"} / \code{$ew} is \code{"W"}).
 }
 \details{
 Uses the same internal engine (\code{sm.logfile.merge()},
@@ -89,7 +89,8 @@ that is only partly right is assigned the version it most resembles and
 fails with \code{"These headers are missing: ..."}. A file matching no
 layout is logged as \code{"unknown"}.
 
-\strong{Output names.} \code{lon} becomes \code{$longitude},
+\strong{Output names.} \code{lat} becomes \code{$latitude}, \code{lon}
+\code{$longitude},
 \code{power_v} \code{$power.v} and \code{temp_c} \code{$temperature.c}.
 
 \strong{SM4 files are not merged here.} An SM4 file matched by
@@ -98,8 +99,7 @@ layout is logged as \code{"unknown"}.
 \code{batz.merge_sm4.logfiles()} or \code{batz.merge_sm.logfiles()}.
 
 \strong{Not filtered.} Before the unit gets a GPS fix,
-\code{$lat}/\code{$longitude} can be recorded as \code{0}, giving
-\code{$X}/\code{$Y} of 0. Rows from before a deployment are kept; the log
+\code{$latitude}/\code{$longitude} can be recorded as \code{0}. Rows from before a deployment are kept; the log
 shows them as a \code{$date.range} much larger than \code{$date.unique}.
 
 \strong{Note.} The SM5.1.6 layout has only been tested with synthetic

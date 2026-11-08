@@ -40,7 +40,9 @@
 #'   \code{batz.generate_weatherstation.list()} (\code{$station.total} counts
 #'   only picked stations; \code{$sample.interval} is measured over the
 #'   downloaded dates), and \code{$weatherstation.data} - their
-#'   observations: \code{$site}, \code{$station.name}, \code{$station.code},
+#'   observations: \code{$site} (every site the record was picked for,
+#'   separated by ";", e.g. \code{"Clerk;SugarHill"} - see Details),
+#'   \code{$station.name}, \code{$station.code},
 #'   \code{$station.area}, \code{$station.latitude}, \code{$station.longitude},
 #'   then \code{$date.time} (station local time), \code{$date.time_utc} and one
 #'   column per weather type (all 12 types, named for \code{units}), with the
@@ -67,6 +69,13 @@
 #'   and \code{$station.id}), with the number of observations.
 #'
 #' @details
+#' \strong{Stations shared by several sites.} A station picked for more than
+#' one site is downloaded once. Its records (same station and date-time) are
+#' listed once in \code{$weatherstation.data}, with all those sites in
+#' \code{$site} separated by ";" (in the order of \code{data}), and a NOTE
+#' names the shared stations. \code{$weatherstation.list} still has one row
+#' per site and station.
+#'
 #' \strong{Which stations count.} Stations are tried nearest first. A quick
 #' check of the station's current data types (see
 #' \code{batz.generate_weatherstation.list()}) skips one that clearly lacks a
@@ -213,11 +222,36 @@ batz.generate_weatherstation.data <- function(data,
   }
   wl <- do.call(rbind, lists); rownames(wl) <- NULL
   wd <- if (length(obs) > 0) do.call(rbind, obs) else data.frame()
+  wd <- wu.merge.sites(wd)                                    # shared stations: one record, sites joined with ";"
   wd <- wu.units(wd, units)
   rownames(wd) <- NULL
   print(wl[, setdiff(names(wl), c("station.type", "station.id"))], row.names = FALSE)
   cat(sprintf("weatherstation.data: %d observation(s) from %d station(s).\n", nrow(wd), length(unique(wd$station.code))))
   invisible(list(weatherstation.list = wl, weatherstation.data = wd))
+}
+
+#' One row per station record; sites sharing it joined with ";" (internal)
+#'
+#' Records with the same \code{$station.code}, \code{$date.time} and
+#' \code{$date.time_utc} (a station picked for several sites) are kept once,
+#' with \code{$site} = the sites in order of first appearance, separated by
+#' ";". Prints a NOTE naming the shared stations.
+#' @noRd
+wu.merge.sites <- function(wd) {
+  if (nrow(wd) == 0 || !all(c("site", "station.code", "date.time", "date.time_utc") %in% names(wd))) return(wd)
+  k <- paste(wd$station.code, wd$date.time, wd$date.time_utc, sep = "|")
+  if (!anyDuplicated(k)) return(wd)
+  f <- factor(k, levels = unique(k))
+  joined <- vapply(split(as.character(wd$site), f), function(x) paste(unique(x), collapse = ";"), character(1))
+  keep <- !duplicated(k)
+  out <- wd[keep, , drop = FALSE]
+  out$site <- unname(joined[k[keep]])
+  shared <- unique(out[grepl(";", out$site), c("station.code", "site"), drop = FALSE])
+  if (nrow(shared) > 0)
+    cat(sprintf("NOTE: station %s is shared by sites %s - its records are listed once, $site = \"%s\".\n",
+                shared$station.code, gsub(";", ", ", shared$site), shared$site), sep = "")
+  rownames(out) <- NULL
+  out
 }
 
 #' Download one station's observations, d0 to d1, as wunderground.com headers (internal)

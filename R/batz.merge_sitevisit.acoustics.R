@@ -83,7 +83,9 @@
 #'
 #' @return Invisibly, a list: one data frame per form type (\code{$quad},
 #'   \code{$habitat}, \code{$service}, plus any tab added through
-#'   \code{form.list}), \code{$log} (one row per sheet read: \code{$file},
+#'   \code{form.list}), \code{$deployment.history} and
+#'   \code{$aru.scheduals} (Details, "Deployment history"), \code{$log} (one
+#'   row per sheet read: \code{$file},
 #'   \code{$sheet}, \code{$tab}, \code{$form.version}, \code{$rows},
 #'   \code{$headers.matched}, \code{$headers.not.used}), \code{$headers.db}
 #'   (the Survey123 forms database used, including
@@ -161,6 +163,9 @@
 #'     the habitat \code{$date} is set and the consolidated GlobalID is
 #'     added (below). A column whose type differs between files becomes text.
 #'   \item DBH of trees and snags with more than one trunk (below).
+#'   \item \code{"_other"} values go into their base header (below).
+#'   \item The deployment history and recording schedules are added
+#'     (below).
 #'   \item The workbooks set by \code{project.merged} are written, one tab
 #'     per form type, with the \code{openxlsx} package.
 #' }
@@ -221,6 +226,59 @@
 #' all tabs) is added to every record of that site as
 #' \code{$globalid_consolidate}, just after \code{$globalid}. A tab without all
 #' the \code{header.combo} headers is left unchanged (NOTE).
+#'
+#' \strong{"_other" headers.} For every header ending in \code{"_other"}
+#' (e.g. \code{$equipment.replace_other}, \code{$action.performed_other}),
+#' its value goes into the base header: the name without \code{"_other"}, or
+#' one differing only by a plural "s" (\code{$action.performed_other} goes
+#' into \code{$actions.performed}). An \code{"other"} entry in the base
+#' value is replaced by it; a blank base takes it; otherwise it is added
+#' after \code{"; "} (or \code{","} when the base list uses commas). The
+#' \code{"_other"} column is then removed. A NOTE names the headers merged.
+#'
+#' \strong{Deployment history.} Each workbook gets two more tabs:
+#' \itemize{
+#'   \item \code{deployment history} (\code{$deployment.history} in R): one
+#'     row per deployment (each habitat record: \code{$visit.reason}
+#'     \code{"deployment"}, \code{$date} = \code{$date.deployment},
+#'     \code{$actions.performed} \code{"Deployment; Habitat Assessment"}) and
+#'     per site visit (each service record; a blank
+#'     \code{$actions.performed} takes \code{$visit.reason}), ordered by
+#'     project, site and date, with the headers \code{$form.version},
+#'     \code{$objectid}, \code{$globalid}, \code{$globalid_consolidate},
+#'     \code{$date}, \code{$time}, \code{$project.name},
+#'     \code{$aru.name}, \code{$site} (\code{$aru.name} when the form has
+#'     no site), \code{$longitude}, \code{$latitude}, \code{$state},
+#'     \code{$visit.reason}, \code{$personnel.bri}, \code{$notes},
+#'     \code{$aru.serial}, \code{$microphone.serial},
+#'     \code{$aru.schedule}, \code{$power.serial}, \code{$hobo.serial},
+#'     \code{$actions.performed}, \code{$equipment.replace},
+#'     \code{$aru.serial_new}, \code{$microphone.serial_new},
+#'     \code{$aru.schedule_new}, \code{$aru.moved},
+#'     \code{$hobo.serial_new}, \code{$microphone.calibration_value},
+#'     \code{$power.serial_new}, \code{$personnel.other},
+#'     \code{$creationdate}, \code{$creator}, \code{$editdate},
+#'     \code{$editor}. Headers a form doesn't have are blank.
+#'   \item \code{aru.scheduals}: the rows of the \code{aru.scheduals} tab of
+#'     Batz_reference_db for the schedules in the deployment history (the
+#'     project's own, in a project's workbook): \code{$survey123.name},
+#'     \code{$header.name}, \code{$header.value}, \code{$aru.schedule},
+#'     \code{$aru.schedule_divisions}, \code{$frequencey},
+#'     \code{$time.on}, \code{$time.off}, \code{$recording.type},
+#'     \code{$recording.interval}.
+#' }
+#' A record's schedule comes from the \code{aru.scheduals} tab: a row
+#' applies when its \code{$survey123.name} (without the
+#' \code{"survey123."} / \code{"survey123_"} start) is the tab name (e.g.
+#' \code{habitat}) or the record's \code{$form.version}, its
+#' \code{$header.name} is one of the record's headers, and its
+#' \code{$header.value} is the record's value (or one entry of a list),
+#' ignoring case, spaces and dash type (so \code{"Summer - Acoustic"} gives
+#' \code{USFWS.compliance}). A record's own \code{$aru.schedule} naming a
+#' schedule is used when no row matches. \code{$aru.schedule} of every row
+#' is the schedule in effect at the site (set at deployment); a site visit
+#' whose own schedule differs gives the new one in \code{$aru.schedule_new}.
+#' Rows with no schedule are named in a NOTE.
 #'
 #' \strong{ARU list.} With \code{generate.arulist = TRUE}, one row per site
 #' (\code{header.combo}: project name + \code{$aru.name}) with the headers
@@ -663,6 +721,17 @@ batz.merge_sitevisit.acoustics <- function(dir.load = getwd(),
   ## --- 5c. DBH: extra trunks merged into one column + overall DBH -----------
   for (t in tabs) out[[t]] <- sitevisit.dbh.merge(out[[t]])
 
+  ## --- 5d. "_other" values into their base header (2026-11-07, per Josh) ---
+  for (t in tabs) out[[t]] <- sitevisit.other.merge(out[[t]], t)
+
+  ## --- 5e. deployment history + recording schedules (2026-11-07, per Josh) --
+  sch <- sitevisit.schedules()
+  out[["deployment.history"]] <- sitevisit.deployment.history(out[tabs], sch)
+  used <- unique(c(out$deployment.history$aru.schedule, out$deployment.history$aru.schedule_new))
+  out[["aru.scheduals"]] <- sch[sch$aru.schedule %in% used, , drop = FALSE]
+  rownames(out$aru.scheduals) <- NULL
+  tabs.w <- c(tabs, "deployment.history", "aru.scheduals")
+
   ## --- 6. write (2026-11-06, per Josh: project.merged) -----------------------
   ## projects kept, spelled as in the data (first spelling of each)
   pj.all <- unlist(lapply(tabs, function(t) if ("project.name" %in% names(out[[t]])) as.character(out[[t]]$project.name)))
@@ -677,23 +746,27 @@ batz.merge_sitevisit.acoustics <- function(dir.load = getwd(),
   if (!dir.exists(dir.save)) dir.create(dir.save, recursive = TRUE)
   write.one <- function(tabs.out, lead) {
     path <- file.path(dir.save, paste0(clean(lead), "_", tail.name))
-    openxlsx::write.xlsx(tabs.out, path, overwrite = TRUE)
+    sheets <- tabs.out; names(sheets)[names(sheets) == "deployment.history"] <- "deployment history"
+    openxlsx::write.xlsx(sheets, path, overwrite = TRUE)
     cat("Saved:", path, "\n")
-    for (t in tabs) cat("  ", t, ": ", nrow(tabs.out[[t]]), " row(s)\n", sep = "")
+    for (t in names(sheets)) cat("  ", t, ": ", nrow(sheets[[t]]), " row(s)\n", sep = "")
     path
   }
   path <- character(0)
   if (pm %in% c("FALSE", "BOTH")) {
     if (length(pj.all) == 0) cat("NOTE: no project names in the files - no per-project workbook written.\n")
     for (p in pj.all) {
-      one <- lapply(out[tabs], function(d) {
+      one <- lapply(out[tabs.w], function(d) {
         if (!"project.name" %in% names(d)) return(d[0, , drop = FALSE])
         d <- d[pk(d$project.name) %in% pk(p), , drop = FALSE]; rownames(d) <- NULL; d
       })
+      dh.p <- one$deployment.history                       # schedules used by this project
+      one$aru.scheduals <- out$aru.scheduals[out$aru.scheduals$aru.schedule %in%
+                                               c(dh.p$aru.schedule, dh.p$aru.schedule_new), , drop = FALSE]
       path[p] <- write.one(one, p)
     }
   }
-  if (pm %in% c("TRUE", "BOTH") || length(pj.all) == 0) path["Multipleprojects"] <- write.one(out[tabs], "Multipleprojects")
+  if (pm %in% c("TRUE", "BOTH") || length(pj.all) == 0) path["Multipleprojects"] <- write.one(out[tabs.w], "Multipleprojects")
   if (n.unknown > 0) cat(n.unknown, ' have no associated project name, the value  "unknown.check"\n', sep = "")
 
   ## --- 7. ARU list (2026-11-06, per Josh) -------------------------------------
@@ -826,9 +899,14 @@ sitevisit.to.date <- function(v) {
   if (inherits(v, "Date")) return(v)
   if (inherits(v, "POSIXt")) return(as.Date(format(v, "%Y-%m-%d")))
   v <- trimws(as.character(v)); out <- rep(as.Date(NA), length(v))
-  for (fm in c("%Y-%m-%d", "%Y/%m/%d", "%m/%d/%Y", "%m-%d-%Y", "%Y%m%d")) {
-    todo <- is.na(out) & !is.na(v) & nzchar(v)
-    if (any(todo)) out[todo] <- as.Date(substr(v[todo], 1, if (fm == "%Y%m%d") 8 else 10), format = fm, optional = TRUE)
+  ## each format only for values shaped like it (a 4-digit year where %Y is), so 7/1/2026 is never year 7
+  fmts <- c("%Y-%m-%d" = "^[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}", "%Y/%m/%d" = "^[0-9]{4}/[0-9]{1,2}/[0-9]{1,2}",
+            "%m/%d/%Y" = "^[0-9]{1,2}/[0-9]{1,2}/[0-9]{4}", "%m-%d-%Y" = "^[0-9]{1,2}-[0-9]{1,2}-[0-9]{4}",
+            "%Y%m%d" = "^[0-9]{8}($|[^0-9])")
+  for (fm in names(fmts)) {
+    todo <- is.na(out) & !is.na(v) & grepl(fmts[[fm]], v)
+    if (any(todo)) out[todo] <- as.Date(regmatches(v[todo], regexpr(sub("\\(\\$\\|\\[\\^0-9\\]\\)$", "", fmts[[fm]]), v[todo])),
+                                        format = fm, optional = TRUE)
   }
   todo <- is.na(out) & grepl("^[0-9]{5}(\\.[0-9]+)?$", v)               # Excel serial number
   if (any(todo)) out[todo] <- as.Date(floor(as.numeric(v[todo])), origin = "1899-12-30")
@@ -1015,4 +1093,204 @@ sitevisit.arulist <- function(out, sunregion = "discrete", date.buffer = "1 mont
   rownames(al) <- NULL
   al[, c("project.name", "aru.name", "longitude", "latitude", "date.start", "date.end", "time.zone", "sunregion",
          "sunregion.longitude", "sunregion.latitude", "sunregion_date.start", "sunregion_date.end")]
+}
+
+
+#' "_other" values into their base header (internal)
+#'
+#' For every header ending in "_other" whose base header (the name without
+#' "_other", or one differing only by a plural "s") is in the same tab: an "other" entry in the base value is
+#' replaced by the "_other" value; a blank base takes the "_other" value;
+#' otherwise the "_other" value is added after "; " (unless already there).
+#' The "_other" column is then removed. A NOTE names the headers merged.
+#' @keywords internal
+#' @noRd
+sitevisit.other.merge <- function(d, tab = "") {
+  if (is.null(d) || !ncol(d)) return(d)
+  ## base header: the name without "_other"; when that isn't a header, one that
+  ## differs only by a plural "s" (e.g. action.performed_other -> actions.performed)
+  sing <- function(x) gsub("s(?=[._]|$)", "", x, perl = TRUE)
+  base.of <- function(o) {
+    b <- sub("_other$", "", o)
+    if (b %in% names(d)) return(b)
+    c2 <- setdiff(names(d)[sing(names(d)) == sing(b)], o)
+    if (length(c2)) c2[1] else NA_character_
+  }
+  oth <- grep("_other$", names(d), value = TRUE)
+  bases <- vapply(oth, base.of, character(1))
+  oth <- oth[!is.na(bases)]; bases <- bases[!is.na(bases)]
+  if (!length(oth)) return(d)
+  blank <- function(x) is.na(x) | !nzchar(trimws(x)) | tolower(trimws(x)) %in% c("na", "n/a")
+  for (q in seq_along(oth)) {
+    o <- oth[q]; b <- bases[[q]]
+    bv <- as.character(d[[b]]); ov <- trimws(as.character(d[[o]]))
+    for (i in which(!blank(ov))) {
+      if (blank(bv[i])) { bv[i] <- ov[i]; next }
+      sep <- if (grepl(";", bv[i])) ";" else if (grepl(",", bv[i])) "," else ";"
+      tok <- trimws(strsplit(bv[i], "[,;]")[[1]])
+      if (any(tolower(tok) == "other")) tok[tolower(tok) == "other"] <- ov[i]
+      else if (!tolower(ov[i]) %in% tolower(tok)) tok <- c(tok, ov[i])
+      bv[i] <- paste(unique(tok[nzchar(tok)]), collapse = paste0(sep, if (sep == ";") " " else ""))
+    }
+    d[[b]] <- bv
+    d[[o]] <- NULL
+  }
+  cat("NOTE: ", tab, " - \"_other\" values merged into ", paste(unname(bases), collapse = ", "),
+      " (columns ", paste(oth, collapse = ", "), " removed).\n", sep = "")
+  d
+}
+
+
+#' Recording schedules from Batz_reference_db (internal)
+#'
+#' The aru.scheduals table: $survey123.name, $header.name, $header.value,
+#' $aru.schedule, $aru.schedule_divisions, $frequencey, $time.on,
+#' $time.off, $recording.type, $recording.interval. Empty (with a NOTE) when
+#' the installed package has no such table.
+#' @keywords internal
+#' @noRd
+sitevisit.schedules <- function() {
+  hd <- c("survey123.name", "header.name", "header.value", "aru.schedule", "aru.schedule_divisions",
+          "frequencey", "time.on", "time.off", "recording.type", "recording.interval")
+  d <- tryCatch(batz.db("aru.scheduals"), error = function(e) NULL)
+  if (is.null(d)) {
+    cat("NOTE: Batz has no aru.scheduals table - run batz.util_refdb.sync() and reinstall; $aru.schedule left blank.\n")
+    return(as.data.frame(setNames(replicate(length(hd), character(0), simplify = FALSE), hd), stringsAsFactors = FALSE))
+  }
+  if (!"frequencey" %in% names(d) && "frequency" %in% names(d)) names(d)[names(d) == "frequency"] <- "frequencey"
+  for (h in names(d)) { v <- trimws(as.character(d[[h]])); v[is.na(v)] <- ""; d[[h]] <- v }
+  for (h in setdiff(hd, names(d))) d[[h]] <- rep("", nrow(d))
+  d <- d[, c(hd, setdiff(names(d), hd)), drop = FALSE]
+  d[!is.na(d$aru.schedule) & nzchar(trimws(d$aru.schedule)), , drop = FALSE]
+}
+
+
+#' $aru.schedule of each record of a tab, from the aru.scheduals table (internal)
+#'
+#' A schedule row applies to the tab when its $survey123.name, without the
+#' "survey123." / "survey123_" start, is blank, the tab name or the
+#' record's $form.version; its $header.name is a header of the tab; and its
+#' $header.value matches the record's value (or one entry of a ","/";" list)
+#' ignoring case, spaces and dash type. A record's own $aru.schedule naming a
+#' schedule is used when nothing else matches. NA when nothing matches.
+#' @keywords internal
+#' @noRd
+sitevisit.schedule.of <- function(d, tab, sch) {
+  n <- if (is.null(d)) 0 else nrow(d)
+  out <- rep(NA_character_, n)
+  if (!n || !nrow(sch)) return(out)
+  norm <- function(x) {                                     # case, spaces and dash type ignored
+    x <- enc2utf8(as.character(x))
+    for (ch in intToUtf8(c(0x2012, 0x2013, 0x2014, 0x2212), multiple = TRUE))   # figure/en/em dash, minus
+      x <- gsub(ch, "-", x, fixed = TRUE, useBytes = TRUE)
+    gsub("\\s+", "", tolower(x))
+  }
+  key <- function(x) tolower(gsub("[^A-Za-z0-9]", "", x))
+  fv <- if ("form.version" %in% names(d)) norm(d$form.version) else rep("", n)
+  m <- unique(sch[, c("survey123.name", "header.name", "header.value", "aru.schedule")])
+  scope <- sub("^survey123[._]?", "", norm(m$survey123.name))
+  hits <- vector("list", n)
+  for (k in seq_len(nrow(m))) {
+    j <- match(key(m$header.name[k]), key(names(d)))
+    if (is.na(j)) next
+    ok.scope <- scope[k] %in% c("", norm(tab)) | fv == scope[k]
+    if (!any(ok.scope)) next
+    v <- norm(d[[j]])
+    hit <- ok.scope & !is.na(v) & (v == norm(m$header.value[k]) |
+             vapply(strsplit(ifelse(is.na(v), "", v), "[,;]"), function(t) norm(m$header.value[k]) %in% trimws(t), logical(1)))
+    for (i in which(hit)) hits[[i]] <- c(hits[[i]], m$aru.schedule[k])
+  }
+  if ("aru.schedule" %in% names(d)) {                       # a record's own schedule name
+    own <- trimws(as.character(d$aru.schedule))
+    known <- unique(sch$aru.schedule)
+    for (i in which(vapply(hits, length, 1L) == 0 & norm(own) %in% norm(known)))
+      hits[[i]] <- known[match(norm(own[i]), norm(known))]
+  }
+  for (i in seq_len(n)) if (length(hits[[i]])) out[i] <- paste(unique(hits[[i]]), collapse = ";")
+  many <- grepl(";", out)
+  if (any(many)) cat("NOTE: ", tab, " - ", sum(many), " record(s) match more than one aru.schedule: ",
+                     paste(unique(out[many]), collapse = " | "), "\n", sep = "")
+  out
+}
+
+
+#' Deployment history: one row per deployment (habitat) and site visit (service) (internal)
+#'
+#' Headers as the "deployment history" tab: form.version ... editor (34).
+#' Habitat records give a "deployment" row (date = $date.deployment,
+#' actions.performed "Deployment; Habitat Assessment"); service records give
+#' one row each (blank $actions.performed takes $visit.reason). $aru.schedule
+#' is the schedule in effect at the site; a service visit whose own schedule
+#' differs gives it in $aru.schedule_new. Ordered by project, site and date.
+#' @keywords internal
+#' @noRd
+sitevisit.deployment.history <- function(tabs, sch) {
+  cols <- c("form.version", "objectid", "globalid", "globalid_consolidate", "date", "time", "project.name",
+            "aru.name", "site", "longitude", "latitude", "state", "visit.reason", "personnel.bri", "notes",
+            "aru.serial", "microphone.serial", "aru.schedule", "power.serial", "hobo.serial", "actions.performed",
+            "equipment.replace", "aru.serial_new", "microphone.serial_new", "aru.schedule_new", "aru.moved",
+            "hobo.serial_new", "microphone.calibration_value", "power.serial_new", "personnel.other",
+            "creationdate", "creator", "editdate", "editor")
+  txt <- function(v) { v <- if (inherits(v, "POSIXt")) format(v, "%Y-%m-%d %H:%M:%S") else as.character(v); v[is.na(v)] <- ""; trimws(v) }
+  to.time <- function(v) {                                  # POSIXct, whatever arrives
+    if (inherits(v, "POSIXct")) return(v)
+    v <- txt(v); out <- as.POSIXct(rep(NA_real_, length(v)), origin = "1970-01-01", tz = "UTC")
+    for (fm in c("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d", "%m/%d/%Y %I:%M:%S %p", "%m/%d/%Y %H:%M:%S",
+                 "%m/%d/%Y %H:%M", "%m/%d/%Y")) {
+      todo <- is.na(out) & nzchar(v)
+      if (any(todo)) out[todo] <- as.POSIXct(strptime(v[todo], fm, tz = "UTC"))
+    }
+    ser <- is.na(out) & grepl("^[0-9]{5}(\\.[0-9]+)?$", v)  # Excel serial number
+    if (any(ser)) out[ser] <- as.POSIXct((as.numeric(v[ser]) - 25569) * 86400, origin = "1970-01-01", tz = "UTC")
+    out
+  }
+  get <- function(d, h) if (h %in% names(d)) d[[h]] else rep(NA, nrow(d))
+  build <- function(d, tab, kind) {
+    if (is.null(d) || !nrow(d)) return(NULL)
+    r <- as.data.frame(setNames(lapply(cols, function(h) txt(get(d, h))), cols), stringsAsFactors = FALSE)
+    r$site <- ifelse(nzchar(r$site), r$site, txt(get(d, "aru.name")))
+    r$aru.schedule <- txt(sitevisit.schedule.of(d, tab, sch))
+    r$aru.schedule_new <- ""
+    if (kind == "deployment") {
+      dd <- to.time(get(d, "date.deployment"))
+      alt <- to.time(get(d, "date.habitat.assessment")); dd[is.na(dd)] <- alt[is.na(dd)]
+      r$visit.reason <- "deployment"
+      r$actions.performed <- "Deployment; Habitat Assessment"
+      r$time <- ifelse(is.na(dd), "", format(dd, "%H:%M"))
+    } else {
+      dd <- to.time(get(d, "date"))
+      r$actions.performed <- ifelse(nzchar(r$actions.performed), r$actions.performed, r$visit.reason)
+      r$time <- ifelse(nzchar(r$time), r$time, ifelse(is.na(dd), "", format(dd, "%H:%M")))
+    }
+    r$.dt <- dd; r$.kind <- kind
+    r
+  }
+  dh <- rbind(build(tabs$habitat, "habitat", "deployment"), build(tabs$service, "service", "visit"))
+  if (is.null(dh) || !nrow(dh)) {
+    e <- as.data.frame(setNames(replicate(length(cols), character(0), simplify = FALSE), cols), stringsAsFactors = FALSE)
+    e$date <- as.POSIXct(character(0), tz = "UTC")
+    return(e)
+  }
+  pk <- function(x) gsub("\\s+", "", tolower(x))
+  dh <- dh[order(pk(dh$project.name), pk(dh$site), dh$.dt, dh$.kind != "deployment"), , drop = FALSE]
+  ## schedule in effect at each site, in date order
+  site.k <- paste(pk(dh$project.name), pk(dh$site))
+  for (s in unique(site.k)) {
+    i <- which(site.k == s); cur <- ""
+    for (k in i) {
+      own <- dh$aru.schedule[k]
+      if (dh$.kind[k] == "deployment") { if (nzchar(own)) cur <- own; dh$aru.schedule[k] <- cur; next }
+      if (nzchar(own) && nzchar(cur) && own != cur) dh$aru.schedule_new[k] <- own
+      dh$aru.schedule[k] <- if (nzchar(cur)) cur else own
+      if (nzchar(own)) cur <- own
+    }
+  }
+  dh$date <- dh$.dt
+  dh <- dh[, cols, drop = FALSE]
+  rownames(dh) <- NULL
+  miss <- !nzchar(dh$aru.schedule)
+  if (any(miss)) cat("NOTE: deployment history - no aru.schedule found for ", sum(miss), " row(s): ",
+                     paste(unique(paste(dh$project.name[miss], "/", dh$site[miss])), collapse = "; "),
+                     " (add the form value to the aru.scheduals tab of Batz_reference_db).\n", sep = "")
+  dh
 }

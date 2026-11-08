@@ -4,8 +4,8 @@
 #' Autonomous Recording Unit (ARU) activity-log summary files, checks each
 #' file's headers, and merges the SM4 files into one data frame,
 #' \code{sm4logs.merged}. The ARU name is taken from the file name,
-#' \code{$date} is converted to \code{YYYY-MM-DD}, and signed decimal-degree
-#' coordinates (\code{$X}/\code{$Y}) are added. Optionally returns a log with
+#' \code{$date} is converted to \code{YYYY-MM-DD}, and \code{$latitude} /
+#' \code{$longitude} are signed decimal degrees. Optionally returns a log with
 #' one row per file examined.
 #'
 #' @param dir.load Character. Directory to search for files matching
@@ -37,9 +37,9 @@
 #'   your workspace.
 #'
 #'   \code{sm4logs.merged} columns: \code{$aru.name}, \code{$date},
-#'   \code{$time}, \code{$lat}, \code{$ns}, \code{$longitude}, \code{$ew},
+#'   \code{$time}, \code{$latitude}, \code{$ns}, \code{$longitude}, \code{$ew},
 #'   \code{$power.v}, \code{$temperature.c}, \code{$files}, \code{$scrubbed},
-#'   \code{$mic0.type}, \code{$X}, \code{$Y}. It is an empty
+#'   \code{$mic0.type}. It is an empty
 #'   \code{data.frame()} (with a printed message) if no file loaded.
 #'
 #'   \code{log.file_sm4} columns:
@@ -80,7 +80,8 @@
 #' \code{standardize.headers()} (trimmed, lower case, runs of punctuation or
 #' spaces become \code{"_"}). An SM4 file has \code{DATE, TIME, LAT, NS, LON,
 #' EW, POWER(V), TEMP(C), #FILES, #SCRUBBED, MIC0 TYPE}. In the output,
-#' \code{lon} becomes \code{$longitude}, \code{power_v} \code{$power.v},
+#' \code{lat} becomes \code{$latitude}, \code{lon} \code{$longitude},
+#' \code{power_v} \code{$power.v},
 #' \code{temp_c} \code{$temperature.c} and \code{mic0_type}
 #' \code{$mic0.type}. Extra columns are dropped and do not cause a failure.
 #'
@@ -109,10 +110,10 @@
 #' \code{$date.unique} but not in \code{$date.start}, \code{$date.end} or
 #' \code{$date.range}.
 #'
-#' \strong{Coordinates.} \code{$lat}/\code{$longitude} are already decimal
-#' degrees. \code{$Y} is \code{$lat}, negative when \code{$ns} is
-#' \code{"S"}; \code{$X} is \code{$longitude}, negative when \code{$ew} is
-#' \code{"W"}. The original columns are kept.
+#' \strong{Coordinates.} The log's \code{LAT}/\code{LON} are decimal degrees
+#' without a sign. \code{$latitude} is made negative when \code{$ns} is
+#' \code{"S"}, and \code{$longitude} when \code{$ew} is \code{"W"};
+#' \code{$ns} and \code{$ew} are kept.
 #'
 #' \strong{Duplicates.} A \code{" - Copy"} file identical to its original
 #' adds identical rows; \code{duplicates.remove = TRUE} drops them from

@@ -7,7 +7,7 @@
 batz.plotsm4_heatmap(
   data,
   fig.list,
-  suntimes,
+  suntimes = NULL,
   aes.default = NULL,
   project.name = "new.project",
   aes.style = "override.value",
@@ -34,7 +34,9 @@ See Details.
 Cells holding "NA" (a heading not used by this plot type, as in
 \code{\link{batz.generate_figlist}}) are treated as blank.}
 
-\item{suntimes}{Data frame of sunrise and sunset times, e.g. the output of
+\item{suntimes}{Optional, default \code{NULL}: no Dawn and Dusk lines are
+drawn (the Midnight line still is). Otherwise a data frame of sunrise
+and sunset times, e.g. the output of
 \code{\link{batz.generate_suntimes.arulist}}. Required columns:
 \code{$aru.name}, \code{$date}, \code{$date.monitoringnight},
 \code{$sunregion}, \code{$time.zone}, \code{$sunregion.type},

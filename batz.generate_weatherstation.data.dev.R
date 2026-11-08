@@ -86,5 +86,17 @@ w8b <- batz.generate_weatherstation.list(both, station.max = 1)
 stopifnot(identical(unique(w8b$site), test.data$site))
 # arulist <- read.csv("bristol.arulist.csv"); batz.generate_weatherstation.list(arulist)
 
+## ---- TEST 9: a station shared by several sites (2026-11-06) ------------------
+## Clerk and SugarHill are ~0.5 km apart, so they pick the same stations:
+## each record is listed once, $site = "Clerk;SugarHill"
+arulist <- data.frame(aru.name = c("Clerk", "SugarHill"),
+                      latitude = c(43.59224283, 43.59525033), longitude = c(-71.7364705, -71.73053717))
+w9 <- batz.generate_weatherstation.data(arulist, station.max = 1,
+                                        date.start = "2026-06-26", date.end = "2026-06-26")   # NOTE: station ... is shared by sites Clerk, SugarHill
+table(w9$weatherstation.data$site)
+stopifnot(!anyDuplicated(w9$weatherstation.data[, c("station.code", "date.time_utc")]),
+          any(w9$weatherstation.data$site == "Clerk;SugarHill"))
+w9$weatherstation.list[, c("site", "station.code")]          # still one row per site and station
+
 ## ---- save ------------------------------------------------------------------
 # write.csv(w1$weatherstation.data, "weatherstation.data.csv", row.names = FALSE)
