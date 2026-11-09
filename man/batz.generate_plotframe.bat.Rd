@@ -46,7 +46,11 @@ to midnight.}
 
 \item{groupby}{Character, default \code{"aru.name"}. Name of the column to
 group by (e.g. \code{"aru.name"} for each detector, or
-\code{"deployment.type"}).}
+\code{"deployment.type"}). Not case sensitive: the name is matched to a
+column of \code{data} ignoring case, spaces, dots and underscores, and
+values that differ only in case or leading/trailing spaces (e.g.
+\code{"Ayers"}, \code{"AYERS"}) are one group, shown in \code{$group}
+with the spelling used most often (NOTE).}
 
 \item{alldetections}{Logical, default \code{TRUE}. If \code{TRUE}, adds
 \code{"All Detections"} rows (species combined) to the per-species rows.

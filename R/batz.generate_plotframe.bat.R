@@ -26,7 +26,11 @@
 #'   to midnight.
 #' @param groupby Character, default \code{"aru.name"}. Name of the column to
 #'   group by (e.g. \code{"aru.name"} for each detector, or
-#'   \code{"deployment.type"}).
+#'   \code{"deployment.type"}). Not case sensitive: the name is matched to a
+#'   column of \code{data} ignoring case, spaces, dots and underscores, and
+#'   values that differ only in case or leading/trailing spaces (e.g.
+#'   \code{"Ayers"}, \code{"AYERS"}) are one group, shown in \code{$group}
+#'   with the spelling used most often (NOTE).
 #' @param alldetections Logical, default \code{TRUE}. If \code{TRUE}, adds
 #'   \code{"All Detections"} rows (species combined) to the per-species rows.
 #'   If \code{FALSE}, returns the per-species rows only.
@@ -299,6 +303,33 @@ batz.generate_plotframe.bat <- function(data,
   }
   data <- data.canon$df
 
+  ## groupby (2026-11-09, per Josh): not case sensitive - the column name is
+  ## matched ignoring case, spaces, "." and "_", and its values are grouped
+  ## ignoring case and leading/trailing spaces (shown with the spelling used
+  ## most often in data).
+  gb.key <- function(x) gsub("[^a-z0-9]", "", tolower(x))
+  if (!(groupby %in% names(data))) {
+    hit <- names(data)[gb.key(names(data)) == gb.key(groupby)]
+    if (length(hit)) {
+      cat(sprintf("NOTE: groupby = \"%s\" matched to the column $%s.\n", groupby, hit[1]))
+      groupby <- hit[1]
+    }
+  }
+  if (groupby %in% names(data)) {
+    gv <- trimws(as.character(data[[groupby]]))
+    lk <- tolower(gv)
+    tab <- table(lk[!is.na(gv)], gv[!is.na(gv)])
+    if (nrow(tab)) {
+      pick <- stats::setNames(colnames(tab)[apply(tab, 1, which.max)], rownames(tab))
+      merged <- rownames(tab)[rowSums(tab > 0) > 1]
+      if (length(merged)) cat(sprintf("NOTE: groupby $%s - values that differ only in case are grouped together: %s.\n", groupby,
+                                      paste(vapply(merged, function(m) paste(colnames(tab)[tab[m, ] > 0], collapse = " = "), character(1)),
+                                            collapse = "; ")))
+      gv[!is.na(gv)] <- unname(pick[lk[!is.na(gv)]])
+    }
+    data[[groupby]] <- gv
+  }
+
   for (colname in c(spp.id, groupby.date, groupby)) {
     if (!(colname %in% names(data))) {
       stop("`", colname, "` (from spp.id/groupby.date/groupby) is not ",
@@ -407,7 +438,8 @@ batz.generate_plotframe.bat <- function(data,
          "but none had both an `$aru`/`$aru_name` and `$sunregion` column - cannot look up $sunregion.")
   }
 
-  data$sunregion <- arulist$sunregion[match(data$aru.name, arulist$aru.name)]
+  ## matched ignoring case and leading/trailing spaces (2026-11-09)
+  data$sunregion <- arulist$sunregion[match(tolower(trimws(data$aru.name)), tolower(trimws(arulist$aru.name)))]
   unmatched.arus <- unique(data$aru.name[is.na(data$sunregion)])
   if (length(unmatched.arus) > 0) {
     warning("$aru.name value(s) not found in the loaded arulist - $sunregion will be NA for: ",

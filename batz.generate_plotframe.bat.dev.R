@@ -857,4 +857,26 @@ r18.other.spp.id <- batz.generate_plotframe.bat(blank.data18b, spp.id = "manid.k
 cat("a non-default spp.id column (\"manid.kp\") with trim.noid = TRUE still gets the NOID fill-in, not removal (expected TRUE)?",
     "NOID" %in% r18.other.spp.id$spp.id, "\n\n")
 
+cat("=== TEST 19 (2026-11-09): groupby is not case sensitive ===\n")
+## runs the INSTALLED package function (Batz::), not the copy in SECTION 1;
+## self-contained made-up records and arulist
+library(Batz)
+d19 <- file.path(tempdir(), "groupby_case"); dir.create(d19, showWarnings = FALSE)
+write.csv(data.frame(aru.name = c("Ayers", "Clerk"), sunregion = "Bristol"), file.path(d19, "test.arulist.csv"), row.names = FALSE)
+t19 <- sprintf("2%d:00:00", 1:8 %% 4)
+x19 <- data.frame(filename = paste0("f", 1:8, ".wav"), date.monitoringnight = "2026-06-26",
+  manid = "EPFU", autoid.kp = "EPFU", autoid.sb = "EPFU", lat = 43.6, aru.serial = rep(c("S1", "S2"), each = 4),
+  longitude = -71.7, aru.name = c("Ayers", "AYERS", "ayers ", "Ayers", "Clerk", "CLERK", "Clerk", "clerk"),
+  date = "2026-06-26", time = t19, call.datetime = paste("2026-06-26", t19), manid.sb = "EPFU",
+  deployment.type = c("Ground", "GROUND", "ground", "Ground", "Tree", "tree", "Tree", "TREE"))
+## values differing only in case are one group, shown with the most used spelling (NOTE)
+r19 <- Batz::batz.generate_plotframe.bat(x19, dir.load = d19)
+print(r19[, c("spp.id", "group", "aru.name", "sunregion", "observations.count")])
+stopifnot(setequal(r19$group, c("Ayers", "Clerk")), all(r19$observations.count == 4), all(r19$sunregion == "Bristol"))
+## the groupby name itself: case, spaces, "." and "_" ignored (NOTE names the column used)
+r19b <- Batz::batz.generate_plotframe.bat(x19, dir.load = d19, groupby = "Deployment_Type")
+print(r19b[, c("spp.id", "group", "groupedby", "observations.count")])
+stopifnot(setequal(r19b$group, c("Ground", "Tree")), all(r19b$groupedby == "deployment.type"), all(r19b$observations.count == 4))
+cat("TEST 19 passed\n\n")
+
 cat("\nAll dev-script tests completed.\n")
