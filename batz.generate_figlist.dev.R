@@ -22,11 +22,9 @@ View(f$descriptions)
 ok(identical(openxlsx::getSheetNames(f$file), c("fig.list", "descriptions")), "two tabs: fig.list, descriptions")
 ok(all(nzchar(f$descriptions$description)), "every heading has a description")
 ok(identical(names(f$descriptions), c("header", "required.in", "optional.in", "description")), "descriptions headers")
-
-## 1b. Same headings, same order, for every plot type; "NA" = not used by that plot type
-print(t(f$fig.list))
-ok(all(f$fig.list[f$fig.list$plot.type == "sm4.heatmap", c("facet.set", "myso", "bin.colors")] == "NA"), "sm4.heatmap row: unused headings are NA")
-ok(all(f$fig.list[f$fig.list$plot.type == "sm4.heatmap", c("plot.name", "plot.set", "date.start")] == ""), "sm4.heatmap row: its own headings are blank")
+## $plot first, every starter row FALSE (a model row), headings grouped as in Batz_reference_db FIGLIST_all (2026-11-09)
+ok(identical(names(f$fig.list)[1:3], c("plot", "plot.type", "plot.name")) && all(f$fig.list$plot == "FALSE"), "$plot first, model rows FALSE")
+print(names(f$fig.list))   # plot, plot.type, plot.name | data: plot.set ... pool | facets | columns / time | X axis | Y axis | Y right | legend / bins
 
 ## 2. Only some functions; project name in the file name
 f2 <- batz.generate_figlist(functions = c("batz.plotsm4_heatmap", "batz.plotdetections_first.last"),
@@ -34,8 +32,7 @@ f2 <- batz.generate_figlist(functions = c("batz.plotsm4_heatmap", "batz.plotdete
 print(basename(f2$file))                                  # Bristol-NH_fig.list_template_<timestamp>.xlsx
 ok(nrow(f2$fig.list) == 2, "one row per chosen function")
 
-## 3. The template works as a fig.list: fill a row, the other rows are skipped by each function,
-##    and "NA" cells are treated as blank (the setting then comes from plotopts)
+## 3. The template works as a fig.list: fill a row, the other rows are skipped by each function
 fl <- openxlsx::read.xlsx(f$file, "fig.list", check.names = FALSE, sep.names = ".")
 fl[is.na(fl)] <- ""
 i <- fl$plot.type == "sm4.heatmap"

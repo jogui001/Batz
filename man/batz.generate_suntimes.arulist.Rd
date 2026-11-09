@@ -12,7 +12,9 @@ batz.generate_suntimes.arulist(
   dir.save = getwd(),
   project.name = "",
   snake_case = FALSE,
-  strip.special = TRUE
+  strip.special = TRUE,
+  sunregion.update = FALSE,
+  sunregion.list = NULL
 )
 }
 \arguments{
@@ -48,6 +50,19 @@ changed.}
 \item{strip.special}{Logical, default \code{TRUE}. If \code{TRUE},
 simplify or remove non-ASCII characters in each loaded file (see
 Details). Files are always read with a UTF-8/Latin-1 fallback.}
+
+\item{sunregion.update}{Logical, default \code{FALSE}. \code{TRUE} fills
+in or works out \code{$sunregion.longitude} / \code{$sunregion.latitude}
+for each \code{$sunregion} before the calculation (see Details, "Sun
+region coordinates"). \code{FALSE} uses them as given.}
+
+\item{sunregion.list}{Optional, default \code{NULL}. Fixed sun regions: a
+data frame, or the path of a CSV (by convention
+\verb{<project.name>.fixedsunregions.csv}), with \code{$aru.name},
+\code{$sunregion}, \code{$sunregion.longitude},
+\code{$sunregion.latitude}, \code{$date.start} and \code{$date.end}
+(headers matched ignoring case and "." / "_" / spaces). See Details,
+"Fixed sun regions".}
 }
 \value{
 Invisibly, a list with:
@@ -66,6 +81,8 @@ sunset on \code{$date}), \code{$sunregion},
 day, text), and \code{$sunset.unix}, \code{$sunrise.unix},
 \code{$sunrise.monitoringnight.unix} (seconds since 1970-01-01
 UTC). Snake_case names if \code{snake_case = TRUE}.}
+\item{arulist}{The ARU list as used (after \code{sunregion.update}),
+one row per ARU.}
 \item{efficiency}{One-row data frame: \code{$aru.date.rows} (ARU-date
 rows), \code{$site.date_rows.count} (unique site-date rows
 calculated), \code{$shared.sites_count} (sites shared by more than
@@ -142,6 +159,42 @@ either one blank uses its \code{$date.start} to \code{$date.end}. The
 output's \code{$date.start}/\code{$date.end} stay the deployment
 dates.
 }
+
+\strong{Sun region coordinates} (\code{sunregion.update = TRUE}). For each
+\code{$sunregion}, the rows' \code{$sunregion.longitude} /
+\code{$sunregion.latitude} pairs are compared (blank = either one blank):
+\itemize{
+\item all blank, or every row a different pair: the central point (mean
+\code{$longitude} and \code{$latitude} of all its rows, 8 decimals)
+goes into every row;
+\item one pair given, or a pair shared by two or more rows: rows with a
+pair keep it, and blank rows get that pair (the most common one when
+there are several).
+}
+A NOTE lists each sun region changed and how. The ARU list as used is
+returned as \code{$arulist}.
+
+\strong{Fixed sun regions} (\code{sunregion.list}). Each row moves ARU-list
+rows whose \code{$aru.name} or \code{$sunregion} matches its
+\code{$aru.name} (ignoring case, spaces, "." and "_") into its
+\code{$sunregion}, for the dates from its \code{$date.start} to
+\code{$date.end} (a blank date = no limit on that side; dates m/d/Y,
+Y-m-d or m/d/y). Its \code{$sunregion.longitude} /
+\code{$sunregion.latitude}, when given, take precedence over the ARU
+list's. When they are blank, the moved rows take the coordinates of other
+ARUs already in that sun region on the same date (the most common pair),
+else the central point (mean \code{$longitude} / \code{$latitude}) of
+the sun region's ARUs. \code{$sunregion.type} of a moved row is
+\code{"fixed.unique"} when the sun region is the ARU itself, else
+\code{"fixed.pooled"}. This is applied per date, after
+\code{sunregion.update}; a NOTE lists the ARUs moved.
+
+\strong{Conflicts stop the function.} An \code{$aru.name} given more than
+one \code{$sunregion} for overlapping dates (in the list itself, or an
+ARU matched by two rows through its \code{$aru.name} and its
+\code{$sunregion}) stops with a message naming the \code{$aru.name}, the
+sun regions, their dates and the lines of the file to edit (line 1 is the
+header).
 
 \strong{Checks.} \code{$sunregion.type} is trimmed and lower-cased. Rows
 that are not \code{"fixed.unique"} or \code{"fixed.pooled"} (e.g.

@@ -23,6 +23,10 @@
 #'   See Details.
 #'   Cells holding "NA" (a heading not used by this plot type, as in
 #'   \code{\link{batz.generate_figlist}}) are treated as blank.
+#'   Only rows whose \code{$plot} is \code{TRUE} or \code{1} are
+#'   plotted; rows with \code{FALSE}, any other entry or a blank are
+#'   skipped (NOTE). A fig.list with no \code{$plot} column has every
+#'   row plotted (NOTE).
 #' @param suntimes Optional, default \code{NULL}: no Dawn and Dusk lines are
 #'   drawn (the Midnight line still is). Otherwise a data frame of sunrise
 #'   and sunset times, e.g. the output of
@@ -217,6 +221,8 @@ batz.plotsm4_heatmap <- function(data, fig.list, suntimes = NULL,
   objname.fig.list <- paste(deparse(substitute(fig.list)), collapse = "")
   objname.aes.default <- paste(deparse(substitute(aes.default)), collapse = "")
   fig.list <- plotutil_figlist_na(fig.list)       # "NA" = heading not used by this plot type
+  fig.list <- plotutil_figlist_plot(fig.list, "batz.plotsm4_heatmap")   # only rows with $plot = TRUE or 1
+  if (is.data.frame(fig.list) && nrow(fig.list) == 0) return(invisible(list(plots = list(), ggplots = list())))
   if (is.null(aes.default)) aes.default <- plotutil_default_plotopts("batz.plotsm4_heatmap")   # built-in settings
   data <- special.strip(data, strip.special)$df
   ## fig.list is a settings table, not data - stripped only when

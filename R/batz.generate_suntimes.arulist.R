@@ -68,6 +68,42 @@
 #'     dates.
 #' }
 #'
+#' \strong{Sun region coordinates} (\code{sunregion.update = TRUE}). For each
+#' \code{$sunregion}, the rows' \code{$sunregion.longitude} /
+#' \code{$sunregion.latitude} pairs are compared (blank = either one blank):
+#' \itemize{
+#'   \item all blank, or every row a different pair: the central point (mean
+#'     \code{$longitude} and \code{$latitude} of all its rows, 8 decimals)
+#'     goes into every row;
+#'   \item one pair given, or a pair shared by two or more rows: rows with a
+#'     pair keep it, and blank rows get that pair (the most common one when
+#'     there are several).
+#' }
+#' A NOTE lists each sun region changed and how. The ARU list as used is
+#' returned as \code{$arulist}.
+#'
+#' \strong{Fixed sun regions} (\code{sunregion.list}). Each row moves ARU-list
+#' rows whose \code{$aru.name} or \code{$sunregion} matches its
+#' \code{$aru.name} (ignoring case, spaces, "." and "_") into its
+#' \code{$sunregion}, for the dates from its \code{$date.start} to
+#' \code{$date.end} (a blank date = no limit on that side; dates m/d/Y,
+#' Y-m-d or m/d/y). Its \code{$sunregion.longitude} /
+#' \code{$sunregion.latitude}, when given, take precedence over the ARU
+#' list's. When they are blank, the moved rows take the coordinates of other
+#' ARUs already in that sun region on the same date (the most common pair),
+#' else the central point (mean \code{$longitude} / \code{$latitude}) of
+#' the sun region's ARUs. \code{$sunregion.type} of a moved row is
+#' \code{"fixed.unique"} when the sun region is the ARU itself, else
+#' \code{"fixed.pooled"}. This is applied per date, after
+#' \code{sunregion.update}; a NOTE lists the ARUs moved.
+#'
+#' \strong{Conflicts stop the function.} An \code{$aru.name} given more than
+#' one \code{$sunregion} for overlapping dates (in the list itself, or an
+#' ARU matched by two rows through its \code{$aru.name} and its
+#' \code{$sunregion}) stops with a message naming the \code{$aru.name}, the
+#' sun regions, their dates and the lines of the file to edit (line 1 is the
+#' header).
+#'
 #' \strong{Checks.} \code{$sunregion.type} is trimmed and lower-cased. Rows
 #' that are not \code{"fixed.unique"} or \code{"fixed.pooled"} (e.g.
 #' \code{"mobile.unique"}, \code{"mobile.pooled"} or a typo) are dropped
@@ -115,6 +151,17 @@
 #' @param strip.special Logical, default \code{TRUE}. If \code{TRUE},
 #'   simplify or remove non-ASCII characters in each loaded file (see
 #'   Details). Files are always read with a UTF-8/Latin-1 fallback.
+#' @param sunregion.update Logical, default \code{FALSE}. \code{TRUE} fills
+#'   in or works out \code{$sunregion.longitude} / \code{$sunregion.latitude}
+#'   for each \code{$sunregion} before the calculation (see Details, "Sun
+#'   region coordinates"). \code{FALSE} uses them as given.
+#' @param sunregion.list Optional, default \code{NULL}. Fixed sun regions: a
+#'   data frame, or the path of a CSV (by convention
+#'   \verb{<project.name>.fixedsunregions.csv}), with \code{$aru.name},
+#'   \code{$sunregion}, \code{$sunregion.longitude},
+#'   \code{$sunregion.latitude}, \code{$date.start} and \code{$date.end}
+#'   (headers matched ignoring case and "." / "_" / spaces). See Details,
+#'   "Fixed sun regions".
 #'
 #' @return Invisibly, a list with:
 #'   \describe{
@@ -132,6 +179,8 @@
 #'       day, text), and \code{$sunset.unix}, \code{$sunrise.unix},
 #'       \code{$sunrise.monitoringnight.unix} (seconds since 1970-01-01
 #'       UTC). Snake_case names if \code{snake_case = TRUE}.}
+#'     \item{arulist}{The ARU list as used (after \code{sunregion.update}),
+#'       one row per ARU.}
 #'     \item{efficiency}{One-row data frame: \code{$aru.date.rows} (ARU-date
 #'       rows), \code{$site.date_rows.count} (unique site-date rows
 #'       calculated), \code{$shared.sites_count} (sites shared by more than
@@ -160,7 +209,10 @@ batz.generate_suntimes.arulist <- function(dir.load = getwd(),
                                     dir.save = getwd(),
                                     project.name = "",
                                     snake_case = FALSE,
-                                    strip.special = TRUE) {
+                                    strip.special = TRUE,
+                                    sunregion.update = FALSE,
+                                    sunregion.list = NULL) {
+  fixed <- if (is.null(sunregion.list)) NULL else suntimes.read.sunregion.list(sunregion.list, strip.special)
 
   ## convert a plain wildcard/glob suffix pattern (or vector of them) into
   ## one combined regex suitable for list.files()'s pattern= argument
@@ -348,6 +400,10 @@ batz.generate_suntimes.arulist <- function(dir.load = getwd(),
   aru.list$longitude <- as.numeric(aru.list$longitude)
   aru.list$sunregion.longitude <- as.numeric(aru.list$sunregion.longitude)
   aru.list$sunregion.latitude  <- as.numeric(aru.list$sunregion.latitude)
+  if (isTRUE(sunregion.update)) aru.list <- suntimes.sunregion.update(aru.list)
+  no.xy <- is.na(aru.list$sunregion.longitude) | is.na(aru.list$sunregion.latitude)
+  if (any(no.xy)) cat("NOTE:", sum(no.xy), "row(s) have no $sunregion.longitude/$sunregion.latitude - their sun times are blank",
+                      "(sunregion.update = TRUE fills them in):", paste(aru.list$aru.name[no.xy], collapse = ", "), "\n\n")
   aru.list$date.start <- parse.simple.date(aru.list$date.start)
   aru.list$date.end   <- parse.simple.date(aru.list$date.end)
   ## dates sun times are calculated for: $sunregion_date.start/end, else $date.start/end
@@ -426,6 +482,7 @@ batz.generate_suntimes.arulist <- function(dir.load = getwd(),
   ## exact-ARU-coords/computed-mean split. (Purely-internal calc.lat/
   ## calc.long variable names left unchanged - see @details, "Round
   ## twenty-six".)
+  aru.list.used <- aru.list[, setdiff(names(aru.list), c("calc.start", "calc.end")), drop = FALSE]
   aru.list$calc.lat  <- aru.list$sunregion.latitude
   aru.list$calc.long <- aru.list$sunregion.longitude
 
@@ -448,6 +505,7 @@ batz.generate_suntimes.arulist <- function(dir.load = getwd(),
     )
   }
   aru.expand <- do.call(rbind, lapply(seq_len(nrow(aru.list)), expand.one))
+  if (!is.null(fixed)) aru.expand <- suntimes.apply.sunregion.list(aru.expand, fixed)
 
   ## ===========================================================================
   ## efficiency step - collapse to the distinct (sunregion, calc.lat,
@@ -572,5 +630,159 @@ batz.generate_suntimes.arulist <- function(dir.load = getwd(),
   ## its own timeline) - see @details, "Follow-up, 2026-09-22".
   if (snake_case) names(aru.suntimes) <- snake.headers(names(aru.suntimes))
 
-  invisible(list(aru.suntimes = aru.suntimes, efficiency = efficiency))
+  invisible(list(aru.suntimes = aru.suntimes, arulist = aru.list.used, efficiency = efficiency))
+}
+
+
+#' Fill in / work out sun-region coordinates (internal)
+#'
+#' Per $sunregion: all pairs blank, or every row a different pair -> the mean
+#' $longitude / $latitude of the region's rows (8 decimals) for every row;
+#' one pair, or a pair shared by 2+ rows -> rows keep theirs, blank rows get
+#' the (most common) pair. Prints a NOTE per region changed.
+#' @keywords internal
+#' @noRd
+suntimes.sunregion.update <- function(a) {
+  lon <- suppressWarnings(as.numeric(a$sunregion.longitude)); lat <- suppressWarnings(as.numeric(a$sunregion.latitude))
+  blank <- is.na(lon) | is.na(lat)
+  rlon <- suppressWarnings(as.numeric(a$longitude)); rlat <- suppressWarnings(as.numeric(a$latitude))
+  reg <- trimws(as.character(a$sunregion))
+  for (r in unique(reg)) {
+    i <- which(reg == r)
+    pair <- ifelse(blank[i], NA, paste(lon[i], lat[i]))
+    tab <- table(pair[!is.na(pair)])
+    if (length(tab) == 0 || (length(tab) > 1 && all(tab == 1))) {
+      cl <- round(mean(rlon[i], na.rm = TRUE), 8); ct <- round(mean(rlat[i], na.rm = TRUE), 8)
+      if (is.nan(cl) || is.nan(ct)) { cat("NOTE: sunregion '", r, "' - no $longitude/$latitude to work out a central point; left as is.\n", sep = ""); next }
+      lon[i] <- cl; lat[i] <- ct
+      cat(sprintf("NOTE: sunregion '%s' - %s: central point of its %d ARU(s) (%s, %s) used for all.\n", r,
+                  if (length(tab) == 0) "no coordinates" else "every ARU had different coordinates", length(i), cl, ct))
+    } else {
+      keep <- names(tab)[which.max(tab)]
+      j <- i[blank[i]]
+      if (!length(j)) next
+      kp <- as.numeric(strsplit(keep, " ")[[1]])
+      lon[j] <- kp[1]; lat[j] <- kp[2]
+      cat(sprintf("NOTE: sunregion '%s' - %d ARU(s) with blank coordinates given the region's (%s, %s): %s.\n", r, length(j),
+                  kp[1], kp[2], paste(a$aru.name[j], collapse = ", ")))
+    }
+  }
+  a$sunregion.longitude <- lon; a$sunregion.latitude <- lat
+  a
+}
+
+
+#' Read and check a fixed sun-region list (internal)
+#'
+#' Returns the list with $line (file line: row + 1), $k (aru.name key),
+#' $d0 / $d1 (dates, -Inf / Inf when blank). Stops on overlapping
+#' different sun regions for one aru.name.
+#' @keywords internal
+#' @noRd
+suntimes.read.sunregion.list <- function(x, strip.special = TRUE) {
+  FN <- "batz.generate_suntimes.arulist"
+  src <- "sunregion.list"
+  if (is.character(x) && length(x) == 1) {
+    if (!file.exists(x)) stop(FN, ": sunregion.list file not found: ", x, call. = FALSE)
+    src <- basename(x)
+    x <- special.read.csv(x, stringsAsFactors = FALSE, colClasses = "character", check.names = FALSE)
+  }
+  if (!is.data.frame(x)) stop(FN, ": sunregion.list must be a data frame or the path of a CSV.", call. = FALSE)
+  x <- special.strip(x, strip.special)$df
+  need <- c("aru.name", "sunregion", "sunregion.longitude", "sunregion.latitude", "date.start", "date.end")
+  ch <- canonicalize.headers(x, need)
+  if (length(ch$missing)) stop(FN, ": ", src, " is missing these headers: ", paste(ch$missing, collapse = ", "), call. = FALSE)
+  x <- ch$df[, need]
+  for (h in need) { v <- trimws(as.character(x[[h]])); v[is.na(v) | toupper(v) == "NA"] <- ""; x[[h]] <- v }
+  x$line <- seq_len(nrow(x)) + 1L
+  x <- x[nzchar(x$aru.name) & nzchar(x$sunregion), , drop = FALSE]
+  if (!nrow(x)) stop(FN, ": ", src, " has no rows with both $aru.name and $sunregion.", call. = FALSE)
+  key <- function(v) gsub("[^a-z0-9]", "", tolower(v))
+  pd <- function(v) {
+    out <- rep(as.Date(NA), length(v))
+    for (fm in c("%m/%d/%Y", "%Y-%m-%d", "%m/%d/%y")) { todo <- is.na(out) & nzchar(v); if (any(todo)) out[todo] <- as.Date(v[todo], format = fm, optional = TRUE) }
+    out
+  }
+  d0 <- pd(x$date.start); d1 <- pd(x$date.end)
+  bad <- (nzchar(x$date.start) & is.na(d0)) | (nzchar(x$date.end) & is.na(d1))
+  if (any(bad)) stop(FN, ": ", src, " - unreadable date(s) on line(s) ", paste(x$line[bad], collapse = ", "),
+                     " (use m/d/Y, Y-m-d or m/d/y).", call. = FALSE)
+  x$d0 <- ifelse(is.na(d0), -Inf, as.numeric(d0)); x$d1 <- ifelse(is.na(d1), Inf, as.numeric(d1))
+  x$lon <- suppressWarnings(as.numeric(x$sunregion.longitude)); x$lat <- suppressWarnings(as.numeric(x$sunregion.latitude))
+  x$k <- key(x$aru.name); x$src <- src
+  ## conflicts: one aru.name, different sun regions, overlapping dates
+  msg <- character(0)
+  for (k in unique(x$k)) {
+    i <- which(x$k == k)
+    if (length(i) < 2) next
+    for (a in i) for (b in i) if (a < b && key(x$sunregion[a]) != key(x$sunregion[b]) && x$d0[a] <= x$d1[b] && x$d0[b] <= x$d1[a])
+      msg <- c(msg, sprintf("  aru.name '%s': sunregion '%s' (%s to %s, line %d) and '%s' (%s to %s, line %d)",
+                            x$aru.name[a], x$sunregion[a], suntimes.dtxt(x$date.start[a]), suntimes.dtxt(x$date.end[a]), x$line[a],
+                            x$sunregion[b], suntimes.dtxt(x$date.start[b]), suntimes.dtxt(x$date.end[b]), x$line[b]))
+  }
+  if (length(msg)) stop(FN, ": ", src, " gives an aru.name more than one sunregion for overlapping dates - edit these lines:\n",
+                        paste(msg, collapse = "\n"), call. = FALSE)
+  x
+}
+
+#' Blank date shown as "any date" (internal)
+#' @keywords internal
+#' @noRd
+suntimes.dtxt <- function(v) ifelse(nzchar(v), v, "any date")
+
+
+#' Apply a fixed sun-region list to the per-date ARU rows (internal)
+#' @keywords internal
+#' @noRd
+suntimes.apply.sunregion.list <- function(e, fx) {
+  FN <- "batz.generate_suntimes.arulist"
+  key <- function(v) gsub("[^a-z0-9]", "", tolower(as.character(v)))
+  dn <- as.numeric(e$date)
+  hit <- rep(NA_integer_, nrow(e))
+  msg <- character(0)
+  for (r in seq_len(nrow(fx))) {
+    i <- which((key(e$aru.name) == fx$k[r] | key(e$sunregion) == fx$k[r]) & dn >= fx$d0[r] & dn <= fx$d1[r])
+    if (!length(i)) next
+    clash <- i[!is.na(hit[i]) & key(fx$sunregion[hit[i]]) != key(fx$sunregion[r])]
+    if (length(clash)) {
+      for (q in unique(hit[clash])) {
+        j <- clash[hit[clash] == q]
+        msg <- c(msg, sprintf("  aru.name '%s' (sunregion '%s' in the ARU list), %s to %s: sunregion '%s' (line %d, aru.name '%s') and '%s' (line %d, aru.name '%s')",
+                              e$aru.name[j[1]], e$sunregion[j[1]], format(min(e$date[j])), format(max(e$date[j])),
+                              fx$sunregion[q], fx$line[q], fx$aru.name[q], fx$sunregion[r], fx$line[r], fx$aru.name[r]))
+      }
+      next
+    }
+    hit[i] <- r
+  }
+  if (length(msg)) stop(FN, ": ", fx$src[1], " gives an ARU more than one sunregion for the same dates (through its aru.name and its sunregion) - edit these lines:\n",
+                        paste(unique(msg), collapse = "\n"), call. = FALSE)
+  i <- which(!is.na(hit))
+  if (!length(i)) { cat("NOTE: sunregion.list matched no ARU in the ARU list.\n"); return(e) }
+  moved <- unique(paste0(e$aru.name[i], " -> ", fx$sunregion[hit[i]]))
+  e$sunregion[i] <- fx$sunregion[hit[i]]
+  e$sunregion.longitude[i] <- fx$lon[hit[i]]
+  e$sunregion.latitude[i] <- fx$lat[hit[i]]
+  ## blank coordinates: same sun region and date (most common pair), else the region's central point
+  nb <- i[is.na(e$sunregion.longitude[i]) | is.na(e$sunregion.latitude[i])]
+  if (length(nb)) {
+    ok <- !is.na(e$sunregion.longitude) & !is.na(e$sunregion.latitude) & !seq_len(nrow(e)) %in% nb
+    for (g in unique(paste(key(e$sunregion[nb]), dn[nb]))) {
+      j <- nb[paste(key(e$sunregion[nb]), dn[nb]) == g]
+      same <- which(ok & key(e$sunregion) == key(e$sunregion[j[1]]) & dn == dn[j[1]])
+      if (length(same)) {
+        pr <- table(paste(e$sunregion.longitude[same], e$sunregion.latitude[same]))
+        pp <- as.numeric(strsplit(names(pr)[which.max(pr)], " ")[[1]])
+      } else {
+        reg <- which(key(e$sunregion) == key(e$sunregion[j[1]]))
+        u <- unique(e[reg, c("aru.name", "longitude", "latitude")])
+        pp <- c(round(mean(as.numeric(u$longitude), na.rm = TRUE), 8), round(mean(as.numeric(u$latitude), na.rm = TRUE), 8))
+      }
+      e$sunregion.longitude[j] <- pp[1]; e$sunregion.latitude[j] <- pp[2]
+    }
+  }
+  e$calc.long[i] <- e$sunregion.longitude[i]; e$calc.lat[i] <- e$sunregion.latitude[i]
+  e$sunregion.type[i] <- ifelse(key(e$sunregion[i]) == key(e$aru.name[i]), "fixed.unique", "fixed.pooled")
+  cat("NOTE: sunregion.list - ", length(moved), " ARU sun region(s) set: ", paste(moved, collapse = "; "), "\n", sep = "")
+  e
 }

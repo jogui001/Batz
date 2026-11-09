@@ -529,3 +529,28 @@ plotutil_figlist_na <- function(fig.list) {
   }
   fig.list
 }
+
+
+#' fig.list rows to plot: $plot TRUE or 1 (internal)
+#'
+#' Keeps the rows whose $plot is TRUE or 1 (text, number or logical; case
+#' and spaces ignored); FALSE, any other entry or a blank is skipped. With
+#' no $plot column every row is kept. Prints a NOTE either way. Non-data-
+#' frames (e.g. NULL) are returned unchanged.
+#' @keywords internal
+#' @noRd
+plotutil_figlist_plot <- function(fig.list, fn) {
+  if (!is.data.frame(fig.list)) return(fig.list)
+  j <- match("plot", tolower(trimws(names(fig.list))))
+  if (is.na(j)) {
+    cat(sprintf("NOTE: %s - fig.list has no $plot column: every row is plotted.\n", fn))
+    return(fig.list)
+  }
+  v <- toupper(trimws(as.character(fig.list[[j]])))
+  keep <- !is.na(v) & v %in% c("TRUE", "1")
+  cat(sprintf("NOTE: %s - %d of %d fig.list row(s) have $plot = TRUE or 1 and are plotted%s.\n", fn, sum(keep), length(keep),
+              if (any(!keep)) "; the others are skipped" else ""))
+  out <- fig.list[keep, , drop = FALSE]
+  rownames(out) <- NULL
+  out
+}

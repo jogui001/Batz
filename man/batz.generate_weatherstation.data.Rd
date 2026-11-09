@@ -17,7 +17,10 @@ batz.generate_weatherstation.data(
     "Wind Gust", "Pressure", "Precip.", "UV", "Solar"),
   weather.patched = FALSE,
   date.start = NULL,
-  date.end = NULL
+  date.end = NULL,
+  save = TRUE,
+  dir.save = getwd(),
+  project.name = ""
 )
 }
 \arguments{
@@ -82,9 +85,23 @@ gaps from several stations.}
 \item{date.start, date.end}{Character \code{"YYYY-MM-DD"} (or Date), default
 \code{NULL} (both are required). First and last day downloaded (station
 local time).}
+
+\item{save}{Logical, default \code{TRUE}. \code{TRUE} saves
+\code{$weatherstation.data} as a CSV in \code{dir.save}, named
+\verb{<project.name>_weatherdata_<YYYYMMDD>to<YYYYMMDD>_<YYYYMMDDHHMMSS>.csv}
+(first and last date of the data, station local time, then the time
+of the run; \verb{weatherdata_...} when \code{project.name} is blank).
+Nothing is saved when no data was downloaded (NOTE).}
+
+\item{dir.save}{Character, default \code{getwd()}. Folder the CSV is saved
+in (created if needed).}
+
+\item{project.name}{Character, default \code{""}. First part of the file
+name (spaces become "-").}
 }
 \value{
-Invisibly, a list of two data frames:
+Invisibly, a list: two data frames and \code{$file} (the CSV
+saved, or \code{NA}):
 \code{$weatherstation.list} - the stations picked, in the same layout as
 \code{batz.generate_weatherstation.list()} (\code{$station.total} counts
 only picked stations; \code{$sample.interval} is measured over the

@@ -4,7 +4,8 @@
 #' \describe{
 #'   \item{\code{fig.list}}{Every fig.list heading used by the Batz plot
 #'     functions, as columns in the same order for every plot type, with one
-#'     starter row per plot function (\code{$plot.type} filled in). A
+#'     starter row per plot function (\code{$plot = FALSE},
+#'     \code{$plot.type} filled in). A
 #'     heading that plot type does not use holds \code{"NA"}; the headings it
 #'     uses are blank, ready to fill in. Fill in the rows you need and delete
 #'     the others; each plot function only plots rows of its own
@@ -36,9 +37,19 @@
 #'
 #' @details
 #' \strong{Headings.} For each function, the required and optional fig.list
-#' headings are the ones the function checks for. \code{$plot.type} and
-#' \code{$plot.name} come first, then the other headings in the order the
-#' functions list them. Besides these, a fig.list row can hold a column for
+#' headings are the ones the function checks for, plus \code{$plot}. They
+#' are in the order of the \code{FIGLIST_all} tab of Batz_reference_db,
+#' grouped by what they set: \code{$plot}, \code{$plot.type},
+#' \code{$plot.name}; the data plotted (sites, groups, species, dates,
+#' pooling); facets; data columns and time of night; X axis; Y axis;
+#' secondary Y axis; legend and colour bins. Headings not in that tab come
+#' last.
+#'
+#' \strong{$plot.} Every starter row has \code{$plot = FALSE}: a model row
+#' for each plot type. Copy it, set \code{$plot} to \code{TRUE} (or 1) and
+#' fill it in; the plot functions only plot rows with \code{$plot} TRUE or
+#' 1, so finished rows can be set to \code{FALSE} to redo just a few
+#' plots. Besides these, a fig.list row can hold a column for
 #' any plotopts setting of that function (e.g. \code{legend.position}),
 #' which is used for that row before plotopts; those columns are not listed
 #' here.
@@ -118,7 +129,10 @@ batz.generate_figlist <- function(functions = c("batz.plot_bar.bat.group", "batz
   names(descs) <- functions
 
   ## ---- heading order and tables ----------------------------------------------
-  all.h <- unique(c("plot.type", "plot.name", unlist(lapply(heads, function(h) c(h$required, h$optional)))))
+  all.h <- unique(c("plot", "plot.type", "plot.name", unlist(lapply(heads, function(h) c(h$required, h$optional)))))
+  ## heading order: the FIGLIST_all tab of Batz_reference_db (grouped by what they set); others after
+  ord <- tryCatch(names(batz.db("figlist.all")), error = function(e) NULL)
+  if (length(ord)) all.h <- c(intersect(ord, all.h), setdiff(all.h, ord))
   ptype <- vapply(functions, function(f) {
     b <- body(get(f, envir = ns)); v <- find.assign(b, "PLOT.TYPE")
     if (length(v)) v[1] else c(batz.plotactivity_observations = "call.observations",
@@ -127,9 +141,10 @@ batz.generate_figlist <- function(functions = c("batz.plot_bar.bat.group", "batz
   fl <- as.data.frame(matrix("", nrow = length(functions), ncol = length(all.h), dimnames = list(NULL, all.h)),
                       stringsAsFactors = FALSE, check.names = FALSE)
   fl$plot.type <- unname(ptype)
+  fl$plot <- "FALSE"                                   # model rows: copy one, set $plot = TRUE, fill it in
   for (i in seq_along(functions)) {                    # "NA" = heading not used by this plot type
     used <- c(heads[[functions[i]]]$required, heads[[functions[i]]]$optional)
-    fl[i, !names(fl) %in% c("plot.type", used)] <- "NA"
+    fl[i, !names(fl) %in% c("plot", "plot.type", used)] <- "NA"
   }
 
   short <- function(f) sub("^batz\\.", "", f)
@@ -140,6 +155,9 @@ batz.generate_figlist <- function(functions = c("batz.plot_bar.bat.group", "batz
     names(d) <- unlist(lapply(c(req, opt), function(f) if (!is.null(descs[[f]][[h]])) f))
     d.txt <- if (!length(d)) "" else if (length(unique(d)) == 1) unique(d)[1] else
       paste0(short(names(d)), ": ", d, collapse = "\n")
+    if (h == "plot") { opt <- functions; d.txt <- paste("TRUE or 1 = plot this row; FALSE, any other entry or blank = skip it.",
+                                                        "Lets a few rows of a long fig.list be redone, and keeps model rows (FALSE) for copying.",
+                                                        "No $plot column = every row is plotted.") }
     data.frame(header = h, required.in = paste(req, collapse = "; "), optional.in = paste(opt, collapse = "; "),
                description = d.txt, stringsAsFactors = FALSE)
   }))

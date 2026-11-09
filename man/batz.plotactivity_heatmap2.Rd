@@ -31,7 +31,11 @@ batz.plotactivity_heatmap2(
 \item{fig.list}{Optional data frame, one row per plot (see Details).
 \code{NULL} (default) = one plot per group x spp.id.
 Cells holding "NA" (a heading not used by this plot type, as in
-\code{\link{batz.generate_figlist}}) are treated as blank.}
+\code{\link{batz.generate_figlist}}) are treated as blank.
+Only rows whose \code{$plot} is \code{TRUE} or \code{1} are
+plotted; rows with \code{FALSE}, any other entry or a blank are
+skipped (NOTE). A fig.list with no \code{$plot} column has every
+row plotted (NOTE).}
 
 \item{aes.default}{Optional plot-settings data frame
 (\code{plotopts_heatmap2.csv}) with \code{$category},

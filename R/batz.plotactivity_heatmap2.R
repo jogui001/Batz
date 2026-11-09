@@ -140,6 +140,10 @@
 #'   \code{NULL} (default) = one plot per group x spp.id.
 #'   Cells holding "NA" (a heading not used by this plot type, as in
 #'   \code{\link{batz.generate_figlist}}) are treated as blank.
+#'   Only rows whose \code{$plot} is \code{TRUE} or \code{1} are
+#'   plotted; rows with \code{FALSE}, any other entry or a blank are
+#'   skipped (NOTE). A fig.list with no \code{$plot} column has every
+#'   row plotted (NOTE).
 #' @param aes.default Optional plot-settings data frame
 #'   (\code{plotopts_heatmap2.csv}) with \code{$category},
 #'   \code{$parameter}, \code{$default.value}, plus the \code{aes.style}
@@ -237,6 +241,8 @@ batz.plotactivity_heatmap2 <- function(data,
   ## settings typed into the call: used before fig.list and plotopts
   plot.inputs <- plotutil_plot_inputs(plotutil_dots(...), FN)
   fig.list <- plotutil_figlist_na(fig.list)       # "NA" = heading not used by this plot type
+  fig.list <- plotutil_figlist_plot(fig.list, "batz.plotactivity_heatmap2")   # only rows with $plot = TRUE or 1
+  if (is.data.frame(fig.list) && nrow(fig.list) == 0) return(invisible(list(data = NULL, plots = list(), files = character(0))))
   PLOT.TYPE <- "activity.heatmap"
   if (!is.data.frame(data)) stop("`data` must be a data frame.")
   if (nrow(data) == 0) stop("`data` has 0 rows - nothing to plot.")

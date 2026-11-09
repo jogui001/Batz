@@ -26,6 +26,10 @@
 #'   name. See Details.
 #'   Cells holding "NA" (a heading not used by this plot type, as in
 #'   \code{\link{batz.generate_figlist}}) are treated as blank.
+#'   Only rows whose \code{$plot} is \code{TRUE} or \code{1} are
+#'   plotted; rows with \code{FALSE}, any other entry or a blank are
+#'   skipped (NOTE). A fig.list with no \code{$plot} column has every
+#'   row plotted (NOTE).
 #' @param aes.default Data frame of plot settings (plotopts), normally
 #'   \verb{plotopts_bar.bat.group.csv}. Required columns: \code{$category},
 #'   \code{$parameter}, \code{$default.value}. The custom style column
@@ -181,6 +185,8 @@ batz.plot_bar.bat.group <- function(data, fig.list, aes.default = NULL,
   objname.fig.list <- paste(deparse(substitute(fig.list)), collapse = "")
   objname.aes.default <- paste(deparse(substitute(aes.default)), collapse = "")
   fig.list <- plotutil_figlist_na(fig.list)       # "NA" = heading not used by this plot type
+  fig.list <- plotutil_figlist_plot(fig.list, "batz.plot_bar.bat.group")   # only rows with $plot = TRUE or 1
+  if (is.data.frame(fig.list) && nrow(fig.list) == 0) return(invisible(list(plots = list(), ggplots = list())))
   if (is.null(aes.default)) aes.default <- plotutil_default_plotopts("batz.plot_bar.bat.group")   # built-in settings
   for (a in c("data", "fig.list", "aes.default")) {
     if (!is.data.frame(get(a))) stop(sprintf("%s: `%s` must be a data frame.", FN, a), call. = FALSE)

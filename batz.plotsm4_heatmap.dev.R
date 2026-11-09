@@ -22,6 +22,7 @@ pf <- batz.generate_plotframe.sm4(sm4, dir.save = NULL)            # NOTE: most 
 ok(sum(pf$mins.oper == 0) == 8, "2-hour gap -> 8 intervals of 0")
 
 fl <- batz.generate_figlist(functions = "batz.plotsm4_heatmap", dir.save = NULL)$fig.list
+fl$plot <- TRUE                                                     # the model row comes with $plot = FALSE
 fl$plot.set <- "AYERS"; fl$plot.name <- "Test AYERS"
 fl$date.start <- "6/26/2026"; fl$date.end <- "6/29/2026"; fl$date.format <- "%b-%d"; fl$xaxe.interval <- "4"
 fl$xaxe.title <- "Monitoring Night"; fl$yaxe.title <- "Hour of Monitoring"
@@ -40,5 +41,16 @@ st <- data.frame(aru.name = "AYERS", date = format(as.Date("2026-06-26") + 0:3),
 r2 <- batz.plotsm4_heatmap(data = pf, fig.list = fl, suntimes = st, project.name = "sun", dir.save = dir.out)
 lines2 <- vapply(r2$ggplots[[1]]$layers, function(l) class(l$geom)[1], "")
 ok(sum(lines2 == "GeomLine") == 3, "with suntimes: Dawn, Dusk and Midnight")
+
+## 3. $plot (2026-11-09): only rows with TRUE or 1 are plotted
+fl3 <- rbind(fl, fl, fl); fl3$plot <- c("FALSE", "1", ""); fl3$plot.name <- c("skip", "redo", "blank")
+r3 <- batz.plotsm4_heatmap(data = pf, fig.list = fl3, project.name = "plot3", dir.save = dir.out)   # NOTE: 1 of 3 ...
+ok(length(r3$ggplots) == 1, "$plot: only the row with 1 (\"redo\") is plotted")
+fl4 <- fl; fl4$plot <- FALSE
+r4 <- batz.plotsm4_heatmap(data = pf, fig.list = fl4, dir.save = dir.out)
+ok(length(r4$ggplots) == 0, "$plot = FALSE everywhere: nothing plotted, no error")
+fl5 <- fl[, names(fl) != "plot"]
+r5 <- batz.plotsm4_heatmap(data = pf, fig.list = fl5, project.name = "noplotcol", dir.save = dir.out)   # NOTE: no $plot column
+ok(length(r5$ggplots) == 1, "no $plot column: every row plotted")
 
 cat("\nALL TESTS PASSED - PNGs in", dir.out, "\n")

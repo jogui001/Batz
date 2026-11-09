@@ -31,7 +31,7 @@ st <- batz.generate_suntimes.arulist(dir.load = dir.arul, dir.save = dir.arul, p
 ## fig.list: every header "NA", then fill the bat.detection settings
 fb <- batz.generate_figlist(functions = "batz.plotdetections_first.last", dir.save = dir.out)$fig.list
 fb <- fb[rep(1, 4), ]
-fb$plot.type <- "bat.detection"; fb$plot.set <- c("Ayers", "Cemetery", "Clerk", "Sugar Hill")
+fb$plot <- TRUE; fb$plot.type <- "bat.detection"; fb$plot.set <- c("Ayers", "Cemetery", "Clerk", "Sugar Hill")
 fb$plot.name <- paste("HEB", fb$plot.set); fb$facet.header <- "sppid"; fb$facet.plot <- "TRUE"
 fb$facet.set <- "NE"; fb$myso <- "FALSE"; fb$all.detections <- "TRUE"; fb$`40khzmyo` <- "TRUE"
 fb$facet.label <- "common_name"; fb$date.format <- "%b-%d"

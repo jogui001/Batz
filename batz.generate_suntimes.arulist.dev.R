@@ -52,6 +52,49 @@ sc <- batz.generate_suntimes.arulist(dir.load = file.path(dir.out, "C"), write.o
 ok(identical(range(sc$date), as.Date(c("2026-06-26", "2026-07-02"))), "C: no sun-region dates - deployment dates")
 ok(all(sc$schedule1 == "sunset-sunrise"), "C: old spelling schedual1 read as schedule1")
 
+## D. sunregion.update = TRUE (2026-11-09), as Bristol-NH_20261109125049.arulist.csv:
+##   "Bristol NH": 4 ARUs share a pair, Ayers2 blank -> Ayers2 gets the shared pair
+##   "Bristol NH2": all blank -> central point of its 3 ARUs
+##   "Diff": 2 ARUs with different pairs -> central point replaces both
+dd <- rbind(transform(b, sunregion = "Bristol NH", sunregion_date.start = "6/1/2026"),
+            transform(b, aru.name = paste0(b$aru.name, "2"), sunregion = c("Bristol NH2", "Bristol NH2", "Bristol NH2", "Bristol NH"),
+                      sunregion.longitude = NA, sunregion.latitude = NA, sunregion_date.start = "6/1/2026"),
+            transform(b[1:2, ], aru.name = c("D1", "D2"), sunregion = "Diff", sunregion.longitude = c(-71.1, -71.2),
+                      sunregion.latitude = c(43.1, 43.2), sunregion_date.start = "6/1/2026"))
+write.csv(dd, file.path(sub.dir("D"), "update.arulist.csv"), row.names = FALSE, na = "")
+sd0 <- batz.generate_suntimes.arulist(dir.load = file.path(dir.out, "D"), write.output = FALSE)   # NOTE: 4 row(s) have no ...
+ok(any(is.na(sd0$aru.suntimes$sunset.unix)), "sunregion.update = FALSE: blank coordinates -> blank sun times")
+sd <- batz.generate_suntimes.arulist(dir.load = file.path(dir.out, "D"), write.output = FALSE, sunregion.update = TRUE)
+al <- sd$arulist
+print(al[, c("aru.name", "sunregion", "sunregion.longitude", "sunregion.latitude")])
+ok(all(al$sunregion.longitude[al$sunregion == "Bristol NH"] == b$sunregion.longitude[1]), "shared pair kept and copied to the blank row")
+ok(isTRUE(all.equal(al$sunregion.longitude[al$aru.name == "Clerk2"], round(mean(b$longitude[1:3]), 8))), "all blank -> central point")
+ok(length(unique(al$sunregion.longitude[al$sunregion == "Diff"])) == 1 &&
+     isTRUE(all.equal(al$sunregion.longitude[al$aru.name == "D1"], round(mean(b$longitude[1:2]), 8))), "all different -> central point")
+ok(!any(is.na(sd$aru.suntimes$sunset.unix)), "every row has sun times")
+
+## E. sunregion.list: fixed sun regions from <project.name>.fixedsunregions.csv (2026-11-09)
+##   line 2: Clerk2 is its own sun region from 6/28 on (coordinates blank -> its own position)
+##   line 3: every ARU in sun region "Bristol NH2" moves to "Lake" (given coordinates) up to 6/27
+##   line 4: Ayers2 (spelled "ayers_2") is its own sun region up to 6/30
+fx <- data.frame(aru.name = c("Clerk2", "Bristol NH2", "ayers_2"), sunregion = c("Clerk2", "Lake", "Ayers2"),
+                 sunregion.longitude = c("", "-71.5", ""), sunregion.latitude = c("", "43.5", ""),
+                 date.start = c("6/28/2026", "", ""), date.end = c("", "6/27/2026", "6/30/2026"))
+f.fx <- file.path(dir.out, "D", "Bristol NH.fixedsunregions.csv"); write.csv(fx, f.fx, row.names = FALSE)
+se <- batz.generate_suntimes.arulist(dir.load = file.path(dir.out, "D"), load.pattern = "update.arulist.csv", write.output = FALSE,
+                                     sunregion.update = TRUE, sunregion.list = f.fx)$aru.suntimes      # NOTE: sun region(s) set ...
+g <- function(a, d) se[se$aru.name == a & se$date == as.Date(d), ]
+ok(g("Clerk2", "2026-06-27")$sunregion == "Lake" && g("Clerk2", "2026-06-27")$sunregion.longitude == -71.5, "region moved, given coordinates used")
+ok(g("Clerk2", "2026-06-29")$sunregion == "Clerk2" && g("Clerk2", "2026-06-29")$sunregion.type == "fixed.unique", "own sun region from 6/28")
+ok(g("Ayers2", "2026-07-01")$sunregion == "Bristol NH", "after date.end the ARU list's sun region again")
+## conflicts stop the function, naming the aru.name, sun regions, dates and lines
+try(batz.generate_suntimes.arulist(dir.load = file.path(dir.out, "D"), load.pattern = "update.arulist.csv", write.output = FALSE,
+                                   sunregion.list = rbind(fx, data.frame(aru.name = "CLERK2", sunregion = "Other", sunregion.longitude = "",
+                                                                         sunregion.latitude = "", date.start = "7/1/2026", date.end = "7/5/2026"))))
+fx2 <- fx; fx2$date.end[2] <- ""                  # "Bristol NH2" -> Lake for all dates overlaps Clerk2 -> Clerk2 from 6/28
+try(batz.generate_suntimes.arulist(dir.load = file.path(dir.out, "D"), load.pattern = "update.arulist.csv", write.output = FALSE,
+                                   sunregion.update = TRUE, sunregion.list = fx2))
+
 ## the merged ARU list straight from batz.merge_sitevisit.acoustics():
 # m <- batz.merge_sitevisit.acoustics(dir.load = wd.Raw, dir.save = wd.out, generate.arulist = TRUE)
 # st <- batz.generate_suntimes.arulist(dir.load = wd.out, dir.save = wd.out, project.name = "Bristol NH")

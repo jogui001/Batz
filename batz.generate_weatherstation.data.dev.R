@@ -98,5 +98,18 @@ stopifnot(!anyDuplicated(w9$weatherstation.data[, c("station.code", "date.time_u
           any(w9$weatherstation.data$site == "Clerk;SugarHill"))
 w9$weatherstation.list[, c("site", "station.code")]          # still one row per site and station
 
+## ---- TEST 10: save the weather data (2026-11-09) -----------------------------
+## save = TRUE (default): <project.name>_weatherdata_<first date>to<last date>_<timestamp>.csv in dir.save
+## (the tests above also save, into the working directory)
+dir.w <- file.path(tempdir(), "weather_test")
+w10 <- batz.generate_weatherstation.data(test.data[1, ], station.max = 1, date.start = "2026-07-01", date.end = "2026-07-02",
+                                         dir.save = dir.w, project.name = "Bristol NH")
+print(basename(w10$file))                   # Bristol-NH_weatherdata_20260701to20260702_<YYYYMMDDHHMMSS>.csv
+stopifnot(grepl("^Bristol-NH_weatherdata_\\d{8}to\\d{8}_\\d{14}\\.csv$", basename(w10$file)),
+          nrow(read.csv(w10$file)) == nrow(w10$weatherstation.data))
+w10b <- batz.generate_weatherstation.data(test.data[1, ], station.max = 1, date.start = "2026-07-01", date.end = "2026-07-01",
+                                          save = FALSE)
+stopifnot(is.na(w10b$file))                 # save = FALSE: no file
+
 ## ---- save ------------------------------------------------------------------
 # write.csv(w1$weatherstation.data, "weatherstation.data.csv", row.names = FALSE)

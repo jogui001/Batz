@@ -130,6 +130,7 @@ cat("\nALL TESTS PASSED - output in", dir.out, "\n")
 # suntimes <- read.csv("Bristol NH_suntimes_20260601to20260731_20261106203223.csv", check.names = FALSE)
 # fig.list <- batz.generate_figlist(functions = "batz.plotsm4_heatmap", dir.save = NULL)$fig.list
 # fig.list <- fig.list[rep(1, 4), ]
+# fig.list$plot <- TRUE                                                 # model rows come with $plot = FALSE
 # fig.list$plot.set <- c("Ayers", "Cemetery", "Clerk", "SugarHill")      # one ARU per row
 # fig.list$plot.name <- paste("HEB", fig.list$plot.set)
 # fig.list$date.start <- "6/26/2026"; fig.list$date.end <- "7/2/2026"

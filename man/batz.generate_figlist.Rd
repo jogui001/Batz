@@ -38,7 +38,8 @@ Writes one Excel workbook with two tabs:
 \describe{
 \item{\code{fig.list}}{Every fig.list heading used by the Batz plot
 functions, as columns in the same order for every plot type, with one
-starter row per plot function (\code{$plot.type} filled in). A
+starter row per plot function (\code{$plot = FALSE},
+\code{$plot.type} filled in). A
 heading that plot type does not use holds \code{"NA"}; the headings it
 uses are blank, ready to fill in. Fill in the rows you need and delete
 the others; each plot function only plots rows of its own
@@ -53,9 +54,19 @@ matches the installed version.
 }
 \details{
 \strong{Headings.} For each function, the required and optional fig.list
-headings are the ones the function checks for. \code{$plot.type} and
-\code{$plot.name} come first, then the other headings in the order the
-functions list them. Besides these, a fig.list row can hold a column for
+headings are the ones the function checks for, plus \code{$plot}. They
+are in the order of the \code{FIGLIST_all} tab of Batz_reference_db,
+grouped by what they set: \code{$plot}, \code{$plot.type},
+\code{$plot.name}; the data plotted (sites, groups, species, dates,
+pooling); facets; data columns and time of night; X axis; Y axis;
+secondary Y axis; legend and colour bins. Headings not in that tab come
+last.
+
+\strong{$plot.} Every starter row has \code{$plot = FALSE}: a model row
+for each plot type. Copy it, set \code{$plot} to \code{TRUE} (or 1) and
+fill it in; the plot functions only plot rows with \code{$plot} TRUE or
+1, so finished rows can be set to \code{FALSE} to redo just a few
+plots. Besides these, a fig.list row can hold a column for
 any plotopts setting of that function (e.g. \code{legend.position}),
 which is used for that row before plotopts; those columns are not listed
 here.

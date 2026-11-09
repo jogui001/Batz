@@ -34,8 +34,19 @@
 #' @param date.start,date.end Character \code{"YYYY-MM-DD"} (or Date), default
 #'   \code{NULL} (both are required). First and last day downloaded (station
 #'   local time).
+#' @param save Logical, default \code{TRUE}. \code{TRUE} saves
+#'   \code{$weatherstation.data} as a CSV in \code{dir.save}, named
+#'   \verb{<project.name>_weatherdata_<YYYYMMDD>to<YYYYMMDD>_<YYYYMMDDHHMMSS>.csv}
+#'   (first and last date of the data, station local time, then the time
+#'   of the run; \verb{weatherdata_...} when \code{project.name} is blank).
+#'   Nothing is saved when no data was downloaded (NOTE).
+#' @param dir.save Character, default \code{getwd()}. Folder the CSV is saved
+#'   in (created if needed).
+#' @param project.name Character, default \code{""}. First part of the file
+#'   name (spaces become "-").
 #'
-#' @return Invisibly, a list of two data frames:
+#' @return Invisibly, a list: two data frames and \code{$file} (the CSV
+#'   saved, or \code{NA}):
 #'   \code{$weatherstation.list} - the stations picked, in the same layout as
 #'   \code{batz.generate_weatherstation.list()} (\code{$station.total} counts
 #'   only picked stations; \code{$sample.interval} is measured over the
@@ -137,7 +148,10 @@ batz.generate_weatherstation.data <- function(data,
                                                                "Wind Gust", "Pressure", "Precip.", "UV", "Solar"),
                                               weather.patched = FALSE,
                                               date.start = NULL,
-                                              date.end = NULL) {
+                                              date.end = NULL,
+                                              save = TRUE,
+                                              dir.save = getwd(),
+                                              project.name = "") {
   FN <- "batz.generate_weatherstation.data"
   if (missing(units)) units <- "metric"
   units <- unique(match.arg(units, c("metric", "imperial", "both"), several.ok = TRUE))
@@ -227,7 +241,22 @@ batz.generate_weatherstation.data <- function(data,
   rownames(wd) <- NULL
   print(wl[, setdiff(names(wl), c("station.type", "station.id"))], row.names = FALSE)
   cat(sprintf("weatherstation.data: %d observation(s) from %d station(s).\n", nrow(wd), length(unique(wd$station.code))))
-  invisible(list(weatherstation.list = wl, weatherstation.data = wd))
+  file <- NA_character_
+  if (isTRUE(save)) {
+    if (nrow(wd) == 0 || !"date.time" %in% names(wd)) {
+      cat("NOTE: ", FN, " - no weather data downloaded - nothing saved.\n", sep = "")
+    } else {
+      dts <- as.Date(substr(as.character(wd$date.time), 1, 10))
+      pj <- if (is.null(project.name) || !length(project.name) || is.na(project.name[1]) || !nzchar(trimws(project.name[1]))) "" else
+        paste0(gsub("\\s+", "-", gsub('[\\\\/:*?"<>|]+', "", trimws(project.name[1]))), "_")
+      if (!dir.exists(dir.save)) dir.create(dir.save, recursive = TRUE)
+      file <- file.path(dir.save, sprintf("%sweatherdata_%sto%s_%s.csv", pj, format(min(dts, na.rm = TRUE), "%Y%m%d"),
+                                          format(max(dts, na.rm = TRUE), "%Y%m%d"), format(Sys.time(), "%Y%m%d%H%M%S")))
+      utils::write.csv(wd, file, row.names = FALSE)
+      cat("Saved:", file, "\n")
+    }
+  }
+  invisible(list(weatherstation.list = wl, weatherstation.data = wd, file = file))
 }
 
 #' One row per station record; sites sharing it joined with ";" (internal)

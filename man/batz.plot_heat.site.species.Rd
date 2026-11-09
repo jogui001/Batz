@@ -39,7 +39,11 @@ row is skipped (NOTE).}
 parameter with a column of the same name (e.g. \code{$bin.minutes},
 \code{$time.start}). See Details.
 Cells holding "NA" (a heading not used by this plot type, as in
-\code{\link{batz.generate_figlist}}) are treated as blank.}
+\code{\link{batz.generate_figlist}}) are treated as blank.
+Only rows whose \code{$plot} is \code{TRUE} or \code{1} are
+plotted; rows with \code{FALSE}, any other entry or a blank are
+skipped (NOTE). A fig.list with no \code{$plot} column has every
+row plotted (NOTE).}
 
 \item{aes.default}{Data frame of plot settings (plotopts), normally
 \verb{plotopts_heat.site.species.csv}. Required columns:
