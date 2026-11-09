@@ -7,7 +7,7 @@
 #'     starter row per plot function (\code{$plot = FALSE},
 #'     \code{$plot.type} filled in). A
 #'     heading that plot type does not use holds \code{"NA"}; the headings it
-#'     uses are blank, ready to fill in. Fill in the rows you need and delete
+#'     uses hold an example entry, ready to edit. Fill in the rows you need and delete
 #'     the others; each plot function only plots rows of its own
 #'     \code{$plot.type}, and treats \code{"NA"} cells as blank.}
 #'   \item{\code{descriptions}}{One row per heading: \code{$header},
@@ -24,7 +24,8 @@
 #'   \code{"batz.plotactivity_observations"},
 #'   \code{"batz.plotdetections_first.last"},
 #'   \code{"batz.plotsm4_heatmap"}, \code{"batz.plotactivity_heatmap2"}.
-#'   Plot functions to include.
+#'   Plot functions to include. \code{""} (or \code{NULL}) = all of them,
+#'   one row for every plot type.
 #' @param project.name Character, default \code{""}. First part of the file
 #'   name. Blank = no project part.
 #' @param dir.save Character, default \code{getwd()}. Folder the workbook is
@@ -45,8 +46,11 @@
 #' secondary Y axis; legend and colour bins. Headings not in that tab come
 #' last.
 #'
-#' \strong{$plot.} Every starter row has \code{$plot = FALSE}: a model row
-#' for each plot type. Copy it, set \code{$plot} to \code{TRUE} (or 1) and
+#' \strong{$plot and example entries.} Every starter row has
+#' \code{$plot = FALSE}: a model row for each plot type, with an example
+#' entry in each heading that plot type uses (from the first row of that
+#' plot type in the \code{FIGLIST_all} tab of Batz_reference_db) and
+#' \code{"NA"} in the headings it does not use. Copy it, set \code{$plot} to \code{TRUE} (or 1) and
 #' fill it in; the plot functions only plot rows with \code{$plot} TRUE or
 #' 1, so finished rows can be set to \code{FALSE} to redo just a few
 #' plots. Besides these, a fig.list row can hold a column for
@@ -75,11 +79,16 @@ batz.generate_figlist <- function(functions = c("batz.plot_bar.bat.group", "batz
                                                 "batz.plotsm4_heatmap", "batz.plotactivity_heatmap2"),
                                   project.name = "", dir.save = getwd()) {
   FN <- "batz.generate_figlist"
+  ALL <- c("batz.plot_bar.bat.group", "batz.plot_heat.site.species", "batz.plotactivity_observations",
+           "batz.plotdetections_first.last", "batz.plotsm4_heatmap", "batz.plotactivity_heatmap2")
+  functions <- if (is.null(functions)) character(0) else trimws(as.character(functions))
+  functions <- functions[!is.na(functions) & nzchar(functions)]
+  if (!length(functions)) functions <- ALL                 # "" = every plot type
   ns <- asNamespace("Batz")
   bad <- functions[!vapply(functions, exists, logical(1), envir = ns, inherits = FALSE)]
   if (length(bad)) stop(FN, ": not a Batz function: ", paste(bad, collapse = ", "), call. = FALSE)
   ## settings that heatmap2 reads from fig.list besides its checked headings
-  EXTRA.OPTIONAL <- list(batz.plotactivity_heatmap2 = c("date.format", "xaxe.interval", "xaxe.title", "yaxe.title"))
+  EXTRA.OPTIONAL <- list(batz.plotactivity_heatmap2 = c("date.format", "xaxe.interval", "xaxe.title", "yaxe.title", "facet.label"))
 
   ## ---- headings each function checks for (read from the function itself) -------
   find.assign <- function(expr, name) {
@@ -142,9 +151,18 @@ batz.generate_figlist <- function(functions = c("batz.plot_bar.bat.group", "batz
                       stringsAsFactors = FALSE, check.names = FALSE)
   fl$plot.type <- unname(ptype)
   fl$plot <- "FALSE"                                   # model rows: copy one, set $plot = TRUE, fill it in
+  ## example entries: the first row of that plot type in Batz_reference_db FIGLIST_all
+  ex <- tryCatch(batz.db("figlist.all"), error = function(e) NULL)
   for (i in seq_along(functions)) {                    # "NA" = heading not used by this plot type
     used <- c(heads[[functions[i]]]$required, heads[[functions[i]]]$optional)
     fl[i, !names(fl) %in% c("plot", "plot.type", used)] <- "NA"
+    if (!is.null(ex) && "plot.type" %in% names(ex)) {
+      e <- ex[trimws(ex$plot.type) == fl$plot.type[i], , drop = FALSE]
+      if (nrow(e)) for (h in intersect(setdiff(used, c("plot", "plot.type")), names(e))) {
+        v <- trimws(as.character(e[[h]][1]))
+        if (!is.na(v) && nzchar(v) && toupper(v) != "NA") fl[i, h] <- v
+      }
+    }
   }
 
   short <- function(f) sub("^batz\\.", "", f)

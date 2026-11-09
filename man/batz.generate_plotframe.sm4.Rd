@@ -106,6 +106,14 @@ scheduled intervals with no system check.}
 to the interval start (0 to 1439).}
 \item{\code{$mins2.midnight}}{Minutes from the start of the calendar
 day to the interval start (0 to 1439).}
+\item{\code{$aru.schedule}}{The recording schedule used for the
+ARU at that time (Details, "Scheduled recording"): the deployment
+history's (a change by \code{$aru.schedule_new} applies from that
+visit on), \code{aru.schedule}, or the most likely schedule worked
+out from the checks (a database name, or
+\code{"observed HH:MM-HH:MM"} / \code{"observed continuous"}). A
+row outside every deployment takes the schedule of the nearest one.
+Blank with \code{aru.schedule = ""}.}
 }
 The file written is named in a printed line.
 }

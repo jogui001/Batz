@@ -19,7 +19,8 @@ fig.list: \code{"batz.plot_bar.bat.group"},
 \code{"batz.plotactivity_observations"},
 \code{"batz.plotdetections_first.last"},
 \code{"batz.plotsm4_heatmap"}, \code{"batz.plotactivity_heatmap2"}.
-Plot functions to include.}
+Plot functions to include. \code{""} (or \code{NULL}) = all of them,
+one row for every plot type.}
 
 \item{project.name}{Character, default \code{""}. First part of the file
 name. Blank = no project part.}
@@ -41,7 +42,7 @@ functions, as columns in the same order for every plot type, with one
 starter row per plot function (\code{$plot = FALSE},
 \code{$plot.type} filled in). A
 heading that plot type does not use holds \code{"NA"}; the headings it
-uses are blank, ready to fill in. Fill in the rows you need and delete
+uses hold an example entry, ready to edit. Fill in the rows you need and delete
 the others; each plot function only plots rows of its own
 \code{$plot.type}, and treats \code{"NA"} cells as blank.}
 \item{\code{descriptions}}{One row per heading: \code{$header},
@@ -62,8 +63,11 @@ pooling); facets; data columns and time of night; X axis; Y axis;
 secondary Y axis; legend and colour bins. Headings not in that tab come
 last.
 
-\strong{$plot.} Every starter row has \code{$plot = FALSE}: a model row
-for each plot type. Copy it, set \code{$plot} to \code{TRUE} (or 1) and
+\strong{$plot and example entries.} Every starter row has
+\code{$plot = FALSE}: a model row for each plot type, with an example
+entry in each heading that plot type uses (from the first row of that
+plot type in the \code{FIGLIST_all} tab of Batz_reference_db) and
+\code{"NA"} in the headings it does not use. Copy it, set \code{$plot} to \code{TRUE} (or 1) and
 fill it in; the plot functions only plot rows with \code{$plot} TRUE or
 1, so finished rows can be set to \code{FALSE} to redo just a few
 plots. Besides these, a fig.list row can hold a column for

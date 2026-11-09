@@ -206,7 +206,7 @@ try(p12("yes"))                                                            # pro
 cat("TEST 12 passed\n")
 
 ## ---- TEST 13: generate.arulist / sunregion / date.buffer (2026-11-06) --------
-AL.HEADERS <- c("aru.name", "longitude", "latitude", "date.start", "date.end", "time.zone", "sunregion",
+AL.HEADERS <- c("aru.name", "longitude", "latitude", "date.start", "date.end", "aru.schedule", "time.zone", "sunregion",
                 "sunregion.longitude", "sunregion.latitude", "sunregion_date.start", "sunregion_date.end")
 a13 <- function(...) batz.merge_sitevisit.acoustics(d12, dir.save = file.path(d12, "out13"), generate.arulist = TRUE, ...)
 r13 <- a13(project.merged = "BOTH")                                     # discrete, "1 month"
@@ -229,6 +229,15 @@ m13 <- a13(project.merged = TRUE, date.buffer = "2 month")$arulist
 print(unique(m13[, c("date.start", "date.end", "sunregion_date.start", "sunregion_date.end")]))   # one more month at each end
 try(a13(date.buffer = "week"))                                                   # stops: must be "none", "<N> month" or "year"
 try(a13(sunregion = "mixed"))                                                    # stops: must be "discrete" or "pooled"
+## $aru.schedule (2026-11-09): the deployment history's schedule(s), "; " between a change
+print(r13$arulist[, c("project.name", "aru.name", "aru.schedule")])
+dh13 <- r13$deployment.history
+for (i in seq_len(nrow(r13$arulist))) {
+  k <- tolower(dh13$project.name) == tolower(r13$arulist$project.name[i]) &
+       tolower(ifelse(nzchar(dh13$aru.name), dh13$aru.name, dh13$site)) == tolower(r13$arulist$aru.name[i])
+  v <- unique(c(dh13$aru.schedule[k], dh13$aru.schedule_new[k])); v <- v[!is.na(v) & nzchar(v)]
+  stopifnot(setequal(trimws(strsplit(r13$arulist$aru.schedule[i], ";")[[1]]), v) || (!length(v) && !nzchar(r13$arulist$aru.schedule[i])))
+}
 cat("TEST 13 passed\n")
 
 ## ---- TEST 14: "_other" headers, deployment history, aru.scheduals (2026-11-07) ----

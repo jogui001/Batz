@@ -3,39 +3,53 @@
 ## $facet.label, and plotting data made by batz.generate_plotframe.bat()
 ## with pool.interval other than "1day".
 
-#' Species facet-panel labels from fig.list $facet.label (internal)
+#' Species facet-panel labels from fig.list $facet.label_format (internal)
 #'
 #' Used when fig.list \code{$facet.header = "sppid"}. Recodes each species name
 #' in \code{levels} with \code{batz.batusa_recode.names()} to the format in
 #' \code{fmt}.
 #' @param levels Species names (the facet levels).
-#' @param fmt The fig.list row's \code{$facet.label}: any value
+#' @param fmt The fig.list row's \code{$facet.label_format}: any value
 #'   \code{batz.batusa_recode.names()} accepts for \code{batname.format.out}
 #'   (\code{"common_name"}, \code{"scientific_name"}, \code{"code4"},
 #'   \code{"code6"}, \code{"both"}, ...). Quotes are dropped; blank or
 #'   \code{NA} means \code{"common_name"}.
 #' @param job.label,fn.name fig.list row label and calling function, used in
 #'   messages.
+#' @param alt The fig.list row's \code{$facet.label} (alternative labels;
+#'   see \code{plotutil_facet_relabel()}).
 #' @details A panel whose recoded label is blank (e.g. \code{"All detections"}
 #'   with a species-only format) keeps its original name. A \code{fmt} that
 #'   cannot be used stops with an error naming the fig.list row.
 #' @return Named character vector of labels, named by \code{levels}.
 #' @keywords internal
 #' @noRd
-plotutil_facet_labels <- function(levels, fmt, job.label, fn.name) {
+plotutil_facet_labels <- function(levels, fmt, job.label, fn.name, alt = "") {
   fmt <- if (length(fmt) == 0 || is.na(fmt)) "" else trimws(gsub('"', "", as.character(fmt)))
   if (!nzchar(fmt)) fmt <- "common_name"
   res <- tryCatch(
     batz.batusa_recode.names(levels, batname.format.out = fmt),
     error = function(e) {
-      stop(sprintf("%s: fig.list row '%s' has $facet.label = '%s', which can't be used as a species name format.\n%s",
+      stop(sprintf("%s: fig.list row '%s' has $facet.label_format = '%s', which can't be used as a species name format.\n%s",
                    fn.name, job.label, fmt, conditionMessage(e)), call. = FALSE)
     })
   res <- as.character(res)
   blank <- is.na(res) | !nzchar(trimws(res))
   res[blank] <- levels[blank]
   names(res) <- levels
-  res
+  ## other names a $facet.label pair may use for a panel: species codes and names, AllDet, 40kMyo
+  aka <- lapply(levels, function(l) l)
+  for (f in c("code4", "code6", "common_name", "scientific_name")) {
+    v <- tryCatch(as.character(suppressMessages(suppressWarnings(batz.batusa_recode.names(levels, batname.format.out = f)))),
+                  error = function(e) rep(NA_character_, length(levels)))
+    if (length(v) == length(levels)) for (i in seq_along(levels)) if (!is.na(v[i]) && nzchar(v[i])) aka[[i]] <- c(aka[[i]], v[i])
+  }
+  k <- gsub("[^a-z0-9]", "", tolower(levels))
+  for (i in seq_along(levels)) {
+    if (k[i] %in% c("alldetections", "alldet")) aka[[i]] <- c(aka[[i]], "AllDet", "All detections")
+    if (grepl("40k", k[i])) aka[[i]] <- c(aka[[i]], "40khzmyo", "40kMyo")
+  }
+  plotutil_facet_relabel(res, alt, job.label, fn.name, aka = aka)
 }
 
 #' Collapse pooled plot-frame rows to one row per date (internal)
@@ -148,6 +162,8 @@ plotutil_figlist_legacy <- function(fig.list, fn.name) {
   rename.old("facet", "facet.header")
   rename.old("alldect", "all.detections")
   rename.old("all_dectections", "all.detections")  # spelling fix 2026-11-04, per Josh
+  fig.list <- plotutil_figlist_labelformat(fig.list, fn.name)
+  std <- standardize.headers(names(fig.list))
   if (!("facet_plot" %in% std)) {
     fig.list$facet.plot <- rep(TRUE, nrow(fig.list))
     cat(sprintf("WARNING: %s - fig.list has no $facet.plot column - every row is drawn as one faceted plot (facet.plot = TRUE).\n", fn.name))
@@ -171,6 +187,8 @@ plotutil_figlist_legacy <- function(fig.list, fn.name) {
 #'   (with a NOTE).
 #' @param job.label,fn.name fig.list row label and calling function, used in
 #'   messages.
+#' @param alt The fig.list row's \code{$facet.label} (alternative labels;
+#'   see \code{plotutil_facet_relabel()}).
 #' @details Species are recoded to common names. An entry that is neither a
 #'   preset nor a recognized species is kept as written, with a NOTE.
 #'   Duplicates (ignoring case and punctuation) are dropped.
@@ -553,4 +571,76 @@ plotutil_figlist_plot <- function(fig.list, fn) {
   out <- fig.list[keep, , drop = FALSE]
   rownames(out) <- NULL
   out
+}
+
+
+#' Old fig.list $facet.label (a name format) read as $facet.label_format (internal)
+#'
+#' Until 2026-11-09 $facet.label held the species name format
+#' (common_name, code4, ...). It is now $facet.label_format, and $facet.label
+#' holds alternative labels. A fig.list with $facet.label but no
+#' $facet.label_format, whose $facet.label cells are all name formats or
+#' blank / "NA", has that column renamed (WARNING).
+#' @keywords internal
+#' @noRd
+plotutil_figlist_labelformat <- function(fig.list, fn.name) {
+  if (!is.data.frame(fig.list)) return(fig.list)
+  std <- standardize.headers(names(fig.list))
+  if (!"facet_label" %in% std || "facet_label_format" %in% std) return(fig.list)
+  j <- which(std == "facet_label")[1]
+  v <- tolower(trimws(gsub('"', "", as.character(fig.list[[j]]))))
+  v <- v[!is.na(v) & nzchar(v) & v != "na"]
+  fmts <- c("common_name", "scientific_name", "code4", "code6", "both", "common", "latin", "scientific")
+  if (all(v %in% fmts)) {                                    # name formats, or all blank / "NA"
+    names(fig.list)[j] <- "facet.label_format"
+    cat(sprintf("WARNING: %s - fig.list has $facet.label but no $facet.label_format%s - used as $facet.label_format (the new name); $facet.label is now for alternative labels.\n",
+                fn.name, if (length(v)) sprintf(" (it holds name formats: %s)", paste(unique(v), collapse = ", ")) else ""))
+  }
+  fig.list
+}
+
+
+#' Text of one fig.list cell, "" when absent / NA / "NA" (internal)
+#' @keywords internal
+#' @noRd
+plotutil_job_text <- function(job, name) {
+  if (is.null(job) || !name %in% names(job)) return("")
+  v <- trimws(as.character(job[[name]])[1])
+  if (is.na(v) || toupper(v) == "NA") "" else v
+}
+
+
+#' Alternative panel labels from fig.list $facet.label (internal)
+#'
+#' \code{alt} is a ";" list: either \code{name=label} pairs (a name is matched
+#' to a panel's name, its current label or one of \code{aka} (e.g. species
+#' codes), ignoring case, spaces, dots and underscores), or labels in panel
+#' order. Panels not given a label keep theirs. A
+#' NOTE names pairs that match no panel or a count that doesn't match.
+#' @param labels Named character vector: current labels, named by panel.
+#' @return \code{labels} with the alternative labels in place.
+#' @keywords internal
+#' @noRd
+plotutil_facet_relabel <- function(labels, alt, job.label, fn.name, aka = NULL) {
+  alt <- if (length(alt) == 0 || is.na(alt[1])) "" else trimws(as.character(alt[1]))
+  if (!nzchar(alt) || toupper(alt) == "NA") return(labels)
+  key <- function(x) gsub("[^a-z0-9]", "", tolower(x))
+  parts <- trimws(strsplit(alt, ";", fixed = TRUE)[[1]]); parts <- parts[nzchar(parts)]
+  if (any(grepl("=", parts, fixed = TRUE))) {
+    for (pr in parts) {
+      kv <- trimws(strsplit(pr, "=", fixed = TRUE)[[1]])
+      if (length(kv) < 2 || !nzchar(kv[2])) next
+      i <- which(key(names(labels)) == key(kv[1]) | key(labels) == key(kv[1]) |
+                   vapply(seq_along(labels), function(j) !is.null(aka) && key(kv[1]) %in% key(aka[[j]]), logical(1)))
+      if (!length(i)) cat(sprintf("NOTE: %s - '%s': $facet.label '%s' matches no panel.\n", fn.name, job.label, kv[1]))
+      labels[i] <- paste(kv[-1], collapse = "=")
+    }
+  } else {
+    if (length(parts) != length(labels))
+      cat(sprintf("NOTE: %s - '%s': $facet.label has %d label(s) for %d panel(s) - %s.\n", fn.name, job.label, length(parts),
+                  length(labels), if (length(parts) < length(labels)) "the rest keep their names" else "the extra labels are not used"))
+    n <- min(length(parts), length(labels))
+    if (n) labels[seq_len(n)] <- parts[seq_len(n)]
+  }
+  labels
 }

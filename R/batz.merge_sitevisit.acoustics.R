@@ -283,7 +283,8 @@
 #' \strong{ARU list.} With \code{generate.arulist = TRUE}, one row per site
 #' (\code{header.combo}: project name + \code{$aru.name}) with the headers
 #' \code{$aru.name}, \code{$longitude}, \code{$latitude},
-#' \code{$date.start}, \code{$date.end}, \code{$time.zone},
+#' \code{$date.start}, \code{$date.end}, \code{$aru.schedule},
+#' \code{$time.zone},
 #' \code{$sunregion}, \code{$sunregion.longitude},
 #' \code{$sunregion.latitude}, \code{$sunregion_date.start},
 #' \code{$sunregion_date.end} (dates as m/d/Y, e.g. \code{6/26/2026}). Sites
@@ -296,9 +297,13 @@
 #'     \code{$date.deployment}.
 #'   \item \code{$date.end}: the site's latest service record with
 #'     \code{$visit.reason} \code{"retrieval"}.
+#'   \item \code{$aru.schedule}: the site's recording schedule from the
+#'     deployment history tab (\code{$aru.schedule}). When a visit changed
+#'     it (\code{$aru.schedule_new}), every schedule is listed in date
+#'     order, separated by "; " (e.g. \code{"USFWS.compliance; continuous"}).
 #' }
 #' Coordinates are rounded to 8 decimals.
-#' A site with no coordinates, deployment date or retrieval record keeps
+#' A site with no coordinates, deployment date, retrieval record or schedule keeps
 #' that cell blank and is named in a NOTE. The files hold no project-name
 #' column; the returned \code{$arulist} has one.
 #' \code{\link{batz.generate_suntimes.arulist}} reads these files and
@@ -1050,6 +1055,19 @@ sitevisit.arulist <- function(out, sunregion = "discrete", date.buffer = "1 mont
                date.start = as.Date(character(0)), date.end = as.Date(character(0)))
   al$longitude <- round(al$longitude, 8); al$latitude <- round(al$latitude, 8)   # as in Survey123 (8 decimals)
   al$time.zone <- rep(time.zone[1], nrow(al))
+  ## aru.schedule: the schedule(s) of the deployment history, in date order (a change adds "; <new>")
+  dh <- out$deployment.history
+  al$aru.schedule <- rep("", nrow(al))
+  if (!is.null(dh) && nrow(dh)) {
+    dn <- ifelse(nzchar(txt(get(dh, "aru.name"))), txt(get(dh, "aru.name")), txt(get(dh, "site")))
+    dk <- key(get(dh, "project.name"), dn)
+    for (i in seq_len(nrow(al))) {
+      r <- which(dk == key(al$project.name[i], al$aru.name[i]))
+      v <- as.vector(rbind(txt(get(dh, "aru.schedule")[r]), txt(get(dh, "aru.schedule_new")[r])))
+      v <- unique(v[nzchar(v)])
+      al$aru.schedule[i] <- paste(v, collapse = "; ")
+    }
+  }
   ## sun region
   if (sunregion == "pooled") {
     al$sunregion <- al$project.name
@@ -1082,16 +1100,17 @@ sitevisit.arulist <- function(out, sunregion = "discrete", date.buffer = "1 mont
   al$sunregion_date.start <- mdy(sds); al$sunregion_date.end <- mdy(sde)
   al$date.start <- mdy(al$date.start); al$date.end <- mdy(al$date.end)
   ## sites missing a value
-  for (h2 in c("longitude", "latitude", "date.start", "date.end")) {
+  for (h2 in c("longitude", "latitude", "date.start", "date.end", "aru.schedule")) {
     miss <- is.na(al[[h2]]) | (is.character(al[[h2]]) & !nzchar(al[[h2]]))
     if (any(miss)) cat("NOTE: ARU list - no ", switch(h2, longitude = "longitude", latitude = "latitude",
                                                       date.start = "deployment date (date.start)",
-                                                      date.end = "retrieval record (date.end)"),
+                                                      date.end = "retrieval record (date.end)",
+                                                      aru.schedule = "aru.schedule in the deployment history"),
                        " for ", sum(miss), " site(s): ", paste(al$project.name[miss], "/", al$aru.name[miss], collapse = "; "),
                        " - left blank.\n", sep = "")
   }
   rownames(al) <- NULL
-  al[, c("project.name", "aru.name", "longitude", "latitude", "date.start", "date.end", "time.zone", "sunregion",
+  al[, c("project.name", "aru.name", "longitude", "latitude", "date.start", "date.end", "aru.schedule", "time.zone", "sunregion",
          "sunregion.longitude", "sunregion.latitude", "sunregion_date.start", "sunregion_date.end")]
 }
 

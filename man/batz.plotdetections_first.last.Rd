@@ -174,11 +174,21 @@ if \code{$facet.set} does not already list it.}
 \code{$facet.set}) plots 40kHzMyo detections. They are drawn inside the "All detections" facet
 when it exists, otherwise in their own last facet. The 40kHzMyo legend
 key is shown whenever this is on, even with no 40kHzMyo detections.}
-\item{\code{$facet.label}}{Format of species facet titles:
+\item{\code{$facet.label_format}}{Format of species facet titles:
 \code{"common_name"} (used when blank), \code{"scientific_name"},
 \code{"code4"}, \code{"code6"}, \code{"both"}, or \code{"common"},
 \code{"latin"}, \code{"scientific"}. Other values stop with an error
-naming the row. Non-species facets keep their own name.}
+naming the row. Non-species facets keep their own name. An older
+fig.list whose \code{$facet.label} holds these formats (and has no
+\code{$facet.label_format}) is read as \code{$facet.label_format}
+(WARNING).}
+\item{\code{$facet.label}}{Optional. Alternative names for the panels
+(or other labelled parts of the graph): a ";" list, either
+\code{name=label} pairs (e.g. \code{"lano=Silver-haired;AllDet=All
+    bats"}; a name is matched to the panel's name, its label or its species code or name (AllDet = All detections), ignoring
+case, spaces, dots and underscores) or labels in panel order. Panels not
+given a label keep theirs; a NOTE names pairs that match no panel and
+a count that doesn't match.}
 \item{\code{$plot.set}}{One ARU/group value. \code{data} is filtered on
 \code{$group} and \code{suntimes} on \code{$aru.name} (ignoring case).
 Blank = no filter.}

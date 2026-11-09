@@ -324,7 +324,8 @@ Rows with no schedule are named in a NOTE.
 \strong{ARU list.} With \code{generate.arulist = TRUE}, one row per site
 (\code{header.combo}: project name + \code{$aru.name}) with the headers
 \code{$aru.name}, \code{$longitude}, \code{$latitude},
-\code{$date.start}, \code{$date.end}, \code{$time.zone},
+\code{$date.start}, \code{$date.end}, \code{$aru.schedule},
+\code{$time.zone},
 \code{$sunregion}, \code{$sunregion.longitude},
 \code{$sunregion.latitude}, \code{$sunregion_date.start},
 \code{$sunregion_date.end} (dates as m/d/Y, e.g. \code{6/26/2026}). Sites
@@ -337,9 +338,13 @@ record; a site with none takes them from its latest service record.
 \code{$date.deployment}.
 \item \code{$date.end}: the site's latest service record with
 \code{$visit.reason} \code{"retrieval"}.
+\item \code{$aru.schedule}: the site's recording schedule from the
+deployment history tab (\code{$aru.schedule}). When a visit changed
+it (\code{$aru.schedule_new}), every schedule is listed in date
+order, separated by "; " (e.g. \code{"USFWS.compliance; continuous"}).
 }
 Coordinates are rounded to 8 decimals.
-A site with no coordinates, deployment date or retrieval record keeps
+A site with no coordinates, deployment date, retrieval record or schedule keeps
 that cell blank and is named in a NOTE. The files hold no project-name
 column; the returned \code{$arulist} has one.
 \code{\link{batz.generate_suntimes.arulist}} reads these files and

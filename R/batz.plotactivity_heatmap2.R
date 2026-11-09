@@ -116,7 +116,18 @@
 #'     accepted with a WARNING.}
 #'   \item{\code{$40khzmyo}}{\code{TRUE} adds a 40kHzMyo facet (its own
 #'     facet; a heatmap cannot overlay it).}
-#'   \item{\code{$facet.label}}{Facet labels.}
+#'   \item{\code{$facet.label_format}}{Format of species facet titles
+#'     (\code{"common_name"}, \code{"scientific_name"}, \code{"code4"},
+#'     \code{"code6"}, \code{"both"}; blank = \code{"common_name"}). An
+#'     older fig.list whose \code{$facet.label} holds these formats is read
+#'     as \code{$facet.label_format} (WARNING).}
+#'   \item{\code{$facet.label}}{Optional. Alternative names for the panels
+#'     (or other labelled parts of the graph): a ";" list, either
+#'     \code{name=label} pairs (e.g. \code{"lano=Silver-haired;AllDet=All
+#'     bats"}; a name is matched to the panel's name, its label or its species code or name (AllDet = All detections), ignoring
+#'     case, spaces, dots and underscores) or labels in panel order. Panels not
+#'     given a label keep theirs; a NOTE names pairs that match no panel and
+#'     a count that doesn't match.}
 #'   \item{\code{$plot.set}}{\code{$group} value(s) to plot, separated by
 #'     \code{;} or \code{,} (several are summed, with a NOTE); blank = all.}
 #'   \item{\code{$date.start}, \code{$date.end}}{Date range; blank = range
@@ -324,7 +335,7 @@ batz.plotactivity_heatmap2 <- function(data,
     if (!is.data.frame(fig.list)) stop("`fig.list` must be a data frame (e.g. read.csv(\"heat2.figlist.csv\")).")
     fig.list <- plotutil_figlist_legacy(fig.list, FN)
     FIG.LIST.REQUIRED <- c("plot.type", "plot.name", "facet.header", "facet.plot", "facet.set",
-                           "all.detections", "40khzmyo", "facet.label", "plot.set",
+                           "all.detections", "40khzmyo", "facet.label_format", "plot.set",
                            "date.start", "date.end")
     fl.canon <- canonicalize.headers(fig.list, FIG.LIST.REQUIRED)
     if (length(fl.canon$missing) > 0) stop("fig.list is missing these headers: ", paste(fl.canon$missing, collapse = ", "))
@@ -463,7 +474,7 @@ batz.plotactivity_heatmap2 <- function(data,
         }
         facet.recs[[fc]] <- sub
       }
-      labs <- plotutil_facet_labels(facets, setting(job, "facet.label"), job.label, FN)
+      labs <- plotutil_facet_labels(facets, setting(job, "facet.label_format"), job.label, FN, alt = plotutil_job_text(job, "facet.label"))
       ids <- plotutil_facet_id(facets, "sppid")
       set.tok <- if (length(sets) > 0) sets else ""
       if (faceted) {

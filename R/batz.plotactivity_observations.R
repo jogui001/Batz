@@ -153,11 +153,21 @@
 #'     \code{$facet.set}) plots 40kHzMyo bars. They are drawn on top of the
 #'     bars in the "All detections" facet when it exists, otherwise in their
 #'     own last facet. The 40kHzMyo legend key is shown whenever this is on.}
-#'   \item{\code{$facet.label}}{Format of species facet titles:
+#'   \item{\code{$facet.label_format}}{Format of species facet titles:
 #'     \code{"common_name"} (used when blank), \code{"scientific_name"},
 #'     \code{"code4"}, \code{"code6"}, \code{"both"}, or \code{"common"},
 #'     \code{"latin"}, \code{"scientific"}. Other values stop with an error
-#'     naming the row. Non-species facets keep their own name.}
+#'     naming the row. Non-species facets keep their own name. An older
+#'     fig.list whose \code{$facet.label} holds these formats (and has no
+#'     \code{$facet.label_format}) is read as \code{$facet.label_format}
+#'     (WARNING).}
+#'   \item{\code{$facet.label}}{Optional. Alternative names for the panels
+#'     (or other labelled parts of the graph): a ";" list, either
+#'     \code{name=label} pairs (e.g. \code{"lano=Silver-haired;AllDet=All
+#'     bats"}; a name is matched to the panel's name, its label or its species code or name (AllDet = All detections), ignoring
+#'     case, spaces, dots and underscores) or labels in panel order. Panels not
+#'     given a label keep theirs; a NOTE names pairs that match no panel and
+#'     a count that doesn't match.}
 #'   \item{\code{$plot.set}}{One or more values of the \code{$plot.group}
 #'     column to include, separated by spaces (double quotes are treated as
 #'     spaces), matched ignoring case. Blank = all values.}
@@ -379,7 +389,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
   ## 2026-10-09, per Josh: $facet -> $facet.header, new $facet.plot,
   ## $facet.panel dropped (old files still load - see plotutil_figlist_legacy())
   FIG.LIST.REQUIRED <- c("plot.type", "plot.name", "facet.header", "facet.plot", "facet.set", "myso",
-                          "all.detections", "40khzmyo", "facet.label",
+                          "all.detections", "40khzmyo", "facet.label_format",
                           "plot.set", "pool", "date.format",
                           "date.start", "date.end", "xaxe.interval")
   # Follow-up, 2026-09-23, per Josh (bug report: an explicit $yaxe.trans =
@@ -391,7 +401,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
   # whitespace/casing bug)" in Details.
   ## $plot.order/$facpan removed 2026-10-09 - $facet.set now sets the
   ## facets and their order
-  FIG.LIST.OPTIONAL <- c("plot.group", "yaxe.trans", "loglabels", "y.scale",
+  FIG.LIST.OPTIONAL <- c("facet.label", "plot.group", "yaxe.trans", "loglabels", "y.scale",
                           "y.custom", "ymax", "legend")
   AES.DEFAULT.REQUIRED <- c("category", "parameter", "default.value")
 
@@ -726,8 +736,8 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     # "common"/"latin"/"scientific". See plotutil_facet_labels() in
     # batz.util_plot.helpers.R.
     panel.levels.raw <- facpan
-    panel.labels <- plotutil_facet_labels(panel.levels.raw, get.setting(job, "facet.label"),
-                                      job.label, "batz.plotactivity_observations")
+    panel.labels <- plotutil_facet_labels(panel.levels.raw, get.setting(job, "facet.label_format"),
+                                      job.label, "batz.plotactivity_observations", alt = plotutil_job_text(job, "facet.label"))
     ## facet order = $facet.set order (2026-10-09; replaces $plot.order)
     ordered.levels <- panel.levels.raw
     pd$facet.panel.value <- factor(pd$facet.panel.value, levels = ordered.levels, labels = panel.labels[ordered.levels])

@@ -23,13 +23,17 @@ Required columns: \code{$aru.name}, \code{$date.monitoringnight},
 \code{$mins.oper} (minutes recorded in the interval),
 \code{$mins2.noon.mon} (minutes from that night's noon to the interval).
 A column named exactly \code{aru} is used as \code{$aru.name} when there
-is no \code{aru.name} column.}
+is no \code{aru.name} column. Optional: \code{$aru.schedule} (as in
+\code{\link{batz.generate_plotframe.sm4}} output), used for the Y-axis
+limits when \code{time.start} or \code{time.end} is blank.}
 
 \item{fig.list}{Data frame, one row per plot. Required columns:
 \code{$plot.type}, \code{$plot.name}, \code{$plot.set},
 \code{$date.format}, \code{$date.start}, \code{$date.end},
-\code{$xaxe.interval}, \code{$xaxe.title}, \code{$yaxe.title}. Other
-columns (species and facet columns of a shared fig.list) are ignored.
+\code{$xaxe.interval}, \code{$xaxe.title}, \code{$yaxe.title}.
+Optional: \code{$facet.label}, \code{$time.start}, \code{$time.end},
+\code{$time.interval}. Other columns (species and facet columns of a
+shared fig.list) are ignored.
 See Details.
 Cells holding "NA" (a heading not used by this plot type, as in
 \code{\link{batz.generate_figlist}}) are treated as blank.
@@ -110,7 +114,8 @@ one extra row copied at each end (half a day outside the date
 window) so the lines reach the panel edges.}
 \item{\code{$bin.minutes}}{Tile height in minutes (see Details).}
 \item{\code{$tz}}{Time zone used.}
-\item{\code{$y.start}, \code{$y.end}}{Y-axis window (Noon to Noon).}
+\item{\code{$y.start}, \code{$y.end}, \code{$y.interval}}{Y-axis
+limits and the minutes between Y labels (see "Y axis" in Details).}
 \item{\code{$date.start}, \code{$date.end}}{X-axis date window.}
 \item{\code{$plot.set.val}}{The \code{$plot.set} value.}
 }
@@ -127,8 +132,10 @@ Draws a night-by-time-of-night heatmap of how many minutes an SM4Bat
 detector was recording in each interval of the night, from an
 already-summarized per-interval table (\code{$mins.oper},
 \code{$mins2.noon.mon}). Dawn, Dusk and Midnight reference lines are drawn
-as in \code{\link{batz.plotdetections_first.last}}. The Y axis is one
-shared Noon-to-Noon window; the X axis is the date. One single-panel PNG is
+as in \code{\link{batz.plotdetections_first.last}}. The Y axis is the
+time of night on a Noon-to-Noon axis, limited by \code{time.start} and
+\code{time.end} (or by the ARUs' recording schedule); the X axis is the
+date. One single-panel PNG is
 saved per \code{fig.list} row whose \code{$plot.type} is
 \code{"sm4.heatmap"}.
 }
@@ -142,22 +149,76 @@ other values are skipped with a NOTE. Rows with a blank
 (NOTE).}
 \item{\code{$plot.name}}{Plot title and part of the file name. Blank
 gives \code{"row N"}.}
-\item{\code{$plot.set}}{One ARU. \code{data} and \code{suntimes} are
-filtered on \code{$aru.name} (ignoring case). Blank = no filter.}
+\item{\code{$plot.set}}{One ARU, or several separated by ";" (e.g.
+\code{"CLERK; SUGARHILL; CEMETERY; AYERS"}). \code{data} and
+\code{suntimes} are filtered on \code{$aru.name}, ignoring case,
+spaces, dots and underscores. With more than one ARU, each gets its own panel
+(in the order listed, 2 per row, titled with the ARU name as in
+\code{data}) and the plot height grows with the rows of panels.
+Blank = every ARU in \code{data}, one panel each. ARUs not in
+\code{data} are named in a NOTE.}
+\item{\code{$facet.label}}{Optional. Alternative names for the ARU
+panels: a ";" list, either \code{name=label} pairs (e.g.
+\code{"CLERK=Clerk Rd;SUGARHILL=Sugar Hill"}; a name is matched to the
+ARU name ignoring case, spaces, dots and underscores) or labels in
+\code{$plot.set} order. ARUs not given a label keep their name.}
 \item{\code{$date.start}, \code{$date.end}}{Date window of the plot
 (m/d/Y, Y-m-d or m/d/y). Both are needed: a blank or unreadable date
 leaves no rows. A row with no data left makes no plot (NOTE).}
 \item{\code{$date.format}}{X-axis date label format (strftime style).
-A literal "/n" becomes a line break.}
-\item{\code{$xaxe.interval}}{Number of evenly spaced labeled dates from
-\code{$date.start} to \code{$date.end}. An unusable value gives 2
-labels (NOTE).}
+A literal "/n" becomes a line break. Blank gives \code{"\%b-\%d"}
+(NOTE).}
+\item{\code{$xaxe.interval}}{A number: that many evenly spaced labeled
+dates from \code{$date.start} to \code{$date.end}. Or
+\code{"N day"} / \code{"N week"} (e.g. \code{"2 day"}): a label every
+N days or weeks from \code{$date.start}. Anything else gives 2 labels
+(NOTE).}
 \item{\code{$xaxe.title}, \code{$yaxe.title}}{Axis titles.}
+\item{\code{$time.start}, \code{$time.end}, \code{$time.interval}}{
+Optional Y-axis settings, see "Y axis". Like every setting, they can
+also be typed into the call (e.g. \code{time.start = "18:00"}) or
+given in \code{aes.default}.}
+}
+
+\strong{Y axis.}
+\itemize{
+\item \code{time.start}: lowest time on the Y axis, \code{"HH:MM"}
+(e.g. \code{"18:00"}).
+\item \code{time.end}: highest time on the Y axis, \code{"HH:MM"}
+(e.g. \code{"08:00"}, the next morning). The axis runs Noon to Noon,
+so a time before noon is the next morning; \code{"12:00"} is the
+next noon. A \code{time.end} not after \code{time.start} gives the
+full Noon-to-Noon axis (NOTE).
+\item \code{time.interval}: minutes between Y-axis labels, default
+\code{60} (\code{"30 min"} and \code{"2 hour"} are also read).
+Labels are on clock times that are multiples of it (60: every full
+hour; 30: every hour and half hour; 120: every second hour from
+midnight).
+\item A blank \code{time.start} or \code{time.end} comes from the
+\code{$aru.schedule} of the plotted rows: the earliest
+\code{$time.on} and the latest \code{$time.off} of those schedules
+in the \code{aru.scheduals} tab of Batz_reference_db (several
+schedules, or a ";" list, are pooled). \code{time.start} is rounded
+down and \code{time.end} up to a multiple of \code{time.interval}
+(60: nearest hour; 30: nearest half hour; 120: nearest 2 hours).
+\itemize{
+\item Sunset and sunrise times use the earliest sunset and the
+latest sunrise (\code{$sunrise.monitoringnight}) of the plotted
+\code{suntimes}, plus the schedule's offset.
+\item \code{"deployment"} / \code{"recovery"},
+\code{"observed continuous"} and schedules that cross noon give
+the full Noon-to-Noon axis; \code{"observed HH:MM-HH:MM"} (from
+\code{batz.generate_plotframe.sm4}) uses those times.
+\item With no \code{$aru.schedule} column, a blank or unknown
+schedule, or a sun-based schedule without \code{suntimes}, the
+range of the plotted intervals is used (NOTE).
+}
+\item Tiles and lines outside the limits are cut off at the panel edge.
 }
 
 \strong{Tiles.} Each \code{data} row is one tile, placed at its
 \code{$date.monitoringnight} (X) and \code{$mins2.noon.mon} (Y, on the
-shared Noon-to-Noon axis) and filled by \code{$mins.oper}. The data is
+Noon-to-Noon axis) and filled by \code{$mins.oper}. The data is
 not re-binned. The tile height is the most common gap between
 consecutive \code{$mins2.noon.mon} values within each night (rounded to
 0.1 minute), or 15 minutes when it cannot be worked out. A partial first
@@ -179,8 +240,7 @@ blank, otherwise \code{$default.value}. Only the fig.list columns listed
 above are read from \code{fig.list}; every other setting comes from
 plotopts. These \code{$parameter} rows must exist (case and spaces ignored), or
 the function stops listing the missing ones:
-\code{yaxe.break.interval}, \code{yaxe.labelformat},
-\code{yaxe.break.labels}, \code{dawn.linetype}, \code{dawn.color},
+\code{yaxe.labelformat}, \code{yaxe.break.labels}, \code{dawn.linetype}, \code{dawn.color},
 \code{dusk.linetype}, \code{dusk.color}, \code{midnight.linetype},
 \code{midnight.color}, \code{panel.border.linewidth},
 \code{reference.line.legend.title}, \code{fill.max}, \code{fill.colors},
@@ -192,10 +252,11 @@ the function stops listing the missing ones:
 \code{ggsave.width.pad}, \code{ggsave.height.pad}, \code{plot.width},
 \code{plot.height}.
 \itemize{
-\item Y breaks every \code{yaxe.break.interval} (e.g.
-\code{"3 hours"}), labeled with the ";"-separated
-\code{yaxe.break.labels}. If the counts differ, times formatted with
-\code{yaxe.labelformat} are used (NOTE).
+\item Y labels (every \code{time.interval}, see "Y axis") are times
+formatted with \code{yaxe.labelformat} (e.g. \code{"\%H:\%M"}).
+A non-blank ";"-separated \code{yaxe.break.labels} with one label per
+break is used instead; with a different count the formatted times are
+used (NOTE).
 \item Fill: a continuous gradient through the ";"-separated
 \code{fill.colors} (fewer than 2 colors gives a 7-color viridis
 ramp), from 0 to \code{fill.max} (an unusable value gives 15).

@@ -39,5 +39,14 @@ i <- fl$plot.type == "sm4.heatmap"
 fl$plot.name[i] <- "my.site"; fl$plot.set[i] <- "my.site"            # ... fill in the rest, then:
 # batz.plotsm4_heatmap(sm4, fl, suntimes, plotopts)
 
+## example entries in every heading a plot type uses, "NA" in the others; $facet.label_format and $facet.label (2026-11-09)
+ok(!any(as.matrix(f$fig.list) == ""), "every used heading has an example entry")
+ok(all(c("facet.label_format", "facet.label") %in% names(f$fig.list)), "$facet.label_format and $facet.label headings")
+print(f$fig.list[, c("plot.type", "facet.label_format", "facet.label")])
+
+## functions = "" : every plot type (2026-11-09)
+f3 <- batz.generate_figlist(functions = "", dir.save = NULL)
+ok(nrow(f3$fig.list) == nrow(f$fig.list) && identical(f3$fig.list$plot.type, f$fig.list$plot.type), "functions = \"\": all plot types")
+
 try(batz.generate_figlist(functions = "batz.not_a_function", dir.save = NULL))   # error names it
 cat("Workbook in:", dir.out, "\n")

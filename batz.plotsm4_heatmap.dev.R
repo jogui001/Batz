@@ -53,4 +53,60 @@ fl5 <- fl[, names(fl) != "plot"]
 r5 <- batz.plotsm4_heatmap(data = pf, fig.list = fl5, project.name = "noplotcol", dir.save = dir.out)   # NOTE: no $plot column
 ok(length(r5$ggplots) == 1, "no $plot column: every row plotted")
 
+## 4. plot.set with several ARUs separated by ";" (one panel each), "2 day" x labels, blank date.format (2026-11-09)
+pf2 <- rbind(pf, transform(pf, aru.name = "SUGARHILL"))
+fl6 <- fl; fl6$plot.set <- "AYERS ; sugar_hill.  "; fl6$plot.name <- "two ARUs"
+fl6$xaxe.interval <- "2 day"; fl6$date.format <- ""
+r6 <- batz.plotsm4_heatmap(data = pf2, fig.list = fl6, suntimes = st, project.name = "multi", dir.save = dir.out)   # NOTE: $date.format is blank
+g6 <- r6$ggplots[[1]]
+ok(inherits(g6$facet, "FacetWrap") && identical(levels(g6$data$facet), c("AYERS", "SUGARHILL")), "two ARUs: one panel each, in plot.set order")
+ok(length(ggplot2::ggplot_build(g6)$layout$panel_params[[1]]$x$breaks[!is.na(ggplot2::ggplot_build(g6)$layout$panel_params[[1]]$x$breaks)]) == 2,
+   "\"2 day\" from 6/26 to 6/29: labels on 6/26 and 6/28")
+
+## 5. $facet.label: alternative panel names (2026-11-09)
+fl7 <- fl6; fl7$facet.label <- "sugarhill=Sugar Hill"; fl7$date.format <- "%b-%d"
+r7 <- batz.plotsm4_heatmap(data = pf2, fig.list = fl7, project.name = "labels", dir.save = dir.out)
+ok(identical(levels(r7$ggplots[[1]]$data$facet), c("AYERS", "Sugar Hill")), "$facet.label: SUGARHILL shown as 'Sugar Hill'")
+fl8 <- fl7; fl8$facet.label <- "Ayers Rd; Sugar Hill"
+r8 <- batz.plotsm4_heatmap(data = pf2, fig.list = fl8, project.name = "labels", dir.save = dir.out)
+ok(identical(levels(r8$ggplots[[1]]$data$facet), c("Ayers Rd", "Sugar Hill")), "$facet.label in plot.set order")
+
+## ---- 6. Y axis: time.start / time.end / time.interval (2026-11-09) -----------
+hm <- function(x) format(x, "%H:%M")
+yb <- function(r) { b <- ggplot2::ggplot_build(r$ggplots[[1]])$layout$panel_params[[1]]$y$breaks; hm(as.POSIXct(b[!is.na(b)], origin = "1970-01-01", tz = r$plots[[1]]$tz)) }
+## given: used as they are
+fl9 <- fl; fl9$time.start <- "19:00"; fl9$time.end <- "07:00"; fl9$time.interval <- "120"
+r9 <- batz.plotsm4_heatmap(data = pf, fig.list = fl9, suntimes = st, project.name = "ygiven", dir.save = dir.out)
+ok(hm(r9$plots[[1]]$y.start) == "19:00" && hm(r9$plots[[1]]$y.end) == "07:00", "time.start / time.end given: 19:00 to 07:00")
+print(yb(r9))
+ok(identical(yb(r9), c("20:00", "22:00", "00:00", "02:00", "04:00", "06:00")), "time.interval 120: labels every second hour from midnight")
+## blank: from $aru.schedule (USFWS.compliance = sunset-30 to sunrise+30), rounded to time.interval
+pfu <- pf; pfu$aru.schedule <- "USFWS.compliance"
+stu <- st; stu$sunset <- paste(as.Date("2026-06-26") + 0:3, "21:33:00")                       # earliest sunset 21:33 -> 21:03
+stu$sunrise.monitoringnight <- paste(as.Date("2026-06-27") + 0:3, c("06:10:00", "06:05:00", "06:00:00", "05:55:00"))   # latest 06:10 -> 06:40
+y.of <- function(iv) { f <- fl; f$time.start <- ""; f$time.end <- ""; f$time.interval <- iv
+  r <- batz.plotsm4_heatmap(data = pfu, fig.list = f, suntimes = stu, project.name = paste0("yiv", iv), dir.save = dir.out)
+  c(hm(r$plots[[1]]$y.start), hm(r$plots[[1]]$y.end)) }
+ok(identical(y.of("60"), c("21:00", "07:00")), "time.interval 60: 21:03 -> 21:00, 06:40 -> 07:00")
+ok(identical(y.of("30"), c("21:00", "07:00")), "time.interval 30: 21:00 to 07:00")
+ok(identical(y.of("120"), c("20:00", "08:00")), "time.interval 120: 20:00 to 08:00")
+ok(identical(y.of("15 min"), c("21:00", "06:45")), "time.interval \"15 min\": 21:00 to 06:45")
+ok(identical(y.of(""), c("21:00", "07:00")), "time.interval blank: 60")
+## one given, one blank
+fl10 <- fl; fl10$time.start <- "18:00"; fl10$time.end <- ""
+r10 <- batz.plotsm4_heatmap(data = pfu, fig.list = fl10, suntimes = stu, project.name = "yhalf", dir.save = dir.out)
+ok(hm(r10$plots[[1]]$y.start) == "18:00" && hm(r10$plots[[1]]$y.end) == "07:00", "time.start given, time.end from the schedule")
+## typed into the call (call > fig.list)
+r11 <- batz.plotsm4_heatmap(data = pfu, fig.list = fl10, suntimes = stu, project.name = "ycall", dir.save = dir.out, time.start = "22:00")
+ok(hm(r11$plots[[1]]$y.start) == "22:00", "time.start typed into the call wins over the fig.list")
+## inferred schedule from batz.generate_plotframe.sm4 ("observed HH:MM-HH:MM"), no suntimes needed
+fl12 <- fl; fl12$time.start <- ""; fl12$time.end <- ""
+r12 <- batz.plotsm4_heatmap(data = pf, fig.list = fl12, project.name = "yobs", dir.save = dir.out)
+print(unique(pf$aru.schedule))
+ok(hm(r12$plots[[1]]$y.start) == "20:00" && hm(r12$plots[[1]]$y.end) == "06:00", "observed 20:03-05:44 -> 20:00 to 06:00")
+## sun-based schedule without suntimes, or no $aru.schedule column: range of the plotted intervals (NOTE)
+r13 <- batz.plotsm4_heatmap(data = pfu, fig.list = fl12, project.name = "ynosun", dir.save = dir.out)
+r14 <- batz.plotsm4_heatmap(data = pf[, names(pf) != "aru.schedule"], fig.list = fl12, project.name = "ynocol", dir.save = dir.out)
+ok(hm(r14$plots[[1]]$y.start) == "20:00" && hm(r14$plots[[1]]$y.end) == "06:00", "no $aru.schedule: range of the plotted intervals")
+
 cat("\nALL TESTS PASSED - PNGs in", dir.out, "\n")

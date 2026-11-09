@@ -83,6 +83,14 @@
 #'       to the interval start (0 to 1439).}
 #'     \item{\code{$mins2.midnight}}{Minutes from the start of the calendar
 #'       day to the interval start (0 to 1439).}
+#'     \item{\code{$aru.schedule}}{The recording schedule used for the
+#'       ARU at that time (Details, "Scheduled recording"): the deployment
+#'       history's (a change by \code{$aru.schedule_new} applies from that
+#'       visit on), \code{aru.schedule}, or the most likely schedule worked
+#'       out from the checks (a database name, or
+#'       \code{"observed HH:MM-HH:MM"} / \code{"observed continuous"}). A
+#'       row outside every deployment takes the schedule of the nearest one.
+#'       Blank with \code{aru.schedule = ""}.}
 #'   }
 #'   The file written is named in a printed line.
 #'
@@ -326,6 +334,10 @@ batz.generate_plotframe.sm4 <- function(data,
       cat(sprintf("%s: %d scheduled interval(s) with no system checks added with mins.oper = 0.\n", FN, sum(new)))
     }
   }
+
+  ## ---- aru.schedule of each row ---------------------------------------------
+  ord.b <- as.numeric(as.POSIXct(paste(out$date, out$time), tz = "UTC"))
+  out$aru.schedule <- plotframe.sm4.row.schedule(out$aru.name, ord.b, attr(exp, "segments"))
 
   cat(sprintf("%s: %d check(s) from %d ARU(s) -> %d interval(s) of %d min (mic.type %s, buffer %s s); %d interval(s) with mins.oper < interval length.\n",
               FN, nrow(d), length(unique(d$aru.name)), n.checked, interval, paste(mic.type, collapse = ", "), buffer,
@@ -595,6 +607,9 @@ plotframe.sm4.expected <- function(sched, sc.all, suntimes, d, I, trim, aru.sche
   }
 
   res <- list()
+  seg.tab <- list()                                        # schedule used per ARU and period: $aru, $schedule, $from, $to
+  add.seg <- function(aru, schedule, from, to) seg.tab[[length(seg.tab) + 1]] <<- data.frame(aru = aru, schedule = schedule,
+                                                                                             from = from, to = to, stringsAsFactors = FALSE)
   aru.all <- unique(c(ak(d$aru.name), if (!is.null(dh)) ifelse(nzchar(ak(dh$aru.name)), ak(dh$aru.name), ak(dh$site))))
   aru.all <- aru.all[nzchar(aru.all)]
   for (k in aru.all) {
@@ -603,6 +618,7 @@ plotframe.sm4.expected <- function(sched, sc.all, suntimes, d, I, trim, aru.sche
     ## aru.schedule = "": every minute between the first and last check
     if (!infer && !nzchar(aru.schedule)) {
       if (in.log) res[[length(res) + 1]] <- to.bins(trimw(cbind(first.check[[k]], last.check[[k]])), disp)
+      if (in.log) add.seg(disp, "", first.check[[k]], last.check[[k]])
       next
     }
     ## periods and schedules: deployment history, else first to last check
@@ -650,12 +666,43 @@ plotframe.sm4.expected <- function(sched, sc.all, suntimes, d, I, trim, aru.sche
       if (is.null(rows) || !nrow(rows)) rows <- fallback.rows(k, sg[[2]], sg[[3]], disp)
       label <- if (nrow(rows)) rows$aru.schedule[1] else ""
       w <- windows(rows, sg[[2]], sg[[3]], k, label)
-      if (is.null(w) && nrow(rows) && needs.sun(rows)) w <- windows(infer.rows(k, sg[[2]], sg[[3]], disp), sg[[2]], sg[[3]], k, "observed")
+      if (is.null(w) && nrow(rows) && needs.sun(rows)) {
+        rows <- infer.rows(k, sg[[2]], sg[[3]], disp); label <- if (nrow(rows)) rows$aru.schedule[1] else ""
+        w <- windows(rows, sg[[2]], sg[[3]], k, label)
+      }
+      add.seg(disp, label, sg[[2]], sg[[3]])
       res[[length(res) + 1]] <- to.bins(trimw(w), disp)
     }
   }
+  segs.out <- if (length(seg.tab)) do.call(rbind, seg.tab) else
+    data.frame(aru = character(0), schedule = character(0), from = numeric(0), to = numeric(0))
   o <- if (length(res)) do.call(rbind, res) else empty
-  if (!nrow(o)) return(empty)
+  if (!nrow(o)) return(structure(empty, segments = segs.out))
   o <- stats::aggregate(secs ~ aru + bin + noon, data = o, FUN = sum)
-  o[o$secs >= 60, c("aru", "bin", "noon", "secs"), drop = FALSE]
+  structure(o[o$secs >= 60, c("aru", "bin", "noon", "secs"), drop = FALSE], segments = segs.out)
+}
+
+
+#' aru.schedule of each plot-frame row (internal)
+#'
+#' The schedule of the ARU's period (deployment) holding the row's interval;
+#' a row outside every period takes the nearest period's schedule. Blank
+#' when the ARU has no period (or aru.schedule = "").
+#' @keywords internal
+#' @noRd
+plotframe.sm4.row.schedule <- function(aru, bin, segs) {
+  ak <- function(x) gsub("[^a-z0-9]", "", tolower(as.character(x)))
+  out <- rep("", length(aru))
+  if (is.null(segs) || !nrow(segs)) return(out)
+  sk <- ak(segs$aru)
+  for (a in unique(ak(aru))) {
+    i <- which(ak(aru) == a); g <- segs[sk == a, , drop = FALSE]
+    if (!nrow(g)) next
+    out[i] <- vapply(bin[i], function(b) {
+      hit <- which(b >= g$from & b < g$to)
+      if (length(hit)) return(g$schedule[hit[length(hit)]])
+      g$schedule[which.min(pmin(abs(b - g$from), abs(b - g$to)))]
+    }, character(1))
+  }
+  out
 }

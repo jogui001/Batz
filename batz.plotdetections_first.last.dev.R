@@ -34,7 +34,7 @@ fb <- fb[rep(1, 4), ]
 fb$plot <- TRUE; fb$plot.type <- "bat.detection"; fb$plot.set <- c("Ayers", "Cemetery", "Clerk", "Sugar Hill")
 fb$plot.name <- paste("HEB", fb$plot.set); fb$facet.header <- "sppid"; fb$facet.plot <- "TRUE"
 fb$facet.set <- "NE"; fb$myso <- "FALSE"; fb$all.detections <- "TRUE"; fb$`40khzmyo` <- "TRUE"
-fb$facet.label <- "common_name"; fb$date.format <- "%b-%d"
+fb$facet.label_format <- "common_name"; fb$facet.label <- ""; fb$date.format <- "%b-%d"
 fb$date.start <- "6/26/2026"; fb$date.end <- "7/2/2026"; fb$xaxe.interval <- "4"
 fb$xaxe.title <- "Date"; fb$yaxe.title <- "Time"
 
@@ -44,4 +44,13 @@ r <- batz.plotdetections_first.last(data = bat, fig.list = fb, suntimes = st, ae
                                     strip.special = TRUE, strip.special.plotopts = FALSE, )   # trailing comma
 ok(length(r$ggplots) == 4, "4 plots, including sites with no suntimes rows")
 ok(nrow(r$plots[[3]]$sdb) == 0, "Clerk: 0 suntimes rows, no error")
+## $facet.label: alternative panel names (2026-11-09); an old $facet.label holding a name format still works
+fl2 <- fb[1, ]; fl2$facet.label <- "AllDet=All bats;epfu=Big brown"
+r2 <- batz.plotdetections_first.last(data = bat, fig.list = fl2, suntimes = st, dir.save = dir.out)
+labs2 <- levels(r2$plots[[1]]$pd$facet.panel.value)
+print(labs2)
+ok(labs2[1] == "All bats" && "Big brown" %in% labs2, "$facet.label renames panels")
+fl3 <- fb[1, setdiff(names(fb), "facet.label_format")]; fl3$facet.label <- "code4"   # old fig.list
+r3 <- batz.plotdetections_first.last(data = bat, fig.list = fl3, suntimes = st, dir.save = dir.out)   # WARNING: ... used as $facet.label_format
+ok("EPFU" %in% toupper(levels(r3$plots[[1]]$pd$facet.panel.value)), "old $facet.label = code4 read as $facet.label_format")
 cat("PNGs in:", dir.out, "\n")

@@ -225,7 +225,18 @@ old headers \code{$all.dectections} and \code{$Alldect} are still
 accepted with a WARNING.}
 \item{\code{$40khzmyo}}{\code{TRUE} adds a 40kHzMyo facet (its own
 facet; a heatmap cannot overlay it).}
-\item{\code{$facet.label}}{Facet labels.}
+\item{\code{$facet.label_format}}{Format of species facet titles
+(\code{"common_name"}, \code{"scientific_name"}, \code{"code4"},
+\code{"code6"}, \code{"both"}; blank = \code{"common_name"}). An
+older fig.list whose \code{$facet.label} holds these formats is read
+as \code{$facet.label_format} (WARNING).}
+\item{\code{$facet.label}}{Optional. Alternative names for the panels
+(or other labelled parts of the graph): a ";" list, either
+\code{name=label} pairs (e.g. \code{"lano=Silver-haired;AllDet=All
+    bats"}; a name is matched to the panel's name, its label or its species code or name (AllDet = All detections), ignoring
+case, spaces, dots and underscores) or labels in panel order. Panels not
+given a label keep theirs; a NOTE names pairs that match no panel and
+a count that doesn't match.}
 \item{\code{$plot.set}}{\code{$group} value(s) to plot, separated by
 \code{;} or \code{,} (several are summed, with a NOTE); blank = all.}
 \item{\code{$date.start}, \code{$date.end}}{Date range; blank = range

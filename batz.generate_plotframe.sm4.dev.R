@@ -32,7 +32,7 @@ d$power.v[nrow(d)] <- 6.1
 pf <- batz.generate_plotframe.sm4(d, dir.save = dir.out, project.name = "Bristol NH")
 print(head(pf))
 ok(identical(names(pf), c("aru.name", "date", "time", "date.monitoringnight", "mins.oper", "power.v",
-                          "temperature.c", "files", "scrubbed", "mins2.noon.mon", "mins2.midnight")), "headers")
+                          "temperature.c", "files", "scrubbed", "mins2.noon.mon", "mins2.midnight", "aru.schedule")), "headers")
 ok(pf$mins.oper[pf$time == "20:00:00"] == 13, "first interval: checks from 20:02:59 -> 13 minutes")
 ok(pf$mins.oper[pf$time == "22:00:00"] == 15, "late checks (within buffer) still 15 minutes")
 ok(pf$mins.oper[pf$time == "01:00:00"] == 10, "5 checks with no mic -> 10 minutes")
@@ -119,6 +119,24 @@ meta9 <- meta; meta9$deployment.history$aru.name <- "ay_ers"; meta9$deployment.h
 d9 <- d6; d9$aru.name <- "Ayers."
 p9 <- batz.generate_plotframe.sm4(d9, dir.save = NULL, site.metadata = meta9, suntimes = st)
 ok(sum(p9$mins.oper == 0) == 8 && all(p9$aru.name == "Ayers."), "ARU names matched ignoring case, \".\" and \"_\"")
+
+## ---- 8. $aru.schedule in the output (2026-11-09) -----------------------------
+ok(all(pfs$aru.schedule == "USFWS.compliance"), "deployment history schedule -> $aru.schedule USFWS.compliance")
+ok(all(grepl("^observed", p7a$aru.schedule) | p7a$aru.schedule %in% unique(Batz:::batz.db("aru.scheduals")$aru.schedule)),
+   "inferred schedule named in $aru.schedule")
+print(unique(p7a$aru.schedule))
+ok(all(p7c$aru.schedule == ""), "aru.schedule = \"\" -> blank $aru.schedule")
+## a visit at 02:00 changes the schedule to "continuous": rows from then on take the new one
+meta10 <- meta
+meta10$deployment.history <- rbind(dh[1, ], dh[1, ], dh[2, ])
+meta10$deployment.history$visit.reason[2] <- "sitevisit_maintenance"
+meta10$deployment.history$date[2] <- as.POSIXct("2026-06-27 06:00:00", tz = "UTC")          # 02:00 local
+meta10$deployment.history$aru.schedule_new[2] <- "continuous"
+p10 <- batz.generate_plotframe.sm4(d, dir.save = NULL, site.metadata = meta10, suntimes = st)
+print(table(p10$time >= "02:00:00" & p10$time < "12:00:00", p10$aru.schedule))
+ok(all(p10$aru.schedule[p10$time >= "02:00:00" & p10$time < "12:00:00"] == "continuous") &&
+   all(p10$aru.schedule[p10$time >= "12:00:00" | p10$time < "02:00:00"] == "USFWS.compliance"),
+   "schedule change at a visit: $aru.schedule changes from that visit on")
 
 cat("\nALL TESTS PASSED - output in", dir.out, "\n")
 

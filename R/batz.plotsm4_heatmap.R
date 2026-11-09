@@ -4,8 +4,10 @@
 #' detector was recording in each interval of the night, from an
 #' already-summarized per-interval table (\code{$mins.oper},
 #' \code{$mins2.noon.mon}). Dawn, Dusk and Midnight reference lines are drawn
-#' as in \code{\link{batz.plotdetections_first.last}}. The Y axis is one
-#' shared Noon-to-Noon window; the X axis is the date. One single-panel PNG is
+#' as in \code{\link{batz.plotdetections_first.last}}. The Y axis is the
+#' time of night on a Noon-to-Noon axis, limited by \code{time.start} and
+#' \code{time.end} (or by the ARUs' recording schedule); the X axis is the
+#' date. One single-panel PNG is
 #' saved per \code{fig.list} row whose \code{$plot.type} is
 #' \code{"sm4.heatmap"}.
 #'
@@ -14,12 +16,16 @@
 #'   \code{$mins.oper} (minutes recorded in the interval),
 #'   \code{$mins2.noon.mon} (minutes from that night's noon to the interval).
 #'   A column named exactly \code{aru} is used as \code{$aru.name} when there
-#'   is no \code{aru.name} column.
+#'   is no \code{aru.name} column. Optional: \code{$aru.schedule} (as in
+#'   \code{\link{batz.generate_plotframe.sm4}} output), used for the Y-axis
+#'   limits when \code{time.start} or \code{time.end} is blank.
 #' @param fig.list Data frame, one row per plot. Required columns:
 #'   \code{$plot.type}, \code{$plot.name}, \code{$plot.set},
 #'   \code{$date.format}, \code{$date.start}, \code{$date.end},
-#'   \code{$xaxe.interval}, \code{$xaxe.title}, \code{$yaxe.title}. Other
-#'   columns (species and facet columns of a shared fig.list) are ignored.
+#'   \code{$xaxe.interval}, \code{$xaxe.title}, \code{$yaxe.title}.
+#'   Optional: \code{$facet.label}, \code{$time.start}, \code{$time.end},
+#'   \code{$time.interval}. Other columns (species and facet columns of a
+#'   shared fig.list) are ignored.
 #'   See Details.
 #'   Cells holding "NA" (a heading not used by this plot type, as in
 #'   \code{\link{batz.generate_figlist}}) are treated as blank.
@@ -91,7 +97,8 @@
 #'       window) so the lines reach the panel edges.}
 #'     \item{\code{$bin.minutes}}{Tile height in minutes (see Details).}
 #'     \item{\code{$tz}}{Time zone used.}
-#'     \item{\code{$y.start}, \code{$y.end}}{Y-axis window (Noon to Noon).}
+#'     \item{\code{$y.start}, \code{$y.end}, \code{$y.interval}}{Y-axis
+#'       limits and the minutes between Y labels (see "Y axis" in Details).}
 #'     \item{\code{$date.start}, \code{$date.end}}{X-axis date window.}
 #'     \item{\code{$plot.set.val}}{The \code{$plot.set} value.}
 #'   }
@@ -113,22 +120,76 @@
 #'     (NOTE).}
 #'   \item{\code{$plot.name}}{Plot title and part of the file name. Blank
 #'     gives \code{"row N"}.}
-#'   \item{\code{$plot.set}}{One ARU. \code{data} and \code{suntimes} are
-#'     filtered on \code{$aru.name} (ignoring case). Blank = no filter.}
+#'   \item{\code{$plot.set}}{One ARU, or several separated by ";" (e.g.
+#'     \code{"CLERK; SUGARHILL; CEMETERY; AYERS"}). \code{data} and
+#'     \code{suntimes} are filtered on \code{$aru.name}, ignoring case,
+#'     spaces, dots and underscores. With more than one ARU, each gets its own panel
+#'     (in the order listed, 2 per row, titled with the ARU name as in
+#'     \code{data}) and the plot height grows with the rows of panels.
+#'     Blank = every ARU in \code{data}, one panel each. ARUs not in
+#'     \code{data} are named in a NOTE.}
+#'   \item{\code{$facet.label}}{Optional. Alternative names for the ARU
+#'     panels: a ";" list, either \code{name=label} pairs (e.g.
+#'     \code{"CLERK=Clerk Rd;SUGARHILL=Sugar Hill"}; a name is matched to the
+#'     ARU name ignoring case, spaces, dots and underscores) or labels in
+#'     \code{$plot.set} order. ARUs not given a label keep their name.}
 #'   \item{\code{$date.start}, \code{$date.end}}{Date window of the plot
 #'     (m/d/Y, Y-m-d or m/d/y). Both are needed: a blank or unreadable date
 #'     leaves no rows. A row with no data left makes no plot (NOTE).}
 #'   \item{\code{$date.format}}{X-axis date label format (strftime style).
-#'     A literal "/n" becomes a line break.}
-#'   \item{\code{$xaxe.interval}}{Number of evenly spaced labeled dates from
-#'     \code{$date.start} to \code{$date.end}. An unusable value gives 2
-#'     labels (NOTE).}
+#'     A literal "/n" becomes a line break. Blank gives \code{"\%b-\%d"}
+#'     (NOTE).}
+#'   \item{\code{$xaxe.interval}}{A number: that many evenly spaced labeled
+#'     dates from \code{$date.start} to \code{$date.end}. Or
+#'     \code{"N day"} / \code{"N week"} (e.g. \code{"2 day"}): a label every
+#'     N days or weeks from \code{$date.start}. Anything else gives 2 labels
+#'     (NOTE).}
 #'   \item{\code{$xaxe.title}, \code{$yaxe.title}}{Axis titles.}
+#'   \item{\code{$time.start}, \code{$time.end}, \code{$time.interval}}{
+#'     Optional Y-axis settings, see "Y axis". Like every setting, they can
+#'     also be typed into the call (e.g. \code{time.start = "18:00"}) or
+#'     given in \code{aes.default}.}
+#' }
+#'
+#' \strong{Y axis.}
+#' \itemize{
+#'   \item \code{time.start}: lowest time on the Y axis, \code{"HH:MM"}
+#'     (e.g. \code{"18:00"}).
+#'   \item \code{time.end}: highest time on the Y axis, \code{"HH:MM"}
+#'     (e.g. \code{"08:00"}, the next morning). The axis runs Noon to Noon,
+#'     so a time before noon is the next morning; \code{"12:00"} is the
+#'     next noon. A \code{time.end} not after \code{time.start} gives the
+#'     full Noon-to-Noon axis (NOTE).
+#'   \item \code{time.interval}: minutes between Y-axis labels, default
+#'     \code{60} (\code{"30 min"} and \code{"2 hour"} are also read).
+#'     Labels are on clock times that are multiples of it (60: every full
+#'     hour; 30: every hour and half hour; 120: every second hour from
+#'     midnight).
+#'   \item A blank \code{time.start} or \code{time.end} comes from the
+#'     \code{$aru.schedule} of the plotted rows: the earliest
+#'     \code{$time.on} and the latest \code{$time.off} of those schedules
+#'     in the \code{aru.scheduals} tab of Batz_reference_db (several
+#'     schedules, or a ";" list, are pooled). \code{time.start} is rounded
+#'     down and \code{time.end} up to a multiple of \code{time.interval}
+#'     (60: nearest hour; 30: nearest half hour; 120: nearest 2 hours).
+#'     \itemize{
+#'       \item Sunset and sunrise times use the earliest sunset and the
+#'         latest sunrise (\code{$sunrise.monitoringnight}) of the plotted
+#'         \code{suntimes}, plus the schedule's offset.
+#'       \item \code{"deployment"} / \code{"recovery"},
+#'         \code{"observed continuous"} and schedules that cross noon give
+#'         the full Noon-to-Noon axis; \code{"observed HH:MM-HH:MM"} (from
+#'         \code{batz.generate_plotframe.sm4}) uses those times.
+#'       \item With no \code{$aru.schedule} column, a blank or unknown
+#'         schedule, or a sun-based schedule without \code{suntimes}, the
+#'         range of the plotted intervals is used (NOTE).
+#'     }
+#'   \item Tiles and lines outside the limits are cut off at the panel edge.
 #' }
 #'
 #' \strong{Tiles.} Each \code{data} row is one tile, placed at its
 #' \code{$date.monitoringnight} (X) and \code{$mins2.noon.mon} (Y, on the
-#' shared Noon-to-Noon axis) and filled by \code{$mins.oper}. The data is
+#' Noon-to-Noon axis) and filled by \code{$mins.oper}. The data is
 #' not re-binned. The tile height is the most common gap between
 #' consecutive \code{$mins2.noon.mon} values within each night (rounded to
 #' 0.1 minute), or 15 minutes when it cannot be worked out. A partial first
@@ -150,8 +211,7 @@
 #' above are read from \code{fig.list}; every other setting comes from
 #' plotopts. These \code{$parameter} rows must exist (case and spaces ignored), or
 #' the function stops listing the missing ones:
-#' \code{yaxe.break.interval}, \code{yaxe.labelformat},
-#' \code{yaxe.break.labels}, \code{dawn.linetype}, \code{dawn.color},
+#' \code{yaxe.labelformat}, \code{yaxe.break.labels}, \code{dawn.linetype}, \code{dawn.color},
 #' \code{dusk.linetype}, \code{dusk.color}, \code{midnight.linetype},
 #' \code{midnight.color}, \code{panel.border.linewidth},
 #' \code{reference.line.legend.title}, \code{fill.max}, \code{fill.colors},
@@ -163,10 +223,11 @@
 #' \code{ggsave.width.pad}, \code{ggsave.height.pad}, \code{plot.width},
 #' \code{plot.height}.
 #' \itemize{
-#'   \item Y breaks every \code{yaxe.break.interval} (e.g.
-#'     \code{"3 hours"}), labeled with the ";"-separated
-#'     \code{yaxe.break.labels}. If the counts differ, times formatted with
-#'     \code{yaxe.labelformat} are used (NOTE).
+#'   \item Y labels (every \code{time.interval}, see "Y axis") are times
+#'     formatted with \code{yaxe.labelformat} (e.g. \code{"\%H:\%M"}).
+#'     A non-blank ";"-separated \code{yaxe.break.labels} with one label per
+#'     break is used instead; with a different count the formatted times are
+#'     used (NOTE).
 #'   \item Fill: a continuous gradient through the ";"-separated
 #'     \code{fill.colors} (fewer than 2 colors gives a 7-color viridis
 #'     ramp), from 0 to \code{fill.max} (an unusable value gives 15).
@@ -222,6 +283,7 @@ batz.plotsm4_heatmap <- function(data, fig.list, suntimes = NULL,
   objname.aes.default <- paste(deparse(substitute(aes.default)), collapse = "")
   fig.list <- plotutil_figlist_na(fig.list)       # "NA" = heading not used by this plot type
   fig.list <- plotutil_figlist_plot(fig.list, "batz.plotsm4_heatmap")   # only rows with $plot = TRUE or 1
+  fig.list <- plotutil_figlist_labelformat(fig.list, "batz.plotsm4_heatmap")   # old $facet.label (a name format)
   if (is.data.frame(fig.list) && nrow(fig.list) == 0) return(invisible(list(plots = list(), ggplots = list())))
   if (is.null(aes.default)) aes.default <- plotutil_default_plotopts("batz.plotsm4_heatmap")   # built-in settings
   data <- special.strip(data, strip.special)$df
@@ -268,10 +330,11 @@ batz.plotsm4_heatmap <- function(data, fig.list, suntimes = NULL,
   FIG.LIST.REQUIRED <- c("plot.type", "plot.name", "plot.set", "date.format",
                           "date.start", "date.end", "xaxe.interval",
                           "xaxe.title", "yaxe.title")
+  FIG.LIST.OPTIONAL <- c("facet.label", "time.start", "time.end", "time.interval")   # read directly when present
   AES.DEFAULT.REQUIRED <- c("category", "parameter", "default.value")
 
   AES.DEFAULT.REQUIRED.PARAMETERS <- c(
-    "yaxe.break.interval", "yaxe.labelformat", "yaxe.break.labels",
+    "yaxe.labelformat", "yaxe.break.labels",
     "dawn.linetype", "dawn.color", "dusk.linetype", "dusk.color",
     "midnight.linetype", "midnight.color", "panel.border.linewidth",
     "reference.line.legend.title",
@@ -406,11 +469,22 @@ batz.plotsm4_heatmap <- function(data, fig.list, suntimes = NULL,
       next
     }
 
-    plot.set.val <- trimws(job$plot.set)
+    plot.set.val <- trimws(job$plot.set); if (is.na(plot.set.val)) plot.set.val <- ""
+    ## plot.set: one ARU, or several separated by ";" (one panel each, in that order); blank = every ARU.
+    ## Names matched ignoring case, spaces, "." and "_".
+    ak <- function(x) gsub("[^a-z0-9]", "", tolower(as.character(x)))
+    sets <- trimws(strsplit(plot.set.val, ";", fixed = TRUE)[[1]]); sets <- sets[nzchar(sets)]
     pd <- data
-    if (nzchar(plot.set.val)) {
-      pd <- pd[tolower(trimws(pd$aru.name)) == tolower(plot.set.val), , drop = FALSE]
-    }
+    if (length(sets)) pd <- pd[ak(pd$aru.name) %in% ak(sets), , drop = FALSE]
+    miss <- sets[!ak(sets) %in% ak(pd$aru.name)]
+    if (length(miss)) cat(sprintf("NOTE: fig.list row for '%s' - plot.set ARU(s) not in data: %s.\n", job.label, paste(miss, collapse = ", ")))
+    facet.keys <- if (length(sets)) unique(ak(sets)) else unique(ak(pd$aru.name))
+    facet.keys <- facet.keys[facet.keys %in% ak(pd$aru.name)]
+    facet.labs <- vapply(facet.keys, function(k) as.character(pd$aru.name[ak(pd$aru.name) == k][1]), character(1))
+    names(facet.labs) <- facet.keys
+    facet.labs[] <- plotutil_facet_relabel(stats::setNames(unname(facet.labs), unname(facet.labs)),
+                                           plotutil_job_text(job, "facet.label"), job.label, "batz.plotsm4_heatmap")
+    pd$facet <- factor(facet.labs[ak(pd$aru.name)], levels = unname(facet.labs))
 
     date.start <- parse.flex.date(get.setting(job, "date.start"))
     date.end   <- parse.flex.date(get.setting(job, "date.end"))
@@ -426,14 +500,14 @@ batz.plotsm4_heatmap <- function(data, fig.list, suntimes = NULL,
     if (!has.sun) {                               # Midnight line only
       tz <- "UTC"
       y.ref.noon <- as.POSIXct(paste(y.ref.date, "12:00:00"), tz = tz)
-      sdb <- data.frame(date.parsed = c(date.start - 0.5, date.end + 0.5))
+      sdb <- expand.grid(date.parsed = c(date.start - 0.5, date.end + 0.5), facet = unname(facet.labs), stringsAsFactors = FALSE)
+      sdb$facet <- factor(sdb$facet, levels = unname(facet.labs))
       sdb$midnight.time <- y.ref.noon + rep(12 * 3600, nrow(sdb))
     } else {
     sdb <- suntimes
     sdb$date.parsed <- parse.flex.date(sdb$date)
-    if (nzchar(plot.set.val)) {
-      sdb <- sdb[tolower(trimws(sdb$aru.name)) == tolower(plot.set.val), , drop = FALSE]
-    }
+    sdb <- sdb[ak(sdb$aru.name) %in% facet.keys, , drop = FALSE]
+    sdb$facet <- factor(facet.labs[ak(sdb$aru.name)], levels = unname(facet.labs))
     sdb <- sdb[!is.na(sdb$date.parsed) & sdb$date.parsed >= date.start & sdb$date.parsed <= date.end, , drop = FALSE]
 
     if (nrow(sdb) == 0) {
@@ -496,24 +570,29 @@ batz.plotsm4_heatmap <- function(data, fig.list, suntimes = NULL,
     # both ends. Flat-extended (not extrapolated) from the nearest real
     # row's own value, so this only changes how far the line reaches, not
     # its slope/shape.
-    if (has.sun && nrow(sdb) > 0) {
-      sdb <- sdb[order(sdb$date.parsed), , drop = FALSE]
-      left.pad  <- sdb[1, , drop = FALSE]
-      right.pad <- sdb[nrow(sdb), , drop = FALSE]
-      left.pad$date.parsed  <- date.start - 0.5
-      right.pad$date.parsed <- date.end + 0.5
-      sdb <- rbind(left.pad, sdb, right.pad)
+    if (has.sun && nrow(sdb) > 0) {                 # per panel (ARU)
+      sdb <- do.call(rbind, lapply(split(sdb, sdb$facet, drop = TRUE), function(x) {
+        x <- x[order(x$date.parsed), , drop = FALSE]
+        left.pad  <- x[1, , drop = FALSE]
+        right.pad <- x[nrow(x), , drop = FALSE]
+        left.pad$date.parsed  <- date.start - 0.5
+        right.pad$date.parsed <- date.end + 0.5
+        rbind(left.pad, x, right.pad)
+      }))
+      rownames(sdb) <- NULL
     }
 
-    y.start <- y.ref.noon
-    y.end   <- y.ref.noon + 24 * 3600
+    ## Y axis: time.start / time.end (blank: from $aru.schedule, rounded to time.interval), time.interval
+    yw <- sm4heat_y_window(job, get.setting, pd, if (has.sun) sdb else NULL, y.ref.noon, bin.minutes, job.label)
+    y.start <- y.ref.noon + yw$start * 60
+    y.end   <- y.ref.noon + yw$end * 60
 
     plots[[job.key]] <- list(
       job.label = job.label, job = job, pd = pd, sdb = sdb,
       bin.minutes = bin.minutes, tz = tz,
-      y.start = y.start, y.end = y.end,
+      y.start = y.start, y.end = y.end, y.interval = yw$interval, y.ref.noon = y.ref.noon,
       date.start = date.start, date.end = date.end,
-      plot.set.val = plot.set.val
+      plot.set.val = plot.set.val, n.facet = length(facet.labs)
     )
 
     cat(sprintf("Prepared plot data for '%s': %d tile(s), bin width %g minute(s), %s.\n",
@@ -532,22 +611,43 @@ batz.plotsm4_heatmap <- function(data, fig.list, suntimes = NULL,
       p <- plots[[job.key]]
       job.label <- p$job.label
 
-      y.breaks <- seq(p$y.start, p$y.end, by = get.default("yaxe.break.interval"))
-      y.break.labels <- strsplit(get.default("yaxe.break.labels"), ";", fixed = TRUE)[[1]]
-      if (length(y.break.labels) != length(y.breaks)) {
-        cat(sprintf("NOTE: '%s' - $yaxe.break.labels has %d label(s) but $yaxe.break.interval produces %d break(s) - falling back to $yaxe.labelformat-formatted times instead of the custom labels.\n",
+      ## breaks every time.interval minutes, on clock times that are multiples of it (e.g. 60: every full hour)
+      iv <- p$y.interval * 60
+      ys <- as.numeric(p$y.start); ye <- as.numeric(p$y.end)
+      off <- as.numeric(p$y.ref.noon) - 43200                                          # midnight before the axis noon
+      b1 <- off + ceiling((ys - off) / iv - 1e-9) * iv
+      y.breaks <- as.POSIXct(seq(b1, ye + 1e-6, by = iv), origin = "1970-01-01", tz = p$tz)
+      y.break.labels <- get.default("yaxe.break.labels")
+      y.break.labels <- if (is.na(y.break.labels) || !nzchar(trimws(y.break.labels))) character(0) else
+        trimws(strsplit(y.break.labels, ";", fixed = TRUE)[[1]])
+      if (!length(y.break.labels)) {
+        y.break.labels <- format(y.breaks, get.default("yaxe.labelformat"))
+      } else if (length(y.break.labels) != length(y.breaks)) {
+        cat(sprintf("NOTE: '%s' - $yaxe.break.labels has %d label(s) but time.start / time.end / time.interval give %d break(s) - falling back to $yaxe.labelformat-formatted times instead of the custom labels.\n",
                      job.label, length(y.break.labels), length(y.breaks)))
         y.break.labels <- format(y.breaks, get.default("yaxe.labelformat"))
       }
 
-      xaxe.date.labels.fmt <- gsub("/n", "\n", get.setting(p$job, "date.format"), fixed = TRUE)
-      xaxe.n.labels <- suppressWarnings(as.numeric(get.setting(p$job, "xaxe.interval")))
-      if (is.na(xaxe.n.labels) || xaxe.n.labels < 1) {
-        cat(sprintf("NOTE: '%s' - $xaxe.interval = '%s' is not a usable number of x-axis labels - defaulting to 2 (just date.start/date.end).\n",
-                     job.label, get.setting(p$job, "xaxe.interval")))
-        xaxe.n.labels <- 2
+      fmt.raw <- get.setting(p$job, "date.format")
+      if (is.null(fmt.raw) || length(fmt.raw) != 1 || is.na(fmt.raw) || !nzchar(trimws(fmt.raw))) {
+        cat(sprintf("NOTE: '%s' - $date.format is blank - \"%%b-%%d\" used.\n", job.label))
+        fmt.raw <- "%b-%d"
       }
-      xaxe.breaks <- seq(p$date.start, p$date.end, length.out = round(xaxe.n.labels))
+      xaxe.date.labels.fmt <- gsub("/n", "\n", fmt.raw, fixed = TRUE)
+      ## $xaxe.interval: a number = that many evenly spaced labels; "N day(s)" / "N week(s)" = a label every N days / weeks
+      xi <- tolower(trimws(as.character(get.setting(p$job, "xaxe.interval")))); if (!length(xi) || is.na(xi)) xi <- ""
+      m <- regmatches(xi, regexec("^([0-9]+)\\s*(day|days|week|weeks)$", xi))[[1]]
+      if (length(m)) {
+        xaxe.breaks <- seq(p$date.start, p$date.end, by = paste(m[2], sub("s$", "", m[3])))
+      } else {
+        xaxe.n.labels <- suppressWarnings(as.numeric(xi))
+        if (is.na(xaxe.n.labels) || xaxe.n.labels < 1) {
+          cat(sprintf("NOTE: '%s' - $xaxe.interval = '%s' is not a number of labels or \"N day\" / \"N week\" - defaulting to 2 (just date.start/date.end).\n",
+                       job.label, xi))
+          xaxe.n.labels <- 2
+        }
+        xaxe.breaks <- seq(p$date.start, p$date.end, length.out = round(xaxe.n.labels))
+      }
 
       panel.border.lw <- as.numeric(get.default("panel.border.linewidth"))
       # Same 2x geom-line-vs-panel-border rendering quirk documented in
@@ -605,14 +705,15 @@ batz.plotsm4_heatmap <- function(data, fig.list, suntimes = NULL,
                                         guide = ggplot2::guide_colorbar(direction = colorbar.direction,
                                           barheight = colorbar.barheight, barwidth = colorbar.barwidth,
                                           title.position = "top")) +
-        ggplot2::scale_y_datetime(limits = c(p$y.start, p$y.end),
-                                    breaks = y.breaks, labels = y.break.labels,
-                                    expand = c(0, 0), oob = scales::oob_squish,
+        ggplot2::scale_y_datetime(breaks = y.breaks, labels = y.break.labels,
+                                    expand = c(0, 0),
                                     name = paste0("\n", get.setting(p$job, "yaxe.title"))) +
+        ggplot2::coord_cartesian(ylim = c(p$y.start, p$y.end), expand = FALSE) +   # tiles and lines clipped at the Y limits
         ggplot2::scale_x_date(limits = c(p$date.start - 0.5, p$date.end + 0.5),
                                 breaks = xaxe.breaks, date_labels = xaxe.date.labels.fmt,
                                 expand = c(0, 0), oob = scales::oob_squish,
                                 name = paste0("\n", get.setting(p$job, "xaxe.title"))) +
+        (if (p$n.facet > 1) ggplot2::facet_wrap(~ facet, ncol = min(2, p$n.facet))) +
         ggplot2::labs(title = job.label) +
         ggplot2::theme_bw() +
         ggplot2::theme(panel.grid.major = ggplot2::element_blank(),
@@ -641,7 +742,7 @@ batz.plotsm4_heatmap <- function(data, fig.list, suntimes = NULL,
 
       ggplot2::ggsave(fname, plot = g,
                         width = as.numeric(get.default("plot.width")) + as.numeric(get.default("ggsave.width.pad")),
-                        height = as.numeric(get.default("plot.height")) + as.numeric(get.default("ggsave.height.pad")),
+                        height = as.numeric(get.default("plot.height")) * ceiling(p$n.facet / 2) + as.numeric(get.default("ggsave.height.pad")),
                         units = get.default("ggsave.units"),
                         dpi = as.numeric(get.default("ggsave.dpi")))
       cat("Saved:", fname, "\n")
@@ -651,4 +752,117 @@ batz.plotsm4_heatmap <- function(data, fig.list, suntimes = NULL,
   }
 
   invisible(list(plots = plots, ggplots = ggplots))
+}
+
+
+#' Y-axis window of batz.plotsm4_heatmap (internal)
+#'
+#' time.start / time.end ("HH:MM") as given; a blank one comes from the
+#' $aru.schedule of the plotted rows (earliest time.on, latest time.off of
+#' their schedules in the aru.scheduals table, sunset / sunrise from the
+#' plotted suntimes), rounded down (start) or up (end) to a clock time that
+#' is a multiple of time.interval. time.interval: minutes ("60", "30",
+#' "2 hour", "30 min"); blank 60. Returns minutes from the axis noon
+#' ($start, $end, 0 to 1440) and $interval (minutes).
+#' @keywords internal
+#' @noRd
+sm4heat_y_window <- function(job, get.setting, pd, sdb, y.ref.noon, bin.minutes, job.label) {
+  FN <- "batz.plotsm4_heatmap"
+  val <- function(nm) { v <- get.setting(job, nm); v <- if (is.null(v) || !length(v)) "" else trimws(as.character(v[1]))
+    if (is.na(v) || toupper(v) == "NA") "" else v }
+  ## time.interval, minutes
+  iv.txt <- val("time.interval"); iv <- 60
+  if (nzchar(iv.txt)) {
+    m <- regmatches(tolower(iv.txt), regexec("^([0-9.]+)\\s*(min|mins|minute|minutes|hour|hours|hr|hrs|h)?$", tolower(iv.txt)))[[1]]
+    if (length(m) && !is.na(suppressWarnings(as.numeric(m[2]))) && as.numeric(m[2]) > 0)
+      iv <- as.numeric(m[2]) * if (nzchar(m[3]) && grepl("^h", m[3])) 60 else 1
+    else cat(sprintf("NOTE: '%s' - time.interval '%s' is not a number of minutes (e.g. 60) - 60 used.\n", job.label, iv.txt))
+  }
+  ## "HH:MM" -> minutes from the axis noon
+  clock <- function(x, nm) {
+    m <- regmatches(x, regexec("^([0-9]{1,2}):([0-9]{2})(:[0-9]{2})?$", x))[[1]]
+    if (!length(m) || as.numeric(m[2]) > 24 || as.numeric(m[3]) > 59) {
+      cat(sprintf("NOTE: '%s' - %s '%s' is not a time (HH:MM) - taken from $aru.schedule instead.\n", job.label, nm, x))
+      return(NA_real_)
+    }
+    ((as.numeric(m[2]) * 60 + as.numeric(m[3])) - 720) %% 1440
+  }
+  st <- if (nzchar(val("time.start"))) clock(val("time.start"), "time.start") else NA_real_
+  en <- if (nzchar(val("time.end"))) clock(val("time.end"), "time.end") else NA_real_
+  if (!is.na(en) && en == 0) en <- 1440                         # "12:00" as the end = the next noon
+  ## blank: from $aru.schedule
+  if (is.na(st) || is.na(en)) {
+    w <- sm4heat_schedule_window(pd, sdb, y.ref.noon, bin.minutes, job.label)
+    if (is.na(st)) st <- max(0, floor((w[1] + 720) / iv + 1e-9) * iv - 720)
+    if (is.na(en)) en <- min(1440, ceiling((w[2] + 720) / iv - 1e-9) * iv - 720)
+  }
+  if (en <= st) {
+    cat(sprintf("NOTE: '%s' - time.end is not after time.start on the noon-to-noon axis - the full Noon to Noon window is used.\n", job.label))
+    st <- 0; en <- 1440
+  }
+  list(start = st, end = en, interval = iv)
+}
+
+
+#' Earliest start and latest end of the plotted rows' $aru.schedule (internal)
+#'
+#' Minutes from the axis noon, c(start, end). Schedules from the aru.scheduals
+#' table of Batz_reference_db, or "observed HH:MM-HH:MM" / "observed
+#' continuous" (batz.generate_plotframe.sm4). A sun-based time uses the
+#' earliest (start) or latest (end) sunset / sunrise in the plotted suntimes;
+#' without suntimes, an unknown schedule or no $aru.schedule column, the
+#' plotted tiles' own range is used (NOTE).
+#' @keywords internal
+#' @noRd
+sm4heat_schedule_window <- function(pd, sdb, y.ref.noon, bin.minutes, job.label) {
+  tiles <- c(min(pd$mins2.noon.mon, na.rm = TRUE), max(pd$mins2.noon.mon, na.rm = TRUE) + bin.minutes)
+  if (!"aru.schedule" %in% names(pd)) {
+    cat(sprintf("NOTE: '%s' - time.start / time.end blank and data has no $aru.schedule - the range of the plotted intervals is used (re-run batz.generate_plotframe.sm4() to add it).\n", job.label))
+    return(tiles)
+  }
+  nm <- trimws(unlist(strsplit(as.character(pd$aru.schedule), ";", fixed = TRUE)))
+  nm <- unique(nm[!is.na(nm) & nzchar(nm)])
+  if (!length(nm)) {
+    cat(sprintf("NOTE: '%s' - time.start / time.end blank and $aru.schedule is blank - the range of the plotted intervals is used.\n", job.label))
+    return(tiles)
+  }
+  sc <- tryCatch(plotframe.sm4.all.schedules(NULL, NULL, "batz.plotsm4_heatmap"), error = function(e) NULL)
+  sun <- list()
+  if (!is.null(sdb) && nrow(sdb) && all(c("dusk.time", "dawn.time") %in% names(sdb))) {
+    sun$sunset  <- as.numeric(difftime(sdb$dusk.time, y.ref.noon, units = "mins"))
+    sun$sunrise <- as.numeric(difftime(sdb$dawn.time, y.ref.noon, units = "mins"))
+    sun <- lapply(sun, function(v) v[!is.na(v)])
+  }
+  at <- function(x, end) {                                        # minutes from noon, or NA (unknown)
+    x <- gsub("\\s+", "", tolower(x))
+    if (x %in% c("deployment", "recovery")) return(if (end) 1440 else 0)
+    m <- regmatches(x, regexec("^(sunset|sunrise)([+-][0-9]+)?$", x))[[1]]
+    if (length(m)) {
+      v <- sun[[m[2]]]
+      if (!length(v)) return(NA_real_)
+      return((if (end) max(v) else min(v)) + if (nzchar(m[3])) as.numeric(m[3]) else 0)
+    }
+    m <- regmatches(x, regexec("^([0-9]{1,2}):([0-9]{2})$", x))[[1]]
+    if (length(m)) { v <- ((as.numeric(m[2]) * 60 + as.numeric(m[3])) - 720) %% 1440; return(if (end && v == 0) 1440 else v) }
+    NA_real_
+  }
+  ons <- numeric(0); offs <- numeric(0); unknown <- character(0); nosun <- FALSE
+  for (n in nm) {
+    if (grepl("^observed continuous$", n, ignore.case = TRUE)) { ons <- c(ons, 0); offs <- c(offs, 1440); next }
+    m <- regmatches(n, regexec("^observed\\s+([0-9]{1,2}:[0-9]{2})-([0-9]{1,2}:[0-9]{2})$", n, ignore.case = TRUE))[[1]]
+    rows <- if (length(m)) data.frame(time.on = m[2], time.off = m[3], stringsAsFactors = FALSE) else
+      if (!is.null(sc)) sc[tolower(sc$aru.schedule) == tolower(n), , drop = FALSE] else NULL
+    if (is.null(rows) || !nrow(rows)) { unknown <- c(unknown, n); next }
+    for (r in seq_len(nrow(rows))) {
+      a <- at(rows$time.on[r], FALSE); b <- at(rows$time.off[r], TRUE)
+      if (is.na(a) || is.na(b)) { if (grepl("sun", tolower(paste(rows$time.on[r], rows$time.off[r])))) nosun <- TRUE else unknown <- c(unknown, n); next }
+      if (b <= a) { a <- 0; b <- 1440 }                           # crosses noon: the whole window
+      ons <- c(ons, a); offs <- c(offs, b)
+    }
+  }
+  if (length(unknown)) cat(sprintf("NOTE: '%s' - aru.schedule %s not in the aru.scheduals table of Batz_reference_db - the range of the plotted intervals is used for it.\n",
+                                   job.label, paste0("'", unique(unknown), "'", collapse = ", ")))
+  if (nosun) cat(sprintf("NOTE: '%s' - a sunset / sunrise schedule needs suntimes for the plotted ARUs and dates - the range of the plotted intervals is used for it.\n", job.label))
+  if (length(unknown) || nosun) { ons <- c(ons, tiles[1]); offs <- c(offs, tiles[2]) }
+  c(max(0, min(ons)), min(1440, max(offs)))
 }
