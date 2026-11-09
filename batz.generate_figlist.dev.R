@@ -48,5 +48,10 @@ print(f$fig.list[, c("plot.type", "facet.label_format", "facet.label")])
 f3 <- batz.generate_figlist(functions = "", dir.save = NULL)
 ok(nrow(f3$fig.list) == nrow(f$fig.list) && identical(f3$fig.list$plot.type, f$fig.list$plot.type), "functions = \"\": all plot types")
 
+## $plot.dimensions: a heading for every plot type, right after $plot.name, with an example size (2026-11-09)
+ok(identical(names(f$fig.list)[match("plot.name", names(f$fig.list)) + 1], "plot.dimensions"), "$plot.dimensions after $plot.name")
+ok(all(f$fig.list$plot.dimensions != "NA"), "every plot type has an example $plot.dimensions")
+print(f$fig.list[, c("plot.type", "plot.dimensions")])
+
 try(batz.generate_figlist(functions = "batz.not_a_function", dir.save = NULL))   # error names it
 cat("Workbook in:", dir.out, "\n")

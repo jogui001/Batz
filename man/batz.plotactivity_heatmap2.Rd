@@ -107,6 +107,19 @@ without \code{.png}). \code{NULL} if nothing was plotted.}
 \code{.png}).}
 \item{files}{Paths of the saved PNG files.}
 }
+
+\strong{Saved size.}
+\describe{
+\item{\code{$plot.dimensions}}{Optional fig.list column: width x height
+of the saved PNG in inches. "1/3 page" = 6 x 3.5, "1/2 page" = 6 x 4,
+"2/3 page" = 6 x 6, "1 page" = 6 x 7.5, "1/3 ppt" = 6 x 3,
+"1/2 ppt" = 12 x 3, "2/3 ppt" = 8 x 6, "1 ppt" = 12 x 6 (case and
+spaces ignored), or any "W x H" (e.g. "7 x 4"). It replaces
+plot.width, plot.height, the pads and ggsave.units. Blank or "NA":
+the plotopts size settings are used; any other entry gives a NOTE and
+the plotopts size. The old spelling $plot.dimentions is also read, and it
+can be typed into the call (e.g. plot.dimensions = "1/2 page").}
+}
 }
 \description{
 Draws ggplot2 heatmaps of observation counts (\code{$observations.count})

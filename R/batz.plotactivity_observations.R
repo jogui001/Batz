@@ -290,6 +290,19 @@
 #'   \item If ggplot2 is not installed, only the prepared data is returned.
 #' }
 #'
+#' \strong{Saved size.}
+#' \describe{
+#'   \item{\code{$plot.dimensions}}{Optional fig.list column: width x height
+#'     of the saved PNG in inches. "1/3 page" = 6 x 3.5, "1/2 page" = 6 x 4,
+#'     "2/3 page" = 6 x 6, "1 page" = 6 x 7.5, "1/3 ppt" = 6 x 3,
+#'     "1/2 ppt" = 12 x 3, "2/3 ppt" = 8 x 6, "1 ppt" = 12 x 6 (case and
+#'     spaces ignored), or any "W x H" (e.g. "7 x 4"). It replaces
+#'     plot.width, plot.height, the pads and ggsave.units. Blank or "NA":
+#'     the plotopts size settings are used; any other entry gives a NOTE and
+#'     the plotopts size. The old spelling $plot.dimentions is also read, and it
+#'     can be typed into the call (e.g. plot.dimensions = "1/2 page").}
+#' }
+#'
 #' @seealso \code{\link{batz.generate_plotframe.bat}},
 #'   \code{\link{batz.generate_plotopts}},
 #'   \code{\link{batz.plotdetections_first.last}}
@@ -402,7 +415,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
   ## $plot.order/$facpan removed 2026-10-09 - $facet.set now sets the
   ## facets and their order
   FIG.LIST.OPTIONAL <- c("facet.label", "plot.group", "yaxe.trans", "loglabels", "y.scale",
-                          "y.custom", "ymax", "legend")
+                          "y.custom", "ymax", "legend", "plot.dimensions")
   AES.DEFAULT.REQUIRED <- c("category", "parameter", "default.value")
 
   ## "output.filename.pattern" deliberately removed from this required list
@@ -573,7 +586,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     }
     val
   }
-  plotutil_plot_inputs_check(plot.inputs, c(AES.DEFAULT.REQUIRED.PARAMETERS, aes.default$parameter, names(fig.list)), "batz.plotactivity_observations")
+  plotutil_plot_inputs_check(plot.inputs, c(AES.DEFAULT.REQUIRED.PARAMETERS, aes.default$parameter, names(fig.list), "plot.dimensions", "plot.dimentions"), "batz.plotactivity_observations")
 
   get.setting <- function(job, param) {
     if (!is.null(v.in <- plotutil_input_get(plot.inputs, param))) return(v.in)   # function call, then fig.list, then plotopts
@@ -1006,10 +1019,11 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
                                      p$date.start, p$date.end, fn.name = "batz.plotactivity_observations", project.name = project.name)
       fname <- file.path(dir.save, fname)
 
+      dims <- plotutil_plot_dimensions(p$job, plot.inputs, job.label, "batz.plotactivity_observations")   # $plot.dimensions (inches)
       ggplot2::ggsave(fname, plot = g,
-        width = as.numeric(get.default("plot.width")) + as.numeric(get.default("ggsave.width.pad")),
-        height = as.numeric(get.default("plot.height")) + as.numeric(get.default("ggsave.height.pad")),
-        units = get.default("ggsave.units"), dpi = as.numeric(get.default("ggsave.dpi")))
+        width = if (!is.null(dims)) dims[1] else as.numeric(get.default("plot.width")) + as.numeric(get.default("ggsave.width.pad")),
+        height = if (!is.null(dims)) dims[2] else as.numeric(get.default("plot.height")) + as.numeric(get.default("ggsave.height.pad")),
+        units = if (!is.null(dims)) "in" else get.default("ggsave.units"), dpi = as.numeric(get.default("ggsave.dpi")))
       cat("Saved:", fname, "\n")
     }
   } else {

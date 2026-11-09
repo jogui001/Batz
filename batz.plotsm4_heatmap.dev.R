@@ -109,4 +109,25 @@ r13 <- batz.plotsm4_heatmap(data = pfu, fig.list = fl12, project.name = "ynosun"
 r14 <- batz.plotsm4_heatmap(data = pf[, names(pf) != "aru.schedule"], fig.list = fl12, project.name = "ynocol", dir.save = dir.out)
 ok(hm(r14$plots[[1]]$y.start) == "20:00" && hm(r14$plots[[1]]$y.end) == "06:00", "no $aru.schedule: range of the plotted intervals")
 
+## ---- 7. $plot.dimensions: saved size in inches (2026-11-09) -------------------
+px <- function(f) dim(png::readPNG(f))[2:1]                                            # width, height in pixels
+last.png <- function(tag) { f <- list.files(dir.out, paste0("^", tag, "_.*\\.png$"), full.names = TRUE); f[which.max(file.mtime(f))] }
+fl15 <- fl; fl15$plot.dimensions <- "1 ppt"
+batz.plotsm4_heatmap(data = pf, fig.list = fl15, project.name = "dim1ppt", dir.save = dir.out, ggsave.dpi = 100)
+ok(identical(px(last.png("dim1ppt")), c(1200L, 600L)), "\"1 ppt\" = 12 x 6 in")
+fl15$plot.dimensions <- " 1/3 PAGE "
+batz.plotsm4_heatmap(data = pf, fig.list = fl15, project.name = "dimthird", dir.save = dir.out, ggsave.dpi = 100)
+ok(identical(px(last.png("dimthird")), c(600L, 350L)), "\"1/3 page\" (case and spaces ignored) = 6 x 3.5 in")
+fl15$plot.dimensions <- "7 x 4"
+batz.plotsm4_heatmap(data = pf, fig.list = fl15, project.name = "dimcustom", dir.save = dir.out, ggsave.dpi = 100)
+ok(identical(px(last.png("dimcustom")), c(700L, 400L)), "\"7 x 4\" = 7 x 4 in")
+batz.plotsm4_heatmap(data = pf, fig.list = fl15, project.name = "dimcall", dir.save = dir.out, ggsave.dpi = 100, plot.dimensions = "2/3 ppt")
+ok(identical(px(last.png("dimcall")), c(800L, 600L)), "typed into the call wins: \"2/3 ppt\" = 8 x 6 in")
+fl15$plot.dimensions <- ""
+batz.plotsm4_heatmap(data = pf, fig.list = fl15, project.name = "dimblank", dir.save = dir.out, ggsave.dpi = 100)
+ok(identical(px(last.png("dimblank")), c(1050L, 750L)), "blank: plotopts plot.width + pad x plot.height + pad (10.5 x 7.5)")
+fl15$plot.dimensions <- "half page"
+batz.plotsm4_heatmap(data = pf, fig.list = fl15, project.name = "dimbad", dir.save = dir.out, ggsave.dpi = 100)   # NOTE: not a size
+ok(identical(px(last.png("dimbad")), c(1050L, 750L)), "unknown entry: NOTE and the plotopts size")
+
 cat("\nALL TESTS PASSED - PNGs in", dir.out, "\n")

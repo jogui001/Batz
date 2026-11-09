@@ -152,6 +152,19 @@
 #'
 #' If ggplot2 is not installed, only the prepared data is returned.
 #'
+#' \strong{Saved size.}
+#' \describe{
+#'   \item{\code{$plot.dimensions}}{Optional fig.list column: width x height
+#'     of the saved PNG in inches. "1/3 page" = 6 x 3.5, "1/2 page" = 6 x 4,
+#'     "2/3 page" = 6 x 6, "1 page" = 6 x 7.5, "1/3 ppt" = 6 x 3,
+#'     "1/2 ppt" = 12 x 3, "2/3 ppt" = 8 x 6, "1 ppt" = 12 x 6 (case and
+#'     spaces ignored), or any "W x H" (e.g. "7 x 4"). It replaces
+#'     plot.width, plot.height, the pads and ggsave.units. Blank or "NA":
+#'     the plotopts size settings are used; any other entry gives a NOTE and
+#'     the plotopts size. The old spelling $plot.dimentions is also read, and it
+#'     can be typed into the call (e.g. plot.dimensions = "1/2 page").}
+#' }
+#'
 #' @seealso \code{\link{batz.generate_plotframe.bat.group}},
 #'   \code{\link{batz.generate_plotopts}}
 #'
@@ -207,7 +220,7 @@ batz.plot_bar.bat.group <- function(data, fig.list, aes.default = NULL,
   FIG.LIST.REQUIRED <- c("plot.type", "plot.name", "plot.species", "plot.set",
                          "xaxe.title", "yaxe.title")
   FIG.LIST.OPTIONAL <- c("plot.year", "plot.group", "group.labels", "community.exclude",
-                         "yaxe.title.right")
+                         "yaxe.title.right", "plot.dimensions")
   AES.DEFAULT.REQUIRED <- c("category", "parameter", "default.value")
   AES.DEFAULT.REQUIRED.PARAMETERS <- c(
     "passes.per", "yaxe.left.breaks", "yaxe.right.breaks", "community.colors",
@@ -260,7 +273,7 @@ batz.plot_bar.bat.group <- function(data, fig.list, aes.default = NULL,
     }
     if (is.na(val)) "" else val
   }
-  plotutil_plot_inputs_check(plot.inputs, c(AES.DEFAULT.REQUIRED.PARAMETERS, aes.default$parameter, names(fig.list)), "batz.plot_bar.bat.group")
+  plotutil_plot_inputs_check(plot.inputs, c(AES.DEFAULT.REQUIRED.PARAMETERS, aes.default$parameter, names(fig.list), "plot.dimensions", "plot.dimentions"), "batz.plot_bar.bat.group")
   get.setting <- function(job, param) {
     if (!is.null(v.in <- plotutil_input_get(plot.inputs, param))) return(v.in)   # function call, then fig.list, then plotopts
     if (param %in% names(job) && !blank(job[[param]])) return(as.character(job[[param]]))
@@ -436,10 +449,11 @@ batz.plot_bar.bat.group <- function(data, fig.list, aes.default = NULL,
     ggplots[[job.label]] <- g
 
     fname <- sprintf("%s_%s_%s_%s.png", project.name, job.label, year, format(Sys.time(), "%Y%m%d%H%M%S"))
+    dims <- plotutil_plot_dimensions(job, plot.inputs, job.label, "batz.plot_bar.bat.group")   # $plot.dimensions (inches)
     ggplot2::ggsave(file.path(dir.save, fname), plot = g,
-                    width = num.setting(job, "plot.width") + num.setting(job, "ggsave.width.pad"),
-                    height = num.setting(job, "plot.height") + num.setting(job, "ggsave.height.pad"),
-                    units = get.setting(job, "ggsave.units"), dpi = num.setting(job, "ggsave.dpi"),
+                    width = if (!is.null(dims)) dims[1] else num.setting(job, "plot.width") + num.setting(job, "ggsave.width.pad"),
+                    height = if (!is.null(dims)) dims[2] else num.setting(job, "plot.height") + num.setting(job, "ggsave.height.pad"),
+                    units = if (!is.null(dims)) "in" else get.setting(job, "ggsave.units"), dpi = num.setting(job, "ggsave.dpi"),
                     bg = "white")
     plots[[job.label]]$file <- fname
     cat("Saved:", fname, "\n")

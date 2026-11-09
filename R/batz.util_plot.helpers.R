@@ -644,3 +644,36 @@ plotutil_facet_relabel <- function(labels, alt, job.label, fn.name, aka = NULL) 
   }
   labels
 }
+
+
+#' Saved-chart size from $plot.dimensions (internal)
+#'
+#' The value is taken from the function call, then the fig.list row
+#' ($plot.dimensions, or the old spelling $plot.dimentions). Blank or "NA":
+#' NULL (the plotopts plot.width / plot.height are used). A size name
+#' (case and spaces ignored) or "<width> x <height>" in inches gives
+#' c(width, height); anything else gives NULL with a NOTE.
+#' @keywords internal
+#' @noRd
+plotutil_plot_dimensions <- function(job, inputs, job.label, fn.name) {
+  SIZES <- list("1/3 page" = c(6, 3.5), "1/2 page" = c(6, 4), "2/3 page" = c(6, 6), "1 page" = c(6, 7.5),
+                "1/3 ppt" = c(6, 3), "1/2 ppt" = c(12, 3), "2/3 ppt" = c(8, 6), "1 ppt" = c(12, 6))
+  v <- NULL
+  for (nm in c("plot.dimensions", "plot.dimentions")) {
+    if (is.null(v)) v <- plotutil_input_get(inputs, nm)
+  }
+  if (is.null(v)) for (nm in c("plot.dimensions", "plot.dimentions")) {
+    t <- plotutil_job_text(job, nm)
+    if (nzchar(t)) { v <- t; break }
+  }
+  v <- if (is.null(v)) "" else trimws(as.character(v)[1])
+  if (is.na(v) || !nzchar(v) || toupper(v) == "NA") return(NULL)
+  key <- function(x) gsub("\\s+", "", tolower(x))
+  hit <- match(key(v), key(names(SIZES)))
+  if (!is.na(hit)) return(SIZES[[hit]])
+  m <- regmatches(key(v), regexec("^([0-9]*\\.?[0-9]+)(in)?x([0-9]*\\.?[0-9]+)(in)?$", key(v)))[[1]]
+  if (length(m)) return(c(as.numeric(m[2]), as.numeric(m[4])))
+  cat(sprintf("NOTE: %s - '%s': $plot.dimensions '%s' is not one of %s or \"<width> x <height>\" - the plotopts plot.width / plot.height are used.\n",
+              fn.name, job.label, v, paste0('"', names(SIZES), '"', collapse = ", ")))
+  NULL
+}

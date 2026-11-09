@@ -248,6 +248,19 @@
 #' reported together in one error. If ggplot2 is not installed, only the
 #' prepared data is returned.
 #'
+#' \strong{Saved size.}
+#' \describe{
+#'   \item{\code{$plot.dimensions}}{Optional fig.list column: width x height
+#'     of the saved PNG in inches. "1/3 page" = 6 x 3.5, "1/2 page" = 6 x 4,
+#'     "2/3 page" = 6 x 6, "1 page" = 6 x 7.5, "1/3 ppt" = 6 x 3,
+#'     "1/2 ppt" = 12 x 3, "2/3 ppt" = 8 x 6, "1 ppt" = 12 x 6 (case and
+#'     spaces ignored), or any "W x H" (e.g. "7 x 4"). It replaces
+#'     plot.width, plot.height, the pads and ggsave.units. Blank or "NA":
+#'     the plotopts size settings are used; any other entry gives a NOTE and
+#'     the plotopts size. The old spelling $plot.dimentions is also read, and it
+#'     can be typed into the call (e.g. plot.dimensions = "1/2 page").}
+#' }
+#'
 #' @seealso \code{\link{batz.plotdetections_first.last}},
 #'   \code{\link{batz.generate_suntimes.arulist}},
 #'   \code{\link{batz.generate_plotopts}}
@@ -330,7 +343,7 @@ batz.plotsm4_heatmap <- function(data, fig.list, suntimes = NULL,
   FIG.LIST.REQUIRED <- c("plot.type", "plot.name", "plot.set", "date.format",
                           "date.start", "date.end", "xaxe.interval",
                           "xaxe.title", "yaxe.title")
-  FIG.LIST.OPTIONAL <- c("facet.label", "time.start", "time.end", "time.interval")   # read directly when present
+  FIG.LIST.OPTIONAL <- c("facet.label", "time.start", "time.end", "time.interval", "plot.dimensions")   # read directly when present
   AES.DEFAULT.REQUIRED <- c("category", "parameter", "default.value")
 
   AES.DEFAULT.REQUIRED.PARAMETERS <- c(
@@ -430,7 +443,7 @@ batz.plotsm4_heatmap <- function(data, fig.list, suntimes = NULL,
     }
     val
   }
-  plotutil_plot_inputs_check(plot.inputs, c(AES.DEFAULT.REQUIRED.PARAMETERS, aes.default$parameter, names(fig.list)), "batz.plotsm4_heatmap")
+  plotutil_plot_inputs_check(plot.inputs, c(AES.DEFAULT.REQUIRED.PARAMETERS, aes.default$parameter, names(fig.list), "plot.dimensions", "plot.dimentions"), "batz.plotsm4_heatmap")
 
   get.setting <- function(job, param) {
     if (!is.null(v.in <- plotutil_input_get(plot.inputs, param))) return(v.in)   # function call, then fig.list, then plotopts
@@ -740,10 +753,11 @@ batz.plotsm4_heatmap <- function(data, fig.list, suntimes = NULL,
       fname <- sprintf("%s_%s_%s_%s.png", project.name, job.label, daterange.token, format(Sys.time(), "%Y%m%d%H%M%S"))
       fname <- file.path(dir.save, fname)
 
+      dims <- plotutil_plot_dimensions(p$job, plot.inputs, job.label, "batz.plotsm4_heatmap")   # $plot.dimensions (inches)
       ggplot2::ggsave(fname, plot = g,
-                        width = as.numeric(get.default("plot.width")) + as.numeric(get.default("ggsave.width.pad")),
-                        height = as.numeric(get.default("plot.height")) * ceiling(p$n.facet / 2) + as.numeric(get.default("ggsave.height.pad")),
-                        units = get.default("ggsave.units"),
+                        width = if (!is.null(dims)) dims[1] else as.numeric(get.default("plot.width")) + as.numeric(get.default("ggsave.width.pad")),
+                        height = if (!is.null(dims)) dims[2] else as.numeric(get.default("plot.height")) * ceiling(p$n.facet / 2) + as.numeric(get.default("ggsave.height.pad")),
+                        units = if (!is.null(dims)) "in" else get.default("ggsave.units"),
                         dpi = as.numeric(get.default("ggsave.dpi")))
       cat("Saved:", fname, "\n")
     }

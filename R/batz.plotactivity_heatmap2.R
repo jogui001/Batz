@@ -212,6 +212,19 @@
 #'     \item{files}{Paths of the saved PNG files.}
 #'   }
 #'
+#' \strong{Saved size.}
+#' \describe{
+#'   \item{\code{$plot.dimensions}}{Optional fig.list column: width x height
+#'     of the saved PNG in inches. "1/3 page" = 6 x 3.5, "1/2 page" = 6 x 4,
+#'     "2/3 page" = 6 x 6, "1 page" = 6 x 7.5, "1/3 ppt" = 6 x 3,
+#'     "1/2 ppt" = 12 x 3, "2/3 ppt" = 8 x 6, "1 ppt" = 12 x 6 (case and
+#'     spaces ignored), or any "W x H" (e.g. "7 x 4"). It replaces
+#'     plot.width, plot.height, the pads and ggsave.units. Blank or "NA":
+#'     the plotopts size settings are used; any other entry gives a NOTE and
+#'     the plotopts size. The old spelling $plot.dimentions is also read, and it
+#'     can be typed into the call (e.g. plot.dimensions = "1/2 page").}
+#' }
+#'
 #' @examples
 #' \dontrun{
 #' plfr <- batz.generate_plotframe.bat(vetted.merged, pool.interval = "15 min")
@@ -311,7 +324,7 @@ batz.plotactivity_heatmap2 <- function(data,
     OPT.DEFAULTS[[param]]
   }
   plotutil_plot_inputs_check(plot.inputs, c(names(OPT.DEFAULTS), arg.names, if (!is.null(aes.default)) aes.default$parameter,
-                                             if (is.data.frame(fig.list)) names(fig.list)), FN)
+                                             if (is.data.frame(fig.list)) names(fig.list), "plot.dimensions", "plot.dimentions"), FN)
   num.opt <- function(job, param) {
     v <- suppressWarnings(as.numeric(setting(job, param)))
     if (length(v) != 1 || is.na(v)) as.numeric(OPT.DEFAULTS[[param]]) else v
@@ -513,8 +526,10 @@ batz.plotactivity_heatmap2 <- function(data,
       fname <- file.path(dir.save, pu$fname)
       n.rows <- if (pu$faceted) ceiling(length(pu$facets) / max(1, num.opt(job, "facpan.numcol"))) else 1
       height <- if (pu$faceted && n.rows > 1) num.opt(job, "facpan.hgt") * n.rows + 1.5 else num.opt(job, "plot.height")
-      ggplot2::ggsave(fname, plot = out$plot, width = num.opt(job, "plot.width"), height = height,
-                      units = setting(job, "ggsave.units"), dpi = num.opt(job, "ggsave.dpi"))
+      dims <- plotutil_plot_dimensions(job, plot.inputs, job.label, FN)   # $plot.dimensions (inches)
+      ggplot2::ggsave(fname, plot = out$plot, width = if (!is.null(dims)) dims[1] else num.opt(job, "plot.width"),
+                      height = if (!is.null(dims)) dims[2] else height,
+                      units = if (!is.null(dims)) "in" else setting(job, "ggsave.units"), dpi = num.opt(job, "ggsave.dpi"))
       cat("Saved:", fname, "\n")
       key <- sub("\\.png$", "", basename(fname))
       plots[[key]] <- out$plot
