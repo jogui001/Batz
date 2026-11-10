@@ -32,8 +32,9 @@ in the output: \code{"code2"}, \code{"official.name"} or
 \item{batname.format.out}{Character, default \code{"full"}. Species label
 in \code{$common.name}: \code{"full"} = \code{"<common> (<latin>)"}
 followed directly (no separator) by the hibernation strategy;
-\code{"both"} = \code{"<common> (<latin>)"}; \code{"common"}; or
-\code{"latin"}.}
+\code{"both"} = \code{"<common> (<latin>)"}; \code{"common"};
+\code{"latin"}; \code{"label_name"} (e.g. \code{"Big brown (EPFU)"});
+or \code{"label2_name"} (e.g. \code{"Big brown bat (EPFU)"}).}
 
 \item{bat.code}{Character, default \code{"code4"}. Code shown in
 \code{$species.code}: \code{"code4"}, \code{"code6"}, or \code{"none"}

@@ -434,3 +434,16 @@ print(batz.batusa_recode.names("25k", batname.format.out = "scientific_name"))
 ## ---------------------------------------------------------------------------
 print(batz.batusa_recode.names(c("LUSO", "Little brown bat, Indiana bat", "Desert red bat", "LAFR"), batname.format.out = "common_name"))
 # expect: "Little brown bat; Indiana bat" (x2) "Western red bat" (x2)
+
+## ---------------------------------------------------------------------------
+## label_name / label2_name (2026-11-09): new DB_bat.ref.names columns, used as
+## an output format and matched as input like scientific_name / common_name / code4 / code6
+## ---------------------------------------------------------------------------
+x <- c("epfu", "Hoary bat", "Myotis lucifugus", "Big brown (EPFU)", "Silver-haired bat (LANO)")
+print(data.frame(x, label_name = batz.batusa_recode.names(x, "label_name"), label2_name = batz.batusa_recode.names(x, "label2")))
+stopifnot(batz.batusa_recode.names("epfu", "label_name") == "Big brown (EPFU)",
+          batz.batusa_recode.names("laci", "label2_name") == "Hoary bat (LACI)",
+          batz.batusa_recode.names("Big brown (EPFU)", "code4") == "epfu",                         # label_name as input
+          batz.batusa_recode.names("Silver-haired bat (LANO)", "scientific_name") == "Lasionycteris noctivagans")
+## groups / frequency classes have no label columns: their common_name is returned
+print(batz.batusa_recode.names(c("EPFUMYLU", "40kMyo"), "label_name"))

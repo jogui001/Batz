@@ -11,7 +11,9 @@
 #'   columns character, same names) is returned.
 #' @param batname.format.out Character, default \code{"common_name"}. Output
 #'   format: any column of the bat reference table - \code{"scientific_name"},
-#'   \code{"common_name"}, \code{"code4"}, \code{"code6"}, \code{"family"},
+#'   \code{"common_name"}, \code{"label_name"} (e.g. \code{"Big brown
+#'   (EPFU)"}), \code{"label2_name"} (e.g. \code{"Big brown bat (EPFU)"}),
+#'   \code{"code4"}, \code{"code6"}, \code{"family"},
 #'   \code{"region"}, \code{"listing.status_federal"},
 #'   \code{"listing.status_iucn"}, \code{"states.listed"},
 #'   \code{"states.present"}, \code{"states.endangered"},
@@ -22,7 +24,8 @@
 #'   underscores and dashes are ignored (\code{"Common Name"} =
 #'   \code{"common_name"}), and short names work: \code{"common"},
 #'   \code{"latin"}/\code{"scientific"}/\code{"sci"}/\code{"species"},
-#'   \code{"code"} (= \code{code4}). Any other value stops with an error
+#'   \code{"code"} (= \code{code4}), \code{"label"} (= \code{label_name}),
+#'   \code{"label2"} (= \code{label2_name}). Any other value stops with an error
 #'   listing the accepted values.
 #' @param grammar.dash Logical, default \code{TRUE}. Output only:
 #'   \code{TRUE} returns values as written in the reference table
@@ -71,9 +74,12 @@
 #'     \code{All}: \code{All detections}, \code{40KHzMyo}, \code{HiF},
 #'     \code{LoF}, \code{HiFrag}, \code{LoFrag}, \code{Multiple},
 #'     \code{Social}) is searched on \code{scientific_name},
-#'     \code{common_name}, \code{code4}, \code{code6}.
+#'     \code{common_name}, \code{label_name}, \code{label2_name},
+#'     \code{code4}, \code{code6}.
 #' }
-#' The first two tables only have name/code columns, so any other
+#' The first two tables have no label columns: for \code{"label_name"} and
+#' \code{"label2_name"} their \code{common_name} is returned. They only
+#' have name/code columns, so any other
 #' \code{batname.format.out} (e.g. \code{listing.status_federal},
 #' \code{family}, \code{region}) returns \code{""} for values found there.
 #' The 8 category labels in \code{bat.names} also return \code{""} for the
@@ -114,6 +120,9 @@
 #'
 #' batz.batusa_recode.names("mylu", batname.format.out = "both")
 #' # "Little brown bat (Myotis lucifugus)"
+#'
+#' batz.batusa_recode.names(c("epfu", "Hoary bat"), batname.format.out = "label_name")
+#' # "Big brown (EPFU)"  "Hoary (LACI)"
 #'
 #' batz.batusa_recode.names(c("hif", "40kMyo", "2bat"), batname.format.out = "code4")
 #' # "HiF"  "40KHzMyo"  "Multiple"
@@ -177,7 +186,8 @@ batz.batusa_recode.names <- function(data, batname.format.out = "common_name", g
     "Desert red bat" = "Western red bat"
   )
 
-  match.cols <- c("scientific_name", "common_name", "code4", "code6")
+  match.cols <- c("scientific_name", "common_name", "label_name", "label2_name", "code4", "code6")
+  match.cols <- match.cols[match.cols %in% names(nabat.names)]       # an older table without the label columns
 
   ## 2026-10-02, per Josh: accept old/short format names ("common",
   ## "latin", ...), any case/separator, and the derived "both" format -
@@ -207,6 +217,8 @@ batz.batusa_recode.names <- function(data, batname.format.out = "common_name", g
       return(ifelse(is.na(sn) | !nzchar(sn) | tolower(sn) == tolower(cn), cn, sprintf("%s (%s)", cn, sn)))
     }
     if (fmt %in% names(df) && fmt != "region") return(as.character(df[[fmt]]))
+    ## label_name / label2_name: these tables have no label columns - their common_name is used
+    if (fmt %in% c("label_name", "label2_name") && "common_name" %in% names(df)) return(as.character(df$common_name))
     rep("", nrow(df))
   }
 
@@ -316,6 +328,7 @@ batusa.resolve.format <- function(fmt, valid) {
                scientific = "scientific_name", sci = "scientific_name",
                sciname = "scientific_name", species = "scientific_name",
                code = "code4", fourlettercode = "code4", sixlettercode = "code6",
+               label = "label_name", label1 = "label_name", label2 = "label2_name",
                both = "both", commonlatin = "both", commonscientific = "both",
                commonandscientific = "both", commonandlatin = "both")
   accepted <- c(valid, "both")

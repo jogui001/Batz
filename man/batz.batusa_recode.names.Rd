@@ -19,7 +19,9 @@ columns character, same names) is returned.}
 
 \item{batname.format.out}{Character, default \code{"common_name"}. Output
 format: any column of the bat reference table - \code{"scientific_name"},
-\code{"common_name"}, \code{"code4"}, \code{"code6"}, \code{"family"},
+\code{"common_name"}, \code{"label_name"} (e.g. \code{"Big brown
+  (EPFU)"}), \code{"label2_name"} (e.g. \code{"Big brown bat (EPFU)"}),
+\code{"code4"}, \code{"code6"}, \code{"family"},
 \code{"region"}, \code{"listing.status_federal"},
 \code{"listing.status_iucn"}, \code{"states.listed"},
 \code{"states.present"}, \code{"states.endangered"},
@@ -30,7 +32,8 @@ format: any column of the bat reference table - \code{"scientific_name"},
 underscores and dashes are ignored (\code{"Common Name"} =
 \code{"common_name"}), and short names work: \code{"common"},
 \code{"latin"}/\code{"scientific"}/\code{"sci"}/\code{"species"},
-\code{"code"} (= \code{code4}). Any other value stops with an error
+\code{"code"} (= \code{code4}), \code{"label"} (= \code{label_name}),
+\code{"label2"} (= \code{label2_name}). Any other value stops with an error
 listing the accepted values.}
 
 \item{grammar.dash}{Logical, default \code{TRUE}. Output only:
@@ -90,9 +93,12 @@ American species marked \code{NABAT}, plus 8 category labels marked
 \code{All}: \code{All detections}, \code{40KHzMyo}, \code{HiF},
 \code{LoF}, \code{HiFrag}, \code{LoFrag}, \code{Multiple},
 \code{Social}) is searched on \code{scientific_name},
-\code{common_name}, \code{code4}, \code{code6}.
+\code{common_name}, \code{label_name}, \code{label2_name},
+\code{code4}, \code{code6}.
 }
-The first two tables only have name/code columns, so any other
+The first two tables have no label columns: for \code{"label_name"} and
+\code{"label2_name"} their \code{common_name} is returned. They only
+have name/code columns, so any other
 \code{batname.format.out} (e.g. \code{listing.status_federal},
 \code{family}, \code{region}) returns \code{""} for values found there.
 The 8 category labels in \code{bat.names} also return \code{""} for the
@@ -130,6 +136,9 @@ batz.batusa_recode.names("myse", batname.format.out = "listing.status_federal")
 
 batz.batusa_recode.names("mylu", batname.format.out = "both")
 # "Little brown bat (Myotis lucifugus)"
+
+batz.batusa_recode.names(c("epfu", "Hoary bat"), batname.format.out = "label_name")
+# "Big brown (EPFU)"  "Hoary (LACI)"
 
 batz.batusa_recode.names(c("hif", "40kMyo", "2bat"), batname.format.out = "code4")
 # "HiF"  "40KHzMyo"  "Multiple"

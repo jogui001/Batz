@@ -65,8 +65,9 @@
 #' @param batname.format.out Character, default \code{"full"}. Species label
 #'   in \code{$common.name}: \code{"full"} = \code{"<common> (<latin>)"}
 #'   followed directly (no separator) by the hibernation strategy;
-#'   \code{"both"} = \code{"<common> (<latin>)"}; \code{"common"}; or
-#'   \code{"latin"}.
+#'   \code{"both"} = \code{"<common> (<latin>)"}; \code{"common"};
+#'   \code{"latin"}; \code{"label_name"} (e.g. \code{"Big brown (EPFU)"});
+#'   or \code{"label2_name"} (e.g. \code{"Big brown bat (EPFU)"}).
 #' @param bat.code Character, default \code{"code4"}. Code shown in
 #'   \code{$species.code}: \code{"code4"}, \code{"code6"}, or \code{"none"}
 #'   (column left out).
@@ -293,7 +294,8 @@ batz.batusa_list.species <- function(data,
     symbol_presence.absence[1]
   }
 
-  bat.cols   <- c("latin", "common", "code4", "code6")
+  bat.cols   <- c("latin", "common", "label_name", "label2_name", "code4", "code6")
+  bat.cols   <- bat.cols[bat.cols %in% names(nabat)]
   state.cols <- c("official.name", "short.name", "code2")
 
   x <- if (is.data.frame(data)) unlist(lapply(data, as.character), use.names = FALSE) else as.character(data)
@@ -356,7 +358,9 @@ batz.batusa_list.species <- function(data,
       "both"   = sprintf("%s (%s)", row[["common"]], row[["latin"]]),
       "common" = row[["common"]],
       "latin"  = row[["latin"]],
-      stop(sprintf("batname.format.out must be one of \"full\", \"both\", \"common\", \"latin\" (got '%s')", batname.format.out))
+      "label_name"  = row[["label_name"]],
+      "label2_name" = row[["label2_name"]],
+      stop(sprintf("batname.format.out must be one of \"full\", \"both\", \"common\", \"latin\", \"label_name\", \"label2_name\" (got '%s')", batname.format.out))
     )
     if (!grammar.dash) name <- gsub("-", " ", name)
     name

@@ -117,8 +117,10 @@
 #'   \item{\code{$40khzmyo}}{\code{TRUE} adds a 40kHzMyo facet (its own
 #'     facet; a heatmap cannot overlay it).}
 #'   \item{\code{$facet.label_format}}{Format of species facet titles
-#'     (\code{"common_name"}, \code{"scientific_name"}, \code{"code4"},
-#'     \code{"code6"}, \code{"both"}; blank = \code{"common_name"}). An
+#'     (\code{"common_name"}, \code{"scientific_name"}, \code{"label_name"}
+#'     (e.g. "Big brown (EPFU)"), \code{"label2_name"} (e.g. "Big brown bat
+#'     (EPFU)"), \code{"code4"}, \code{"code6"}, \code{"both"}; blank =
+#'     \code{"common_name"}). An
 #'     older fig.list whose \code{$facet.label} holds these formats is read
 #'     as \code{$facet.label_format} (WARNING).}
 #'   \item{\code{$facet.label}}{Optional. Alternative names for the panels

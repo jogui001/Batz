@@ -184,7 +184,9 @@ bars in the "All detections" facet when it exists, otherwise in their
 own last facet. The 40kHzMyo legend key is shown whenever this is on.}
 \item{\code{$facet.label_format}}{Format of species facet titles:
 \code{"common_name"} (used when blank), \code{"scientific_name"},
-\code{"code4"}, \code{"code6"}, \code{"both"}, or \code{"common"},
+\code{"label_name"} (e.g. "Big brown (EPFU)"), \code{"label2_name"}
+(e.g. "Big brown bat (EPFU)"), \code{"code4"}, \code{"code6"},
+\code{"both"}, or \code{"common"},
 \code{"latin"}, \code{"scientific"}. Other values stop with an error
 naming the row. Non-species facets keep their own name. An older
 fig.list whose \code{$facet.label} holds these formats (and has no

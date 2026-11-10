@@ -564,3 +564,11 @@ stopifnot(!(mygr.row[["AK"]] %in% c("SC")))
 cat("PASSED\n")
 
 cat("\nALL TESTS COMPLETED\n")
+
+## label_name / label2_name (2026-11-09): output format and input matching
+s <- batz.batusa_list.species("NH", batname.format.out = "label2_name")
+print(head(s[, c("state", "common.name", "species.code")]))
+stopifnot("Hoary bat (LACI)" %in% s$common.name)
+s2 <- batz.batusa_list.species("Big brown (EPFU)", batname.format.out = "label_name")
+stopifnot(all(s2$common.name == "Big brown (EPFU)"))
+cat("label_name / label2_name PASSED\n")

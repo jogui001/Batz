@@ -11,8 +11,8 @@
 #' @param levels Species names (the facet levels).
 #' @param fmt The fig.list row's \code{$facet.label_format}: any value
 #'   \code{batz.batusa_recode.names()} accepts for \code{batname.format.out}
-#'   (\code{"common_name"}, \code{"scientific_name"}, \code{"code4"},
-#'   \code{"code6"}, \code{"both"}, ...). Quotes are dropped; blank or
+#'   (\code{"common_name"}, \code{"scientific_name"}, \code{"label_name"},
+#'   \code{"label2_name"}, \code{"code4"}, \code{"code6"}, \code{"both"}, ...). Quotes are dropped; blank or
 #'   \code{NA} means \code{"common_name"}.
 #' @param job.label,fn.name fig.list row label and calling function, used in
 #'   messages.
@@ -39,7 +39,7 @@ plotutil_facet_labels <- function(levels, fmt, job.label, fn.name, alt = "") {
   names(res) <- levels
   ## other names a $facet.label pair may use for a panel: species codes and names, AllDet, 40kMyo
   aka <- lapply(levels, function(l) l)
-  for (f in c("code4", "code6", "common_name", "scientific_name")) {
+  for (f in c("code4", "code6", "common_name", "scientific_name", "label_name", "label2_name")) {
     v <- tryCatch(as.character(suppressMessages(suppressWarnings(batz.batusa_recode.names(levels, batname.format.out = f)))),
                   error = function(e) rep(NA_character_, length(levels)))
     if (length(v) == length(levels)) for (i in seq_along(levels)) if (!is.na(v[i]) && nzchar(v[i])) aka[[i]] <- c(aka[[i]], v[i])
@@ -590,7 +590,8 @@ plotutil_figlist_labelformat <- function(fig.list, fn.name) {
   j <- which(std == "facet_label")[1]
   v <- tolower(trimws(gsub('"', "", as.character(fig.list[[j]]))))
   v <- v[!is.na(v) & nzchar(v) & v != "na"]
-  fmts <- c("common_name", "scientific_name", "code4", "code6", "both", "common", "latin", "scientific")
+  fmts <- c("common_name", "scientific_name", "label_name", "label2_name", "code4", "code6", "both", "common", "latin",
+            "scientific", "label", "label2")
   if (all(v %in% fmts)) {                                    # name formats, or all blank / "NA"
     names(fig.list)[j] <- "facet.label_format"
     cat(sprintf("WARNING: %s - fig.list has $facet.label but no $facet.label_format%s - used as $facet.label_format (the new name); $facet.label is now for alternative labels.\n",
