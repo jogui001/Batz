@@ -9,7 +9,10 @@
 #' site, as Word and/or PDF.
 #'
 #' @param data The Survey123 export workbook (\code{.xlsx}, one tab per
-#'   form), a named list of data frames (one per form), or a folder. For a
+#'   form), a named list of data frames (one per form; other list elements,
+#'   e.g. \code{$headers.db} and \code{$file} of the list returned by
+#'   \code{\link{batz.merge_sitevisit.acoustics}}, are skipped), or a
+#'   folder. For a
 #'   folder, the \code{.xlsx} (sub-folders searched, \code{Archive} folders
 #'   and \code{~$} lock files skipped) with the most form tabs is used, the
 #'   newest if several tie (NOTE), e.g. the workbook written by
@@ -64,10 +67,15 @@
 #'   searched with its sub-folders (\code{Archive} folders skipped). See
 #'   Details. \code{NULL} (and \code{data} not a folder with photos): the
 #'   photo cells read \code{"No photo folder given (photo.dir)"}.
-#' @param sm4.data Data frame, or the path to a merged SM4 log \code{.csv}
-#'   (e.g. from \code{\link{batz.merge_sm4.logfiles}}), default \code{NULL}.
-#'   Needs \code{aru.name} (or \code{aru}), \code{date} and \code{time}
-#'   columns (any case/separator). Used for Figure 5.
+#' @param sm4.data Data frame, or the path to its \code{.csv}, default
+#'   \code{NULL}. Used for Figure 5. Either the plot frame from
+#'   \code{\link{batz.generate_plotframe.sm4}} (has \code{$mins.oper} and
+#'   \code{$mins2.noon.mon}: used as it is, so its scheduled intervals with
+#'   no checks show as 0), or a merged SM4 log (e.g. from
+#'   \code{\link{batz.merge_sm.logfiles}}) with \code{aru.name} (or
+#'   \code{aru}), \code{date} and \code{time} columns (any
+#'   case/separator), whose lines are counted as minutes per 15-minute
+#'   interval.
 #' @param plotopts.bullseye,plotopts.sm4heatmap Data frame or path to the
 #'   \code{plotopts_bullseye.csv} / \code{plotopts_sm4heatmap.csv} settings
 #'   table, default \code{NULL} (the built-in settings carried by the
@@ -395,7 +403,12 @@ batz.generate_aru.appendix <- function(data,
       readxl::read_excel(data, sheet = s, .name_repair = "minimal"), stringsAsFactors = FALSE, check.names = FALSE))
     names(tabs.in) <- sheets
   } else if (is.list(data) && !is.data.frame(data) && length(data) > 0 && !is.null(names(data))) {
-    tabs.in <- lapply(data, as.data.frame, stringsAsFactors = FALSE, check.names = FALSE)
+    ## only the data-frame elements are tabs: the list from
+    ## batz.merge_sitevisit.acoustics() also holds $headers.db (a list of
+    ## tables), $file and others, which are skipped (2026-11-09)
+    is.tab <- vapply(data, is.data.frame, logical(1))
+    if (!any(is.tab)) stop("`data` is a list with no data frames - give the Survey123 .xlsx or a named list of data frames.", call. = FALSE)
+    tabs.in <- lapply(data[is.tab], as.data.frame, stringsAsFactors = FALSE, check.names = FALSE)
   } else {
     stop("`data` must be the path to the Survey123 .xlsx export or a named list of data frames.", call. = FALSE)
   }
@@ -1128,7 +1141,17 @@ batz.generate_aru.appendix <- function(data,
     sm <- as.data.frame(sm4.data, stringsAsFactors = FALSE)
     names(sm) <- standardize.headers(names(sm))
     if ("aru" %in% names(sm) && !("aru_name" %in% names(sm))) names(sm)[names(sm) == "aru"] <- "aru_name"
-    if (!all(c("aru_name", "date", "time") %in% names(sm))) stop("sm4.data needs aru.name, date and time columns.", call. = FALSE)
+    is.pf <- all(c("aru_name", "date_monitoringnight", "mins_oper", "mins2_noon_mon") %in% names(sm))
+    if (is.pf) {                                   # plot frame from batz.generate_plotframe.sm4(): used as it is
+      sm4.sum <- data.frame(aru.name = clean(sm$aru_name), date.monitoringnight = format(sitevisit.to.date(sm$date_monitoringnight)),
+                            mins.oper = suppressWarnings(as.numeric(sm$mins_oper)),
+                            mins2.noon.mon = suppressWarnings(as.numeric(sm$mins2_noon_mon)), stringsAsFactors = FALSE)
+      if ("aru_schedule" %in% names(sm)) sm4.sum$aru.schedule <- clean(sm$aru_schedule)
+      sm4.sum <- sm4.sum[nzchar(sm4.sum$aru.name) & !is.na(sm4.sum$date.monitoringnight) & !is.na(sm4.sum$mins2.noon.mon), , drop = FALSE]
+      cat("sm4.data: plot frame (batz.generate_plotframe.sm4) - $mins.oper used as it is\n")
+    }
+    if (!is.pf && !all(c("aru_name", "date", "time") %in% names(sm))) stop("sm4.data needs aru.name, date and time columns, or the plot frame from batz.generate_plotframe.sm4().", call. = FALSE)
+    if (!is.pf) {
     ## each SM4 log line is one minute of recording: count lines per 15-min
     ## interval of the monitoring night (noon to noon, log times are local)
     dt.txt <- paste(clean(sm$date), clean(sm$time))
@@ -1145,6 +1168,7 @@ batz.generate_aru.appendix <- function(data,
     sm4.sum <- stats::aggregate(list(mins.oper = rep(1, length(dt))),
                                 list(aru.name = clean(sm$aru_name), date.monitoringnight = format(night),
                                      mins2.noon.mon = floor(m2n / 15) * 15), sum)
+    }
     sm4.sites <- unique(sm4.sum$aru.name)
     missing.sm4 <- sites[!(key(sites) %in% key(sm4.sites))]
     if (length(missing.sm4) > 0) cat("NOTE: no SM4 log data for: ", paste(missing.sm4, collapse = ", "), "\n", sep = "")

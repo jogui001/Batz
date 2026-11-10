@@ -32,7 +32,10 @@ batz.generate_aru.appendix(
 }
 \arguments{
 \item{data}{The Survey123 export workbook (\code{.xlsx}, one tab per
-form), a named list of data frames (one per form), or a folder. For a
+form), a named list of data frames (one per form; other list elements,
+e.g. \code{$headers.db} and \code{$file} of the list returned by
+\code{\link{batz.merge_sitevisit.acoustics}}, are skipped), or a
+folder. For a
 folder, the \code{.xlsx} (sub-folders searched, \code{Archive} folders
 and \code{~$} lock files skipped) with the most form tabs is used, the
 newest if several tie (NOTE), e.g. the workbook written by
@@ -103,10 +106,15 @@ searched with its sub-folders (\code{Archive} folders skipped). See
 Details. \code{NULL} (and \code{data} not a folder with photos): the
 photo cells read \code{"No photo folder given (photo.dir)"}.}
 
-\item{sm4.data}{Data frame, or the path to a merged SM4 log \code{.csv}
-(e.g. from \code{\link{batz.merge_sm4.logfiles}}), default \code{NULL}.
-Needs \code{aru.name} (or \code{aru}), \code{date} and \code{time}
-columns (any case/separator). Used for Figure 5.}
+\item{sm4.data}{Data frame, or the path to its \code{.csv}, default
+\code{NULL}. Used for Figure 5. Either the plot frame from
+\code{\link{batz.generate_plotframe.sm4}} (has \code{$mins.oper} and
+\code{$mins2.noon.mon}: used as it is, so its scheduled intervals with
+no checks show as 0), or a merged SM4 log (e.g. from
+\code{\link{batz.merge_sm.logfiles}}) with \code{aru.name} (or
+\code{aru}), \code{date} and \code{time} columns (any
+case/separator), whose lines are counted as minutes per 15-minute
+interval.}
 
 \item{plotopts.bullseye, plotopts.sm4heatmap}{Data frame or path to the
 \code{plotopts_bullseye.csv} / \code{plotopts_sm4heatmap.csv} settings

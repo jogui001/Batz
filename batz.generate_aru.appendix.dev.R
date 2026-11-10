@@ -143,3 +143,15 @@ try(batz.generate_aru.appendix(list(photos = data.frame(a = 1)), template = temp
 try(batz.generate_aru.appendix(file.data, word = FALSE, pdf = FALSE, template = template))
 
 list.files(dir.out)
+
+## ---- TEST 5 (2026-11-09): data = the list returned by batz.merge_sitevisit.acoustics()
+## ($headers.db is a list of tables, $file a character vector - only the data-frame
+## elements are read as tabs), and sm4.data = the plot frame from batz.generate_plotframe.sm4()
+d5 <- c(d, list(headers.db = list(a = data.frame(x = 1:3), b = data.frame(y = 1:5)), file = c(x = "a.xlsx")))
+r5 <- batz.generate_aru.appendix(d5, project.name = "NA Bat", collate = TRUE, separate = FALSE,
+                                 dir.save = file.path(dir.out, "sitevisit.list"), template = template)
+stopifnot(nrow(r5$sites) > 0)
+## sm4.data as a plot frame: $mins.oper used as it is (prints "sm4.data: plot frame ...")
+# plfr.sm4 <- batz.generate_plotframe.sm4(sm4.logs, dir.save = NULL)
+# r5b <- batz.generate_aru.appendix(d5, project.name = "NA Bat", sm4.data = plfr.sm4, template = template,
+#                                   dir.save = file.path(dir.out, "plotframe"), separate = FALSE)
