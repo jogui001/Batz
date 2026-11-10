@@ -806,7 +806,7 @@ fl.luso <- function(type, facet.set) data.frame(plot.type = type, plot.name = pa
   plot.set = "A1", pool = FALSE, date.format = "%b-%d", date.start = "2026-07-01", date.end = "2026-07-05",
   xaxe.interval = "1 day", xaxe.title = "Date", check.names = FALSE)
 facets.of <- function(r) unique(as.character(r$ggplots[[1]]$data$facet.panel.value))
-aes.obs <- Batz:::batz.db("plotopts.batz.plotactivity_observations")   # built-in settings (Batz_reference_db)
+aes.obs <- read.csv("plotopts_callobs.csv", stringsAsFactors = FALSE, check.names = FALSE)
 r.luso <- batz.plotactivity_observations(mk(c("MYLU", "MYSO", "EPFU")), fl.luso("call.observations", "MYLU;EPFU"), st, aes.obs, dir.save = tempdir())
 cat("MYLU present -> facets (expect LUSO, epfu):", facets.of(r.luso), "\n")
 r.myso <- batz.plotactivity_observations(mk(c("MYSO", "EPFU")), fl.luso("call.observations", "EPFU"), st, aes.obs, dir.save = tempdir())
@@ -835,3 +835,17 @@ r.win <- batz.plotactivity_observations(mk("EPFU"), fl.days("2026-07-01; 2026-07
 stopifnot(!"2026-07-03" %in% format(r.win$plots[[1]]$pd$date.parsed))
 ## lists of different length stop with a message
 try(batz.plotactivity_observations(mk("EPFU"), fl.days("2026-07-01; 2026-07-04", "2026-07-05"), st, aes.obs, dir.save = tempdir()))
+
+## ---------------------------------------------------------------------------
+## 2026-11-09: a list in $date.start with $date.end blank (or NA) = only those dates;
+## $plot.set as a ";" list; $plot.group NA (read.csv turns "NA" into NA) = "group"
+## ---------------------------------------------------------------------------
+r.blank <- batz.plotactivity_observations(mk("EPFU"), fl.days(L, NA), st, aes.obs, dir.save = tempdir())
+stopifnot(identical(sort(unique(format(r.blank$plots[[1]]$pd$date.parsed))), c("2026-07-01", "2026-07-03", "2026-07-05")))
+f.na <- fl.days(L, L); f.na$plot.group <- NA
+r.na <- batz.plotactivity_observations(mk("EPFU"), f.na, st, aes.obs, dir.save = tempdir())
+stopifnot(length(r.na$ggplots) == 1)                                   # not skipped
+f.sc <- f.na; f.sc$plot.set <- paste(" ", unique(mk("EPFU")$group)[1], " ; ")   # spaces around a ";" list
+r.sc <- batz.plotactivity_observations(mk("EPFU"), f.sc, st, aes.obs, dir.save = tempdir())
+stopifnot(identical(tolower(r.sc$plots[[1]]$plot.sets.vals), tolower(unique(mk("EPFU")$group)[1])))
+cat("2026-11-09 checks passed\n")

@@ -169,8 +169,11 @@
 #'     given a label keep theirs; a NOTE names pairs that match no panel and
 #'     a count that doesn't match.}
 #'   \item{\code{$plot.set}}{One or more values of the \code{$plot.group}
-#'     column to include, separated by spaces (double quotes are treated as
-#'     spaces), matched ignoring case. Blank = all values.}
+#'     column to include, separated by ";" (e.g.
+#'     \code{"CLERK; SUGARHILL; AYERS"}; spaces around each value are
+#'     ignored), matched ignoring case. Without a ";", values separated by
+#'     spaces are read (double quotes are treated as spaces). Blank = all
+#'     values.}
 #'   \item{\code{$pool}}{TRUE sums \code{$observations.count} over all
 #'     selected \code{$plot.set} values into one bar per date and facet.
 #'     FALSE keeps one bar per value, side by side.}
@@ -182,8 +185,8 @@
 #'     one window per pair (first \code{$date.start} with first
 #'     \code{$date.end}, ...): only the days in the windows are plotted, side
 #'     by side, and the days between them are left out. With the same list
-#'     in both, only those dates are plotted. The two lists must be the same
-#'     length.}
+#'     in both, or a list in one and the other blank, only those dates are
+#'     plotted. Otherwise the two lists must be the same length.}
 #'   \item{\code{$xaxe.interval}}{Number of evenly spaced labeled dates on
 #'     the X axis, from \code{$date.start} to \code{$date.end}. An unusable
 #'     value gives 2 labels (NOTE). With date windows, every plotted day is
@@ -533,7 +536,8 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     x <- trimws(as.character(x))
     if (length(x) == 0 || is.na(x) || !nzchar(x)) return(character(0))
     x <- gsub('"', " ", x, fixed = TRUE)
-    vals <- strsplit(trimws(x), "\\s+")[[1]]
+    ## ";" list (2026-11-09); without a ";", values separated by spaces
+    vals <- if (grepl(";", x, fixed = TRUE)) trimws(strsplit(x, ";", fixed = TRUE)[[1]]) else strsplit(trimws(x), "\\s+")[[1]]
     vals[nzchar(vals)]
   }
 
@@ -551,8 +555,10 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
   ## length ("2026-06-26; 2026-06-28" / "2026-06-26; 2026-06-28"): each pair is
   ## a window and only the days in the windows are plotted (gaps left out)
   resolve.dates <- function(job, job.label) {
-    sp <- function(v) { x <- trimws(gsub('"', "", unlist(strsplit(as.character(v), "[;,]")))); x[nzchar(x)] }
+    sp <- function(v) { x <- trimws(gsub('"', "", unlist(strsplit(as.character(v), "[;,]")))); x[!is.na(x) & nzchar(x) & toupper(x) != "NA"] }
     ds <- parse.flex.date(sp(get.setting(job, "date.start"))); de <- parse.flex.date(sp(get.setting(job, "date.end")))
+    if (length(ds) > 1 && !length(de)) de <- ds                   # list of dates, blank end: only those dates
+    if (length(de) > 1 && !length(ds)) ds <- de
     if (length(ds) <= 1 && length(de) <= 1) return(list(start = ds[1], end = de[1], days = NULL))
     if (length(ds) != length(de))
       stop(sprintf("fig.list row '%s': $date.start has %d date(s) and $date.end has %d - give one date each, or the same number (one window per pair).",
@@ -683,7 +689,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     # batz.plotdetections_first.last()'s fixed grouping column) instead of
     # skipping the row - see Details for the full history/judgment call. A
     # row can still supply its own $plot.group value to override this. ---
-    group.col <- if ("plot.group" %in% names(job)) trimws(as.character(job$plot.group)) else ""
+    group.col <- plotutil_job_text(job, "plot.group")             # blank, NA or "NA" -> ""
     if (!nzchar(group.col)) {
       group.col <- "group"
     }

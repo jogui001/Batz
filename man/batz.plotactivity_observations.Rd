@@ -198,8 +198,11 @@ case, spaces, dots and underscores) or labels in panel order. Panels not
 given a label keep theirs; a NOTE names pairs that match no panel and
 a count that doesn't match.}
 \item{\code{$plot.set}}{One or more values of the \code{$plot.group}
-column to include, separated by spaces (double quotes are treated as
-spaces), matched ignoring case. Blank = all values.}
+column to include, separated by ";" (e.g.
+\code{"CLERK; SUGARHILL; AYERS"}; spaces around each value are
+ignored), matched ignoring case. Without a ";", values separated by
+spaces are read (double quotes are treated as spaces). Blank = all
+values.}
 \item{\code{$pool}}{TRUE sums \code{$observations.count} over all
 selected \code{$plot.set} values into one bar per date and facet.
 FALSE keeps one bar per value, side by side.}
@@ -211,8 +214,8 @@ Read as m/d/Y, Y-m-d or m/d/y. Several dates separated by ";" (e.g.
 one window per pair (first \code{$date.start} with first
 \code{$date.end}, ...): only the days in the windows are plotted, side
 by side, and the days between them are left out. With the same list
-in both, only those dates are plotted. The two lists must be the same
-length.}
+in both, or a list in one and the other blank, only those dates are
+plotted. Otherwise the two lists must be the same length.}
 \item{\code{$xaxe.interval}}{Number of evenly spaced labeled dates on
 the X axis, from \code{$date.start} to \code{$date.end}. An unusable
 value gives 2 labels (NOTE). With date windows, every plotted day is
