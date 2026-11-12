@@ -61,7 +61,8 @@ Optional rows \code{plot.title.face}, \code{axis.title.face} and
 \code{"bold.italic"}) set the title fonts; a missing row gives bold.
 \code{plot.zero} (the fig.list column \code{$plot.zero}, the plotopts row or typed into the call), default
 \code{FALSE}: values of 0 (bars, tiles, cells) are not drawn; \code{TRUE}
-draws them.
+draws them. A 0 bar keeps its place (grouped / side-by-side bars do
+not move); it is only made invisible.
 Optional row \code{strip.text.size}: size of the facet panel titles
 (a missing row gives 10).}
 
@@ -346,8 +347,15 @@ the plotopts size settings are used; any other entry gives a NOTE and
 the plotopts size. The old spelling $plot.dimentions is also read, and it
 can be typed into the call (e.g. plot.dimensions = "1/2 page").}
 \item{\code{$plot.zero}}{Optional fig.list column: FALSE (default) =
-values of 0 (bars, tiles, cells) are not drawn; TRUE draws them. Can
+values of 0 (bars, tiles, cells) are not drawn (bars keep their
+place); TRUE draws them. Can
 also be set in plotopts or typed into the call (plot.zero = TRUE).}
+\item{\code{$plot.zero_all.detections}}{Optional: plot.zero for the All detections bars only
+(FALSE = 0 not drawn). Wins over $plot.zero at the same level (call,
+fig.list, plotopts); blank uses $plot.zero.}
+\item{\code{$plot.zero_40khzmyo}}{Optional: plot.zero for the 40kHzMyo bars only
+(FALSE = 0 not drawn). Wins over $plot.zero at the same level (call,
+fig.list, plotopts); blank uses $plot.zero.}
 }
 }
 \examples{

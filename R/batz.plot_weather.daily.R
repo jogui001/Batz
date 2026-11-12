@@ -103,8 +103,11 @@
 #'   limits.
 #' @param wind.range Numeric, default \code{c(0, 10)}. Wind axis limits. Its
 #'   maximum is also the maximum drawn precipitation.
-#' @param plot.zero Logical, default \code{FALSE}. Zero wind and zero
-#'   precipitation are not drawn (\code{TRUE}: drawn). Temperature is always
+#' @param plot.zero,plot.zero_wind,plot.zero_precipitation Logical, default
+#'   \code{FALSE}. Zero wind and zero precipitation are not drawn
+#'   (\code{TRUE}: drawn). \code{plot.zero_wind} / \code{plot.zero_precipitation}
+#'   set one data set and win over \code{plot.zero}; \code{plot.zero} sets
+#'   both when the data set's own setting is not given. Temperature is always
 #'   drawn, 0 included. \code{wind.absent} / \code{precipitation.absent},
 #'   when given, decide for wind / precipitation.
 #' @param wind.absent \code{"hide"} (default, from \code{plot.zero}) or \code{"show"}. \code{"show"}
@@ -239,7 +242,7 @@ batz.plot_weather.daily <- function(data, suntimes = NULL, date.start = NULL, da
                                     wind.absent = c("hide", "show"), precipitation.absent = c("hide", "show"),
                                     precip.cumulative = TRUE, facet.ncol = 2,
                                     project.name = "", dir.save = getwd(), plot.width = 9,
-                                    plot.zero = FALSE,
+                                    plot.zero = FALSE, plot.zero_wind = FALSE, plot.zero_precipitation = FALSE,
                                     aes.plotopts = NULL, aes.style = "override.value") {
   FN <- "batz.plot_weather.daily"
   ## settings (2026-11-10): function call > aes.plotopts > built-in defaults
@@ -267,9 +270,12 @@ batz.plot_weather.daily <- function(data, suntimes = NULL, date.start = NULL, da
   }
   ## zero wind / precipitation: wind.absent / precipitation.absent when given, else plot.zero ("show" when TRUE)
   set.by <- c(given, names(po.vals))
-  zero.opt <- if (plotutil_plot_zero(plot.zero)) "show" else "hide"
-  if (!"wind.absent" %in% set.by) wind.absent <- zero.opt
-  if (!"precipitation.absent" %in% set.by) precipitation.absent <- zero.opt
+  zero.of <- function(nm) {                                  # plot.zero_<data> when set, else plot.zero
+    v <- if (paste0("plot.zero_", nm) %in% set.by) get(paste0("plot.zero_", nm)) else plot.zero
+    if (plotutil_plot_zero(v)) "show" else "hide"
+  }
+  if (!"wind.absent" %in% set.by) wind.absent <- zero.of("wind")
+  if (!"precipitation.absent" %in% set.by) precipitation.absent <- zero.of("precipitation")
   wind.absent <- absent.opt(wind.absent, "wind.absent")
   wind.type <- tolower(trimws(as.character(wind.type)[1]))
   if (!wind.type %in% c("speed", "gust")) stop(FN, ': wind.type must be "speed" or "gust".', call. = FALSE)

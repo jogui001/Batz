@@ -48,7 +48,8 @@
 #'   \code{"bold.italic"}) set the title fonts; a missing row gives bold.
 #'   \code{plot.zero} (the fig.list column \code{$plot.zero}, the plotopts row or typed into the call), default
 #'   \code{FALSE}: values of 0 (bars, tiles, cells) are not drawn; \code{TRUE}
-#'   draws them.
+#'   draws them. A 0 bar keeps its place (grouped / side-by-side bars do
+#'   not move); it is only made invisible.
 #'   Optional row \code{strip.text.size}: size of the facet panel titles
 #'   (a missing row gives 10).
 #' @param project.name Character, default \code{"new.project"}. Put at the
@@ -317,8 +318,15 @@
 #'     the plotopts size. The old spelling $plot.dimentions is also read, and it
 #'     can be typed into the call (e.g. plot.dimensions = "1/2 page").}
 #'   \item{\code{$plot.zero}}{Optional fig.list column: FALSE (default) =
-#'     values of 0 (bars, tiles, cells) are not drawn; TRUE draws them. Can
+#'     values of 0 (bars, tiles, cells) are not drawn (bars keep their
+#'     place); TRUE draws them. Can
 #'     also be set in plotopts or typed into the call (plot.zero = TRUE).}
+#'   \item{\code{$plot.zero_all.detections}}{Optional: plot.zero for the All detections bars only
+#'     (FALSE = 0 not drawn). Wins over $plot.zero at the same level (call,
+#'     fig.list, plotopts); blank uses $plot.zero.}
+#'   \item{\code{$plot.zero_40khzmyo}}{Optional: plot.zero for the 40kHzMyo bars only
+#'     (FALSE = 0 not drawn). Wins over $plot.zero at the same level (call,
+#'     fig.list, plotopts); blank uses $plot.zero.}
 #' }
 #'
 #' @seealso \code{\link{batz.generate_plotframe.bat}},
@@ -434,7 +442,8 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
   ## $plot.order/$facpan removed 2026-10-09 - $facet.set now sets the
   ## facets and their order
   FIG.LIST.OPTIONAL <- c("facet.label", "plot.group", "yaxe.trans", "loglabels", "y.scale",
-                          "y.custom", "ymax", "legend", "plot.dimensions", "plot.zero")
+                          "y.custom", "ymax", "legend", "plot.dimensions", "plot.zero",
+                          "plot.zero_all.detections", "plot.zero_40khzmyo")
   AES.DEFAULT.REQUIRED <- c("category", "parameter", "default.value")
 
   ## "output.filename.pattern" deliberately removed from this required list
@@ -843,7 +852,11 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     y.upper <- max(c(ymax.raw, raw.breaks, pd$observations.count), na.rm = TRUE)
 
     pd$obs.plot <- trans.fn(pd$observations.count)
-    if (!plotutil_plot_zero(get.setting(job, "plot.zero"))) pd <- pd[pd$observations.count != 0, , drop = FALSE]   # 0 not drawn
+    ## plot.zero = FALSE: 0 bars are kept (bar positions unchanged) but drawn fully transparent
+    ## one setting per data set: plot.zero_all.detections, plot.zero_40khzmyo (else plot.zero)
+    z.all <- plotutil_zero_set("all.detections", plot.inputs, job, get.default)
+    z.khz <- plotutil_zero_set("40khzmyo", plot.inputs, job, get.default)
+    pd$.alpha <- ifelse(pd$observations.count == 0 & !ifelse(pd$bar.type == "40kHzMyo", z.khz, z.all), 0, 1)
     break.pos <- trans.fn(raw.breaks)
     # break.pos (axis position) is always computed from the exact, unrounded raw.breaks so the
     # BUGFIX 2026-08-28 even-spacing above stays exact. label.breaks is a display-only copy: under
@@ -969,20 +982,20 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
 
         g <- ggplot2::ggplot(pd.fill, ggplot2::aes(x = x.val)) +
           ggplot2::geom_col(data = pd.fill[pd.fill$bar.type == "All detections", , drop = FALSE],
-                             ggplot2::aes(y = obs.plot, fill = fill.val, group = group.val),
+                             ggplot2::aes(y = obs.plot, fill = fill.val, group = group.val, alpha = .alpha),
                              width = bar.width.val, position = bar.position) +
           ggplot2::geom_col(data = pd.fill[pd.fill$bar.type == "40kHzMyo", , drop = FALSE],
-                             ggplot2::aes(y = obs.plot, fill = fill.val, group = group.val),
+                             ggplot2::aes(y = obs.plot, fill = fill.val, group = group.val, alpha = .alpha),
                              width = bar.width.val, position = bar.position) +
           ggplot2::scale_fill_manual(name = get.default("legend.groupval.title"),
                                       breaks = fill.breaks, limits = names(fill.values), values = fill.values)
       } else {
         g <- ggplot2::ggplot(p$pd, ggplot2::aes(x = x.val)) +
           ggplot2::geom_col(data = p$pd[p$pd$bar.type == "All detections", , drop = FALSE],
-                             ggplot2::aes(y = obs.plot, fill = bar.type, group = group.val),
+                             ggplot2::aes(y = obs.plot, fill = bar.type, group = group.val, alpha = .alpha),
                              width = bar.width.val, position = bar.position) +
           ggplot2::geom_col(data = p$pd[p$pd$bar.type == "40kHzMyo", , drop = FALSE],
-                             ggplot2::aes(y = obs.plot, fill = bar.type, group = group.val),
+                             ggplot2::aes(y = obs.plot, fill = bar.type, group = group.val, alpha = .alpha),
                              width = bar.width.val, position = bar.position) +
           ggplot2::scale_fill_manual(name = get.default("bar.fill.legend.title"),
             breaks = fill.legend.breaks, limits = fill.legend.limits,
@@ -990,7 +1003,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
                        `40kHzMyo` = get.default("bar.40khzmyo.fill")))
       }
 
-      g <- g +
+      g <- g + ggplot2::scale_alpha_identity() +                         # 0 bars transparent (plot.zero = FALSE)
         ggplot2::scale_y_continuous(limits = c(0, p$y.upper.plot), breaks = p$break.pos, labels = p$break.labels,
           name = paste0("\n", get.setting(p$job, "yaxe.title"))) +
         (if (is.null(p$date.days))

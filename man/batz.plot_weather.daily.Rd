@@ -35,6 +35,8 @@ batz.plot_weather.daily(
   dir.save = getwd(),
   plot.width = 9,
   plot.zero = FALSE,
+  plot.zero_wind = FALSE,
+  plot.zero_precipitation = FALSE,
   aes.plotopts = NULL,
   aes.style = "override.value"
 )
@@ -182,8 +184,11 @@ saved in (created if missing). \code{NULL} saves nothing.}
 \item{plot.width}{Numeric, default \code{9}. PNG width (inches). The
 height is 1.9 inches per row of panels plus 1 inch.}
 
-\item{plot.zero}{Logical, default \code{FALSE}. Zero wind and zero
-precipitation are not drawn (\code{TRUE}: drawn). Temperature is always
+\item{plot.zero, plot.zero_wind, plot.zero_precipitation}{Logical, default
+\code{FALSE}. Zero wind and zero precipitation are not drawn
+(\code{TRUE}: drawn). \code{plot.zero_wind} / \code{plot.zero_precipitation}
+set one data set and win over \code{plot.zero}; \code{plot.zero} sets
+both when the data set's own setting is not given. Temperature is always
 drawn, 0 included. \code{wind.absent} / \code{precipitation.absent},
 when given, decide for wind / precipitation.}
 

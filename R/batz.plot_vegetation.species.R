@@ -32,9 +32,9 @@
 #'   \code{"left"}, \code{"top"} (or \code{"none"}). Where the legend goes.
 #' @param bar \code{"stacked"} (default) or \code{"grouped"}. Stacked puts
 #'   the sites' bars on top of each other; grouped puts them side by side,
-#'   every site in the same place under every species, with a 0 (a short
-#'   line in the site's color, \code{zero.show}) where a site has none of
-#'   that species.
+#'   every site in the same place under every species. Where a site has
+#'   none of that species its place stays empty; with \code{plot.zero = TRUE}
+#'   (and \code{zero.show}) a short line in the site's color marks the 0.
 #' @param size \code{"page"} (default), \code{"half page"},
 #'   \code{"powerpoint"}, \code{"half powerpoint"}, or \code{"<width>x<height>"}
 #'   in inches (e.g. \code{"8x5"}). PNG size, width x height: page 6 x 7,
@@ -57,7 +57,8 @@
 #'   \code{"bold.italic"}) set the title fonts; a missing row gives bold.
 #'   \code{plot.zero} (the plotopts row or typed into the call), default
 #'   \code{FALSE}: values of 0 (bars, tiles, cells) are not drawn; \code{TRUE}
-#'   draws them.
+#'   draws them. A 0 bar keeps its place (grouped / side-by-side bars do
+#'   not move); it is only made invisible.
 #' @param ... Any other setting listed in Details ("Settings"), typed into
 #'   the call by name (e.g. \code{yaxe.max = 20}); used before
 #'   \code{aes.plotopts}.
@@ -361,10 +362,13 @@ batz.plot_vegetation.species <- function(data, project.name = "", site.names = N
   pos <- if (bar == "stacked") ggplot2::position_stack(reverse = TRUE) else ggplot2::position_dodge(width = bw)
   outline <- setting("bar.outline.color")
 
-  if (!plotutil_plot_zero(setting("plot.zero"))) pd <- pd[pd$count != 0, , drop = FALSE]   # 0 not drawn
+  ## plot.zero = FALSE: 0 bars are kept (bar positions unchanged) but drawn fully transparent, with no outline
+  hide0 <- !plotutil_plot_zero(setting("plot.zero")) & pd$count == 0
+  pd$.alpha <- ifelse(hide0, 0, 1)
+  pd$.outline <- if (blank(outline) || key(outline) == "none") NA_character_ else ifelse(hide0, NA_character_, outline)
   g <- ggplot2::ggplot(pd, ggplot2::aes(x = species, y = count, fill = site)) +
-    ggplot2::geom_col(position = pos, width = bw,
-                      colour = if (blank(outline) || key(outline) == "none") NA else outline) +
+    ggplot2::geom_col(ggplot2::aes(alpha = .alpha, colour = .outline), position = pos, width = bw) +
+    ggplot2::scale_alpha_identity() + ggplot2::scale_colour_identity() +
     ggplot2::facet_wrap(~panel, ncol = 1, drop = FALSE) +
     ggplot2::scale_x_discrete(drop = FALSE) +
     ggplot2::scale_y_continuous(breaks = brks, limits = c(0, ymax), expand = ggplot2::expansion(mult = c(0.05, 0.05))) +
@@ -380,14 +384,14 @@ batz.plot_vegetation.species <- function(data, project.name = "", site.names = N
                    legend.title = ggplot2::element_text(size = num("legend.title.size"), face = plotutil_face(setting("legend.title.face"))),
                    legend.key.size = ggplot2::unit(num("legend.key.size"), "lines"),
                    legend.position = legend.position)
-  if (bar == "grouped" && flag("zero.show") && any(pd$count == 0)) {
+  if (bar == "grouped" && flag("zero.show") && plotutil_plot_zero(setting("plot.zero")) && any(pd$count == 0)) {
     z <- pd[pd$count == 0, , drop = FALSE]
     n.s <- length(sites); i <- as.integer(z$site)
     z$x <- as.integer(z$species) + (i - (n.s + 1) / 2) * bw / n.s
     z$x0 <- z$x - bw / n.s / 2 * 0.9; z$x1 <- z$x + bw / n.s / 2 * 0.9
-    g <- g + ggplot2::geom_segment(data = z, ggplot2::aes(x = x0, xend = x1, y = 0, yend = 0, colour = site),
-                                   linewidth = num("zero.linewidth"), inherit.aes = FALSE, show.legend = FALSE) +
-      ggplot2::scale_colour_manual(values = fills, guide = "none")
+    z$.col <- unname(fills[as.character(z$site)])
+    g <- g + ggplot2::geom_segment(data = z, ggplot2::aes(x = x0, xend = x1, y = 0, yend = 0, colour = .col),
+                                   linewidth = num("zero.linewidth"), inherit.aes = FALSE, show.legend = FALSE)
   }
   if (!is.null(dbh.mean)) {                      # mean DBH printed above the tree-panel bars
     lab <- dbh.mean

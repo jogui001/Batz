@@ -78,3 +78,10 @@ if (file.exists(merged.file)) {
   print(r7$counts)
 }
 cat("PNGs in:", dir.out, "\n")
+
+## plot.zero (2026-11-13): grouped bars keep their place; 0 bars are invisible unless plot.zero = TRUE
+z0 <- batz.plot_vegetation.species(q, project.name = "Falmouth", bar = "grouped", dir.save = NULL)
+z1 <- batz.plot_vegetation.species(q, project.name = "Falmouth", bar = "grouped", dir.save = NULL, plot.zero = TRUE)
+b0 <- ggplot2::layer_data(z0$plot, 1); b1 <- ggplot2::layer_data(z1$plot, 1)
+stopifnot(isTRUE(all.equal(b0$x, b1$x)), all(b0$alpha[b0$y == 0] == 0))   # same bar positions; 0 bars transparent
+cat("plot.zero: bar positions kept, 0 bars hidden\n")

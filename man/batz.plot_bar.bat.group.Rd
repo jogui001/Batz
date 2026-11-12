@@ -200,6 +200,15 @@ can be typed into the call (e.g. plot.dimensions = "1/2 page").}
 \item{\code{$plot.zero}}{Optional fig.list column: FALSE (default) =
 values of 0 (bars, tiles, cells) are not drawn; TRUE draws them. Can
 also be set in plotopts or typed into the call (plot.zero = TRUE).}
+\item{\code{$plot.zero_sites.sampled}}{Optional: plot.zero for the sites-sampled bars only
+(FALSE = 0 not drawn). Wins over $plot.zero at the same level (call,
+fig.list, plotopts); blank uses $plot.zero.}
+\item{\code{$plot.zero_sites.detected}}{Optional: plot.zero for the sites-detected bars only
+(FALSE = 0 not drawn). Wins over $plot.zero at the same level (call,
+fig.list, plotopts); blank uses $plot.zero.}
+\item{\code{$plot.zero_passes.per.night}}{Optional: plot.zero for the passes-per-night bars only
+(FALSE = 0 not drawn). Wins over $plot.zero at the same level (call,
+fig.list, plotopts); blank uses $plot.zero.}
 }
 }
 \examples{

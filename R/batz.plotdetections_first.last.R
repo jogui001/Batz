@@ -287,6 +287,12 @@
 #'   \item{\code{$plot.zero}}{Optional fig.list column: FALSE (default) =
 #'     values of 0 (bars, tiles, cells) are not drawn; TRUE draws them. Can
 #'     also be set in plotopts or typed into the call (plot.zero = TRUE).}
+#'   \item{\code{$plot.zero_all.detections}}{Optional: plot.zero for the All detections crossbars only
+#'     (FALSE = 0 not drawn). Wins over $plot.zero at the same level (call,
+#'     fig.list, plotopts); blank uses $plot.zero.}
+#'   \item{\code{$plot.zero_40khzmyo}}{Optional: plot.zero for the 40kHzMyo crossbars only
+#'     (FALSE = 0 not drawn). Wins over $plot.zero at the same level (call,
+#'     fig.list, plotopts); blank uses $plot.zero.}
 #' }
 #'
 #' @seealso \code{\link{batz.generate_plotframe.bat}},
@@ -401,7 +407,8 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
                                  "all.detections", "40khzmyo", "facet.label_format",
                                  "plot.set", "date.format", "date.start", "date.end",
                                  "xaxe.interval", "xaxe.title")
-  FIG.LIST.OPTIONAL <- c("facet.label", "plot.dimensions", "plot.zero")   # read directly when present
+  FIG.LIST.OPTIONAL <- c("facet.label", "plot.dimensions", "plot.zero",
+                         "plot.zero_all.detections", "plot.zero_40khzmyo")   # read directly when present
   AES.DEFAULT.REQUIRED <- c("category", "parameter", "default.value")
 
   # 2026-08-27, later still - real bug hit on Josh's machine: his loaded
@@ -1051,8 +1058,12 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
       fill.legend.limits <- if (isTRUE(p$khz.flag)) c("All detections", "40kHzMyo") else "All detections"
       fill.legend.breaks <- if (isTRUE(p$khz.flag)) "40kHzMyo" else character(0)
 
-      if (!plotutil_plot_zero(get.setting(p$job, "plot.zero")) && "observations.count" %in% names(p$pd))
-        p$pd <- p$pd[is.na(p$pd$observations.count) | p$pd$observations.count != 0, , drop = FALSE]   # 0 not drawn
+      if ("observations.count" %in% names(p$pd)) {           # 0 not drawn: plot.zero_all.detections / plot.zero_40khzmyo, else plot.zero
+        z.all <- plotutil_zero_set("all.detections", plot.inputs, p$job, get.default)
+        z.khz <- plotutil_zero_set("40khzmyo", plot.inputs, p$job, get.default)
+        keep0 <- ifelse(p$pd$crossbar.type == "40kHzMyo", z.khz, z.all)
+        p$pd <- p$pd[is.na(p$pd$observations.count) | p$pd$observations.count != 0 | keep0, , drop = FALSE]
+      }
       g <- ggplot2::ggplot(p$pd, ggplot2::aes(x = date.parsed)) +
         ggplot2::geom_line(data = p$sdb, ggplot2::aes(x = date.parsed, y = dusk.time, color = "Dusk"),
                              linetype = get.default("dusk.linetype"), inherit.aes = FALSE) +

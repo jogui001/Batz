@@ -45,9 +45,9 @@ black to light grey (two sites = black and grey75, as in the example).}
 
 \item{bar}{\code{"stacked"} (default) or \code{"grouped"}. Stacked puts
 the sites' bars on top of each other; grouped puts them side by side,
-every site in the same place under every species, with a 0 (a short
-line in the site's color, \code{zero.show}) where a site has none of
-that species.}
+every site in the same place under every species. Where a site has
+none of that species its place stays empty; with \code{plot.zero = TRUE}
+(and \code{zero.show}) a short line in the site's color marks the 0.}
 
 \item{size}{\code{"page"} (default), \code{"half page"},
 \code{"powerpoint"}, \code{"half powerpoint"}, or \code{"<width>x<height>"}
@@ -74,7 +74,8 @@ Optional rows \code{plot.title.face}, \code{axis.title.face} and
 \code{"bold.italic"}) set the title fonts; a missing row gives bold.
 \code{plot.zero} (the plotopts row or typed into the call), default
 \code{FALSE}: values of 0 (bars, tiles, cells) are not drawn; \code{TRUE}
-draws them.}
+draws them. A 0 bar keeps its place (grouped / side-by-side bars do
+not move); it is only made invisible.}
 
 \item{aes.style}{Character, default \code{"override.value"}. Name of the
 \code{aes.plotopts} column read before \code{$default.value} (an old

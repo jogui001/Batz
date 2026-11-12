@@ -99,3 +99,7 @@ r12 <- batz.plot_weather.daily(weather, suntimes = suntimes, aes.plotopts = po, 
                                dir.save = file.path(tempdir(), "wx_plotopts"))   # NOTE: settings from aes.plotopts: panels, temp.range
 r13 <- batz.plot_weather.daily(weather, suntimes = suntimes, aes.plotopts = po, aes.style = "Bristol NH", panels = 6,
                                dir.save = file.path(tempdir(), "wx_plotopts_call"))   # panels from the call (6), temp.range from po
+
+## ---- plot.zero_<data> (2026-11-13): one setting per data set, each FALSE by default ----
+r14 <- batz.plot_weather.daily(weather, suntimes = suntimes, plot.zero_wind = TRUE, dir.save = file.path(tempdir(), "wx_zero"))
+# zero wind drawn (line along 0); zero precipitation still not drawn (plot.zero_precipitation = FALSE)

@@ -52,6 +52,9 @@ ok(nrow(f3$fig.list) == nrow(f$fig.list) && identical(f3$fig.list$plot.type, f$f
 ok(identical(names(f$fig.list)[match("plot.name", names(f$fig.list)) + 1], "plot.dimensions"), "$plot.dimensions after $plot.name")
 ok(all(f$fig.list$plot.dimensions != "NA"), "every plot type has an example $plot.dimensions")
 ok(all(f$fig.list$plot.zero == "FALSE"), "every plot type has $plot.zero = FALSE")
+z <- f$fig.list[, c("plot.type", grep("^plot.zero_", names(f$fig.list), value = TRUE))]; print(z)
+ok(all(z$plot.zero_sites.sampled[z$plot.type == "bar.bat.group"] == "FALSE") &&
+   all(z$plot.zero_40khzmyo[z$plot.type %in% c("call.observations", "bat.detection")] == "FALSE"), "plot.zero_<data> columns for multi-data plots")
 print(f$fig.list[, c("plot.type", "plot.dimensions")])
 
 try(batz.generate_figlist(functions = "batz.not_a_function", dir.save = NULL))   # error names it

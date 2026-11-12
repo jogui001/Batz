@@ -736,3 +736,22 @@ plotutil_plot_zero <- function(v) {
   v <- if (is.null(v) || !length(v)) "" else toupper(trimws(as.character(v[1])))
   !is.na(v) && v %in% c("TRUE", "T", "YES", "Y", "1")
 }
+
+
+#' plot.zero for one data set of a plot (internal)
+#'
+#' For plots with several data sets: \code{plot.zero_<name>}, else
+#' \code{plot.zero}, taken from the function call, then the fig.list row,
+#' then plotopts (a data set's own setting wins over \code{plot.zero} at
+#' the same level). Nothing set: FALSE (zeros not drawn).
+#' @keywords internal
+#' @noRd
+plotutil_zero_set <- function(name, inputs, job, plotopts.get) {
+  keys <- c(paste0("plot.zero_", name), "plot.zero")
+  given <- function(v) !(is.null(v) || !length(v) || is.na(v[1]) || !nzchar(trimws(as.character(v[1]))) ||
+                           toupper(trimws(as.character(v[1]))) == "NA")
+  for (k in keys) { v <- plotutil_input_get(inputs, k); if (given(v)) return(plotutil_plot_zero(v)) }
+  for (k in keys) { v <- plotutil_job_text(job, k); if (given(v)) return(plotutil_plot_zero(v)) }
+  for (k in keys) { v <- tryCatch(plotopts.get(k), error = function(e) NA); if (given(v)) return(plotutil_plot_zero(v)) }
+  FALSE
+}

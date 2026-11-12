@@ -173,6 +173,15 @@
 #'   \item{\code{$plot.zero}}{Optional fig.list column: FALSE (default) =
 #'     values of 0 (bars, tiles, cells) are not drawn; TRUE draws them. Can
 #'     also be set in plotopts or typed into the call (plot.zero = TRUE).}
+#'   \item{\code{$plot.zero_sites.sampled}}{Optional: plot.zero for the sites-sampled bars only
+#'     (FALSE = 0 not drawn). Wins over $plot.zero at the same level (call,
+#'     fig.list, plotopts); blank uses $plot.zero.}
+#'   \item{\code{$plot.zero_sites.detected}}{Optional: plot.zero for the sites-detected bars only
+#'     (FALSE = 0 not drawn). Wins over $plot.zero at the same level (call,
+#'     fig.list, plotopts); blank uses $plot.zero.}
+#'   \item{\code{$plot.zero_passes.per.night}}{Optional: plot.zero for the passes-per-night bars only
+#'     (FALSE = 0 not drawn). Wins over $plot.zero at the same level (call,
+#'     fig.list, plotopts); blank uses $plot.zero.}
 #' }
 #'
 #' @seealso \code{\link{batz.generate_plotframe.bat.group}},
@@ -231,7 +240,8 @@ batz.plot_bar.bat.group <- function(data, fig.list, aes.plotopts = NULL,
   FIG.LIST.REQUIRED <- c("plot.type", "plot.name", "plot.species", "plot.set",
                          "xaxe.title", "yaxe.title")
   FIG.LIST.OPTIONAL <- c("plot.year", "plot.group", "group.labels", "community.exclude",
-                         "yaxe.title.right", "plot.dimensions", "plot.zero")
+                         "yaxe.title.right", "plot.dimensions", "plot.zero",
+                         "plot.zero_sites.sampled", "plot.zero_sites.detected", "plot.zero_passes.per.night")
   AES.DEFAULT.REQUIRED <- c("category", "parameter", "default.value")
   AES.DEFAULT.REQUIRED.PARAMETERS <- c(
     "passes.per", "yaxe.left.breaks", "yaxe.right.breaks", "community.colors",
@@ -421,16 +431,18 @@ batz.plot_bar.bat.group <- function(data, fig.list, aes.plotopts = NULL,
     right.title <- if ("yaxe.title.right" %in% names(job) && !blank(job$yaxe.title.right)) job$yaxe.title.right else "Number of Sites"
     passes.lab <- get.setting(job, "passes.legend.label")
 
-    zero <- plotutil_plot_zero(get.setting(job, "plot.zero"))          # FALSE: bars with 0 are not drawn
+    ## FALSE: bars with 0 are not drawn - one setting per data set (plot.zero_<data>, else plot.zero)
+    zero.of <- function(nm) plotutil_zero_set(nm, plot.inputs, job, get.default)
+    z.s <- zero.of("sites.sampled"); z.d <- zero.of("sites.detected"); z.p <- zero.of("passes.per.night")
     g <- ggplot2::ggplot(pd, ggplot2::aes(x = community)) +
-      ggplot2::geom_col(data = if (zero) pd else pd[pd$sites_sampled != 0, , drop = FALSE],
+      ggplot2::geom_col(data = if (z.s) pd else pd[pd$sites_sampled != 0, , drop = FALSE],
                         ggplot2::aes(y = y.sampled, fill = community), width = bw,
                         alpha = num.setting(job, "sampled.alpha"), show.legend = FALSE) +
-      ggplot2::geom_col(data = if (zero) pd else pd[pd$sites_detected != 0, , drop = FALSE],
+      ggplot2::geom_col(data = if (z.d) pd else pd[pd$sites_detected != 0, , drop = FALSE],
                         ggplot2::aes(y = y.detected, fill = community), width = bw,
                         color = get.setting(job, "bar.outline.color"),
                         linewidth = num.setting(job, "bar.outline.linewidth")) +
-      ggplot2::geom_col(data = if (zero) pd else pd[pd$passes.per.night > 0, , drop = FALSE],
+      ggplot2::geom_col(data = if (z.p) pd else pd[pd$passes.per.night > 0, , drop = FALSE],
                         ggplot2::aes(y = y.passes, color = passes.lab), width = pw,
                         fill = get.setting(job, "passes.bar.color")) +
       ggplot2::scale_fill_manual(values = fills, breaks = names(fills),
