@@ -41,6 +41,9 @@
 #'   \code{PLOTOPTS_plot_heat.site.species} tab of Batz_reference_db, carried by the
 #'   package. A data frame given here is used instead.
 #'   (The old argument name \code{aes.default} is still read, with a WARNING.)
+#'   Optional rows \code{plot.title.face}, \code{axis.title.face} and
+#'   \code{legend.title.face} (\code{"plain"}, \code{"bold"}, \code{"italic"},
+#'   \code{"bold.italic"}) set the title fonts; a missing row gives bold.
 #' @param spp.id Character, default \code{"species"}. Name of the species
 #'   column in \code{data}.
 #' @param groupby.date Character, default \code{"date.monitoringnight"}.
@@ -584,7 +587,7 @@ batz.plot_heat.site.species <- function(data, fig.list, aes.plotopts = NULL,
     y.labels <- min.to.hhmm(t.start + y.breaks * bin.minutes)
     legend.title <- gsub("<bin.minutes>", format(bin.minutes, trim = TRUE), get.setting(job, "legend.title"), fixed = TRUE)
     angle <- num.setting(job, "xaxe.text.angle")
-    face.of <- function(p) { f <- key(get.setting(job, p)); if (f %in% c("plain", "bold", "italic", "bold.italic")) f else "plain" }
+    face.of <- function(p) { f <- key(get.setting(job, p)); if (f %in% c("plain", "bold", "italic", "bold.italic")) f else "bold" }
     grouped <- nzchar(group.col)
     divider <- data.frame(group.lab = factor(levels(cells$group.lab)[-1], levels = levels(cells$group.lab)))
 
@@ -608,13 +611,15 @@ batz.plot_heat.site.species <- function(data, fig.list, aes.plotopts = NULL,
                      axis.text.x = ggplot2::element_text(angle = angle, hjust = if (angle > 0) 1 else 0.5,
                                                          vjust = if (angle > 0) 1 else 0.5),
                      axis.ticks = ggplot2::element_line(color = "grey40"),
-                     axis.title = ggplot2::element_text(size = num.setting(job, "axis.title.size")),
+                     axis.title = ggplot2::element_text(size = num.setting(job, "axis.title.size"),
+                                                        face = plotutil_face(get.setting(job, "axis.title.face"))),
                      plot.title = ggplot2::element_text(face = face.of("plot.title.face"),
                                                         size = num.setting(job, "plot.title.size"),
                                                         hjust = num.setting(job, "plot.title.hjust")),
                      legend.position = get.setting(job, "legend.position"),
                      legend.text = ggplot2::element_text(size = num.setting(job, "legend.text.size")),
-                     legend.title = ggplot2::element_text(size = num.setting(job, "legend.title.size")),
+                     legend.title = ggplot2::element_text(size = num.setting(job, "legend.title.size"),
+                                                          face = plotutil_face(get.setting(job, "legend.title.face"))),
                      plot.background = ggplot2::element_rect(fill = "white", color = NA))
     if (grouped) {
       g <- g + ggplot2::facet_grid(. ~ group.lab, scales = "free_x", space = "free_x")

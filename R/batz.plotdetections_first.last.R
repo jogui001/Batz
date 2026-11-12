@@ -44,6 +44,11 @@
 #'   \code{PLOTOPTS_plotdet_first.last} tab of Batz_reference_db, carried by the
 #'   package. A data frame given here is used instead.
 #'   (The old argument name \code{aes.default} is still read, with a WARNING.)
+#'   Optional rows \code{plot.title.face}, \code{axis.title.face} and
+#'   \code{legend.title.face} (\code{"plain"}, \code{"bold"}, \code{"italic"},
+#'   \code{"bold.italic"}) set the title fonts; a missing row gives bold.
+#'   Optional row \code{strip.text.size}: size of the facet panel titles
+#'   (a missing row gives 10).
 #' @param project.name Character, default \code{"new.project"}. Put at the
 #'   start of every saved file name. A blank value leaves it out.
 #' @param ... Plot settings typed into the call, named as the
@@ -1096,12 +1101,13 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
                         strip.background = ggplot2::element_blank(),
                         panel.border = ggplot2::element_rect(linewidth = panel.border.lw, colour = "grey20", fill = NA),
                         legend.position = get.default("legend.position"),
-                        plot.title = ggplot2::element_text(hjust = as.numeric(get.default("plot.title.hjust")),
+                        plot.title = ggplot2::element_text(hjust = as.numeric(get.default("plot.title.hjust")), face = plotutil_face(get.default("plot.title.face")),
                                                              size = as.numeric(get.default("plot.title.size"))),
-                        axis.title = ggplot2::element_text(size = as.numeric(get.default("axis.title.size"))),
+                        axis.title = ggplot2::element_text(size = as.numeric(get.default("axis.title.size")), face = plotutil_face(get.default("axis.title.face"))),
                         axis.text = ggplot2::element_text(size = as.numeric(get.default("axis.text.size"))),
                         legend.text = ggplot2::element_text(size = as.numeric(get.default("legend.text.size"))),
-                        legend.title = ggplot2::element_text(size = as.numeric(get.default("legend.title.size"))),
+                        legend.title = ggplot2::element_text(size = as.numeric(get.default("legend.title.size")), face = plotutil_face(get.default("legend.title.face"))),
+                        strip.text = ggplot2::element_text(size = plotutil_num(get.default("strip.text.size"), 10)),
                         panel.spacing.x = grid::unit(as.numeric(get.default("panel.spacing.x")), "pt"))
 
       ggplots[[job.key]] <- g

@@ -154,7 +154,8 @@
 #'     minutes (e.g. \code{sunset-30}; \code{suntimes} \code{$sunset} /
 #'     \code{$sunrise} of each date), or \code{HH:MM}; a
 #'     \code{$recording.interval} of \code{"XXonXXoff"} records XX minutes,
-#'     then pauses XX minutes. All divisions together are the time the unit
+#'     then pauses XX minutes; any other value (e.g. \code{"constant"})
+#'     records the whole period. All divisions together are the time the unit
 #'     should be on. Each recording period is shortened by
 #'     \code{schedule.buffer} minutes at each end.
 #'   \item \code{aru.schedule = ""}: every interval from the first to the
@@ -588,7 +589,7 @@ plotframe.sm4.expected <- function(sched, sc.all, suntimes, d, I, trim, aru.sche
     en0 <- stats::median(vapply(nights, function(v) max(v) - noon.of(min(v)), numeric(1)))
     hm <- function(s) { m <- round(((s + 43200) %% 86400) / 60) %% 1440; sprintf("%02d:%02d", m %/% 60, m %% 60) }
     own <- data.frame(aru.schedule = sprintf("observed %s-%s", hm(st0), hm(en0)), time.on = hm(st0), time.off = hm(en0),
-                      recording.interval = "continuous", stringsAsFactors = FALSE)
+                      recording.interval = "constant", stringsAsFactors = FALSE)
     if (en0 - st0 >= 86400 - 3600) own[1, c("time.on", "time.off", "aru.schedule")] <- c("deployment", "recovery", "observed continuous")
     own.score <- score(windows(own, from, to, k, own$aru.schedule, quiet = TRUE))
     best <- if (length(sc.score)) names(sc.score)[which.max(sc.score)] else NA

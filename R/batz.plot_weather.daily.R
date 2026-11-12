@@ -133,7 +133,8 @@
 #'   \code{wind.ms}, \code{panels}); lists are separated by ";" (e.g.
 #'   \code{"0;25"}). Settings are taken from the function call, then
 #'   \code{aes.plotopts}, then the defaults shown here. A blank cell keeps
-#'   the default.
+#'   the default. Text sizes are fixed: axis and panel labels 10 pt, axis
+#'   titles 10 pt bold.
 #' @param aes.style Character, default \code{"override.value"}. Name of the
 #'   \code{aes.plotopts} column read before \code{$default.value} (e.g. the
 #'   project-name column written by \code{\link{batz.generate_plotopts}}).
@@ -619,7 +620,9 @@ batz.plot_weather.daily <- function(data, suntimes = NULL, date.start = NULL, da
         ggplot2::labs(x = "Local Time") +
         ggplot2::theme_bw() +
         ggplot2::theme(panel.grid = ggplot2::element_blank(), strip.background = ggplot2::element_blank(),
-                       strip.text = ggplot2::element_text(size = 10))
+                       strip.text = ggplot2::element_text(size = 10),
+                       axis.text = ggplot2::element_text(size = 10),
+                       axis.title = ggplot2::element_text(size = 10, face = "bold"))
       plots[[s]][[ci]] <- g
       if (!is.null(dir.save)) {
         if (!dir.exists(dir.save)) dir.create(dir.save, recursive = TRUE)

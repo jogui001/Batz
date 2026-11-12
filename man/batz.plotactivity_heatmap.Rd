@@ -41,7 +41,10 @@ otherwise the function stops.}
 Default \code{NULL}: the built-in settings are used (NOTE): the
 \code{PLOTOPTS_plotact_heatmap} tab of Batz_reference_db, carried by the
 package. A data frame given here is used instead.
-(The old argument name \code{aes.default} is still read, with a WARNING.)}
+(The old argument name \code{aes.default} is still read, with a WARNING.)
+Optional rows \code{plot.title.face}, \code{axis.title.face} and
+\code{legend.title.face} (\code{"plain"}, \code{"bold"}, \code{"italic"},
+\code{"bold.italic"}) set the title fonts; a missing row gives bold.}
 
 \item{project.name}{Character, default \code{"new.project"}. First part
 of the saved file name.}

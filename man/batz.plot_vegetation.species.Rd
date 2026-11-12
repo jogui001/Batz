@@ -68,7 +68,10 @@ a data frame, or the path to a \code{.csv} or \code{.xlsx} file, laid
 out like \verb{plotopts_vegetation.species.csv}: columns
 \code{$category}, \code{$parameter}, \code{$default.value}, and
 optionally \code{$override.value} and \code{$notes}. A parameter left
-out uses the built-in default. See "Settings" in Details.}
+out uses the built-in default. See "Settings" in Details.
+Optional rows \code{plot.title.face}, \code{axis.title.face} and
+\code{legend.title.face} (\code{"plain"}, \code{"bold"}, \code{"italic"},
+\code{"bold.italic"}) set the title fonts; a missing row gives bold.}
 
 \item{aes.style}{Character, default \code{"override.value"}. Name of the
 \code{aes.plotopts} column read before \code{$default.value} (an old

@@ -165,6 +165,9 @@
 #'   \code{PLOTOPTS_plotact_heatmap2} tab of Batz_reference_db, carried by the
 #'   package. A data frame given here is used instead.
 #'   (The old argument name \code{aes.default} is still read, with a WARNING.)
+#'   Optional rows \code{plot.title.face}, \code{axis.title.face} and
+#'   \code{legend.title.face} (\code{"plain"}, \code{"bold"}, \code{"italic"},
+#'   \code{"bold.italic"}) set the title fonts; a missing row gives bold.
 #' @param date.col Character, default \code{"date.monitoringnight"}. Date
 #'   column, and the day layout: \code{"date.monitoringnight"} (noon to
 #'   noon) or \code{"date.calendar"} (midnight to midnight).
@@ -291,8 +294,9 @@ batz.plotactivity_heatmap2 <- function(data,
     midline.color = "black", midline.linewidth = "0.6",
     facpan.numcol = "1", facpan.hgt = "3",
     plot.width = "10", plot.height = "6", ggsave.units = "in", ggsave.dpi = "300",
-    plot.title.size = "12", axis.title.size = "12", axis.text.size = "10",
-    strip.text.size = "10", legend.title.size = "11", legend.text.size = "10",
+    plot.title.size = "10", axis.title.size = "10", axis.text.size = "10",
+    strip.text.size = "10", legend.title.size = "10", legend.text.size = "10",
+    plot.title.face = "bold", axis.title.face = "bold", legend.title.face = "bold",
     date.format = "%d %b", xaxe.interval = "", xaxe.title = "", yaxe.title = "Time of Day"
   )
   if (is.null(aes.plotopts)) aes.plotopts <- plotutil_aes_legacy(plotutil_dots(...), FN)   # old argument name aes.default / plotopts
@@ -726,11 +730,11 @@ heatmap2.draw <- function(pu, job, setting, num.opt, bin.mins, bin.vals, bin.col
       axis.ticks       = ggplot2::element_line(color = "black", linewidth = 0.3),
       legend.position  = setting(job, "legend.position"),
       legend.key       = ggplot2::element_rect(color = "grey60", linewidth = 0.3),
-      plot.title       = ggplot2::element_text(size = num.opt(job, "plot.title.size")),
-      axis.title       = ggplot2::element_text(size = num.opt(job, "axis.title.size")),
+      plot.title       = ggplot2::element_text(size = num.opt(job, "plot.title.size"), face = plotutil_face(setting(job, "plot.title.face"))),
+      axis.title       = ggplot2::element_text(size = num.opt(job, "axis.title.size"), face = plotutil_face(setting(job, "axis.title.face"))),
       axis.text        = ggplot2::element_text(size = num.opt(job, "axis.text.size")),
       strip.text       = ggplot2::element_text(size = num.opt(job, "strip.text.size")),
-      legend.title     = ggplot2::element_text(size = num.opt(job, "legend.title.size")),
+      legend.title     = ggplot2::element_text(size = num.opt(job, "legend.title.size"), face = plotutil_face(setting(job, "legend.title.face"))),
       legend.text      = ggplot2::element_text(size = num.opt(job, "legend.text.size"))
     ) +
     fill.guide

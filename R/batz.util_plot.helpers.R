@@ -700,3 +700,27 @@ plotutil_aes_legacy <- function(dots, fn) {
   }
   NULL
 }
+
+
+#' Font face of a plot text setting (internal)
+#'
+#' Returns the setting's face ("plain", "bold", "italic" or "bold.italic",
+#' case ignored), or \code{default} when it is missing, blank or not a face
+#' (e.g. a plotopts table saved before the *.face rows were added).
+#' @keywords internal
+#' @noRd
+plotutil_face <- function(v, default = "bold") {
+  v <- if (is.null(v) || !length(v)) NA_character_ else tolower(trimws(as.character(v[1])))
+  if (!is.na(v) && v %in% c("plain", "bold", "italic", "bold.italic")) v else default
+}
+
+
+#' Number from a plot setting, or a default (internal)
+#'
+#' For optional settings that may be missing from an older plotopts table.
+#' @keywords internal
+#' @noRd
+plotutil_num <- function(v, default) {
+  v <- suppressWarnings(as.numeric(if (is.null(v) || !length(v)) NA else v[1]))
+  if (is.na(v)) default else v
+}

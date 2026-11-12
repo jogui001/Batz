@@ -32,6 +32,9 @@
 #'   \code{PLOTOPTS_plotact_daily.count} tab of Batz_reference_db, carried by the
 #'   package. A data frame given here is used instead.
 #'   (The old argument name \code{aes.default} is still read, with a WARNING.)
+#'   Optional rows \code{plot.title.face}, \code{axis.title.face} and
+#'   \code{legend.title.face} (\code{"plain"}, \code{"bold"}, \code{"italic"},
+#'   \code{"bold.italic"}) set the title fonts; a missing row gives bold.
 #' @param project.name Character, default \code{"new.project"}. First part of
 #'   each saved file name.
 #' @param ... Plot settings typed into the call, named as the
@@ -452,9 +455,9 @@ batz.plotactivity_daily.count <- function(data,
       ggplot2::theme(
         panel.grid       = ggplot2::element_blank(),
         axis.line        = ggplot2::element_line(color = "black", linewidth = as.numeric(get.default("panel.border.linewidth"))),
-        axis.title       = ggplot2::element_text(face = "plain", size = as.numeric(get.default("axis.title.size"))),
+        axis.title       = ggplot2::element_text(face = plotutil_face(get.default("axis.title.face")), size = as.numeric(get.default("axis.title.size"))),
         axis.text        = ggplot2::element_text(size = as.numeric(get.default("axis.text.size"))),
-        plot.title       = ggplot2::element_text(size = as.numeric(get.default("plot.title.size"))),
+        plot.title       = ggplot2::element_text(size = as.numeric(get.default("plot.title.size")), face = plotutil_face(get.default("plot.title.face"))),
         panel.background = ggplot2::element_rect(fill = "white", color = NA),
         plot.background  = ggplot2::element_rect(fill = "white", color = NA)
       )

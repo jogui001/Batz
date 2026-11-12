@@ -44,6 +44,9 @@
 #'   \code{$parameter}, \code{$default.value}, and optionally
 #'   \code{$override.value} and \code{$notes}. A parameter left out uses the
 #'   built-in default. See "Settings" in Details.
+#'   Optional rows \code{plot.title.face}, \code{axis.title.face} and
+#'   \code{legend.title.face} (\code{"plain"}, \code{"bold"}, \code{"italic"},
+#'   \code{"bold.italic"}) set the title fonts; a missing row gives bold.
 #' @param ... Any other setting listed in Details ("Settings"), typed into
 #'   the call by name (e.g. \code{yaxe.max = 20}); used before
 #'   \code{aes.plotopts}.
@@ -306,9 +309,10 @@ batz.plot_vegetation.dbh <- function(data, project.name = "", site.names = NULL,
     ggplot2::labs(x = setting("xaxe.title"), y = ytitle) +
     ggplot2::theme_bw() +
     ggplot2::theme(panel.grid = ggplot2::element_blank(),
-                   axis.title = ggplot2::element_text(size = num("axis.title.size")),
+                   axis.title = ggplot2::element_text(size = num("axis.title.size"), face = plotutil_face(setting("axis.title.face"))),
                    axis.text = ggplot2::element_text(size = num("axis.text.size")),
                    legend.text = ggplot2::element_text(size = num("legend.text.size")),
+                   legend.title = ggplot2::element_text(size = num("legend.title.size"), face = plotutil_face(setting("legend.title.face"))),
                    legend.key.size = ggplot2::unit(num("legend.key.size"), "lines"),
                    legend.position = legend.position)
   if (legend.position %in% c("top", "bottom")) g <- g + ggplot2::guides(fill = ggplot2::guide_legend(nrow = 1))

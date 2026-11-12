@@ -30,6 +30,9 @@
 #'   \code{PLOTOPTS_plotcover_bullseye} tab of Batz_reference_db, carried by the
 #'   package. A data frame given here is used instead.
 #'   (The old argument name \code{aes.default} is still read, with a WARNING.)
+#'   Optional rows \code{plot.title.face}, \code{axis.title.face} and
+#'   \code{legend.title.face} (\code{"plain"}, \code{"bold"}, \code{"italic"},
+#'   \code{"bold.italic"}) set the title fonts; a missing row gives bold.
 #' @param project.name Character, default \code{"new.project"}. First part of
 #'   each saved file name.
 #' @param ... Plot settings typed into the call, named as the
@@ -585,7 +588,7 @@ batz.plotcover_bullseye <- function(data, mic, aes.plotopts = NULL, project.name
       ggplot2::coord_polar(theta = "x", start = 0, direction = 1) +
       ggplot2::labs(title = panel.title, x = NULL, y = NULL) +
       ggplot2::theme_minimal() +
-      ggplot2::theme(plot.title = ggplot2::element_text(size = plot.title.size, hjust = 0.5),
+      ggplot2::theme(plot.title = ggplot2::element_text(size = plot.title.size, hjust = 0.5, face = plotutil_face(get.default("plot.title.face"))),
                       axis.text.x = ggplot2::element_text(size = axis.text.size),
                       axis.text.y = ggplot2::element_blank(),
                       axis.ticks = ggplot2::element_blank(),
@@ -747,7 +750,7 @@ batz.plotcover_bullseye <- function(data, mic, aes.plotopts = NULL, project.name
       ggplot2::coord_polar(theta = "x", start = -pi / 2, direction = -1) +
       ggplot2::labs(title = mic.bull.title, x = NULL, y = NULL) +
       ggplot2::theme_minimal() +
-      ggplot2::theme(plot.title = ggplot2::element_text(size = plot.title.size, hjust = 0.5),
+      ggplot2::theme(plot.title = ggplot2::element_text(size = plot.title.size, hjust = 0.5, face = plotutil_face(get.default("plot.title.face"))),
                       axis.text.x = ggplot2::element_text(size = axis.text.size),
                       axis.text.y = ggplot2::element_blank(),
                       axis.ticks = ggplot2::element_blank(),
@@ -839,7 +842,7 @@ batz.plotcover_bullseye <- function(data, mic, aes.plotopts = NULL, project.name
                                    expand = c(0, 0)) +
       ggplot2::labs(title = mic.panel.title, x = NULL, y = mic.panel.ylab) +
       ggplot2::theme_minimal() +
-      ggplot2::theme(plot.title = ggplot2::element_text(size = plot.title.size, hjust = 0.5),
+      ggplot2::theme(plot.title = ggplot2::element_text(size = plot.title.size, hjust = 0.5, face = plotutil_face(get.default("plot.title.face"))),
                       axis.title.x = ggplot2::element_blank(),
                       ## Round twenty, per Josh ("reduce the font size to be
                       ## the same size as the other two plots"): the Y-axis
@@ -849,7 +852,7 @@ batz.plotcover_bullseye <- function(data, mic, aes.plotopts = NULL, project.name
                       ## used everywhere else on this panel and its
                       ## siblings) - a real, previously-unnoticed mismatch,
                       ## now pinned to the same derived axis.text.size.
-                      axis.title.y = ggplot2::element_text(size = axis.text.size),
+                      axis.title.y = ggplot2::element_text(size = axis.text.size, face = plotutil_face(get.default("axis.title.face"))),
                       axis.text.x = ggplot2::element_blank(),
                       axis.text.y = ggplot2::element_text(size = axis.text.size),
                       axis.ticks = ggplot2::element_blank(),

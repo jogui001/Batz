@@ -185,7 +185,8 @@ give \code{$time.on} / \code{$time.off} as \code{deployment} /
 minutes (e.g. \code{sunset-30}; \code{suntimes} \code{$sunset} /
 \code{$sunrise} of each date), or \code{HH:MM}; a
 \code{$recording.interval} of \code{"XXonXXoff"} records XX minutes,
-then pauses XX minutes. All divisions together are the time the unit
+then pauses XX minutes; any other value (e.g. \code{"constant"})
+records the whole period. All divisions together are the time the unit
 should be on. Each recording period is shortened by
 \code{schedule.buffer} minutes at each end.
 \item \code{aru.schedule = ""}: every interval from the first to the

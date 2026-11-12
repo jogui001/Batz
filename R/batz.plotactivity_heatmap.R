@@ -85,6 +85,9 @@
 #'   \code{PLOTOPTS_plotact_heatmap} tab of Batz_reference_db, carried by the
 #'   package. A data frame given here is used instead.
 #'   (The old argument name \code{aes.default} is still read, with a WARNING.)
+#'   Optional rows \code{plot.title.face}, \code{axis.title.face} and
+#'   \code{legend.title.face} (\code{"plain"}, \code{"bold"}, \code{"italic"},
+#'   \code{"bold.italic"}) set the title fonts; a missing row gives bold.
 #' @param project.name Character, default \code{"new.project"}. First part
 #'   of the saved file name.
 #' @param ... Plot settings typed into the call, named as the
@@ -385,14 +388,14 @@ batz.plotactivity_heatmap <- function(data,
         plot.background  = ggplot2::element_rect(fill = "white", color = NA),
         axis.line        = ggplot2::element_line(color = "black", linewidth = as.numeric(get.default("panel.border.linewidth"))),
         axis.ticks.x     = ggplot2::element_blank(),
-        axis.title       = ggplot2::element_text(face = "plain", size = as.numeric(get.default("axis.title.size"))),
+        axis.title       = ggplot2::element_text(face = plotutil_face(get.default("axis.title.face")), size = as.numeric(get.default("axis.title.size"))),
         axis.text        = ggplot2::element_text(size = as.numeric(get.default("axis.text.size"))),
         axis.text.x      = ggplot2::element_text(margin = ggplot2::margin(t = 8)),
-        plot.title       = ggplot2::element_text(size = as.numeric(get.default("plot.title.size"))),
+        plot.title       = ggplot2::element_text(size = as.numeric(get.default("plot.title.size")), face = plotutil_face(get.default("plot.title.face"))),
         plot.margin      = ggplot2::margin(t = 5.5, r = 20, b = 5.5, l = 5.5),
         legend.position  = "bottom",
         legend.direction = "horizontal",
-        legend.title     = ggplot2::element_text(size = as.numeric(get.default("legend.title.size"))),
+        legend.title     = ggplot2::element_text(size = as.numeric(get.default("legend.title.size")), face = plotutil_face(get.default("legend.title.face"))),
         legend.text      = ggplot2::element_text(size = as.numeric(get.default("legend.text.size")))
       )
 

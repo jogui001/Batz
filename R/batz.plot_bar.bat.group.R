@@ -39,6 +39,9 @@
 #'   \code{PLOTOPTS_plot_bar.bat.group} tab of Batz_reference_db, carried by the
 #'   package. A data frame given here is used instead.
 #'   (The old argument name \code{aes.default} is still read, with a WARNING.)
+#'   Optional rows \code{plot.title.face}, \code{axis.title.face} and
+#'   \code{legend.title.face} (\code{"plain"}, \code{"bold"}, \code{"italic"},
+#'   \code{"bold.italic"}) set the title fonts; a missing row gives bold.
 #' @param project.name Character, default \code{"new.project"}. First part
 #'   of each saved file name.
 #' @param ... Plot settings typed into the call, named as the
@@ -295,7 +298,7 @@ batz.plot_bar.bat.group <- function(data, fig.list, aes.plotopts = NULL,
   }
   face.of <- function(job, p) {
     f <- key(get.setting(job, p))
-    if (f %in% c("plain", "bold", "italic", "bold.italic")) f else "plain"
+    if (f %in% c("plain", "bold", "italic", "bold.italic")) f else "bold"
   }
   num <- function(x) suppressWarnings(as.numeric(as.character(x)))
 
@@ -441,12 +444,14 @@ batz.plot_bar.bat.group <- function(data, fig.list, aes.plotopts = NULL,
                      plot.title = ggplot2::element_text(face = face.of(job, "plot.title.face"),
                                                         size = num.setting(job, "plot.title.size"),
                                                         hjust = num.setting(job, "plot.title.hjust")),
-                     axis.title = ggplot2::element_text(size = num.setting(job, "axis.title.size")),
+                     axis.title = ggplot2::element_text(size = num.setting(job, "axis.title.size"),
+                                                        face = plotutil_face(get.setting(job, "axis.title.face"))),
                      axis.text = ggplot2::element_text(size = num.setting(job, "axis.text.size")),
                      legend.position = get.setting(job, "legend.position"),
                      legend.box = "horizontal",
                      legend.text = ggplot2::element_text(size = num.setting(job, "legend.text.size")),
-                     legend.title = ggplot2::element_text(size = num.setting(job, "legend.title.size")))
+                     legend.title = ggplot2::element_text(size = num.setting(job, "legend.title.size"),
+                                                          face = plotutil_face(get.setting(job, "legend.title.face"))))
     if (nzchar(group.col)) g <- g + ggplot2::facet_grid(. ~ panel, scales = "free_x", space = "free_x")
     ggplots[[job.label]] <- g
 

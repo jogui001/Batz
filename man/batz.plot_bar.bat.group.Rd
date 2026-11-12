@@ -48,7 +48,10 @@ row plotted (NOTE).}
 Default \code{NULL}: the built-in settings are used (NOTE): the
 \code{PLOTOPTS_plot_bar.bat.group} tab of Batz_reference_db, carried by the
 package. A data frame given here is used instead.
-(The old argument name \code{aes.default} is still read, with a WARNING.)}
+(The old argument name \code{aes.default} is still read, with a WARNING.)
+Optional rows \code{plot.title.face}, \code{axis.title.face} and
+\code{legend.title.face} (\code{"plain"}, \code{"bold"}, \code{"italic"},
+\code{"bold.italic"}) set the title fonts; a missing row gives bold.}
 
 \item{project.name}{Character, default \code{"new.project"}. First part
 of each saved file name.}

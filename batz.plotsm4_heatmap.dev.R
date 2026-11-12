@@ -130,4 +130,12 @@ fl15$plot.dimensions <- "half page"
 batz.plotsm4_heatmap(data = pf, fig.list = fl15, project.name = "dimbad", dir.save = dir.out, ggsave.dpi = 100)   # NOTE: not a size
 ok(identical(px(last.png("dimbad")), c(1050L, 750L)), "unknown entry: NOTE and the plotopts size")
 
+## ---- 8. default text: labels 10 pt, titles 10 pt bold (2026-11-12) -----------
+th <- r1$ggplots[[1]]$theme
+ok(th$axis.text$size == 10 && th$legend.text$size == 10, "axis and legend labels 10 pt")
+ok(all(sapply(c("axis.title", "legend.title", "plot.title"), function(e) th[[e]]$size == 10 && th[[e]]$face == "bold")),
+   "axis, legend and plot titles 10 pt bold")
+th6 <- r6$ggplots[[1]]$theme
+ok(th6$strip.text$size == 10, "facet strip text 10 pt")
+
 cat("\nALL TESTS PASSED - PNGs in", dir.out, "\n")
