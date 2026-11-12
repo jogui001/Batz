@@ -89,7 +89,7 @@ batz.generate_figlist <- function(functions = c("batz.plot_bar.bat.group", "batz
   if (length(bad)) stop(FN, ": not a Batz function: ", paste(bad, collapse = ", "), call. = FALSE)
   ## settings that heatmap2 reads from fig.list besides its checked headings
   EXTRA.OPTIONAL <- list(batz.plotactivity_heatmap2 = c("date.format", "xaxe.interval", "xaxe.title", "yaxe.title", "facet.label",
-                                                         "plot.dimensions"))
+                                                         "plot.dimensions", "plot.zero"))
 
   ## ---- headings each function checks for (read from the function itself) -------
   find.assign <- function(expr, name) {

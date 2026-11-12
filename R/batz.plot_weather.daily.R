@@ -103,11 +103,15 @@
 #'   limits.
 #' @param wind.range Numeric, default \code{c(0, 10)}. Wind axis limits. Its
 #'   maximum is also the maximum drawn precipitation.
-#' @param wind.absent \code{"show"} (default) or \code{"hide"}. \code{"show"}
+#' @param plot.zero Logical, default \code{FALSE}. Zero wind and zero
+#'   precipitation are not drawn (\code{TRUE}: drawn). Temperature is always
+#'   drawn, 0 included. \code{wind.absent} / \code{precipitation.absent},
+#'   when given, decide for wind / precipitation.
+#' @param wind.absent \code{"hide"} (default, from \code{plot.zero}) or \code{"show"}. \code{"show"}
 #'   draws readings with zero wind (the wind line runs along 0);
 #'   \code{"hide"} leaves them out, so the wind line is broken where there is
 #'   no wind (a lone reading between breaks is drawn as a dot).
-#' @param precipitation.absent \code{"hide"} (default) or \code{"show"}.
+#' @param precipitation.absent \code{"hide"} (default, from \code{plot.zero}) or \code{"show"}.
 #'   \code{"hide"} draws no bar for zero precipitation; \code{"show"} draws
 #'   zero precipitation as a blue line along 0. When both zero wind and zero
 #'   precipitation are shown, zero wind is drawn just above the
@@ -232,9 +236,10 @@ batz.plot_weather.daily <- function(data, suntimes = NULL, date.start = NULL, da
                                     time.start_monitoring = "-30 Sunset", time.end_monitoring = "5 hours",
                                     time.start_xaxis = "18:00", time.end_xaxis = "08:00", time.interval = 120,
                                     temp.range = c(0, 25), wind.range = c(0, 10),
-                                    wind.absent = c("show", "hide"), precipitation.absent = c("hide", "show"),
+                                    wind.absent = c("hide", "show"), precipitation.absent = c("hide", "show"),
                                     precip.cumulative = TRUE, facet.ncol = 2,
                                     project.name = "", dir.save = getwd(), plot.width = 9,
+                                    plot.zero = FALSE,
                                     aes.plotopts = NULL, aes.style = "override.value") {
   FN <- "batz.plot_weather.daily"
   ## settings (2026-11-10): function call > aes.plotopts > built-in defaults
@@ -260,6 +265,11 @@ batz.plot_weather.daily <- function(data, suntimes = NULL, date.start = NULL, da
     if (!v %in% c("show", "hide")) stop(FN, ": ", nm, ' must be "show" or "hide".', call. = FALSE)
     v
   }
+  ## zero wind / precipitation: wind.absent / precipitation.absent when given, else plot.zero ("show" when TRUE)
+  set.by <- c(given, names(po.vals))
+  zero.opt <- if (plotutil_plot_zero(plot.zero)) "show" else "hide"
+  if (!"wind.absent" %in% set.by) wind.absent <- zero.opt
+  if (!"precipitation.absent" %in% set.by) precipitation.absent <- zero.opt
   wind.absent <- absent.opt(wind.absent, "wind.absent")
   wind.type <- tolower(trimws(as.character(wind.type)[1]))
   if (!wind.type %in% c("speed", "gust")) stop(FN, ': wind.type must be "speed" or "gust".', call. = FALSE)
@@ -654,7 +664,7 @@ batz.plot_weather.daily <- function(data, suntimes = NULL, date.start = NULL, da
 #' argument not given in the call, the aes.style column (else
 #' $default.value) is used when not blank, converted like the argument's
 #' default: numbers and TRUE/FALSE as such, lists separated by ";". A value
-#' equal to the built-in default is left out. Returns a named list of the
+#' from $default.value equal to the built-in default is left out. Returns a named list of the
 #' values to use.
 #' @keywords internal
 #' @noRd
@@ -682,7 +692,8 @@ weather.daily.plotopts <- function(aes.plotopts, aes.style, given, FN) {
     p <- hit[1]
     if (p %in% given) next                                    # the call wins
     v <- if (!is.na(style.col)) po[[style.col]][i] else NA
-    if (blank(v)) v <- po$default.value[i]
+    from.style <- !blank(v)
+    if (!from.style) v <- po$default.value[i]
     if (blank(v)) next
     def <- eval(fm[[p]])
     parts <- trimws(strsplit(as.character(v), ";", fixed = TRUE)[[1]]); parts <- parts[nzchar(parts)]
@@ -693,7 +704,7 @@ weather.daily.plotopts <- function(aes.plotopts, aes.style, given, FN) {
       val <- if (toupper(parts[1]) %in% c("TRUE", "FALSE")) as.logical(toupper(parts[1])) else parts[1]
     } else val <- parts
     ## same as the built-in default (a choice list counts as its first value): nothing to change
-    if (isTRUE(all.equal(val, def)) || (is.character(def) && length(def) > 1 && identical(val, def[1]))) next
+    if (!from.style && (isTRUE(all.equal(val, def)) || (is.character(def) && length(def) > 1 && identical(val, def[1])))) next
     out[[p]] <- val
   }
   if (length(unknown)) cat(sprintf("NOTE: %s - aes.plotopts parameter(s) not used by this function: %s\n", FN, paste(unknown, collapse = ", ")))

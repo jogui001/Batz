@@ -46,6 +46,9 @@
 #'   Optional rows \code{plot.title.face}, \code{axis.title.face} and
 #'   \code{legend.title.face} (\code{"plain"}, \code{"bold"}, \code{"italic"},
 #'   \code{"bold.italic"}) set the title fonts; a missing row gives bold.
+#'   \code{plot.zero} (the fig.list column \code{$plot.zero}, the plotopts row or typed into the call), default
+#'   \code{FALSE}: values of 0 (bars, tiles, cells) are not drawn; \code{TRUE}
+#'   draws them.
 #'   Optional row \code{strip.text.size}: size of the facet panel titles
 #'   (a missing row gives 10).
 #' @param project.name Character, default \code{"new.project"}. Put at the
@@ -313,6 +316,9 @@
 #'     the plotopts size settings are used; any other entry gives a NOTE and
 #'     the plotopts size. The old spelling $plot.dimentions is also read, and it
 #'     can be typed into the call (e.g. plot.dimensions = "1/2 page").}
+#'   \item{\code{$plot.zero}}{Optional fig.list column: FALSE (default) =
+#'     values of 0 (bars, tiles, cells) are not drawn; TRUE draws them. Can
+#'     also be set in plotopts or typed into the call (plot.zero = TRUE).}
 #' }
 #'
 #' @seealso \code{\link{batz.generate_plotframe.bat}},
@@ -428,7 +434,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
   ## $plot.order/$facpan removed 2026-10-09 - $facet.set now sets the
   ## facets and their order
   FIG.LIST.OPTIONAL <- c("facet.label", "plot.group", "yaxe.trans", "loglabels", "y.scale",
-                          "y.custom", "ymax", "legend", "plot.dimensions")
+                          "y.custom", "ymax", "legend", "plot.dimensions", "plot.zero")
   AES.DEFAULT.REQUIRED <- c("category", "parameter", "default.value")
 
   ## "output.filename.pattern" deliberately removed from this required list
@@ -837,6 +843,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     y.upper <- max(c(ymax.raw, raw.breaks, pd$observations.count), na.rm = TRUE)
 
     pd$obs.plot <- trans.fn(pd$observations.count)
+    if (!plotutil_plot_zero(get.setting(job, "plot.zero"))) pd <- pd[pd$observations.count != 0, , drop = FALSE]   # 0 not drawn
     break.pos <- trans.fn(raw.breaks)
     # break.pos (axis position) is always computed from the exact, unrounded raw.breaks so the
     # BUGFIX 2026-08-28 even-spacing above stays exact. label.breaks is a display-only copy: under

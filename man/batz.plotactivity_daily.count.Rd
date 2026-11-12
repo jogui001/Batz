@@ -59,7 +59,10 @@ package. A data frame given here is used instead.
 (The old argument name \code{aes.default} is still read, with a WARNING.)
 Optional rows \code{plot.title.face}, \code{axis.title.face} and
 \code{legend.title.face} (\code{"plain"}, \code{"bold"}, \code{"italic"},
-\code{"bold.italic"}) set the title fonts; a missing row gives bold.}
+\code{"bold.italic"}) set the title fonts; a missing row gives bold.
+\code{plot.zero} (the plotopts row or typed into the call), default
+\code{FALSE}: values of 0 (bars, tiles, cells) are not drawn; \code{TRUE}
+draws them.}
 
 \item{project.name}{Character, default \code{"new.project"}. First part of
 each saved file name.}

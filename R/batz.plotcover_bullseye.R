@@ -33,6 +33,9 @@
 #'   Optional rows \code{plot.title.face}, \code{axis.title.face} and
 #'   \code{legend.title.face} (\code{"plain"}, \code{"bold"}, \code{"italic"},
 #'   \code{"bold.italic"}) set the title fonts; a missing row gives bold.
+#'   \code{plot.zero} (the plotopts row or typed into the call), default
+#'   \code{FALSE}: values of 0 (bars, tiles, cells) are not drawn; \code{TRUE}
+#'   draws them.
 #' @param project.name Character, default \code{"new.project"}. First part of
 #'   each saved file name.
 #' @param ... Plot settings typed into the call, named as the
@@ -553,7 +556,8 @@ batz.plotcover_bullseye <- function(data, mic, aes.plotopts = NULL, project.name
     ## drawn, the same as before.
     p <- ggplot2::ggplot(quad.df, ggplot2::aes(x = x, y = value))
     if (quadrant.cover) {
-      p <- p + ggplot2::geom_col(width = 90, fill = quadrant.fill, color = quadrant.color)
+      p <- p + ggplot2::geom_col(data = if (plotutil_plot_zero(get.default("plot.zero"))) quad.df else quad.df[quad.df$value != 0, , drop = FALSE],
+                                  width = 90, fill = quadrant.fill, color = quadrant.color)   # 0 not drawn unless plot.zero
     }
     if (mean.cover) {
       p <- p + ggplot2::geom_hline(yintercept = mean.val, color = mean.color,

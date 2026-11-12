@@ -27,13 +27,14 @@ batz.plot_weather.daily(
   time.interval = 120,
   temp.range = c(0, 25),
   wind.range = c(0, 10),
-  wind.absent = c("show", "hide"),
+  wind.absent = c("hide", "show"),
   precipitation.absent = c("hide", "show"),
   precip.cumulative = TRUE,
   facet.ncol = 2,
   project.name = "",
   dir.save = getwd(),
   plot.width = 9,
+  plot.zero = FALSE,
   aes.plotopts = NULL,
   aes.style = "override.value"
 )
@@ -151,12 +152,12 @@ limits.}
 \item{wind.range}{Numeric, default \code{c(0, 10)}. Wind axis limits. Its
 maximum is also the maximum drawn precipitation.}
 
-\item{wind.absent}{\code{"show"} (default) or \code{"hide"}. \code{"show"}
+\item{wind.absent}{\code{"hide"} (default, from \code{plot.zero}) or \code{"show"}. \code{"show"}
 draws readings with zero wind (the wind line runs along 0);
 \code{"hide"} leaves them out, so the wind line is broken where there is
 no wind (a lone reading between breaks is drawn as a dot).}
 
-\item{precipitation.absent}{\code{"hide"} (default) or \code{"show"}.
+\item{precipitation.absent}{\code{"hide"} (default, from \code{plot.zero}) or \code{"show"}.
 \code{"hide"} draws no bar for zero precipitation; \code{"show"} draws
 zero precipitation as a blue line along 0. When both zero wind and zero
 precipitation are shown, zero wind is drawn just above the
@@ -180,6 +181,11 @@ saved in (created if missing). \code{NULL} saves nothing.}
 
 \item{plot.width}{Numeric, default \code{9}. PNG width (inches). The
 height is 1.9 inches per row of panels plus 1 inch.}
+
+\item{plot.zero}{Logical, default \code{FALSE}. Zero wind and zero
+precipitation are not drawn (\code{TRUE}: drawn). Temperature is always
+drawn, 0 included. \code{wind.absent} / \code{precipitation.absent},
+when given, decide for wind / precipitation.}
 
 \item{aes.plotopts}{Optional, default \code{NULL}. Plot settings table:
 a data frame, or the path of a \code{.csv} / \code{.xlsx}, laid out like

@@ -55,6 +55,9 @@
 #'   Optional rows \code{plot.title.face}, \code{axis.title.face} and
 #'   \code{legend.title.face} (\code{"plain"}, \code{"bold"}, \code{"italic"},
 #'   \code{"bold.italic"}) set the title fonts; a missing row gives bold.
+#'   \code{plot.zero} (the plotopts row or typed into the call), default
+#'   \code{FALSE}: values of 0 (bars, tiles, cells) are not drawn; \code{TRUE}
+#'   draws them.
 #' @param ... Any other setting listed in Details ("Settings"), typed into
 #'   the call by name (e.g. \code{yaxe.max = 20}); used before
 #'   \code{aes.plotopts}.
@@ -358,6 +361,7 @@ batz.plot_vegetation.species <- function(data, project.name = "", site.names = N
   pos <- if (bar == "stacked") ggplot2::position_stack(reverse = TRUE) else ggplot2::position_dodge(width = bw)
   outline <- setting("bar.outline.color")
 
+  if (!plotutil_plot_zero(setting("plot.zero"))) pd <- pd[pd$count != 0, , drop = FALSE]   # 0 not drawn
   g <- ggplot2::ggplot(pd, ggplot2::aes(x = species, y = count, fill = site)) +
     ggplot2::geom_col(position = pos, width = bw,
                       colour = if (blank(outline) || key(outline) == "none") NA else outline) +

@@ -138,4 +138,10 @@ ok(all(sapply(c("axis.title", "legend.title", "plot.title"), function(e) th[[e]]
 th6 <- r6$ggplots[[1]]$theme
 ok(th6$strip.text$size == 10, "facet strip text 10 pt")
 
+## ---- 9. plot.zero (2026-11-13): intervals with 0 minutes not drawn unless plot.zero = TRUE ----
+n0 <- sum(pf$mins.oper == 0)
+r9a <- batz.plotsm4_heatmap(data = pf, fig.list = fl, project.name = "zero.no", dir.save = dir.out)
+r9b <- batz.plotsm4_heatmap(data = pf, fig.list = fl, project.name = "zero.yes", dir.save = dir.out, plot.zero = TRUE)
+ok(nrow(r9a$ggplots[[1]]$data) == nrow(r9b$ggplots[[1]]$data) - n0 && n0 > 0, "plot.zero = FALSE (default): 0-minute tiles left out")
+
 cat("\nALL TESTS PASSED - PNGs in", dir.out, "\n")

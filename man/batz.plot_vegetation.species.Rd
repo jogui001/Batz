@@ -71,7 +71,10 @@ optionally \code{$override.value} and \code{$notes}. A parameter left
 out uses the built-in default. See "Settings" in Details.
 Optional rows \code{plot.title.face}, \code{axis.title.face} and
 \code{legend.title.face} (\code{"plain"}, \code{"bold"}, \code{"italic"},
-\code{"bold.italic"}) set the title fonts; a missing row gives bold.}
+\code{"bold.italic"}) set the title fonts; a missing row gives bold.
+\code{plot.zero} (the plotopts row or typed into the call), default
+\code{FALSE}: values of 0 (bars, tiles, cells) are not drawn; \code{TRUE}
+draws them.}
 
 \item{aes.style}{Character, default \code{"override.value"}. Name of the
 \code{aes.plotopts} column read before \code{$default.value} (an old

@@ -168,6 +168,9 @@
 #'   Optional rows \code{plot.title.face}, \code{axis.title.face} and
 #'   \code{legend.title.face} (\code{"plain"}, \code{"bold"}, \code{"italic"},
 #'   \code{"bold.italic"}) set the title fonts; a missing row gives bold.
+#'   \code{plot.zero} (the fig.list column \code{$plot.zero}, the plotopts row or typed into the call), default
+#'   \code{FALSE}: values of 0 (bars, tiles, cells) are not drawn; \code{TRUE}
+#'   draws them.
 #' @param date.col Character, default \code{"date.monitoringnight"}. Date
 #'   column, and the day layout: \code{"date.monitoringnight"} (noon to
 #'   noon) or \code{"date.calendar"} (midnight to midnight).
@@ -230,6 +233,9 @@
 #'     the plotopts size settings are used; any other entry gives a NOTE and
 #'     the plotopts size. The old spelling $plot.dimentions is also read, and it
 #'     can be typed into the call (e.g. plot.dimensions = "1/2 page").}
+#'   \item{\code{$plot.zero}}{Optional fig.list column: FALSE (default) =
+#'     values of 0 (bars, tiles, cells) are not drawn; TRUE draws them. Can
+#'     also be set in plotopts or typed into the call (plot.zero = TRUE).}
 #' }
 #'
 #' @examples
@@ -296,7 +302,7 @@ batz.plotactivity_heatmap2 <- function(data,
     plot.width = "10", plot.height = "6", ggsave.units = "in", ggsave.dpi = "300",
     plot.title.size = "10", axis.title.size = "10", axis.text.size = "10",
     strip.text.size = "10", legend.title.size = "10", legend.text.size = "10",
-    plot.title.face = "bold", axis.title.face = "bold", legend.title.face = "bold",
+    plot.title.face = "bold", axis.title.face = "bold", legend.title.face = "bold", plot.zero = "FALSE",
     date.format = "%d %b", xaxe.interval = "", xaxe.title = "", yaxe.title = "Time of Day"
   )
   if (is.null(aes.plotopts)) aes.plotopts <- plotutil_aes_legacy(plotutil_dots(...), FN)   # old argument name aes.default / plotopts
@@ -715,7 +721,8 @@ heatmap2.draw <- function(pu, job, setting, num.opt, bin.mins, bin.vals, bin.col
   x.title <- setting(job, "xaxe.title")
   if (!nzchar(x.title)) x.title <- if (night.mode) "Monitoring Night" else "Date"
 
-  p <- ggplot2::ggplot(grid, ggplot2::aes(x = date, y = y)) +
+  zero <- plotutil_plot_zero(setting(job, "plot.zero"))              # FALSE: tiles with 0 are not drawn
+  p <- ggplot2::ggplot(if (zero) grid else grid[grid$count != 0, , drop = FALSE], ggplot2::aes(x = date, y = y)) +
     ggplot2::geom_tile(fill.aes, width = 1, height = bin.mins, show.legend = TRUE) +
     fill.scale + x.scale +
     ggplot2::scale_y_continuous(breaks = y.breaks, labels = y.labels) +

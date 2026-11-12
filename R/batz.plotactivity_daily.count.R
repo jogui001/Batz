@@ -35,6 +35,9 @@
 #'   Optional rows \code{plot.title.face}, \code{axis.title.face} and
 #'   \code{legend.title.face} (\code{"plain"}, \code{"bold"}, \code{"italic"},
 #'   \code{"bold.italic"}) set the title fonts; a missing row gives bold.
+#'   \code{plot.zero} (the plotopts row or typed into the call), default
+#'   \code{FALSE}: values of 0 (bars, tiles, cells) are not drawn; \code{TRUE}
+#'   draws them.
 #' @param project.name Character, default \code{"new.project"}. First part of
 #'   each saved file name.
 #' @param ... Plot settings typed into the call, named as the
@@ -445,7 +448,9 @@ batz.plotactivity_daily.count <- function(data,
     xaxe.buffer <- suppressWarnings(as.numeric(get.default("xaxe.date.buffer.days")))
     if (is.na(xaxe.buffer)) xaxe.buffer <- 0.5
 
-    ggplot.obj <- ggplot2::ggplot(daily, ggplot2::aes(x = date.monitoringnight, y = obs.plot)) +
+    zero <- plotutil_plot_zero(get.default("plot.zero"))               # FALSE: days with 0 are not drawn
+    ggplot.obj <- ggplot2::ggplot(if (zero) daily else daily[daily$observations.count != 0, , drop = FALSE],
+                                  ggplot2::aes(x = date.monitoringnight, y = obs.plot)) +
       ggplot2::geom_col(fill = get.default("bar.fill"), width = as.numeric(get.default("bar.width"))) +
       ggplot2::scale_x_date(breaks = month.breaks, date_labels = date.format,
                              limits = c(date.start - xaxe.buffer, date.end + xaxe.buffer)) +

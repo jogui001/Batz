@@ -724,3 +724,15 @@ plotutil_num <- function(v, default) {
   v <- suppressWarnings(as.numeric(if (is.null(v) || !length(v)) NA else v[1]))
   if (is.na(v)) default else v
 }
+
+
+#' plot.zero setting: draw zero values? (internal)
+#'
+#' TRUE / T / YES / 1 (case ignored) = zero values are drawn; anything else,
+#' blank or missing = they are not (the default).
+#' @keywords internal
+#' @noRd
+plotutil_plot_zero <- function(v) {
+  v <- if (is.null(v) || !length(v)) "" else toupper(trimws(as.character(v[1])))
+  !is.na(v) && v %in% c("TRUE", "T", "YES", "Y", "1")
+}

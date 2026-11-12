@@ -58,6 +58,9 @@
 #'   Optional rows \code{plot.title.face}, \code{axis.title.face} and
 #'   \code{legend.title.face} (\code{"plain"}, \code{"bold"}, \code{"italic"},
 #'   \code{"bold.italic"}) set the title fonts; a missing row gives bold.
+#'   \code{plot.zero} (the fig.list column \code{$plot.zero}, the plotopts row or typed into the call), default
+#'   \code{FALSE}: values of 0 (bars, tiles, cells) are not drawn; \code{TRUE}
+#'   draws them.
 #'   Optional row \code{strip.text.size}: size of the facet panel titles
 #'   (a missing row gives 10).
 #' @param project.name Character, default \code{"new.project"}. First part
@@ -265,6 +268,9 @@
 #'     the plotopts size settings are used; any other entry gives a NOTE and
 #'     the plotopts size. The old spelling $plot.dimentions is also read, and it
 #'     can be typed into the call (e.g. plot.dimensions = "1/2 page").}
+#'   \item{\code{$plot.zero}}{Optional fig.list column: FALSE (default) =
+#'     values of 0 (bars, tiles, cells) are not drawn; TRUE draws them. Can
+#'     also be set in plotopts or typed into the call (plot.zero = TRUE).}
 #' }
 #'
 #' @seealso \code{\link{batz.plotdetections_first.last}},
@@ -350,7 +356,7 @@ batz.plotsm4_heatmap <- function(data, fig.list, suntimes = NULL,
   FIG.LIST.REQUIRED <- c("plot.type", "plot.name", "plot.set", "date.format",
                           "date.start", "date.end", "xaxe.interval",
                           "xaxe.title", "yaxe.title")
-  FIG.LIST.OPTIONAL <- c("facet.label", "time.start", "time.end", "time.interval", "plot.dimensions")   # read directly when present
+  FIG.LIST.OPTIONAL <- c("facet.label", "time.start", "time.end", "time.interval", "plot.dimensions", "plot.zero")   # read directly when present
   AES.DEFAULT.REQUIRED <- c("category", "parameter", "default.value")
 
   AES.DEFAULT.REQUIRED.PARAMETERS <- c(
@@ -704,7 +710,8 @@ batz.plotsm4_heatmap <- function(data, fig.list, suntimes = NULL,
       colorbar.barheight <- if (colorbar.horizontal) grid::unit(0.4, "cm") else grid::unit(3.2, "cm")
       colorbar.barwidth  <- if (colorbar.horizontal) grid::unit(3.2, "cm") else grid::unit(0.4, "cm")
 
-      g <- ggplot2::ggplot(p$pd, ggplot2::aes(x = date.parsed, y = tile.time)) +
+      zero <- plotutil_plot_zero(get.setting(p$job, "plot.zero"))     # FALSE: intervals with 0 minutes are not drawn
+      g <- ggplot2::ggplot(if (zero) p$pd else p$pd[p$pd$mins.oper != 0, , drop = FALSE], ggplot2::aes(x = date.parsed, y = tile.time)) +
         ggplot2::geom_tile(ggplot2::aes(fill = mins.oper), width = 1,
                              height = p$bin.minutes * 60,
                              color = tile.color, linewidth = tile.lw) +
@@ -733,7 +740,7 @@ batz.plotsm4_heatmap <- function(data, fig.list, suntimes = NULL,
                                 breaks = xaxe.breaks, date_labels = xaxe.date.labels.fmt,
                                 expand = c(0, 0), oob = scales::oob_squish,
                                 name = paste0("\n", get.setting(p$job, "xaxe.title"))) +
-        (if (p$n.facet > 1) ggplot2::facet_wrap(~ facet, ncol = min(2, p$n.facet))) +
+        (if (p$n.facet > 1) ggplot2::facet_wrap(~ facet, ncol = min(2, p$n.facet), drop = FALSE)) +
         ggplot2::labs(title = job.label) +
         ggplot2::theme_bw() +
         ggplot2::theme(panel.grid.major = ggplot2::element_blank(),

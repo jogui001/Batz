@@ -47,6 +47,9 @@
 #'   Optional rows \code{plot.title.face}, \code{axis.title.face} and
 #'   \code{legend.title.face} (\code{"plain"}, \code{"bold"}, \code{"italic"},
 #'   \code{"bold.italic"}) set the title fonts; a missing row gives bold.
+#'   \code{plot.zero} (the plotopts row or typed into the call), default
+#'   \code{FALSE}: values of 0 (bars, tiles, cells) are not drawn; \code{TRUE}
+#'   draws them.
 #' @param ... Any other setting listed in Details ("Settings"), typed into
 #'   the call by name (e.g. \code{yaxe.max = 20}); used before
 #'   \code{aes.plotopts}.
@@ -290,6 +293,7 @@ batz.plot_vegetation.dbh <- function(data, project.name = "", site.names = NULL,
   bw <- num("box.width")
   dodge <- ggplot2::position_dodge2(preserve = "single", padding = 0.1)
 
+  if (!plotutil_plot_zero(setting("plot.zero"))) pd <- pd[pd$dbh != 0, , drop = FALSE]   # 0 not drawn
   g <- ggplot2::ggplot(pd, ggplot2::aes(x = site, y = dbh, fill = type))
   if (flag("whisker.caps"))                       # short line across the end of each whisker
     g <- g + ggplot2::stat_boxplot(geom = "errorbar", position = ggplot2::position_dodge2(preserve = "single", padding = 0.5),

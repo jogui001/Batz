@@ -44,6 +44,9 @@
 #'   Optional rows \code{plot.title.face}, \code{axis.title.face} and
 #'   \code{legend.title.face} (\code{"plain"}, \code{"bold"}, \code{"italic"},
 #'   \code{"bold.italic"}) set the title fonts; a missing row gives bold.
+#'   \code{plot.zero} (the fig.list column \code{$plot.zero}, the plotopts row or typed into the call), default
+#'   \code{FALSE}: values of 0 (bars, tiles, cells) are not drawn; \code{TRUE}
+#'   draws them.
 #' @param spp.id Character, default \code{"species"}. Name of the species
 #'   column in \code{data}.
 #' @param groupby.date Character, default \code{"date.monitoringnight"}.
@@ -203,6 +206,9 @@
 #'     the plotopts size settings are used; any other entry gives a NOTE and
 #'     the plotopts size. The old spelling $plot.dimentions is also read, and it
 #'     can be typed into the call (e.g. plot.dimensions = "1/2 page").}
+#'   \item{\code{$plot.zero}}{Optional fig.list column: FALSE (default) =
+#'     values of 0 (bars, tiles, cells) are not drawn; TRUE draws them. Can
+#'     also be set in plotopts or typed into the call (plot.zero = TRUE).}
 #' }
 #'
 #' @seealso \code{\link{batz.plot_bar.bat.group}},
@@ -262,7 +268,7 @@ batz.plot_heat.site.species <- function(data, fig.list, aes.plotopts = NULL,
   DATA.REQUIRED <- unique(c("aru.name", spp.id, groupby.date, groupby.time))
   FIG.LIST.REQUIRED <- c("plot.type", "plot.name", "plot.species", "plot.set",
                          "date.start", "date.end", "xaxe.title", "yaxe.title")
-  FIG.LIST.OPTIONAL <- c("plot.group", "group.labels", "site.exclude", "site.bold", "plot.dimensions")
+  FIG.LIST.OPTIONAL <- c("plot.group", "group.labels", "site.exclude", "site.bold", "plot.dimensions", "plot.zero")
   AES.DEFAULT.REQUIRED <- c("category", "parameter", "default.value")
   AES.DEFAULT.REQUIRED.PARAMETERS <- c(
     "time.start", "time.end", "bin.minutes", "yaxe.break.hours",
@@ -591,7 +597,9 @@ batz.plot_heat.site.species <- function(data, fig.list, aes.plotopts = NULL,
     grouped <- nzchar(group.col)
     divider <- data.frame(group.lab = factor(levels(cells$group.lab)[-1], levels = levels(cells$group.lab)))
 
-    g <- ggplot2::ggplot(cells, ggplot2::aes(x = aru.name, y = bin + 0.5, fill = value.class)) +
+    zero <- plotutil_plot_zero(get.setting(job, "plot.zero"))          # FALSE: cells with 0 are not drawn
+    g <- ggplot2::ggplot(if (zero) cells else cells[cells$value != 0, , drop = FALSE],
+                         ggplot2::aes(x = aru.name, y = bin + 0.5, fill = value.class)) +
       ggplot2::geom_tile(width = 1, height = 1, color = get.setting(job, "tile.color"),
                          linewidth = num.setting(job, "tile.linewidth")) +
       ggplot2::scale_fill_manual(values = cols, limits = class.labels, drop = FALSE, name = legend.title,

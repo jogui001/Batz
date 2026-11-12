@@ -42,6 +42,9 @@
 #'   Optional rows \code{plot.title.face}, \code{axis.title.face} and
 #'   \code{legend.title.face} (\code{"plain"}, \code{"bold"}, \code{"italic"},
 #'   \code{"bold.italic"}) set the title fonts; a missing row gives bold.
+#'   \code{plot.zero} (the fig.list column \code{$plot.zero}, the plotopts row or typed into the call), default
+#'   \code{FALSE}: values of 0 (bars, tiles, cells) are not drawn; \code{TRUE}
+#'   draws them.
 #' @param project.name Character, default \code{"new.project"}. First part
 #'   of each saved file name.
 #' @param ... Plot settings typed into the call, named as the
@@ -167,6 +170,9 @@
 #'     the plotopts size settings are used; any other entry gives a NOTE and
 #'     the plotopts size. The old spelling $plot.dimentions is also read, and it
 #'     can be typed into the call (e.g. plot.dimensions = "1/2 page").}
+#'   \item{\code{$plot.zero}}{Optional fig.list column: FALSE (default) =
+#'     values of 0 (bars, tiles, cells) are not drawn; TRUE draws them. Can
+#'     also be set in plotopts or typed into the call (plot.zero = TRUE).}
 #' }
 #'
 #' @seealso \code{\link{batz.generate_plotframe.bat.group}},
@@ -225,7 +231,7 @@ batz.plot_bar.bat.group <- function(data, fig.list, aes.plotopts = NULL,
   FIG.LIST.REQUIRED <- c("plot.type", "plot.name", "plot.species", "plot.set",
                          "xaxe.title", "yaxe.title")
   FIG.LIST.OPTIONAL <- c("plot.year", "plot.group", "group.labels", "community.exclude",
-                         "yaxe.title.right", "plot.dimensions")
+                         "yaxe.title.right", "plot.dimensions", "plot.zero")
   AES.DEFAULT.REQUIRED <- c("category", "parameter", "default.value")
   AES.DEFAULT.REQUIRED.PARAMETERS <- c(
     "passes.per", "yaxe.left.breaks", "yaxe.right.breaks", "community.colors",
@@ -415,13 +421,16 @@ batz.plot_bar.bat.group <- function(data, fig.list, aes.plotopts = NULL,
     right.title <- if ("yaxe.title.right" %in% names(job) && !blank(job$yaxe.title.right)) job$yaxe.title.right else "Number of Sites"
     passes.lab <- get.setting(job, "passes.legend.label")
 
+    zero <- plotutil_plot_zero(get.setting(job, "plot.zero"))          # FALSE: bars with 0 are not drawn
     g <- ggplot2::ggplot(pd, ggplot2::aes(x = community)) +
-      ggplot2::geom_col(ggplot2::aes(y = y.sampled, fill = community), width = bw,
+      ggplot2::geom_col(data = if (zero) pd else pd[pd$sites_sampled != 0, , drop = FALSE],
+                        ggplot2::aes(y = y.sampled, fill = community), width = bw,
                         alpha = num.setting(job, "sampled.alpha"), show.legend = FALSE) +
-      ggplot2::geom_col(ggplot2::aes(y = y.detected, fill = community), width = bw,
+      ggplot2::geom_col(data = if (zero) pd else pd[pd$sites_detected != 0, , drop = FALSE],
+                        ggplot2::aes(y = y.detected, fill = community), width = bw,
                         color = get.setting(job, "bar.outline.color"),
                         linewidth = num.setting(job, "bar.outline.linewidth")) +
-      ggplot2::geom_col(data = pd[pd$passes.per.night > 0, , drop = FALSE],
+      ggplot2::geom_col(data = if (zero) pd else pd[pd$passes.per.night > 0, , drop = FALSE],
                         ggplot2::aes(y = y.passes, color = passes.lab), width = pw,
                         fill = get.setting(job, "passes.bar.color")) +
       ggplot2::scale_fill_manual(values = fills, breaks = names(fills),

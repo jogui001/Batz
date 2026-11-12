@@ -51,7 +51,10 @@ package. A data frame given here is used instead.
 (The old argument name \code{aes.default} is still read, with a WARNING.)
 Optional rows \code{plot.title.face}, \code{axis.title.face} and
 \code{legend.title.face} (\code{"plain"}, \code{"bold"}, \code{"italic"},
-\code{"bold.italic"}) set the title fonts; a missing row gives bold.}
+\code{"bold.italic"}) set the title fonts; a missing row gives bold.
+\code{plot.zero} (the fig.list column \code{$plot.zero}, the plotopts row or typed into the call), default
+\code{FALSE}: values of 0 (bars, tiles, cells) are not drawn; \code{TRUE}
+draws them.}
 
 \item{project.name}{Character, default \code{"new.project"}. First part
 of each saved file name.}
@@ -194,6 +197,9 @@ plot.width, plot.height, the pads and ggsave.units. Blank or "NA":
 the plotopts size settings are used; any other entry gives a NOTE and
 the plotopts size. The old spelling $plot.dimentions is also read, and it
 can be typed into the call (e.g. plot.dimensions = "1/2 page").}
+\item{\code{$plot.zero}}{Optional fig.list column: FALSE (default) =
+values of 0 (bars, tiles, cells) are not drawn; TRUE draws them. Can
+also be set in plotopts or typed into the call (plot.zero = TRUE).}
 }
 }
 \examples{

@@ -88,6 +88,9 @@
 #'   Optional rows \code{plot.title.face}, \code{axis.title.face} and
 #'   \code{legend.title.face} (\code{"plain"}, \code{"bold"}, \code{"italic"},
 #'   \code{"bold.italic"}) set the title fonts; a missing row gives bold.
+#'   \code{plot.zero} (the plotopts row or typed into the call), default
+#'   \code{FALSE}: values of 0 (bars, tiles, cells) are not drawn; \code{TRUE}
+#'   draws them.
 #' @param project.name Character, default \code{"new.project"}. First part
 #'   of the saved file name.
 #' @param ... Plot settings typed into the call, named as the
@@ -364,7 +367,9 @@ batz.plotactivity_heatmap <- function(data,
     ## x = .data[[date.col]] (round twenty-four fix), not a hardcoded
     ## "monnight.date" - see @details, "Internal hardcoded ... literals
     ## fixed".
-    ggplot.obj <- ggplot2::ggplot(counts, ggplot2::aes(x = .data[[date.col]], y = bin.index, fill = n.capped)) +
+    zero <- plotutil_plot_zero(get.default("plot.zero"))               # FALSE: tiles with 0 are not drawn
+    ggplot.obj <- ggplot2::ggplot(if (zero) counts else counts[counts$observations.count != 0, , drop = FALSE],
+                                  ggplot2::aes(x = .data[[date.col]], y = bin.index, fill = n.capped)) +
       ggplot2::geom_tile(color = "white", linewidth = 0.15) +
       ggplot2::geom_segment(
         data = data.frame(x = x.breaks),
