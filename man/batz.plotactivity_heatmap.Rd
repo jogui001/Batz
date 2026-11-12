@@ -9,7 +9,7 @@ batz.plotactivity_heatmap(
   date.col = "date.monitoringnight",
   time.col = "time",
   bin.minutes = 30,
-  aes.default = NULL,
+  aes.plotopts = NULL,
   project.name = "new.project",
   aes.style = "override.value",
   site.label = "",
@@ -34,19 +34,20 @@ with each detection's clock time, \code{"HH:MM"} or \code{"HH:MM:SS"}.}
 in minutes; must divide evenly into 1440 (e.g. 15, 20, 30, 60),
 otherwise the function stops.}
 
-\item{aes.default}{Data frame of plot settings, one row per parameter
+\item{aes.plotopts}{Data frame of plot settings, one row per parameter
 (e.g. \code{plotopts_heatmap.csv}), with \code{$category},
 \code{$parameter}, \code{$default.value} and optionally an
 \code{$override.value} column (see Details).
 Default \code{NULL}: the built-in settings are used (NOTE): the
 \code{PLOTOPTS_plotact_heatmap} tab of Batz_reference_db, carried by the
-package. A data frame given here is used instead.}
+package. A data frame given here is used instead.
+(The old argument name \code{aes.default} is still read, with a WARNING.)}
 
 \item{project.name}{Character, default \code{"new.project"}. First part
 of the saved file name.}
 
 \item{aes.style}{Character, default \code{"override.value"}. Column of
-\code{aes.default} checked first for each parameter; blank cells fall
+\code{aes.plotopts} checked first for each parameter; blank cells fall
 back to \code{$default.value}. An old \code{overide.value} column is
 still read when \code{aes.style = "override.value"} and there is no
 \code{override.value} column.}
@@ -61,17 +62,17 @@ saved to.}
 simplify or remove non-ASCII characters in \code{data} (see Details).}
 
 \item{strip.special.plotopts}{Logical, default \code{FALSE}. If
-\code{TRUE}, clean \code{aes.default} the same way, so a label such as
+\code{TRUE}, clean \code{aes.plotopts} the same way, so a label such as
 "Temperature (degree C)" loses its symbol. If \code{FALSE}, symbols are
 kept and unreadable characters stop the function (see Details).}
 
 \item{...}{Plot settings typed into the call, named as the
-\code{aes.default} \code{$parameter} rows (or fig.list setting
+\code{aes.plotopts} \code{$parameter} rows (or fig.list setting
 columns), e.g. \code{legend.position = "bottom"},
 \code{plot.width = 8}. A vector is joined with ";". Each setting is
-taken from the function call, then \code{aes.default} (its custom-style column, then
+taken from the function call, then \code{aes.plotopts} (its custom-style column, then
 \code{$default.value}). A setting given here does not need a row in
-\code{aes.default}. A NOTE lists the settings used and any name the
+\code{aes.plotopts}. A NOTE lists the settings used and any name the
 function does not use.}
 }
 \value{
@@ -100,7 +101,7 @@ is saved as a PNG. A natural input is the \code{$data} returned by
 \code{time.col} columns. They are matched with
 \code{canonicalize.headers()} (case and \code{"."}/\code{"_"} differences
 are ignored) and renamed to the given spelling; other columns are not
-renamed. \code{aes.default} must have \code{$category},
+renamed. \code{aes.plotopts} must have \code{$category},
 \code{$parameter}, \code{$default.value} and the \code{$parameter} rows
 listed below. Missing headers or parameter rows and duplicate column
 names in either table stop the function with one combined message.
@@ -108,7 +109,7 @@ names in either table stop the function with one combined message.
 \strong{Special characters.} With \code{strip.special = TRUE}, accented
 letters and common symbols in \code{data} are simplified (e.g. an accented
 e becomes \code{e}) and other non-ASCII characters are removed before any
-check. \code{aes.default} is only cleaned when
+check. \code{aes.plotopts} is only cleaned when
 \code{strip.special.plotopts = TRUE}; otherwise it is checked for
 characters that cannot be read in this R session, and the function stops
 with an error naming the table, the number of such characters and the
@@ -130,7 +131,7 @@ month. Y-axis labels are clock times every \code{ybreak.hours} hours.
 Axis titles are "Monitoring Night" and "Hour of Monitoring". If
 \code{ggplot2} is not installed, only the data are returned.
 
-\strong{aes.default parameters} (all required as \code{$parameter} rows;
+\strong{aes.plotopts parameters} (all required as \code{$parameter} rows;
 matched ignoring case). Each value is taken from the \code{aes.style}
 column when it is not blank, otherwise from \code{$default.value}:
 \itemize{
@@ -159,11 +160,11 @@ night in \code{data}.
 \dontrun{
 daily.result <- batz.plotactivity_daily.count(
   data = readxl::read_excel("mine_only.xlsx"),
-  aes.default = read.csv("plotopts_dailycount.csv", stringsAsFactors = FALSE)
+  aes.plotopts = read.csv("plotopts_dailycount.csv", stringsAsFactors = FALSE)
 )
 heatmap.result <- batz.plotactivity_heatmap(
   data = daily.result$data,
-  aes.default = read.csv("plotopts_heatmap.csv", stringsAsFactors = FALSE),
+  aes.plotopts = read.csv("plotopts_heatmap.csv", stringsAsFactors = FALSE),
   bin.minutes = 30,
   project.name = "myproject",
   site.label = "site1"

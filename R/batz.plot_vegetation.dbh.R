@@ -37,7 +37,8 @@
 #'   as a CSV next to the PNG.
 #' @param dir.save Character, default \code{getwd()}. Folder the PNG (and
 #'   table) is saved in (created if needed). \code{NULL} = nothing saved.
-#' @param plotopts Plot settings: \code{NULL} (default; built-in defaults),
+#' @param aes.plotopts Plot settings (the old argument name \code{plotopts}
+#'   is still read, with a WARNING): \code{NULL} (default; built-in defaults),
 #'   a data frame, or the path to a \code{.csv} or \code{.xlsx} file, laid
 #'   out like \verb{plotopts_vegetation.dbh.csv}: columns \code{$category},
 #'   \code{$parameter}, \code{$default.value}, and optionally
@@ -45,9 +46,9 @@
 #'   built-in default. See "Settings" in Details.
 #' @param ... Any other setting listed in Details ("Settings"), typed into
 #'   the call by name (e.g. \code{yaxe.max = 20}); used before
-#'   \code{plotopts}.
+#'   \code{aes.plotopts}.
 #' @param aes.style Character, default \code{"override.value"}. Name of the
-#'   \code{plotopts} column read before \code{$default.value} (an old
+#'   \code{aes.plotopts} column read before \code{$default.value} (an old
 #'   \code{$overide.value} column is still read).
 #'
 #' @return Invisibly, a list: \code{$plot} (the ggplot), \code{$dbh} (one
@@ -64,11 +65,11 @@
 #'   \item the value typed into the function call in this R session
 #'     (\code{site.names}, \code{type.colors}, \code{units},
 #'     \code{legend.position}, \code{size}, \code{table}, or any other setting by name in \code{...});
-#'   \item \code{plotopts}: \code{$override.value} (\code{aes.style}) when
+#'   \item \code{aes.plotopts}: \code{$override.value} (\code{aes.style}) when
 #'     filled, else \code{$default.value};
 #'   \item the built-in default (\code{batz.plot_vegetation.dbh.defaults()}).
 #' }
-#' \code{plotopts} can hold the five inputs above as \code{$parameter} rows
+#' \code{aes.plotopts} can hold the five inputs above as \code{$parameter} rows
 #' as well as these: \code{site.column}, \code{tree.columns},
 #' \code{snag.columns}, \code{snag.include} (TRUE/FALSE), \code{tree.label},
 #' \code{snag.label}, \code{units.column}, \code{xaxe.title},
@@ -110,7 +111,7 @@ batz.plot_vegetation.dbh <- function(data, project.name = "", site.names = NULL,
                                      units = c("in", "cm"),
                                      legend.position = c("right", "bottom", "left", "top"),
                                      size = c("page", "half page", "powerpoint", "half powerpoint"),
-                                     table = TRUE, dir.save = getwd(), plotopts = NULL, aes.style = "override.value", ...) {
+                                     table = TRUE, dir.save = getwd(), aes.plotopts = NULL, aes.style = "override.value", ...) {
   FN <- "batz.plot_vegetation.dbh"
   blank <- function(v) is.null(v) || length(v) == 0 || all(is.na(v)) || all(!nzchar(trimws(as.character(v))))
   split.list <- function(v) {
@@ -120,22 +121,23 @@ batz.plot_vegetation.dbh <- function(data, project.name = "", site.names = NULL,
   }
   key <- function(v) tolower(trimws(as.character(v)))
 
-  ## ---- settings: input > plotopts > default ---------------------------------
+  ## ---- settings: input > aes.plotopts > default ---------------------------------
   defs <- batz.plot_vegetation.dbh.defaults()
   po <- NULL
-  if (!is.null(plotopts)) {
-    if (is.character(plotopts)) {
-      if (!file.exists(plotopts[1])) stop(FN, ": plotopts file not found: ", plotopts[1], call. = FALSE)
-      po <- if (grepl("\\.xlsx?$", plotopts[1], ignore.case = TRUE))
-        as.data.frame(readxl::read_excel(plotopts[1], sheet = if (length(plotopts) > 1) plotopts[2] else 1, col_types = "text"))
-      else utils::read.csv(plotopts[1], check.names = FALSE, colClasses = "character")
-    } else if (is.data.frame(plotopts)) po <- plotopts
-    else stop(FN, ": plotopts must be a data frame or the path to a .csv / .xlsx file.", call. = FALSE)
+  if (is.null(aes.plotopts)) aes.plotopts <- plotutil_aes_legacy(plotutil_dots(...), FN)   # old argument name plotopts
+  if (!is.null(aes.plotopts)) {
+    if (is.character(aes.plotopts)) {
+      if (!file.exists(aes.plotopts[1])) stop(FN, ": aes.plotopts file not found: ", aes.plotopts[1], call. = FALSE)
+      po <- if (grepl("\\.xlsx?$", aes.plotopts[1], ignore.case = TRUE))
+        as.data.frame(readxl::read_excel(aes.plotopts[1], sheet = if (length(aes.plotopts) > 1) aes.plotopts[2] else 1, col_types = "text"))
+      else utils::read.csv(aes.plotopts[1], check.names = FALSE, colClasses = "character")
+    } else if (is.data.frame(aes.plotopts)) po <- aes.plotopts
+    else stop(FN, ": aes.plotopts must be a data frame or the path to a .csv / .xlsx file.", call. = FALSE)
     names(po) <- tolower(trimws(names(po)))
     if (!all(c("parameter", "default.value") %in% names(po)))
-      stop(FN, ": plotopts needs the columns $parameter and $default.value.", call. = FALSE)
+      stop(FN, ": aes.plotopts needs the columns $parameter and $default.value.", call. = FALSE)
     unknown <- po$parameter[!is.na(po$parameter) & !plotutil_param_key(po$parameter) %in% plotutil_param_key(defs$parameter)]
-    if (length(unknown)) cat(sprintf("NOTE: %s - plotopts parameter(s) not used by this function: %s\n", FN, paste(unknown, collapse = ", ")))
+    if (length(unknown)) cat(sprintf("NOTE: %s - aes.plotopts parameter(s) not used by this function: %s\n", FN, paste(unknown, collapse = ", ")))
   }
   style.col <- if (is.null(po)) NA_character_ else plotutil_aes_style_col(po, aes.style)
   inputs <- list()
@@ -145,7 +147,8 @@ batz.plot_vegetation.dbh <- function(data, project.name = "", site.names = NULL,
   if (!missing(table)) inputs$table <- as.character(table)
   if (!missing(legend.position)) inputs$legend.position <- legend.position
   if (!missing(size)) inputs$size <- size
-  dots <- plotutil_dots(...)                                # any other plotopts setting typed into the call
+  dots <- plotutil_dots(...)
+  if (length(dots) && !is.null(names(dots))) dots <- dots[!names(dots) %in% c("aes.default", "plotopts")]                                # any other aes.plotopts setting typed into the call
   if (length(dots)) {
     if (is.null(names(dots)) || any(!nzchar(names(dots)))) stop(FN, ': settings in the call must be named, e.g. yaxe.max = 20.', call. = FALSE)
     for (nm in names(dots)) {
@@ -339,9 +342,9 @@ batz.plot_vegetation.dbh <- function(data, project.name = "", site.names = NULL,
 
 #' Built-in plot settings of batz.plot_vegetation.dbh()
 #'
-#' The settings used when neither the function call nor \code{plotopts}
+#' The settings used when neither the function call nor \code{aes.plotopts}
 #' gives a value. They are kept in Batz_reference_db (tab \code{PLOTOPTS_plot_veg.dbh}) and
-#' carried by the package (\code{\link{batz.util_refdb.sync}}). Write it out as a starting \code{plotopts} file with
+#' carried by the package (\code{\link{batz.util_refdb.sync}}). Write it out as a starting \code{aes.plotopts} file with
 #' \code{write.csv(batz.plot_vegetation.dbh.defaults(),
 #' "plotopts_vegetation.dbh.csv", row.names = FALSE)}.
 #'

@@ -7,7 +7,7 @@
 batz.plot_bar.bat.group(
   data,
   fig.list,
-  aes.default = NULL,
+  aes.plotopts = NULL,
   project.name = "new.project",
   aes.style = "override.value",
   dir.save = getwd(),
@@ -31,7 +31,7 @@ skipped (NOTE).}
 \code{$plot.set}, \code{$xaxe.title}, \code{$yaxe.title}. Optional:
 \code{$plot.year}, \code{$plot.group}, \code{$group.labels},
 \code{$community.exclude}, \code{$yaxe.title.right}. A row can also
-override any \code{aes.default} parameter with a column of the same
+override any \code{aes.plotopts} parameter with a column of the same
 name. See Details.
 Cells holding "NA" (a heading not used by this plot type, as in
 \code{\link{batz.generate_figlist}}) are treated as blank.
@@ -40,20 +40,21 @@ plotted; rows with \code{FALSE}, any other entry or a blank are
 skipped (NOTE). A fig.list with no \code{$plot} column has every
 row plotted (NOTE).}
 
-\item{aes.default}{Data frame of plot settings (plotopts), normally
+\item{aes.plotopts}{Data frame of plot settings (plotopts), normally
 \verb{plotopts_bar.bat.group.csv}. Required columns: \code{$category},
 \code{$parameter}, \code{$default.value}. The custom style column
 (named by \code{aes.style}) and \code{$notes} are optional. See
 "plotopts" in Details.
 Default \code{NULL}: the built-in settings are used (NOTE): the
 \code{PLOTOPTS_plot_bar.bat.group} tab of Batz_reference_db, carried by the
-package. A data frame given here is used instead.}
+package. A data frame given here is used instead.
+(The old argument name \code{aes.default} is still read, with a WARNING.)}
 
 \item{project.name}{Character, default \code{"new.project"}. First part
 of each saved file name.}
 
 \item{aes.style}{Character, default \code{"override.value"}. Name of the
-\code{aes.default} column checked first for each parameter. When that
+\code{aes.plotopts} column checked first for each parameter. When that
 column does not exist, or its cell is blank, \code{$default.value} is
 used. With the default, an old \code{$overide.value} column is still
 read when there is no \code{$override.value} column. A non-blank
@@ -67,17 +68,17 @@ accented letters and removes other non-ASCII characters in \code{data}
 (local copy only). FALSE leaves them as they are.}
 
 \item{strip.special.plotopts}{Logical, default \code{FALSE}. Same
-clean-up for \code{fig.list} and \code{aes.default}. FALSE keeps their
+clean-up for \code{fig.list} and \code{aes.plotopts}. FALSE keeps their
 text, but a cell that cannot be read in this R session stops the
 function with an error. TRUE strips them instead.}
 
 \item{...}{Plot settings typed into the call, named as the
-\code{aes.default} \code{$parameter} rows (or fig.list setting
+\code{aes.plotopts} \code{$parameter} rows (or fig.list setting
 columns), e.g. \code{legend.position = "bottom"},
 \code{plot.width = 8}. A vector is joined with ";". Each setting is
-taken from the function call, then the fig.list row, then \code{aes.default} (its custom-style column, then
+taken from the function call, then the fig.list row, then \code{aes.plotopts} (its custom-style column, then
 \code{$default.value}). A setting given here does not need a row in
-\code{aes.default}. A NOTE lists the settings used and any name the
+\code{aes.plotopts}. A NOTE lists the settings used and any name the
 function does not use.}
 }
 \value{
@@ -159,7 +160,7 @@ drawn (the axis extends).
 from \code{grDevices::hcl.colors(n, "Dark 3")} and a NOTE. The pale bar
 uses the same color at \code{sampled.alpha}.
 
-\strong{plotopts (aes.default).} These \code{$parameter} rows must exist,
+\strong{plotopts (aes.plotopts).} These \code{$parameter} rows must exist,
 or the function stops listing the missing ones: \code{passes.per},
 \code{yaxe.left.breaks}, \code{yaxe.right.breaks},
 \code{community.colors}, \code{sampled.alpha}, \code{bar.width},

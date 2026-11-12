@@ -33,7 +33,9 @@ batz.plot_weather.daily(
   facet.ncol = 2,
   project.name = "",
   dir.save = getwd(),
-  plot.width = 9
+  plot.width = 9,
+  aes.plotopts = NULL,
+  aes.style = "override.value"
 )
 }
 \arguments{
@@ -178,6 +180,21 @@ saved in (created if missing). \code{NULL} saves nothing.}
 
 \item{plot.width}{Numeric, default \code{9}. PNG width (inches). The
 height is 1.9 inches per row of panels plus 1 inch.}
+
+\item{aes.plotopts}{Optional, default \code{NULL}. Plot settings table:
+a data frame, or the path of a \code{.csv} / \code{.xlsx}, laid out like
+\code{batz.generate_plotopts("batz.plot_weather.daily")} writes it
+(columns \code{$category}, \code{$parameter}, \code{$default.value},
+\code{$override.value}, \code{$notes}). Each \code{$parameter} row is
+one of this function's arguments (e.g. \code{temp.range},
+\code{wind.ms}, \code{panels}); lists are separated by ";" (e.g.
+\code{"0;25"}). Settings are taken from the function call, then
+\code{aes.plotopts}, then the defaults shown here. A blank cell keeps
+the default.}
+
+\item{aes.style}{Character, default \code{"override.value"}. Name of the
+\code{aes.plotopts} column read before \code{$default.value} (e.g. the
+project-name column written by \code{\link{batz.generate_plotopts}}).}
 }
 \value{
 Invisibly, a list: \code{$plots} (named list, one entry per

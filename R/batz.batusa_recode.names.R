@@ -13,6 +13,8 @@
 #'   format: any column of the bat reference table - \code{"scientific_name"},
 #'   \code{"common_name"}, \code{"label_name"} (e.g. \code{"Big brown
 #'   (EPFU)"}), \code{"label2_name"} (e.g. \code{"Big brown bat (EPFU)"}),
+#'   \code{"label3_name"} (e.g. \code{"Arizona bat (MYOC)"}; every
+#'   \code{label<N>_name} column of the table can be used),
 #'   \code{"code4"}, \code{"code6"}, \code{"family"},
 #'   \code{"region"}, \code{"listing.status_federal"},
 #'   \code{"listing.status_iucn"}, \code{"states.listed"},
@@ -25,7 +27,8 @@
 #'   \code{"common_name"}), and short names work: \code{"common"},
 #'   \code{"latin"}/\code{"scientific"}/\code{"sci"}/\code{"species"},
 #'   \code{"code"} (= \code{code4}), \code{"label"} (= \code{label_name}),
-#'   \code{"label2"} (= \code{label2_name}). Any other value stops with an error
+#'   \code{"label2"} (= \code{label2_name}), \code{"label3"} (= \code{label3_name}).
+#'   Any other value stops with an error
 #'   listing the accepted values.
 #' @param grammar.dash Logical, default \code{TRUE}. Output only:
 #'   \code{TRUE} returns values as written in the reference table
@@ -74,11 +77,13 @@
 #'     \code{All}: \code{All detections}, \code{40KHzMyo}, \code{HiF},
 #'     \code{LoF}, \code{HiFrag}, \code{LoFrag}, \code{Multiple},
 #'     \code{Social}) is searched on \code{scientific_name},
-#'     \code{common_name}, \code{label_name}, \code{label2_name},
+#'     \code{common_name}, every \code{label<N>_name} column
+#'     (\code{label_name}, \code{label2_name}, \code{label3_name}),
 #'     \code{code4}, \code{code6}.
 #' }
-#' The first two tables have no label columns: for \code{"label_name"} and
-#' \code{"label2_name"} their \code{common_name} is returned. They only
+#' The first two tables have no label columns: for a label format, a value
+#' found there takes its \code{bat.names} label when \code{bat.names} also
+#' has it (e.g. \code{"HiF"}), otherwise their \code{common_name}. They only
 #' have name/code columns, so any other
 #' \code{batname.format.out} (e.g. \code{listing.status_federal},
 #' \code{family}, \code{region}) returns \code{""} for values found there.
@@ -186,8 +191,9 @@ batz.batusa_recode.names <- function(data, batname.format.out = "common_name", g
     "Desert red bat" = "Western red bat"
   )
 
-  match.cols <- c("scientific_name", "common_name", "label_name", "label2_name", "code4", "code6")
-  match.cols <- match.cols[match.cols %in% names(nabat.names)]       # an older table without the label columns
+  ## label columns: every "label<N>_name" in the table (label_name, label2_name, label3_name, ...)
+  label.cols <- grep("^label[0-9]*_name$", names(nabat.names), value = TRUE)
+  match.cols <- c("scientific_name", "common_name", label.cols, "code4", "code6")
 
   ## 2026-10-02, per Josh: accept old/short format names ("common",
   ## "latin", ...), any case/separator, and the derived "both" format -
@@ -217,8 +223,8 @@ batz.batusa_recode.names <- function(data, batname.format.out = "common_name", g
       return(ifelse(is.na(sn) | !nzchar(sn) | tolower(sn) == tolower(cn), cn, sprintf("%s (%s)", cn, sn)))
     }
     if (fmt %in% names(df) && fmt != "region") return(as.character(df[[fmt]]))
-    ## label_name / label2_name: these tables have no label columns - their common_name is used
-    if (fmt %in% c("label_name", "label2_name") && "common_name" %in% names(df)) return(as.character(df$common_name))
+    ## label columns: these tables have none - their common_name is used (unless bat.names has the value)
+    if (fmt %in% label.cols && "common_name" %in% names(df)) return(as.character(df$common_name))
     rep("", nrow(df))
   }
 
@@ -233,6 +239,7 @@ batz.batusa_recode.names <- function(data, batname.format.out = "common_name", g
     # each table the columns are tried in the order given in pre.tables
     # (first match wins); a value found here skips the bat.names lookup.
     pre.done <- rep(FALSE, length(x.orig))
+    pre.soft <- rep(FALSE, length(x.orig))        # label format the table lacks: a bat.names match wins
     pre.out  <- x.orig
     x.pre    <- normalize(x.orig)
     for (pt in pre.tables) {
@@ -244,6 +251,7 @@ batz.batusa_recode.names <- function(data, batname.format.out = "common_name", g
         if (any(hit)) {
           pre.out[hit]  <- pt.vals[idx[hit]]
           pre.done[hit] <- TRUE
+          pre.soft[hit] <- batname.format.out %in% label.cols && !(batname.format.out %in% names(pt$df))
         }
       }
     }
@@ -281,8 +289,9 @@ batz.batusa_recode.names <- function(data, batname.format.out = "common_name", g
       out[found] <- gsub("-", " ", out[found])
     }
 
-    if (any(pre.done)) {
-      out[pre.done] <- if (grammar.dash) pre.out[pre.done] else gsub("-", " ", pre.out[pre.done])
+    use.pre <- pre.done & !(pre.soft & found)
+    if (any(use.pre)) {
+      out[use.pre] <- if (grammar.dash) pre.out[use.pre] else gsub("-", " ", pre.out[use.pre])
     }
 
     list(values = out, unmatched = x.orig[!found & !pre.done])
@@ -328,7 +337,7 @@ batusa.resolve.format <- function(fmt, valid) {
                scientific = "scientific_name", sci = "scientific_name",
                sciname = "scientific_name", species = "scientific_name",
                code = "code4", fourlettercode = "code4", sixlettercode = "code6",
-               label = "label_name", label1 = "label_name", label2 = "label2_name",
+               label = "label_name", label1 = "label_name", label2 = "label2_name", label3 = "label3_name",
                both = "both", commonlatin = "both", commonscientific = "both",
                commonandscientific = "both", commonandlatin = "both")
   accepted <- c(valid, "both")

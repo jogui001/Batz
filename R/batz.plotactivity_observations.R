@@ -33,7 +33,7 @@
 #'   \code{$sunrise.monitoringnight}, \code{$sunrise.monitoringnight.unix};
 #'   old \code{schedual1} / \code{schedual2} are still accepted), but the
 #'   values are not used in the plot.
-#' @param aes.default Data frame of plot settings (plotopts), one row per
+#' @param aes.plotopts Data frame of plot settings (plotopts), one row per
 #'   parameter, e.g. \verb{plotopts_callobs.csv} from
 #'   \code{\link{batz.generate_plotopts}}. Required columns:
 #'   \code{$category}, \code{$parameter}, \code{$default.value}. The custom
@@ -42,18 +42,19 @@
 #'   Default \code{NULL}: the built-in settings are used (NOTE): the
 #'   \code{PLOTOPTS_plotact_observations} tab of Batz_reference_db, carried by the
 #'   package. A data frame given here is used instead.
+#'   (The old argument name \code{aes.default} is still read, with a WARNING.)
 #' @param project.name Character, default \code{"new.project"}. Put at the
 #'   start of every saved file name. A blank value leaves it out.
 #' @param ... Plot settings typed into the call, named as the
-#'   \code{aes.default} \code{$parameter} rows (or fig.list setting
+#'   \code{aes.plotopts} \code{$parameter} rows (or fig.list setting
 #'   columns), e.g. \code{legend.position = "bottom"},
 #'   \code{plot.width = 8}. A vector is joined with ";". Each setting is
-#'   taken from the function call, then the fig.list row, then \code{aes.default} (its custom-style column, then
+#'   taken from the function call, then the fig.list row, then \code{aes.plotopts} (its custom-style column, then
 #'   \code{$default.value}). A setting given here does not need a row in
-#'   \code{aes.default}. A NOTE lists the settings used and any name the
+#'   \code{aes.plotopts}. A NOTE lists the settings used and any name the
 #'   function does not use.
 #' @param aes.style Character, default \code{"override.value"}. Name of the
-#'   \code{aes.default} column checked first for each parameter. When that
+#'   \code{aes.plotopts} column checked first for each parameter. When that
 #'   column does not exist, or its cell is blank, \code{$default.value} is
 #'   used. With the default, an old \code{$overide.value} column is still
 #'   read when there is no \code{$override.value} column.
@@ -65,7 +66,7 @@
 #'   check. FALSE leaves them as they are.
 #' @param strip.special.plotopts Logical, default \code{FALSE}. Same
 #'   clean-up for the settings tables \code{fig.list} and
-#'   \code{aes.default}. FALSE leaves them untouched (plot text keeps its
+#'   \code{aes.plotopts}. FALSE leaves them untouched (plot text keeps its
 #'   symbols), but a cell that cannot be read in this R session stops the
 #'   function with an error naming the table, the number of bad characters
 #'   and the first rows per header. TRUE strips them instead.
@@ -156,7 +157,8 @@
 #'   \item{\code{$facet.label_format}}{Format of species facet titles:
 #'     \code{"common_name"} (used when blank), \code{"scientific_name"},
 #'     \code{"label_name"} (e.g. "Big brown (EPFU)"), \code{"label2_name"}
-#'     (e.g. "Big brown bat (EPFU)"), \code{"code4"}, \code{"code6"},
+#'     (e.g. "Big brown bat (EPFU)"), \code{"label3_name"} (e.g. "Arizona
+#'     bat (MYOC)"), \code{"code4"}, \code{"code6"},
 #'     \code{"both"}, or \code{"common"},
 #'     \code{"latin"}, \code{"scientific"}. Other values stop with an error
 #'     naming the row. Non-species facets keep their own name. An older
@@ -222,7 +224,7 @@
 #' ignored (NOTE). Exact duplicate rows (every column the same) are removed
 #' before plotting (NOTE).
 #'
-#' \strong{plotopts (aes.default).} Each setting is read from the first row
+#' \strong{plotopts (aes.plotopts).} Each setting is read from the first row
 #' whose \code{$parameter} matches the name (ignoring case and spaces).
 #' The value is the \code{aes.style} column when that cell is not blank,
 #' otherwise \code{$default.value}. For the fig.list settings above, a
@@ -318,7 +320,7 @@
 #'   data = plfr.bats,
 #'   fig.list = fig.list,
 #'   suntimes = aru.suntimes,
-#'   aes.default = plotopts.callobs,
+#'   aes.plotopts = plotopts.callobs,
 #'   dir.save = "C:/path/to/output/folder"
 #' )
 #' result$ggplots[[1]]
@@ -326,7 +328,7 @@
 #'
 #' @export
 batz.plotactivity_observations <- function(data, fig.list, suntimes,
-                                            aes.default = NULL, project.name = "new.project",
+                                            aes.plotopts = NULL, project.name = "new.project",
                                             aes.style = "override.value",
                                             dir.save = getwd(),
                                             strip.special = TRUE,
@@ -340,11 +342,12 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
   ## (header standardization/checks included). special.strip() returns
   ## non-data-frames unchanged and only modifies these local copies.
   objname.fig.list <- paste(deparse(substitute(fig.list)), collapse = "")
-  objname.aes.default <- paste(deparse(substitute(aes.default)), collapse = "")
+  objname.aes.plotopts <- paste(deparse(substitute(aes.plotopts)), collapse = "")
   fig.list <- plotutil_figlist_na(fig.list)       # "NA" = heading not used by this plot type
   fig.list <- plotutil_figlist_plot(fig.list, "batz.plotactivity_observations")   # only rows with $plot = TRUE or 1
   if (is.data.frame(fig.list) && nrow(fig.list) == 0) return(invisible(list(plots = list(), ggplots = list())))
-  if (is.null(aes.default)) aes.default <- plotutil_default_plotopts("batz.plotactivity_observations")   # built-in settings
+  if (is.null(aes.plotopts)) aes.plotopts <- plotutil_aes_legacy(plotutil_dots(...), "batz.plotactivity_observations")   # old argument name aes.default / plotopts
+  if (is.null(aes.plotopts)) aes.plotopts <- plotutil_default_plotopts("batz.plotactivity_observations")   # built-in settings
   data <- special.strip(data, strip.special)$df
   ## fig.list is a settings table, not data - stripped only when
   ## strip.special.plotopts = TRUE (2026-10-02, per Josh); otherwise checked
@@ -355,13 +358,13 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     special.check.plotopts(fig.list, "fig.list", objname.fig.list, "batz.plotactivity_observations")
   }
   suntimes <- special.strip(suntimes, strip.special)$df
-  ## aes.default is a settings table, not data - stripped only when
+  ## aes.plotopts is a settings table, not data - stripped only when
   ## strip.special.plotopts = TRUE (2026-10-02, per Josh); otherwise checked
   ## for characters that can't be read, with a readable error.
   if (isTRUE(strip.special.plotopts)) {
-    aes.default <- special.strip(aes.default, TRUE)$df
+    aes.plotopts <- special.strip(aes.plotopts, TRUE)$df
   } else {
-    special.check.plotopts(aes.default, "aes.default", objname.aes.default, "batz.plotactivity_observations")
+    special.check.plotopts(aes.plotopts, "aes.plotopts", objname.aes.plotopts, "batz.plotactivity_observations")
   }
 
   # See @details above for why this value was chosen and how to change it.
@@ -379,7 +382,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
   ## Header standardization (per Josh, 2026-09-14 project preference):
   ## standardize.headers() itself is still NOT applied directly to any of
   ## the five *.REQUIRED*/DATA.REQUIRED constants below, or renamed onto
-  ## `data`/`fig.list`/`suntimes`/`aes.default` wholesale - these names
+  ## `data`/`fig.list`/`suntimes`/`aes.plotopts` wholesale - these names
   ## remain this function's own interface contract with those upstream
   ## functions'/files' already-established output schemas, not raw loaded
   ## headers. See @details "Header standardization" above. As of the
@@ -427,7 +430,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
   ## per Josh's nineteenth follow-up (2026-09-16) - the saved file name is
   ## now built as described in @details, "File naming (round twenty-one)";
   ## $output.filename.pattern is no longer read at all. An
-  ## $output.filename.pattern row left in an existing aes.default sheet is
+  ## $output.filename.pattern row left in an existing aes.plotopts sheet is
   ## harmless (simply ignored).
   AES.DEFAULT.REQUIRED.PARAMETERS <- c(
     "facpan.numcol", "plot.title.size", "plot.title.hjust", "axis.title.size",
@@ -447,7 +450,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
   # required-header list purely to MATCH columns, then renames every
   # matched column, IN A LOCAL COPY ONLY, to the required list's own
   # spelling - never mutates the caller's own data/suntimes/fig.list/
-  # aes.default object, and never changes anything this function returns.
+  # aes.plotopts object, and never changes anything this function returns.
   missing.msg <- function(canon, label) {
     if (length(canon$missing) > 0) {
       return(sprintf("%s is missing these headers: %s", label, paste(canon$missing, collapse = ", ")))
@@ -496,22 +499,22 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
   # canonicalize.headers()'s own $missing would otherwise report an absent
   # OPTIONAL column as if it were a missing REQUIRED one (a hard stop), when
   # an absent/blank optional column is supposed to just fall through to
-  # aes.default via get.setting()/the $plot.group resolver. Only $df is kept
+  # aes.plotopts via get.setting()/the $plot.group resolver. Only $df is kept
   # from this second pass; fig.list.canon$missing (used below to decide
   # whether to stop) still reflects FIG.LIST.REQUIRED only, unaffected.
   fig.list.canon$df <- canonicalize.headers(fig.list.canon$df, FIG.LIST.OPTIONAL)$df
-  aes.default.canon <- canonicalize.headers(aes.default, AES.DEFAULT.REQUIRED)
+  aes.plotopts.canon <- canonicalize.headers(aes.plotopts, AES.DEFAULT.REQUIRED)
 
   problems <- c(
     missing.msg(data.canon, "data"),
     missing.msg(suntimes.canon, "suntimes"),
     missing.msg(fig.list.canon, "fig.list"),
-    missing.msg(aes.default.canon, "aes.default"),
-    check.parameters(aes.default.canon$df, plotutil_required_left(AES.DEFAULT.REQUIRED.PARAMETERS, plot.inputs), "aes.default"),
+    missing.msg(aes.plotopts.canon, "aes.plotopts"),
+    check.parameters(aes.plotopts.canon$df, plotutil_required_left(AES.DEFAULT.REQUIRED.PARAMETERS, plot.inputs), "aes.plotopts"),
     check.duplicates(data, "data"),
     check.duplicates(suntimes, "suntimes"),
     check.duplicates(fig.list, "fig.list"),
-    check.duplicates(aes.default, "aes.default")
+    check.duplicates(aes.plotopts, "aes.plotopts")
   )
   if (length(problems) > 0) {
     stop(paste(problems, collapse = "\n\n"))
@@ -520,7 +523,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
   data        <- data.canon$df
   suntimes    <- suntimes.canon$df
   fig.list    <- fig.list.canon$df
-  aes.default <- aes.default.canon$df
+  aes.plotopts <- aes.plotopts.canon$df
 
   ## 2026-10-02, per Josh: data from batz.generate_plotframe.bat() with a
   ## pool.interval under one day has several rows per species/group/date -
@@ -583,18 +586,18 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
   ## below).
   get.default <- function(param) {
     if (!is.null(v.in <- plotutil_input_get(plot.inputs, param))) return(v.in)   # function call first
-    row.idx <- which(plotutil_param_key(aes.default$parameter) == plotutil_param_key(param))
+    row.idx <- which(plotutil_param_key(aes.plotopts$parameter) == plotutil_param_key(param))
     if (length(row.idx) == 0) return(NA_character_)
-    val <- as.character(aes.default$default.value[row.idx[1]])
-    if (!is.na(aes.col <- plotutil_aes_style_col(aes.default, aes.style))) {
-      override <- aes.default[[aes.col]][row.idx[1]]
+    val <- as.character(aes.plotopts$default.value[row.idx[1]])
+    if (!is.na(aes.col <- plotutil_aes_style_col(aes.plotopts, aes.style))) {
+      override <- aes.plotopts[[aes.col]][row.idx[1]]
       if (!is.na(override) && nzchar(trimws(as.character(override)))) {
         val <- as.character(override)
       }
     }
     val
   }
-  plotutil_plot_inputs_check(plot.inputs, c(AES.DEFAULT.REQUIRED.PARAMETERS, aes.default$parameter, names(fig.list), "plot.dimensions", "plot.dimentions"), "batz.plotactivity_observations")
+  plotutil_plot_inputs_check(plot.inputs, c(AES.DEFAULT.REQUIRED.PARAMETERS, aes.plotopts$parameter, names(fig.list), "plot.dimensions", "plot.dimentions"), "batz.plotactivity_observations")
 
   get.setting <- function(job, param) {
     if (!is.null(v.in <- plotutil_input_get(plot.inputs, param))) return(v.in)   # function call, then fig.list, then plotopts
@@ -746,7 +749,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
 
     # --- $legend (2026-08-29 follow-up, round 2 - see Details): whether to
     # color each dodged bar by which $plot.set value it is. Optional
-    # per-row, falls back to aes.default's own "legend" parameter (default
+    # per-row, falls back to aes.plotopts's own "legend" parameter (default
     # TRUE) - same get.setting()/get.default() pattern as $yaxe.trans/
     # $y.scale/etc.
     legend.flag <- isTRUE(as.logical(get.setting(job, "legend")))
@@ -936,7 +939,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
         groupval.palette <- strsplit(get.default("legend.groupval.colors"), ";", fixed = TRUE)[[1]]
         groupval.palette <- trimws(groupval.palette[nzchar(trimws(groupval.palette))])
         if (length(groupval.palette) == 0) {
-          # fallback palette (ColorBrewer "Dark2"-style) if aes.default's
+          # fallback palette (ColorBrewer "Dark2"-style) if aes.plotopts's
           # own $legend.groupval.colors is blank/unusable - never fatal.
           groupval.palette <- c("#1b9e77", "#d95f02", "#7570b3", "#e7298a",
                                  "#66a61e", "#e6ab02", "#a6761d", "#666666")

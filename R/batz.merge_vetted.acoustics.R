@@ -101,7 +101,7 @@
 #'   format passed as \code{batname.format.out} to
 #'   \code{\link{batz.batusa_recode.names}} (e.g. \code{"code4"},
 #'   \code{"code6"}, \code{"common_name"}, \code{"scientific_name"},
-#'   \code{"label_name"}, \code{"label2_name"}).
+#'   \code{"label_name"}, \code{"label2_name"}, \code{"label3_name"}).
 #' @param manid.kp Logical, default \code{TRUE}. Create \code{$manid.kp}
 #'   (\code{$manid} with blanks filled from \code{$autoid.kp}).
 #' @param manid.sb Logical, default \code{TRUE}. Create \code{$manid.sb}

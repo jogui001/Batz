@@ -12,7 +12,7 @@
 #' \code{time.col} columns. They are matched with
 #' \code{canonicalize.headers()} (case and \code{"."}/\code{"_"} differences
 #' are ignored) and renamed to the given spelling; other columns are not
-#' renamed. \code{aes.default} must have \code{$category},
+#' renamed. \code{aes.plotopts} must have \code{$category},
 #' \code{$parameter}, \code{$default.value} and the \code{$parameter} rows
 #' listed below. Missing headers or parameter rows and duplicate column
 #' names in either table stop the function with one combined message.
@@ -20,7 +20,7 @@
 #' \strong{Special characters.} With \code{strip.special = TRUE}, accented
 #' letters and common symbols in \code{data} are simplified (e.g. an accented
 #' e becomes \code{e}) and other non-ASCII characters are removed before any
-#' check. \code{aes.default} is only cleaned when
+#' check. \code{aes.plotopts} is only cleaned when
 #' \code{strip.special.plotopts = TRUE}; otherwise it is checked for
 #' characters that cannot be read in this R session, and the function stops
 #' with an error naming the table, the number of such characters and the
@@ -42,7 +42,7 @@
 #' Axis titles are "Monitoring Night" and "Hour of Monitoring". If
 #' \code{ggplot2} is not installed, only the data are returned.
 #'
-#' \strong{aes.default parameters} (all required as \code{$parameter} rows;
+#' \strong{aes.plotopts parameters} (all required as \code{$parameter} rows;
 #' matched ignoring case). Each value is taken from the \code{aes.style}
 #' column when it is not blank, otherwise from \code{$default.value}:
 #' \itemize{
@@ -77,25 +77,26 @@
 #' @param bin.minutes Single positive number, default \code{30}. Bin width
 #'   in minutes; must divide evenly into 1440 (e.g. 15, 20, 30, 60),
 #'   otherwise the function stops.
-#' @param aes.default Data frame of plot settings, one row per parameter
+#' @param aes.plotopts Data frame of plot settings, one row per parameter
 #'   (e.g. \code{plotopts_heatmap.csv}), with \code{$category},
 #'   \code{$parameter}, \code{$default.value} and optionally an
 #'   \code{$override.value} column (see Details).
 #'   Default \code{NULL}: the built-in settings are used (NOTE): the
 #'   \code{PLOTOPTS_plotact_heatmap} tab of Batz_reference_db, carried by the
 #'   package. A data frame given here is used instead.
+#'   (The old argument name \code{aes.default} is still read, with a WARNING.)
 #' @param project.name Character, default \code{"new.project"}. First part
 #'   of the saved file name.
 #' @param ... Plot settings typed into the call, named as the
-#'   \code{aes.default} \code{$parameter} rows (or fig.list setting
+#'   \code{aes.plotopts} \code{$parameter} rows (or fig.list setting
 #'   columns), e.g. \code{legend.position = "bottom"},
 #'   \code{plot.width = 8}. A vector is joined with ";". Each setting is
-#'   taken from the function call, then \code{aes.default} (its custom-style column, then
+#'   taken from the function call, then \code{aes.plotopts} (its custom-style column, then
 #'   \code{$default.value}). A setting given here does not need a row in
-#'   \code{aes.default}. A NOTE lists the settings used and any name the
+#'   \code{aes.plotopts}. A NOTE lists the settings used and any name the
 #'   function does not use.
 #' @param aes.style Character, default \code{"override.value"}. Column of
-#'   \code{aes.default} checked first for each parameter; blank cells fall
+#'   \code{aes.plotopts} checked first for each parameter; blank cells fall
 #'   back to \code{$default.value}. An old \code{overide.value} column is
 #'   still read when \code{aes.style = "override.value"} and there is no
 #'   \code{override.value} column.
@@ -106,7 +107,7 @@
 #' @param strip.special Logical, default \code{TRUE}. If \code{TRUE},
 #'   simplify or remove non-ASCII characters in \code{data} (see Details).
 #' @param strip.special.plotopts Logical, default \code{FALSE}. If
-#'   \code{TRUE}, clean \code{aes.default} the same way, so a label such as
+#'   \code{TRUE}, clean \code{aes.plotopts} the same way, so a label such as
 #'   "Temperature (degree C)" loses its symbol. If \code{FALSE}, symbols are
 #'   kept and unreadable characters stop the function (see Details).
 #'
@@ -129,11 +130,11 @@
 #' \dontrun{
 #' daily.result <- batz.plotactivity_daily.count(
 #'   data = readxl::read_excel("mine_only.xlsx"),
-#'   aes.default = read.csv("plotopts_dailycount.csv", stringsAsFactors = FALSE)
+#'   aes.plotopts = read.csv("plotopts_dailycount.csv", stringsAsFactors = FALSE)
 #' )
 #' heatmap.result <- batz.plotactivity_heatmap(
 #'   data = daily.result$data,
-#'   aes.default = read.csv("plotopts_heatmap.csv", stringsAsFactors = FALSE),
+#'   aes.plotopts = read.csv("plotopts_heatmap.csv", stringsAsFactors = FALSE),
 #'   bin.minutes = 30,
 #'   project.name = "myproject",
 #'   site.label = "site1"
@@ -146,7 +147,7 @@ batz.plotactivity_heatmap <- function(data,
                                        date.col = "date.monitoringnight",
                                        time.col = "time",
                                        bin.minutes = 30,
-                                       aes.default = NULL,
+                                       aes.plotopts = NULL,
                                        project.name = "new.project",
                                        aes.style = "override.value",
                                        site.label = "",
@@ -161,16 +162,17 @@ batz.plotactivity_heatmap <- function(data,
   ## special characters from every data-frame input before anything else
   ## (header standardization/checks included). special.strip() returns
   ## non-data-frames unchanged and only modifies these local copies.
-  objname.aes.default <- paste(deparse(substitute(aes.default)), collapse = "")
-  if (is.null(aes.default)) aes.default <- plotutil_default_plotopts("batz.plotactivity_heatmap")   # built-in settings
+  objname.aes.plotopts <- paste(deparse(substitute(aes.plotopts)), collapse = "")
+  if (is.null(aes.plotopts)) aes.plotopts <- plotutil_aes_legacy(plotutil_dots(...), "batz.plotactivity_heatmap")   # old argument name aes.default / plotopts
+  if (is.null(aes.plotopts)) aes.plotopts <- plotutil_default_plotopts("batz.plotactivity_heatmap")   # built-in settings
   data <- special.strip(data, strip.special)$df
-  ## aes.default is a settings table, not data - stripped only when
+  ## aes.plotopts is a settings table, not data - stripped only when
   ## strip.special.plotopts = TRUE (2026-10-02, per Josh); otherwise checked
   ## for characters that can't be read, with a readable error.
   if (isTRUE(strip.special.plotopts)) {
-    aes.default <- special.strip(aes.default, TRUE)$df
+    aes.plotopts <- special.strip(aes.plotopts, TRUE)$df
   } else {
-    special.check.plotopts(aes.default, "aes.default", objname.aes.default, "batz.plotactivity_heatmap")
+    special.check.plotopts(aes.plotopts, "aes.plotopts", objname.aes.plotopts, "batz.plotactivity_heatmap")
   }
 
   AES.DEFAULT.REQUIRED <- c("category", "parameter", "default.value")
@@ -221,9 +223,9 @@ batz.plotactivity_heatmap <- function(data,
   }
 
   problems <- c(
-    check.headers(aes.default, AES.DEFAULT.REQUIRED, "aes.default"),
-    check.parameters(aes.default, plotutil_required_left(AES.DEFAULT.REQUIRED.PARAMETERS, plot.inputs), "aes.default"),
-    check.duplicates(aes.default, "aes.default"),
+    check.headers(aes.plotopts, AES.DEFAULT.REQUIRED, "aes.plotopts"),
+    check.parameters(aes.plotopts, plotutil_required_left(AES.DEFAULT.REQUIRED.PARAMETERS, plot.inputs), "aes.plotopts"),
+    check.duplicates(aes.plotopts, "aes.plotopts"),
     check.data.headers(),
     check.duplicates(data, "data")
   )
@@ -240,18 +242,18 @@ batz.plotactivity_heatmap <- function(data,
 
   get.default <- function(param) {
     if (!is.null(v.in <- plotutil_input_get(plot.inputs, param))) return(v.in)   # function call first
-    row.idx <- which(plotutil_param_key(aes.default$parameter) == plotutil_param_key(param))
+    row.idx <- which(plotutil_param_key(aes.plotopts$parameter) == plotutil_param_key(param))
     if (length(row.idx) == 0) return(NA_character_)
-    val <- as.character(aes.default$default.value[row.idx[1]])
-    if (!is.na(aes.col <- plotutil_aes_style_col(aes.default, aes.style))) {
-      override <- aes.default[[aes.col]][row.idx[1]]
+    val <- as.character(aes.plotopts$default.value[row.idx[1]])
+    if (!is.na(aes.col <- plotutil_aes_style_col(aes.plotopts, aes.style))) {
+      override <- aes.plotopts[[aes.col]][row.idx[1]]
       if (!is.na(override) && nzchar(trimws(as.character(override)))) {
         val <- as.character(override)
       }
     }
     val
   }
-  plotutil_plot_inputs_check(plot.inputs, c(AES.DEFAULT.REQUIRED.PARAMETERS, aes.default$parameter), "batz.plotactivity_heatmap")
+  plotutil_plot_inputs_check(plot.inputs, c(AES.DEFAULT.REQUIRED.PARAMETERS, aes.plotopts$parameter), "batz.plotactivity_heatmap")
 
   data[[date.col]] <- as.Date(data[[date.col]])
   if (any(is.na(data[[date.col]]))) {

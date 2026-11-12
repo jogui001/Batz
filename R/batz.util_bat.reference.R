@@ -10,7 +10,7 @@
 #'   \item{\code{bat.ref.names()}}{data frame, tab \code{bat.names}: 54 species
 #'     plus 8 category labels (\code{All detections}, \code{HiF}, \code{Social}, ...).
 #'     Columns include \code{$region}, \code{$scientific_name}, \code{$common_name},
-#'     \code{$label_name}, \code{$label2_name},
+#'     \code{$label_name}, \code{$label2_name}, \code{$label3_name},
 #'     \code{$code4}, \code{$code6}, \code{$family} (blank for category labels),
 #'     listing-status and state columns, \code{$hibernation.strategy},
 #'     \code{$phonic.group} and \code{$notes}.}

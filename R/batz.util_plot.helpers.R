@@ -12,7 +12,8 @@
 #' @param fmt The fig.list row's \code{$facet.label_format}: any value
 #'   \code{batz.batusa_recode.names()} accepts for \code{batname.format.out}
 #'   (\code{"common_name"}, \code{"scientific_name"}, \code{"label_name"},
-#'   \code{"label2_name"}, \code{"code4"}, \code{"code6"}, \code{"both"}, ...). Quotes are dropped; blank or
+#'   \code{"label2_name"}, \code{"label3_name"}, \code{"code4"}, \code{"code6"},
+#'   \code{"both"}, ...). Quotes are dropped; blank or
 #'   \code{NA} means \code{"common_name"}.
 #' @param job.label,fn.name fig.list row label and calling function, used in
 #'   messages.
@@ -39,7 +40,8 @@ plotutil_facet_labels <- function(levels, fmt, job.label, fn.name, alt = "") {
   names(res) <- levels
   ## other names a $facet.label pair may use for a panel: species codes and names, AllDet, 40kMyo
   aka <- lapply(levels, function(l) l)
-  for (f in c("code4", "code6", "common_name", "scientific_name", "label_name", "label2_name")) {
+  lab.cols <- grep("^label[0-9]*_name$", names(batz.db("bat.ref.names")), value = TRUE)
+  for (f in c("code4", "code6", "common_name", "scientific_name", lab.cols)) {
     v <- tryCatch(as.character(suppressMessages(suppressWarnings(batz.batusa_recode.names(levels, batname.format.out = f)))),
                   error = function(e) rep(NA_character_, length(levels)))
     if (length(v) == length(levels)) for (i in seq_along(levels)) if (!is.na(v[i]) && nzchar(v[i])) aka[[i]] <- c(aka[[i]], v[i])
@@ -357,9 +359,9 @@ plotutil_split_facets <- function(entry, facet.raw, facet.header, fn.name) {
   out
 }
 
-#' Column of aes.default that holds the custom style (internal)
+#' Column of aes.plotopts that holds the custom style (internal)
 #'
-#' @param aes.default Plot-options (aes.default) data frame.
+#' @param aes.plotopts Plot-options (aes.plotopts) data frame.
 #' @param aes.style Name of the custom-style column (the plot functions'
 #'   default is \code{"override.value"}).
 #' @return \code{aes.style} when that column exists. When
@@ -368,10 +370,10 @@ plotutil_split_facets <- function(entry, facet.raw, facet.header, fn.name) {
 #'   \code{NA} when neither exists or \code{aes.style} is not a single value.
 #' @keywords internal
 #' @noRd
-plotutil_aes_style_col <- function(aes.default, aes.style) {
+plotutil_aes_style_col <- function(aes.plotopts, aes.style) {
   if (is.null(aes.style) || length(aes.style) != 1 || is.na(aes.style)) return(NA_character_)
-  if (aes.style %in% names(aes.default)) return(aes.style)
-  if (identical(aes.style, "override.value") && "overide.value" %in% names(aes.default)) return("overide.value")
+  if (aes.style %in% names(aes.plotopts)) return(aes.style)
+  if (identical(aes.style, "override.value") && "overide.value" %in% names(aes.plotopts)) return("overide.value")
   NA_character_
 }
 
@@ -469,6 +471,7 @@ plotutil_dots <- function(...) {
 #' @keywords internal
 #' @noRd
 plotutil_plot_inputs <- function(dots, fn) {
+  if (length(dots) && !is.null(names(dots))) dots <- dots[!names(dots) %in% c("aes.default", "plotopts")]   # old names of aes.plotopts
   if (!length(dots)) return(list())
   nm <- names(dots)
   if (is.null(nm) || any(is.na(nm) | !nzchar(nm)))
@@ -509,20 +512,20 @@ plotutil_required_left <- function(required, inputs) required[!plotutil_param_ke
 
 #' Built-in plot settings (plotopts) of a plot function (internal)
 #'
-#' Every plot function that takes \code{aes.default} uses its built-in
-#' settings table when \code{aes.default} is not given (\code{NULL}). The
+#' Every plot function that takes \code{aes.plotopts} uses its built-in
+#' settings table when \code{aes.plotopts} is not given (\code{NULL}). The
 #' tables are kept in Batz_reference_db (tabs \code{PLOTOPTS_*}, listed in
 #' its \code{database.names} tab as \code{plotopts.<function name>}) and
 #' carried by the package in \verb{R/sysdata.rda}
 #' (\code{\link{batz.util_refdb.sync}}). A NOTE says when they are used. A
-#' data frame given as \code{aes.default} is used instead, and the built-in
+#' data frame given as \code{aes.plotopts} is used instead, and the built-in
 #' table is not read.
 #' @param fn Plot function name, e.g. \code{"batz.plotactivity_observations"}.
 #' @keywords internal
 #' @noRd
 plotutil_default_plotopts <- function(fn) {
   d <- batz.db(paste0("plotopts.", fn))
-  cat(sprintf("NOTE: %s - no aes.default given: the built-in settings (Batz_reference_db) are used.\n", fn))
+  cat(sprintf("NOTE: %s - no aes.plotopts given: the built-in settings (Batz_reference_db) are used.\n", fn))
   d
 }
 
@@ -590,9 +593,8 @@ plotutil_figlist_labelformat <- function(fig.list, fn.name) {
   j <- which(std == "facet_label")[1]
   v <- tolower(trimws(gsub('"', "", as.character(fig.list[[j]]))))
   v <- v[!is.na(v) & nzchar(v) & v != "na"]
-  fmts <- c("common_name", "scientific_name", "label_name", "label2_name", "code4", "code6", "both", "common", "latin",
-            "scientific", "label", "label2")
-  if (all(v %in% fmts)) {                                    # name formats, or all blank / "NA"
+  fmts <- c("common_name", "scientific_name", "code4", "code6", "both", "common", "latin", "scientific")
+  if (all(v %in% fmts | grepl("^label[0-9]*(_name)?$", v))) {                                    # name formats, or all blank / "NA"
     names(fig.list)[j] <- "facet.label_format"
     cat(sprintf("WARNING: %s - fig.list has $facet.label but no $facet.label_format%s - used as $facet.label_format (the new name); $facet.label is now for alternative labels.\n",
                 fn.name, if (length(v)) sprintf(" (it holds name formats: %s)", paste(unique(v), collapse = ", ")) else ""))
@@ -676,5 +678,25 @@ plotutil_plot_dimensions <- function(job, inputs, job.label, fn.name) {
   if (length(m)) return(c(as.numeric(m[2]), as.numeric(m[4])))
   cat(sprintf("NOTE: %s - '%s': $plot.dimensions '%s' is not one of %s or \"<width> x <height>\" - the plotopts plot.width / plot.height are used.\n",
               fn.name, job.label, v, paste0('"', names(SIZES), '"', collapse = ", ")))
+  NULL
+}
+
+
+#' Plot settings given under the old argument name (internal)
+#'
+#' \code{aes.default} (fig.list plot functions) and \code{plotopts}
+#' (vegetation plots) were renamed \code{aes.plotopts} (2026-11-10). A call
+#' that still uses an old name passes it through \code{...}; this returns
+#' it (WARNING), or \code{NULL}.
+#' @keywords internal
+#' @noRd
+plotutil_aes_legacy <- function(dots, fn) {
+  if (!length(dots) || is.null(names(dots))) return(NULL)
+  for (nm in c("aes.default", "plotopts")) {
+    if (nm %in% names(dots) && !is.null(dots[[nm]])) {
+      cat(sprintf("WARNING: %s - argument '%s' is now called aes.plotopts - used as aes.plotopts.\n", fn, nm))
+      return(dots[[nm]])
+    }
+  }
   NULL
 }

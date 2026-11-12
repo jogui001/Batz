@@ -7,7 +7,7 @@
 batz.plotcover_bullseye(
   data,
   mic,
-  aes.default = NULL,
+  aes.plotopts = NULL,
   project.name = "new.project",
   aes.style = "override.value",
   dir.save = getwd(),
@@ -43,7 +43,7 @@ receipt. Required columns: \code{"ARU Label"}, \code{"Microphone Height"}
 and \code{"Vertical Microphone Orientation"} (degrees: 0 = level,
 90 = straight up, 270 = straight down).}
 
-\item{aes.default}{Data frame of plot settings, one row per parameter
+\item{aes.plotopts}{Data frame of plot settings, one row per parameter
 (e.g. \code{plotopts_bullseye.csv}, see
 \code{\link{batz.generate_plotopts}}). Needs \code{$category},
 \code{$parameter} and \code{$default.value}; an \code{$override.value}
@@ -51,13 +51,14 @@ column and \code{$notes} are optional. Its headers are not standardized.
 See Details for the parameters read.
 Default \code{NULL}: the built-in settings are used (NOTE): the
 \code{PLOTOPTS_plotcover_bullseye} tab of Batz_reference_db, carried by the
-package. A data frame given here is used instead.}
+package. A data frame given here is used instead.
+(The old argument name \code{aes.default} is still read, with a WARNING.)}
 
 \item{project.name}{Character, default \code{"new.project"}. First part of
 each saved file name.}
 
 \item{aes.style}{Character, default \code{"override.value"}. Column of
-\code{aes.default} checked first for each parameter; \code{$default.value}
+\code{aes.plotopts} checked first for each parameter; \code{$default.value}
 is used when that column is missing or blank for the row. An old
 \code{$overide.value} column is still read when \code{aes.style =
   "override.value"} and that column is absent.}
@@ -114,18 +115,18 @@ remove other non-ASCII characters (\code{°}, \code{µ}, ...) in \code{data}
 and \code{mic}, headers included, before anything else.}
 
 \item{strip.special.plotopts}{Logical, default \code{FALSE}. Same for
-\code{aes.default}. With \code{FALSE}, \code{aes.default} is left as is (so
+\code{aes.plotopts}. With \code{FALSE}, \code{aes.plotopts} is left as is (so
 labels keep symbols such as \code{°}), but the function stops with an
 error naming the rows if it holds characters that cannot be read in this
 R session.}
 
 \item{...}{Plot settings typed into the call, named as the
-\code{aes.default} \code{$parameter} rows (or fig.list setting
+\code{aes.plotopts} \code{$parameter} rows (or fig.list setting
 columns), e.g. \code{legend.position = "bottom"},
 \code{plot.width = 8}. A vector is joined with ";". Each setting is
-taken from the function call, then \code{aes.default} (its custom-style column, then
+taken from the function call, then \code{aes.plotopts} (its custom-style column, then
 \code{$default.value}). A setting given here does not need a row in
-\code{aes.default}. A NOTE lists the settings used and any name the
+\code{aes.plotopts}. A NOTE lists the settings used and any name the
 function does not use.}
 }
 \value{
@@ -153,7 +154,7 @@ and \code{aru_label}, \code{canopy_cover}, \code{microphone_height},
 \code{microphone.orientation_horizontal} and
 \code{microphone.orientation_vertical}.
 \item The arguments are checked (each bad value stops with an error).
-Then required headers, required \code{aes.default} parameter rows and
+Then required headers, required \code{aes.plotopts} parameter rows and
 duplicate column names are checked, and all problems found are reported
 together in one error.
 \item Cover values are converted to numbers: a range such as
@@ -165,7 +166,7 @@ saved. An ARU missing any of the four quadrants in \code{data} is
 skipped with a warning.
 }
 
-\strong{Settings.} Each parameter is looked up in \code{aes.default$parameter}
+\strong{Settings.} Each parameter is looked up in \code{aes.plotopts$parameter}
 (case-insensitive); the value in the \code{aes.style} column is used when
 present and not blank, otherwise \code{$default.value}. Required parameters:
 \describe{
@@ -250,14 +251,14 @@ printed as \code{Saved: ...}.
 }
 \examples{
 \dontrun{
-aes.default <- read.csv("plotopts_bullseye.csv", stringsAsFactors = FALSE)
+aes.plotopts <- read.csv("plotopts_bullseye.csv", stringsAsFactors = FALSE)
 cover <- read.csv("cover.csv", stringsAsFactors = FALSE, check.names = FALSE)
 mic <- read.csv("mic.csv", stringsAsFactors = FALSE, check.names = FALSE)
-batz.plotcover_bullseye(cover, mic, aes.default, project.name = "site1",
+batz.plotcover_bullseye(cover, mic, aes.plotopts, project.name = "site1",
                         dir.save = getwd())
 
 # canopy and understory only, arrow on both, panel letters
-batz.plotcover_bullseye(cover, mic, aes.default,
+batz.plotcover_bullseye(cover, mic, aes.plotopts,
                         sub.plots = c("canopy.bull", "understory.bull"),
                         arrow.panel = "all", panel.labels = c("(a)", "(b)"))
 }

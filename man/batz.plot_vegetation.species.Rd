@@ -14,7 +14,7 @@ batz.plot_vegetation.species(
   size = c("page", "half page", "powerpoint", "half powerpoint"),
   DBH = TRUE,
   dir.save = getwd(),
-  plotopts = NULL,
+  aes.plotopts = NULL,
   aes.style = "override.value",
   ...
 )
@@ -62,7 +62,8 @@ bars). See "DBH labels" in Details.}
 \item{dir.save}{Character, default \code{getwd()}. Folder the PNG is
 saved in (created if needed). \code{NULL} = no PNG.}
 
-\item{plotopts}{Plot settings: \code{NULL} (default; built-in defaults),
+\item{aes.plotopts}{Plot settings (the old argument name \code{plotopts}
+is still read, with a WARNING): \code{NULL} (default; built-in defaults),
 a data frame, or the path to a \code{.csv} or \code{.xlsx} file, laid
 out like \verb{plotopts_vegetation.species.csv}: columns
 \code{$category}, \code{$parameter}, \code{$default.value}, and
@@ -70,12 +71,12 @@ optionally \code{$override.value} and \code{$notes}. A parameter left
 out uses the built-in default. See "Settings" in Details.}
 
 \item{aes.style}{Character, default \code{"override.value"}. Name of the
-\code{plotopts} column read before \code{$default.value} (an old
+\code{aes.plotopts} column read before \code{$default.value} (an old
 \code{$overide.value} column is still read).}
 
 \item{...}{Any other setting listed in Details ("Settings"), typed into
 the call by name (e.g. \code{yaxe.max = 20}); used before
-\code{plotopts}.}
+\code{aes.plotopts}.}
 }
 \value{
 Invisibly, a list: \code{$plot} (the ggplot), \code{$counts} (one
@@ -104,11 +105,11 @@ is saved.
 \item the value typed into the function call in this R session
 (\code{site.names}, \code{site.colors}, \code{legend.position},
 \code{bar}, \code{size}, \code{DBH}, or any other setting by name in \code{...});
-\item \code{plotopts}: \code{$override.value} (\code{aes.style}) when
+\item \code{aes.plotopts}: \code{$override.value} (\code{aes.style}) when
 filled, else \code{$default.value};
 \item the built-in default (\code{batz.plot_vegetation.species.defaults()}).
 }
-\code{plotopts} can hold the five inputs above as \code{$parameter} rows
+\code{aes.plotopts} can hold the five inputs above as \code{$parameter} rows
 as well as these: \code{tree.columns}, \code{sapling.columns},
 \code{snag.columns}, \code{snag.include} (TRUE/FALSE), \code{snag.label},
 \code{site.column}, \code{species.titlecase} (TRUE/FALSE),

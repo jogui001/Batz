@@ -46,7 +46,7 @@
 #'   Only \code{$aru.name}, \code{$date}, \code{$time.zone}, \code{$sunset}
 #'   (Dusk) and \code{$sunrise.monitoringnight} (Dawn: the sunrise that ends
 #'   the night starting on \code{$date}) are used for drawing.
-#' @param aes.default Data frame of plot settings (plotopts), one row per
+#' @param aes.plotopts Data frame of plot settings (plotopts), one row per
 #'   parameter, e.g. \verb{plotopts_sm4heatmap.csv}. Required columns:
 #'   \code{$category}, \code{$parameter}, \code{$default.value}. The custom
 #'   style column (named by \code{aes.style}) and \code{$notes} are
@@ -54,18 +54,19 @@
 #'   Default \code{NULL}: the built-in settings are used (NOTE): the
 #'   \code{PLOTOPTS_plotsm4_heatmap} tab of Batz_reference_db, carried by the
 #'   package. A data frame given here is used instead.
+#'   (The old argument name \code{aes.default} is still read, with a WARNING.)
 #' @param project.name Character, default \code{"new.project"}. First part
 #'   of each saved file name.
 #' @param ... Plot settings typed into the call, named as the
-#'   \code{aes.default} \code{$parameter} rows (or fig.list setting
+#'   \code{aes.plotopts} \code{$parameter} rows (or fig.list setting
 #'   columns), e.g. \code{legend.position = "bottom"},
 #'   \code{plot.width = 8}. A vector is joined with ";". Each setting is
-#'   taken from the function call, then the fig.list row, then \code{aes.default} (its custom-style column, then
+#'   taken from the function call, then the fig.list row, then \code{aes.plotopts} (its custom-style column, then
 #'   \code{$default.value}). A setting given here does not need a row in
-#'   \code{aes.default}. A NOTE lists the settings used and any name the
+#'   \code{aes.plotopts}. A NOTE lists the settings used and any name the
 #'   function does not use.
 #' @param aes.style Character, default \code{"override.value"}. Name of the
-#'   \code{aes.default} column checked first for each parameter. When that
+#'   \code{aes.plotopts} column checked first for each parameter. When that
 #'   column does not exist, or its cell is blank, \code{$default.value} is
 #'   used. With the default, an old \code{$overide.value} column is still
 #'   read when there is no \code{$override.value} column.
@@ -77,7 +78,7 @@
 #'   check. FALSE leaves them as they are.
 #' @param strip.special.plotopts Logical, default \code{FALSE}. Same
 #'   clean-up for the settings tables \code{fig.list} and
-#'   \code{aes.default}. FALSE leaves them untouched (plot text keeps its
+#'   \code{aes.plotopts}. FALSE leaves them untouched (plot text keeps its
 #'   symbols), but a cell that cannot be read in this R session stops the
 #'   function with an error naming the table, the number of bad characters
 #'   and the first rows per header. TRUE strips them instead.
@@ -148,7 +149,7 @@
 #'   \item{\code{$time.start}, \code{$time.end}, \code{$time.interval}}{
 #'     Optional Y-axis settings, see "Y axis". Like every setting, they can
 #'     also be typed into the call (e.g. \code{time.start = "18:00"}) or
-#'     given in \code{aes.default}.}
+#'     given in \code{aes.plotopts}.}
 #' }
 #'
 #' \strong{Y axis.}
@@ -204,7 +205,7 @@
 #' \code{$time.zone} of the matched suntimes rows (UTC when there are
 #' none). No matching suntimes rows only gives a NOTE (no lines).
 #'
-#' \strong{plotopts (aes.default).} Each setting is read from the first row
+#' \strong{plotopts (aes.plotopts).} Each setting is read from the first row
 #' whose \code{$parameter} matches the name (ignoring case and
 #' spaces). The value is the \code{aes.style} column when that cell is not
 #' blank, otherwise \code{$default.value}. Only the fig.list columns listed
@@ -271,7 +272,7 @@
 #'   data = sm4.activity,
 #'   fig.list = fig.list,
 #'   suntimes = aru.suntimes,
-#'   aes.default = plotopts.sm4heatmap,
+#'   aes.plotopts = plotopts.sm4heatmap,
 #'   project.name = "gome"
 #' )
 #' result$ggplots[[1]]
@@ -279,7 +280,7 @@
 #'
 #' @export
 batz.plotsm4_heatmap <- function(data, fig.list, suntimes = NULL,
-                                  aes.default = NULL, project.name = "new.project",
+                                  aes.plotopts = NULL, project.name = "new.project",
                                   aes.style = "override.value",
                                   dir.save = getwd(),
                                   strip.special = TRUE,
@@ -293,12 +294,13 @@ batz.plotsm4_heatmap <- function(data, fig.list, suntimes = NULL,
   ## (header standardization/checks included). special.strip() returns
   ## non-data-frames unchanged and only modifies these local copies.
   objname.fig.list <- paste(deparse(substitute(fig.list)), collapse = "")
-  objname.aes.default <- paste(deparse(substitute(aes.default)), collapse = "")
+  objname.aes.plotopts <- paste(deparse(substitute(aes.plotopts)), collapse = "")
   fig.list <- plotutil_figlist_na(fig.list)       # "NA" = heading not used by this plot type
   fig.list <- plotutil_figlist_plot(fig.list, "batz.plotsm4_heatmap")   # only rows with $plot = TRUE or 1
   fig.list <- plotutil_figlist_labelformat(fig.list, "batz.plotsm4_heatmap")   # old $facet.label (a name format)
   if (is.data.frame(fig.list) && nrow(fig.list) == 0) return(invisible(list(plots = list(), ggplots = list())))
-  if (is.null(aes.default)) aes.default <- plotutil_default_plotopts("batz.plotsm4_heatmap")   # built-in settings
+  if (is.null(aes.plotopts)) aes.plotopts <- plotutil_aes_legacy(plotutil_dots(...), "batz.plotsm4_heatmap")   # old argument name aes.default / plotopts
+  if (is.null(aes.plotopts)) aes.plotopts <- plotutil_default_plotopts("batz.plotsm4_heatmap")   # built-in settings
   data <- special.strip(data, strip.special)$df
   ## fig.list is a settings table, not data - stripped only when
   ## strip.special.plotopts = TRUE (2026-10-02, per Josh); otherwise checked
@@ -310,13 +312,13 @@ batz.plotsm4_heatmap <- function(data, fig.list, suntimes = NULL,
   }
   has.sun <- !is.null(suntimes)                  # no suntimes: no Dawn / Dusk lines
   if (has.sun) suntimes <- special.strip(suntimes, strip.special)$df
-  ## aes.default is a settings table, not data - stripped only when
+  ## aes.plotopts is a settings table, not data - stripped only when
   ## strip.special.plotopts = TRUE (2026-10-02, per Josh); otherwise checked
   ## for characters that can't be read, with a readable error.
   if (isTRUE(strip.special.plotopts)) {
-    aes.default <- special.strip(aes.default, TRUE)$df
+    aes.plotopts <- special.strip(aes.plotopts, TRUE)$df
   } else {
-    special.check.plotopts(aes.default, "aes.default", objname.aes.default, "batz.plotsm4_heatmap")
+    special.check.plotopts(aes.plotopts, "aes.plotopts", objname.aes.plotopts, "batz.plotsm4_heatmap")
   }
 
   ## $aru -> $aru.name compatibility shim - see @details. Runs BEFORE the
@@ -361,7 +363,7 @@ batz.plotsm4_heatmap <- function(data, fig.list, suntimes = NULL,
   data.canon        <- canonicalize.headers(data, DATA.REQUIRED)
   suntimes.canon    <- if (has.sun) canonicalize.headers(suntimes, SUNTIMES.REQUIRED) else list(df = NULL, missing = character(0))
   fig.list.canon    <- canonicalize.headers(fig.list, FIG.LIST.REQUIRED)
-  aes.default.canon <- canonicalize.headers(aes.default, AES.DEFAULT.REQUIRED)
+  aes.plotopts.canon <- canonicalize.headers(aes.plotopts, AES.DEFAULT.REQUIRED)
 
   missing.msg <- function(canon, label) {
     if (length(canon$missing) > 0) {
@@ -392,12 +394,12 @@ batz.plotsm4_heatmap <- function(data, fig.list, suntimes = NULL,
     missing.msg(data.canon, "data"),
     missing.msg(suntimes.canon, "suntimes"),
     missing.msg(fig.list.canon, "fig.list"),
-    missing.msg(aes.default.canon, "aes.default"),
-    check.parameters(aes.default.canon$df, plotutil_required_left(AES.DEFAULT.REQUIRED.PARAMETERS, plot.inputs), "aes.default"),
+    missing.msg(aes.plotopts.canon, "aes.plotopts"),
+    check.parameters(aes.plotopts.canon$df, plotutil_required_left(AES.DEFAULT.REQUIRED.PARAMETERS, plot.inputs), "aes.plotopts"),
     check.duplicates(data, "data"),
     if (has.sun) check.duplicates(suntimes, "suntimes"),
     check.duplicates(fig.list, "fig.list"),
-    check.duplicates(aes.default, "aes.default")
+    check.duplicates(aes.plotopts, "aes.plotopts")
   )
   if (length(problems) > 0) {
     stop(paste(problems, collapse = "\n\n"))
@@ -406,7 +408,7 @@ batz.plotsm4_heatmap <- function(data, fig.list, suntimes = NULL,
   data        <- data.canon$df
   suntimes    <- suntimes.canon$df
   fig.list    <- fig.list.canon$df
-  aes.default <- aes.default.canon$df
+  aes.plotopts <- aes.plotopts.canon$df
 
   parse.flex.date <- function(x) {
     out <- as.Date(rep(NA_character_, length(x)))
@@ -432,18 +434,18 @@ batz.plotsm4_heatmap <- function(data, fig.list, suntimes = NULL,
 
   get.default <- function(param) {
     if (!is.null(v.in <- plotutil_input_get(plot.inputs, param))) return(v.in)   # function call first
-    row.idx <- which(plotutil_param_key(aes.default$parameter) == plotutil_param_key(param))
+    row.idx <- which(plotutil_param_key(aes.plotopts$parameter) == plotutil_param_key(param))
     if (length(row.idx) == 0) return(NA_character_)
-    val <- as.character(aes.default$default.value[row.idx[1]])
-    if (!is.na(aes.col <- plotutil_aes_style_col(aes.default, aes.style))) {
-      override <- aes.default[[aes.col]][row.idx[1]]
+    val <- as.character(aes.plotopts$default.value[row.idx[1]])
+    if (!is.na(aes.col <- plotutil_aes_style_col(aes.plotopts, aes.style))) {
+      override <- aes.plotopts[[aes.col]][row.idx[1]]
       if (!is.na(override) && nzchar(trimws(as.character(override)))) {
         val <- as.character(override)
       }
     }
     val
   }
-  plotutil_plot_inputs_check(plot.inputs, c(AES.DEFAULT.REQUIRED.PARAMETERS, aes.default$parameter, names(fig.list), "plot.dimensions", "plot.dimentions"), "batz.plotsm4_heatmap")
+  plotutil_plot_inputs_check(plot.inputs, c(AES.DEFAULT.REQUIRED.PARAMETERS, aes.plotopts$parameter, names(fig.list), "plot.dimensions", "plot.dimentions"), "batz.plotsm4_heatmap")
 
   get.setting <- function(job, param) {
     if (!is.null(v.in <- plotutil_input_get(plot.inputs, param))) return(v.in)   # function call, then fig.list, then plotopts

@@ -20,7 +20,7 @@
 #'   (m), \code{"Horizontal Microphone Orientation"} (compass bearing, degrees)
 #'   and \code{"Vertical Microphone Orientation"} (degrees: 0 = level,
 #'   90 = straight up, 270 = straight down).
-#' @param aes.default Data frame of plot settings, one row per parameter
+#' @param aes.plotopts Data frame of plot settings, one row per parameter
 #'   (e.g. \code{plotopts_bullseye.csv}, see
 #'   \code{\link{batz.generate_plotopts}}). Needs \code{$category},
 #'   \code{$parameter} and \code{$default.value}; an \code{$override.value}
@@ -29,18 +29,19 @@
 #'   Default \code{NULL}: the built-in settings are used (NOTE): the
 #'   \code{PLOTOPTS_plotcover_bullseye} tab of Batz_reference_db, carried by the
 #'   package. A data frame given here is used instead.
+#'   (The old argument name \code{aes.default} is still read, with a WARNING.)
 #' @param project.name Character, default \code{"new.project"}. First part of
 #'   each saved file name.
 #' @param ... Plot settings typed into the call, named as the
-#'   \code{aes.default} \code{$parameter} rows (or fig.list setting
+#'   \code{aes.plotopts} \code{$parameter} rows (or fig.list setting
 #'   columns), e.g. \code{legend.position = "bottom"},
 #'   \code{plot.width = 8}. A vector is joined with ";". Each setting is
-#'   taken from the function call, then \code{aes.default} (its custom-style column, then
+#'   taken from the function call, then \code{aes.plotopts} (its custom-style column, then
 #'   \code{$default.value}). A setting given here does not need a row in
-#'   \code{aes.default}. A NOTE lists the settings used and any name the
+#'   \code{aes.plotopts}. A NOTE lists the settings used and any name the
 #'   function does not use.
 #' @param aes.style Character, default \code{"override.value"}. Column of
-#'   \code{aes.default} checked first for each parameter; \code{$default.value}
+#'   \code{aes.plotopts} checked first for each parameter; \code{$default.value}
 #'   is used when that column is missing or blank for the row. An old
 #'   \code{$overide.value} column is still read when \code{aes.style =
 #'   "override.value"} and that column is absent.
@@ -84,7 +85,7 @@
 #'   remove other non-ASCII characters (\code{°}, \code{µ}, ...) in \code{data}
 #'   and \code{mic}, headers included, before anything else.
 #' @param strip.special.plotopts Logical, default \code{FALSE}. Same for
-#'   \code{aes.default}. With \code{FALSE}, \code{aes.default} is left as is (so
+#'   \code{aes.plotopts}. With \code{FALSE}, \code{aes.plotopts} is left as is (so
 #'   labels keep symbols such as \code{°}), but the function stops with an
 #'   error naming the rows if it holds characters that cannot be read in this
 #'   R session.
@@ -101,7 +102,7 @@
 #'     \code{microphone.orientation_horizontal} and
 #'     \code{microphone.orientation_vertical}.
 #'   \item The arguments are checked (each bad value stops with an error).
-#'     Then required headers, required \code{aes.default} parameter rows and
+#'     Then required headers, required \code{aes.plotopts} parameter rows and
 #'     duplicate column names are checked, and all problems found are reported
 #'     together in one error.
 #'   \item Cover values are converted to numbers: a range such as
@@ -113,7 +114,7 @@
 #'     skipped with a warning.
 #' }
 #'
-#' \strong{Settings.} Each parameter is looked up in \code{aes.default$parameter}
+#' \strong{Settings.} Each parameter is looked up in \code{aes.plotopts$parameter}
 #' (case-insensitive); the value in the \code{aes.style} column is used when
 #' present and not blank, otherwise \code{$default.value}. Required parameters:
 #' \describe{
@@ -208,18 +209,18 @@
 #' @export
 #' @examples
 #' \dontrun{
-#' aes.default <- read.csv("plotopts_bullseye.csv", stringsAsFactors = FALSE)
+#' aes.plotopts <- read.csv("plotopts_bullseye.csv", stringsAsFactors = FALSE)
 #' cover <- read.csv("cover.csv", stringsAsFactors = FALSE, check.names = FALSE)
 #' mic <- read.csv("mic.csv", stringsAsFactors = FALSE, check.names = FALSE)
-#' batz.plotcover_bullseye(cover, mic, aes.default, project.name = "site1",
+#' batz.plotcover_bullseye(cover, mic, aes.plotopts, project.name = "site1",
 #'                         dir.save = getwd())
 #'
 #' # canopy and understory only, arrow on both, panel letters
-#' batz.plotcover_bullseye(cover, mic, aes.default,
+#' batz.plotcover_bullseye(cover, mic, aes.plotopts,
 #'                         sub.plots = c("canopy.bull", "understory.bull"),
 #'                         arrow.panel = "all", panel.labels = c("(a)", "(b)"))
 #' }
-batz.plotcover_bullseye <- function(data, mic, aes.default = NULL, project.name = "new.project",
+batz.plotcover_bullseye <- function(data, mic, aes.plotopts = NULL, project.name = "new.project",
                                      aes.style = "override.value",
                                      dir.save = getwd(),
                                      sub.plots = c("canopy.bull", "mic.bar",
@@ -241,17 +242,18 @@ batz.plotcover_bullseye <- function(data, mic, aes.default = NULL, project.name 
   ## special characters from every data-frame input before anything else
   ## (header standardization/checks included). special.strip() returns
   ## non-data-frames unchanged and only modifies these local copies.
-  objname.aes.default <- paste(deparse(substitute(aes.default)), collapse = "")
-  if (is.null(aes.default)) aes.default <- plotutil_default_plotopts("batz.plotcover_bullseye")   # built-in settings
+  objname.aes.plotopts <- paste(deparse(substitute(aes.plotopts)), collapse = "")
+  if (is.null(aes.plotopts)) aes.plotopts <- plotutil_aes_legacy(plotutil_dots(...), "batz.plotcover_bullseye")   # old argument name aes.default / plotopts
+  if (is.null(aes.plotopts)) aes.plotopts <- plotutil_default_plotopts("batz.plotcover_bullseye")   # built-in settings
   data <- special.strip(data, strip.special)$df
   mic <- special.strip(mic, strip.special)$df
-  ## aes.default is a settings table, not data - stripped only when
+  ## aes.plotopts is a settings table, not data - stripped only when
   ## strip.special.plotopts = TRUE (2026-10-02, per Josh); otherwise checked
   ## for characters that can't be read, with a readable error.
   if (isTRUE(strip.special.plotopts)) {
-    aes.default <- special.strip(aes.default, TRUE)$df
+    aes.plotopts <- special.strip(aes.plotopts, TRUE)$df
   } else {
-    special.check.plotopts(aes.default, "aes.default", objname.aes.default, "batz.plotcover_bullseye")
+    special.check.plotopts(aes.plotopts, "aes.plotopts", objname.aes.plotopts, "batz.plotcover_bullseye")
   }
 
   names(data) <- standardize.headers(names(data))
@@ -321,7 +323,7 @@ batz.plotcover_bullseye <- function(data, mic, aes.default = NULL, project.name 
     ## saved file name is now always "<project.name>_<ARU>_<timestamp>.png"
     ## (see @details, "Settings resolution (round nineteen)"); this setting
     ## is no longer read at all. An $output.filename.pattern row left in an
-    ## existing aes.default sheet is harmless (simply ignored).
+    ## existing aes.plotopts sheet is harmless (simply ignored).
     ## NOTE: "mic.panel.xlab" also deliberately removed from this required
     ## list per Josh's sixteenth follow-up (2026-09-15) - no longer read by
     ## this function at all (the mic.bar panel's X-axis title is now
@@ -331,7 +333,7 @@ batz.plotcover_bullseye <- function(data, mic, aes.default = NULL, project.name 
     ## this function at all (see @details, "Figure sizing"): auto.scale =
     ## TRUE now hardcodes a fixed 6.5in total width, and auto.scale =
     ## FALSE computes total width from subplot.size.width instead. A
-    ## $plot.width row left in an existing aes.default sheet is harmless
+    ## $plot.width row left in an existing aes.plotopts sheet is harmless
     ## (simply ignored), so this is a required-check relaxation only, not
     ## a breaking change for anyone with an older settings CSV.
     ## NOTE: "axis.text.size" deliberately removed from this required list
@@ -343,7 +345,7 @@ batz.plotcover_bullseye <- function(data, mic, aes.default = NULL, project.name 
     ## seventeenth follow-up's auto-shrink - see @details, "Figure sizing")
     ## minus 2pt, rather than an independent fixed setting - see @details,
     ## "Axis label sizing". An $axis.text.size row left in an existing
-    ## aes.default sheet is harmless (simply ignored).
+    ## aes.plotopts sheet is harmless (simply ignored).
   )
 
   ## Which panels to draw and in what order, per Josh (2026-09-15):
@@ -417,11 +419,11 @@ batz.plotcover_bullseye <- function(data, mic, aes.default = NULL, project.name 
   problems <- c(
     check.headers(data, DATA.REQUIRED, "data"),
     check.headers(mic, MIC.REQUIRED, "mic"),
-    check.headers(aes.default, AES.DEFAULT.REQUIRED, "aes.default"),
-    check.parameters(aes.default, plotutil_required_left(AES.DEFAULT.REQUIRED.PARAMETERS, plot.inputs), "aes.default"),
+    check.headers(aes.plotopts, AES.DEFAULT.REQUIRED, "aes.plotopts"),
+    check.parameters(aes.plotopts, plotutil_required_left(AES.DEFAULT.REQUIRED.PARAMETERS, plot.inputs), "aes.plotopts"),
     check.duplicates(data, "data"),
     check.duplicates(mic, "mic"),
-    check.duplicates(aes.default, "aes.default")
+    check.duplicates(aes.plotopts, "aes.plotopts")
   )
   if (length(problems) > 0) stop(paste(problems, collapse = "\n\n"))
 
@@ -435,18 +437,18 @@ batz.plotcover_bullseye <- function(data, mic, aes.default = NULL, project.name 
   ## name (see the main loop below).
   get.default <- function(param) {
     if (!is.null(v.in <- plotutil_input_get(plot.inputs, param))) return(v.in)   # function call first
-    row.idx <- which(plotutil_param_key(aes.default$parameter) == plotutil_param_key(param))
+    row.idx <- which(plotutil_param_key(aes.plotopts$parameter) == plotutil_param_key(param))
     if (length(row.idx) == 0) return(NA_character_)
-    val <- as.character(aes.default$default.value[row.idx[1]])
-    if (!is.na(aes.col <- plotutil_aes_style_col(aes.default, aes.style))) {
-      override <- aes.default[[aes.col]][row.idx[1]]
+    val <- as.character(aes.plotopts$default.value[row.idx[1]])
+    if (!is.na(aes.col <- plotutil_aes_style_col(aes.plotopts, aes.style))) {
+      override <- aes.plotopts[[aes.col]][row.idx[1]]
       if (!is.na(override) && nzchar(trimws(as.character(override)))) {
         val <- as.character(override)
       }
     }
     val
   }
-  plotutil_plot_inputs_check(plot.inputs, c(AES.DEFAULT.REQUIRED.PARAMETERS, aes.default$parameter), "batz.plotcover_bullseye")
+  plotutil_plot_inputs_check(plot.inputs, c(AES.DEFAULT.REQUIRED.PARAMETERS, aes.plotopts$parameter), "batz.plotcover_bullseye")
 
   ## "Take the midpoint for each category, e.g. 25-50 would be 37.5, if
   ## there is a single number use that number." Real data uses underscore-
@@ -514,7 +516,7 @@ batz.plotcover_bullseye <- function(data, mic, aes.default = NULL, project.name 
     ## whatever the resolved title size is that render - see @details,
     ## "Axis label sizing". NULL (e.g. when this builder is called
     ## directly, as some tests do) falls back to $axis.text.size if that
-    ## row is still present in aes.default (harmless if it is - see the
+    ## row is still present in aes.plotopts (harmless if it is - see the
     ## required-parameters note above), same fallback pattern as
     ## title.size.override.
     axis.text.size <- if (is.null(axis.text.size.override)) as.numeric(get.default("axis.text.size")) else axis.text.size.override
@@ -781,7 +783,7 @@ batz.plotcover_bullseye <- function(data, mic, aes.default = NULL, project.name 
   ## itself renders square (true for this function's default 3-equal-
   ## column/plot.width/plot.height layout, which also keeps the two
   ## coord_polar bullseye panels perfectly circular - not literally
-  ## guaranteed for every possible aes.default override).
+  ## guaranteed for every possible aes.plotopts override).
   build.mic.panel <- function(mic.height, vert.orient, title.size.override = NULL, axis.text.size.override = NULL) {
     mic.panel.title <- get.default("mic.panel.title")
     ## $mic.panel.xlab (formerly "Ground Level") is no longer read here -

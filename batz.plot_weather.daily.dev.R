@@ -88,3 +88,14 @@ print(cbind(r11s$nights[, c("station", "night")],
             gust.max  = round(r11g$nights$wind.max, 2), gust.pass  = r11g$nights$pass.auto))
 stopifnot("wind.speed.ms" %in% names(r11s$data), "wind.gust.ms" %in% names(r11g$data))   # $data header follows wind.type
 # the right-hand axis title reads "Wind gust (m/s) and precipitation (mm)" on the gust plots
+
+## ---- aes.plotopts / aes.style (2026-11-10): settings from a plotopts file ----------
+## order: function call > aes.plotopts > built-in defaults; a value equal to the default changes nothing
+batz.generate_plotopts("batz.plot_weather.daily", project.name = "Bristol NH", dir.save = tempdir())
+po <- read.csv(file.path(tempdir(), "Bristol NH_plotopts_batz.plot_weather.daily.csv"), check.names = FALSE)
+po$`Bristol NH`[po$parameter == "panels"] <- "4"                   # 4 nights per PNG
+po$`Bristol NH`[po$parameter == "temp.range"] <- "5;30"
+r12 <- batz.plot_weather.daily(weather, suntimes = suntimes, aes.plotopts = po, aes.style = "Bristol NH",
+                               dir.save = file.path(tempdir(), "wx_plotopts"))   # NOTE: settings from aes.plotopts: panels, temp.range
+r13 <- batz.plot_weather.daily(weather, suntimes = suntimes, aes.plotopts = po, aes.style = "Bristol NH", panels = 6,
+                               dir.save = file.path(tempdir(), "wx_plotopts_call"))   # panels from the call (6), temp.range from po

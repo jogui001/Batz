@@ -9,7 +9,8 @@ batz.generate_plotopts(
     "batz.plotactivity_observations", "batz.plotdetections_first.last",
     "batz.plotcover_bullseye", "batz.plotactivity_daily.count",
     "batz.plotactivity_heatmap", "batz.plotactivity_heatmap2", "batz.plotsm4_heatmap",
-    "batz.plot_vegetation.species", "batz.plot_vegetation.dbh"),
+    "batz.plot_vegetation.species", "batz.plot_vegetation.dbh",
+    "batz.plot_weather.daily"),
   project.name = "new project",
   dir.save = getwd(),
   strip.special.plotopts = FALSE
@@ -24,10 +25,14 @@ every plot function with built-in settings:
 \code{"batz.plotcover_bullseye"}, \code{"batz.plotactivity_daily.count"},
 \code{"batz.plotactivity_heatmap"}, \code{"batz.plotactivity_heatmap2"},
 \code{"batz.plotsm4_heatmap"}, \code{"batz.plot_vegetation.species"},
-\code{"batz.plot_vegetation.dbh"}.}
+\code{"batz.plot_vegetation.dbh"}, \code{"batz.plot_weather.daily"}.}
 
 \item{project.name}{Character, default \code{"new project"}. Leading part
-of each output file name.}
+of each output file name, and the name of the column that holds the
+project's own settings (written as \code{$override.value} in the
+built-in table). \code{""}: the column keeps the name
+\code{override.value} and the files are named
+\verb{plotopts_<function.name>.csv}.}
 
 \item{dir.save}{Directory the settings files are written to (created if
 missing). Default \code{getwd()}.}
@@ -45,9 +50,11 @@ file name is printed.
 \description{
 Writes the built-in plot settings of each requested plot function to a
 new project file named \verb{<project.name>_plotopts_<function.name>.csv}.
-Edit the \code{$override.value} column of the copy to customise a
-project's plots, then pass it as the function's \code{aes.default}
-(or \code{plotopts}).
+The \code{$override.value} column is named after the project
+(\code{project.name}). Edit that column of the copy to customise a
+project's plots, then pass the file as the function's
+\code{aes.plotopts} with \code{aes.style = <project.name>} (the column
+read before \code{$default.value}).
 }
 \details{
 \strong{Source.} The settings come from Batz_reference_db, the one master
@@ -55,10 +62,11 @@ copy of the Batz tables: its \code{PLOTOPTS_*} tabs, listed in the
 \code{database.names} tab as \code{plotopts.<function name>}. The package
 carries a copy of them (\code{\link{batz.util_refdb.sync}}), so the file
 written matches the installed version. They are the same settings each
-plot function uses when no \code{aes.default} is given.
+plot function uses when no \code{aes.plotopts} is given.
 
 \strong{Copy.} Every column is written as text, as stored; no settings
-are added, removed or computed. With \code{strip.special.plotopts = TRUE},
+are added, removed or computed. Only the \code{$override.value} header is
+renamed to \code{project.name} (kept when \code{project.name = ""}). With \code{strip.special.plotopts = TRUE},
 special characters are simplified or removed first. A name in
 \code{generate.files} with no built-in settings stops the function with
 an error that lists the recognised names.
@@ -67,6 +75,11 @@ an error that lists the recognised names.
 \dontrun{
 # Settings files for every plot function, into a project sub-folder
 batz.generate_plotopts(project.name = "acme.wetlands.2026", dir.save = "acme_project")
+# then, e.g.:
+# batz.plotsm4_heatmap(data, fig.list,
+#   aes.plotopts = read.csv("acme_project/acme.wetlands.2026_plotopts_batz.plotsm4_heatmap.csv",
+#                           check.names = FALSE),
+#   aes.style = "acme.wetlands.2026")
 
 # One function only
 batz.generate_plotopts(generate.files = "batz.plotcover_bullseye",

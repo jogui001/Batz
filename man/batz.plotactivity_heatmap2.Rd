@@ -7,7 +7,7 @@
 batz.plotactivity_heatmap2(
   data,
   fig.list = NULL,
-  aes.default = NULL,
+  aes.plotopts = NULL,
   date.col = "date.monitoringnight",
   time.col = "pool.start",
   bin.intervals = "15 min",
@@ -37,12 +37,13 @@ plotted; rows with \code{FALSE}, any other entry or a blank are
 skipped (NOTE). A fig.list with no \code{$plot} column has every
 row plotted (NOTE).}
 
-\item{aes.default}{Optional plot-settings data frame
+\item{aes.plotopts}{Optional plot-settings data frame
 (\code{plotopts_heatmap2.csv}) with \code{$category},
 \code{$parameter}, \code{$default.value}, plus the \code{aes.style}
 column. Default \code{NULL}: the built-in settings are used (NOTE): the
 \code{PLOTOPTS_plotact_heatmap2} tab of Batz_reference_db, carried by the
-package. A data frame given here is used instead.}
+package. A data frame given here is used instead.
+(The old argument name \code{aes.default} is still read, with a WARNING.)}
 
 \item{date.col}{Character, default \code{"date.monitoringnight"}. Date
 column, and the day layout: \code{"date.monitoringnight"} (noon to
@@ -81,7 +82,7 @@ of the file name when \code{fig.list = NULL} (fig.list plots are named
 from \code{$plot.name}).}
 
 \item{aes.style}{Character, default \code{"override.value"}. Column of
-\code{aes.default} that overrides \code{$default.value} when filled. An
+\code{aes.plotopts} that overrides \code{$default.value} when filled. An
 old \code{overide.value} column is still read when
 \code{aes.style = "override.value"} and there is no
 \code{override.value} column.}
@@ -91,7 +92,7 @@ saved in (created if needed).}
 
 \item{...}{Plotopts settings typed into the call (e.g.
 \code{legend.position = "top"}, \code{plot.width = 8}); a vector is
-joined with ";". Used before the fig.list row and \code{aes.default}
+joined with ";". Used before the fig.list row and \code{aes.plotopts}
 (see "Where each setting comes from"). A NOTE lists the settings used
 and any name the function does not use.}
 }
@@ -141,7 +142,7 @@ through \code{time.interval}, plus plotopts-only settings such as
 \code{plot.width}) is taken from, in order: (1) the function call: the
 argument, if you passed it, or a plotopts setting typed into \code{...}
 (e.g. \code{legend.position = "top"}); (2) the fig.list row's column of
-that name, if filled; (3) \code{aes.default} (its \code{aes.style}
+that name, if filled; (3) \code{aes.plotopts} (its \code{aes.style}
 column, then \code{$default.value}); (4) the argument's default or the
 built-in default below. Plotopts-only
 settings and their built-in defaults: \code{legend.title}
@@ -241,7 +242,8 @@ facet; a heatmap cannot overlay it).}
 \item{\code{$facet.label_format}}{Format of species facet titles
 (\code{"common_name"}, \code{"scientific_name"}, \code{"label_name"}
 (e.g. "Big brown (EPFU)"), \code{"label2_name"} (e.g. "Big brown bat
-(EPFU)"), \code{"code4"}, \code{"code6"}, \code{"both"}; blank =
+(EPFU)"), \code{"label3_name"} (e.g. "Arizona bat (MYOC)"),
+\code{"code4"}, \code{"code6"}, \code{"both"}; blank =
 \code{"common_name"}). An
 older fig.list whose \code{$facet.label} holds these formats is read
 as \code{$facet.label_format} (WARNING).}
@@ -284,7 +286,7 @@ batz.plotactivity_heatmap2(plfr, bin.scale = "continuous",
 heat2.figlist <- read.csv("heat2.figlist.csv", check.names = FALSE)
 plotopts <- read.csv("plotopts_heatmap2.csv", check.names = FALSE)
 batz.plotactivity_heatmap2(plfr, fig.list = heat2.figlist,
-  aes.default = plotopts, dir.save = "C:/path/to/figures")
+  aes.plotopts = plotopts, dir.save = "C:/path/to/figures")
 }
 
 }

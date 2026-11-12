@@ -34,7 +34,9 @@ in \code{$common.name}: \code{"full"} = \code{"<common> (<latin>)"}
 followed directly (no separator) by the hibernation strategy;
 \code{"both"} = \code{"<common> (<latin>)"}; \code{"common"};
 \code{"latin"}; \code{"label_name"} (e.g. \code{"Big brown (EPFU)"});
-or \code{"label2_name"} (e.g. \code{"Big brown bat (EPFU)"}).}
+\code{"label2_name"} (e.g. \code{"Big brown bat (EPFU)"}); or
+\code{"label3_name"} (e.g. \code{"Arizona bat (MYOC)"}) - any
+\code{label<N>_name} column of the bat table.}
 
 \item{bat.code}{Character, default \code{"code4"}. Code shown in
 \code{$species.code}: \code{"code4"}, \code{"code6"}, or \code{"none"}

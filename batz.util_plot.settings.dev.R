@@ -112,4 +112,14 @@ ok(h5$ggplot$theme$plot.title$size == 31, "given aes.default replaces the built-
 h6 <- batz.plotactivity_heatmap(c4$data, dir.save = dir.out, date.col = "monnight", )
 ok(!is.null(h6$ggplot), "trailing comma in the call is ignored")
 
+## aes.plotopts (2026-11-10): aes.default renamed; the old name is still read (WARNING)
+h7 <- batz.plotactivity_heatmap(c4$data, aes.plotopts = po.h, dir.save = dir.out, date.col = "monnight")
+ok(h7$ggplot$theme$plot.title$size == 31, "aes.plotopts is used")
+h8 <- batz.plotactivity_heatmap(c4$data, aes.default = po.h, dir.save = dir.out, date.col = "monnight")   # WARNING: ... now called aes.plotopts
+ok(h8$ggplot$theme$plot.title$size == 31, "old argument name aes.default still read")
+## aes.style = a project column (as written by batz.generate_plotopts)
+po.p <- po.h; names(po.p)[names(po.p) == "override.value"] <- "acme"; po.p$acme[po.p$parameter == "plot.title.size"] <- "27"
+h9 <- batz.plotactivity_heatmap(c4$data, aes.plotopts = po.p, aes.style = "acme", dir.save = dir.out, date.col = "monnight")
+ok(h9$ggplot$theme$plot.title$size == 27, "aes.style names the project column")
+
 cat("\nALL TESTS PASSED - PNGs in", dir.out, "\n")

@@ -7,7 +7,7 @@
 batz.plot_heat.site.species(
   data,
   fig.list,
-  aes.default = NULL,
+  aes.plotopts = NULL,
   spp.id = "species",
   groupby.date = "date.monitoringnight",
   groupby.time = "time",
@@ -35,7 +35,7 @@ row is skipped (NOTE).}
 \code{$plot.set}, \code{$date.start}, \code{$date.end},
 \code{$xaxe.title}, \code{$yaxe.title}. Optional:
 \code{$plot.group}, \code{$group.labels}, \code{$site.exclude},
-\code{$site.bold}. A row can also override any \code{aes.default}
+\code{$site.bold}. A row can also override any \code{aes.plotopts}
 parameter with a column of the same name (e.g. \code{$bin.minutes},
 \code{$time.start}). See Details.
 Cells holding "NA" (a heading not used by this plot type, as in
@@ -45,14 +45,15 @@ plotted; rows with \code{FALSE}, any other entry or a blank are
 skipped (NOTE). A fig.list with no \code{$plot} column has every
 row plotted (NOTE).}
 
-\item{aes.default}{Data frame of plot settings (plotopts), normally
+\item{aes.plotopts}{Data frame of plot settings (plotopts), normally
 \verb{plotopts_heat.site.species.csv}. Required columns:
 \code{$category}, \code{$parameter}, \code{$default.value}. The custom
 style column (named by \code{aes.style}) and \code{$notes} are
 optional. See "plotopts" in Details.
 Default \code{NULL}: the built-in settings are used (NOTE): the
 \code{PLOTOPTS_plot_heat.site.species} tab of Batz_reference_db, carried by the
-package. A data frame given here is used instead.}
+package. A data frame given here is used instead.
+(The old argument name \code{aes.default} is still read, with a WARNING.)}
 
 \item{spp.id}{Character, default \code{"species"}. Name of the species
 column in \code{data}.}
@@ -74,7 +75,7 @@ dropped).}
 of each saved file name.}
 
 \item{aes.style}{Character, default \code{"override.value"}. Name of the
-\code{aes.default} column checked first for each parameter. When that
+\code{aes.plotopts} column checked first for each parameter. When that
 column does not exist, or its cell is blank, \code{$default.value} is
 used. With the default, an old \code{$overide.value} column is still
 read when there is no \code{$override.value} column. A non-blank
@@ -88,17 +89,17 @@ accented letters and removes other non-ASCII characters in \code{data}
 (local copy only) before matching. FALSE leaves them as they are.}
 
 \item{strip.special.plotopts}{Logical, default \code{FALSE}. Same
-clean-up for \code{fig.list} and \code{aes.default}. FALSE keeps their
+clean-up for \code{fig.list} and \code{aes.plotopts}. FALSE keeps their
 text, but a cell that cannot be read in this R session stops the
 function with an error. TRUE strips them instead.}
 
 \item{...}{Plot settings typed into the call, named as the
-\code{aes.default} \code{$parameter} rows (or fig.list setting
+\code{aes.plotopts} \code{$parameter} rows (or fig.list setting
 columns), e.g. \code{legend.position = "bottom"},
 \code{plot.width = 8}. A vector is joined with ";". Each setting is
-taken from the function call, then the fig.list row, then \code{aes.default} (its custom-style column, then
+taken from the function call, then the fig.list row, then \code{aes.plotopts} (its custom-style column, then
 \code{$default.value}). A setting given here does not need a row in
-\code{aes.default}. A NOTE lists the settings used and any name the
+\code{aes.plotopts}. A NOTE lists the settings used and any name the
 function does not use.}
 }
 \value{
@@ -203,7 +204,7 @@ before their number, then by the number (OLMN3, OLMN7, OLMN13, then
 KA01, KA02). Blocks are separated by a line (\code{group.divider.color},
 \code{group.divider.linewidth}).
 
-\strong{plotopts (aes.default).} These \code{$parameter} rows must exist,
+\strong{plotopts (aes.plotopts).} These \code{$parameter} rows must exist,
 or the function stops listing the missing ones: \code{time.start},
 \code{time.end} (HH:MM), \code{bin.minutes}, \code{yaxe.break.hours},
 \code{value.type}, \code{bin.breaks}, \code{bin.colors},

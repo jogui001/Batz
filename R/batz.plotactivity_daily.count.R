@@ -24,25 +24,26 @@
 #'   and last monitoring night to plot. A \code{NULL} value defaults to
 #'   July 1 (start) or December 31 (end) of the year of the earliest
 #'   monitoring night in \code{data}.
-#' @param aes.default Data frame of plot settings (a plotopts table, e.g.
+#' @param aes.plotopts Data frame of plot settings (a plotopts table, e.g.
 #'   \verb{plotopts_dailycount.csv}), one row per parameter. Required columns:
 #'   \code{$category}, \code{$parameter}, \code{$default.value}. Optional:
 #'   the column named by \code{aes.style}, \code{$notes}.
 #'   Default \code{NULL}: the built-in settings are used (NOTE): the
 #'   \code{PLOTOPTS_plotact_daily.count} tab of Batz_reference_db, carried by the
 #'   package. A data frame given here is used instead.
+#'   (The old argument name \code{aes.default} is still read, with a WARNING.)
 #' @param project.name Character, default \code{"new.project"}. First part of
 #'   each saved file name.
 #' @param ... Plot settings typed into the call, named as the
-#'   \code{aes.default} \code{$parameter} rows (or fig.list setting
+#'   \code{aes.plotopts} \code{$parameter} rows (or fig.list setting
 #'   columns), e.g. \code{legend.position = "bottom"},
 #'   \code{plot.width = 8}. A vector is joined with ";". Each setting is
-#'   taken from the function call, then \code{aes.default} (its custom-style column, then
+#'   taken from the function call, then \code{aes.plotopts} (its custom-style column, then
 #'   \code{$default.value}). A setting given here does not need a row in
-#'   \code{aes.default}. A NOTE lists the settings used and any name the
+#'   \code{aes.plotopts}. A NOTE lists the settings used and any name the
 #'   function does not use.
 #' @param aes.style Character, default \code{"override.value"}. Column of
-#'   \code{aes.default} checked first for each parameter; a blank cell (or a
+#'   \code{aes.plotopts} checked first for each parameter; a blank cell (or a
 #'   missing column) falls back to \code{$default.value}. An old
 #'   \code{overide.value} column is still read when \code{aes.style =
 #'   "override.value"}.
@@ -63,14 +64,14 @@
 #'   the multiplication sign to \code{X}) and removes other non-ASCII characters (e.g.
 #'   degree and micro signs), before any header check.
 #' @param strip.special.plotopts Logical, default \code{FALSE}. Same for
-#'   \code{aes.default}. With \code{FALSE}, plot text such as
+#'   \code{aes.plotopts}. With \code{FALSE}, plot text such as
 #'   \code{"Temperature (degree sign C)"} is kept; a cell that cannot be read in this R
 #'   session (e.g. a Latin-1 degree-sign byte) stops the function with an error
 #'   naming the table, the number of bad characters and the first 5 rows per
 #'   column.
 #'
 #' @details
-#' \strong{Checks.} \code{aes.default} must have the required columns, unique
+#' \strong{Checks.} \code{aes.plotopts} must have the required columns, unique
 #' column names and these \code{$parameter} rows (matched ignoring case):
 #' \code{y.custom}, \code{bar.fill}, \code{bar.width}, \code{xaxe.date.format},
 #' \code{xaxe.date.buffer.days}, \code{plot.title.size},
@@ -158,7 +159,7 @@
 #' \dontrun{
 #' result <- batz.plotactivity_daily.count(
 #'   data = readxl::read_excel("mine_only.xlsx"),
-#'   aes.default = read.csv("plotopts_dailycount.csv", stringsAsFactors = FALSE),
+#'   aes.plotopts = read.csv("plotopts_dailycount.csv", stringsAsFactors = FALSE),
 #'   trim.noid = TRUE,
 #'   date.start = "2025-07-01", date.end = "2025-12-31"
 #' )
@@ -167,13 +168,13 @@
 #' # chain into the heatmap
 #' batz.plotactivity_heatmap(
 #'   data = result$data,
-#'   aes.default = read.csv("plotopts_heatmap.csv", stringsAsFactors = FALSE)
+#'   aes.plotopts = read.csv("plotopts_heatmap.csv", stringsAsFactors = FALSE)
 #' )
 #'
 #' # also write the prepared data as a CSV with snake_case headers
 #' batz.plotactivity_daily.count(
 #'   data = readxl::read_excel("mine_only.xlsx"),
-#'   aes.default = read.csv("plotopts_dailycount.csv", stringsAsFactors = FALSE),
+#'   aes.plotopts = read.csv("plotopts_dailycount.csv", stringsAsFactors = FALSE),
 #'   write.csv.data = TRUE, snake_case = TRUE
 #' )
 #' }
@@ -186,7 +187,7 @@ batz.plotactivity_daily.count <- function(data,
                                            trim.noid = FALSE,
                                            date.start = NULL,
                                            date.end = NULL,
-                                           aes.default = NULL,
+                                           aes.plotopts = NULL,
                                            project.name = "new.project",
                                            aes.style = "override.value",
                                            site.label = "",
@@ -203,16 +204,17 @@ batz.plotactivity_daily.count <- function(data,
   ## special characters from every data-frame input before anything else
   ## (header standardization/checks included). special.strip() returns
   ## non-data-frames unchanged and only modifies these local copies.
-  objname.aes.default <- paste(deparse(substitute(aes.default)), collapse = "")
-  if (is.null(aes.default)) aes.default <- plotutil_default_plotopts("batz.plotactivity_daily.count")   # built-in settings
+  objname.aes.plotopts <- paste(deparse(substitute(aes.plotopts)), collapse = "")
+  if (is.null(aes.plotopts)) aes.plotopts <- plotutil_aes_legacy(plotutil_dots(...), "batz.plotactivity_daily.count")   # old argument name aes.default / plotopts
+  if (is.null(aes.plotopts)) aes.plotopts <- plotutil_default_plotopts("batz.plotactivity_daily.count")   # built-in settings
   data <- special.strip(data, strip.special)$df
-  ## aes.default is a settings table, not data - stripped only when
+  ## aes.plotopts is a settings table, not data - stripped only when
   ## strip.special.plotopts = TRUE (2026-10-02, per Josh); otherwise checked
   ## for characters that can't be read, with a readable error.
   if (isTRUE(strip.special.plotopts)) {
-    aes.default <- special.strip(aes.default, TRUE)$df
+    aes.plotopts <- special.strip(aes.plotopts, TRUE)$df
   } else {
-    special.check.plotopts(aes.default, "aes.default", objname.aes.default, "batz.plotactivity_daily.count")
+    special.check.plotopts(aes.plotopts, "aes.plotopts", objname.aes.plotopts, "batz.plotactivity_daily.count")
   }
 
   AES.DEFAULT.REQUIRED <- c("category", "parameter", "default.value")
@@ -251,9 +253,9 @@ batz.plotactivity_daily.count <- function(data,
   }
 
   problems <- c(
-    check.headers(aes.default, AES.DEFAULT.REQUIRED, "aes.default"),
-    check.parameters(aes.default, plotutil_required_left(AES.DEFAULT.REQUIRED.PARAMETERS, plot.inputs), "aes.default"),
-    check.duplicates(aes.default, "aes.default")
+    check.headers(aes.plotopts, AES.DEFAULT.REQUIRED, "aes.plotopts"),
+    check.parameters(aes.plotopts, plotutil_required_left(AES.DEFAULT.REQUIRED.PARAMETERS, plot.inputs), "aes.plotopts"),
+    check.duplicates(aes.plotopts, "aes.plotopts")
   )
   if (length(problems) > 0) stop(paste(problems, collapse = "\n"))
 
@@ -287,18 +289,18 @@ batz.plotactivity_daily.count <- function(data,
 
   get.default <- function(param) {
     if (!is.null(v.in <- plotutil_input_get(plot.inputs, param))) return(v.in)   # function call first
-    row.idx <- which(plotutil_param_key(aes.default$parameter) == plotutil_param_key(param))
+    row.idx <- which(plotutil_param_key(aes.plotopts$parameter) == plotutil_param_key(param))
     if (length(row.idx) == 0) return(NA_character_)
-    val <- as.character(aes.default$default.value[row.idx[1]])
-    if (!is.na(aes.col <- plotutil_aes_style_col(aes.default, aes.style))) {
-      override <- aes.default[[aes.col]][row.idx[1]]
+    val <- as.character(aes.plotopts$default.value[row.idx[1]])
+    if (!is.na(aes.col <- plotutil_aes_style_col(aes.plotopts, aes.style))) {
+      override <- aes.plotopts[[aes.col]][row.idx[1]]
       if (!is.na(override) && nzchar(trimws(as.character(override)))) {
         val <- as.character(override)
       }
     }
     val
   }
-  plotutil_plot_inputs_check(plot.inputs, c(AES.DEFAULT.REQUIRED.PARAMETERS, aes.default$parameter), "batz.plotactivity_daily.count")
+  plotutil_plot_inputs_check(plot.inputs, c(AES.DEFAULT.REQUIRED.PARAMETERS, aes.plotopts$parameter), "batz.plotactivity_daily.count")
 
   # --- trim.noid: same $spp.id-blank-handling/removal behavior as
   # batz.generate_plotframe.bat() - see @details, "trim.noid matched to
@@ -419,7 +421,7 @@ batz.plotactivity_daily.count <- function(data,
     y.custom <- suppressWarnings(as.numeric(strsplit(get.default("y.custom"), ";", fixed = TRUE)[[1]]))
     y.custom <- sort(unique(y.custom[!is.na(y.custom)]))
     if (length(y.custom) < 2) {
-      stop("aes.default's $y.custom must have at least 2 semicolon-separated numbers (e.g. \"0;5;30;200;1200;7500\").")
+      stop("aes.plotopts's $y.custom must have at least 2 semicolon-separated numbers (e.g. \"0;5;30;200;1200;7500\").")
     }
     y.upper <- max(c(y.custom, daily$observations.count), na.rm = TRUE)
     daily$obs.plot <- log1p(daily$observations.count)

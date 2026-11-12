@@ -124,6 +124,19 @@
 #'   saved file name starts with it.
 #' @param dir.save Character, default \code{getwd()}. Folder the PNGs are
 #'   saved in (created if missing). \code{NULL} saves nothing.
+#' @param aes.plotopts Optional, default \code{NULL}. Plot settings table:
+#'   a data frame, or the path of a \code{.csv} / \code{.xlsx}, laid out like
+#'   \code{batz.generate_plotopts("batz.plot_weather.daily")} writes it
+#'   (columns \code{$category}, \code{$parameter}, \code{$default.value},
+#'   \code{$override.value}, \code{$notes}). Each \code{$parameter} row is
+#'   one of this function's arguments (e.g. \code{temp.range},
+#'   \code{wind.ms}, \code{panels}); lists are separated by ";" (e.g.
+#'   \code{"0;25"}). Settings are taken from the function call, then
+#'   \code{aes.plotopts}, then the defaults shown here. A blank cell keeps
+#'   the default.
+#' @param aes.style Character, default \code{"override.value"}. Name of the
+#'   \code{aes.plotopts} column read before \code{$default.value} (e.g. the
+#'   project-name column written by \code{\link{batz.generate_plotopts}}).
 #' @param plot.width Numeric, default \code{9}. PNG width (inches). The
 #'   height is 1.9 inches per row of panels plus 1 inch.
 #'
@@ -220,9 +233,15 @@ batz.plot_weather.daily <- function(data, suntimes = NULL, date.start = NULL, da
                                     temp.range = c(0, 25), wind.range = c(0, 10),
                                     wind.absent = c("show", "hide"), precipitation.absent = c("hide", "show"),
                                     precip.cumulative = TRUE, facet.ncol = 2,
-                                    project.name = "", dir.save = getwd(), plot.width = 9) {
+                                    project.name = "", dir.save = getwd(), plot.width = 9,
+                                    aes.plotopts = NULL, aes.style = "override.value") {
   FN <- "batz.plot_weather.daily"
-  temp.given <- !missing(temp.range); wind.given <- !missing(wind.range)
+  ## settings (2026-11-10): function call > aes.plotopts > built-in defaults
+  given <- setdiff(names(match.call())[-1], "")
+  po.vals <- weather.daily.plotopts(aes.plotopts, aes.style, given, FN)
+  for (nm in names(po.vals)) assign(nm, po.vals[[nm]])
+  temp.given <- !missing(temp.range) || "temp.range" %in% names(po.vals)
+  wind.given <- !missing(wind.range) || "wind.range" %in% names(po.vals)
   if (!requireNamespace("ggplot2", quietly = TRUE))
     stop(FN, ' needs the ggplot2 package: install.packages("ggplot2")', call. = FALSE)
   if (!is.data.frame(data) || nrow(data) == 0) stop(FN, ": data must be a data frame with rows.", call. = FALSE)
@@ -622,4 +641,59 @@ batz.plot_weather.daily <- function(data, suntimes = NULL, date.start = NULL, da
   out.n <- if (length(all.nights)) do.call(rbind, all.nights) else data.frame(); rownames(out.n) <- NULL
   out.a <- if (length(all.axes)) do.call(rbind, all.axes) else data.frame(); rownames(out.a) <- NULL
   invisible(list(plots = plots, data = out.data, nights = out.n, axes = out.a, files = files))
+}
+
+
+#' Settings of batz.plot_weather.daily from aes.plotopts (internal)
+#'
+#' Reads a plotopts table (data frame, or the path of a .csv / .xlsx) whose
+#' $parameter rows name arguments of batz.plot_weather.daily. For each
+#' argument not given in the call, the aes.style column (else
+#' $default.value) is used when not blank, converted like the argument's
+#' default: numbers and TRUE/FALSE as such, lists separated by ";". A value
+#' equal to the built-in default is left out. Returns a named list of the
+#' values to use.
+#' @keywords internal
+#' @noRd
+weather.daily.plotopts <- function(aes.plotopts, aes.style, given, FN) {
+  if (is.null(aes.plotopts)) return(list())
+  po <- aes.plotopts
+  if (is.character(po)) {
+    if (!file.exists(po[1])) stop(FN, ": aes.plotopts file not found: ", po[1], call. = FALSE)
+    po <- if (grepl("\\.xlsx?$", po[1], ignore.case = TRUE)) as.data.frame(readxl::read_excel(po[1], col_types = "text"))
+          else utils::read.csv(po[1], check.names = FALSE, colClasses = "character")
+  }
+  if (!is.data.frame(po) || !all(c("parameter", "default.value") %in% names(po)))
+    stop(FN, ": aes.plotopts must be a data frame (or .csv / .xlsx path) with $parameter and $default.value.", call. = FALSE)
+  fm <- formals(batz.plot_weather.daily)
+  skip <- c("data", "suntimes", "date.start", "date.end", "project.name", "dir.save", "aes.plotopts", "aes.style")
+  usable <- setdiff(names(fm), skip)
+  style.col <- plotutil_aes_style_col(po, aes.style)
+  blank <- function(x) is.null(x) || length(x) == 0 || is.na(x) || !nzchar(trimws(as.character(x)))
+  out <- list(); unknown <- character(0)
+  for (i in seq_len(nrow(po))) {
+    p <- trimws(as.character(po$parameter[i]))
+    if (blank(p)) next
+    hit <- usable[plotutil_param_key(usable) == plotutil_param_key(p)]
+    if (!length(hit)) { unknown <- c(unknown, p); next }
+    p <- hit[1]
+    if (p %in% given) next                                    # the call wins
+    v <- if (!is.na(style.col)) po[[style.col]][i] else NA
+    if (blank(v)) v <- po$default.value[i]
+    if (blank(v)) next
+    def <- eval(fm[[p]])
+    parts <- trimws(strsplit(as.character(v), ";", fixed = TRUE)[[1]]); parts <- parts[nzchar(parts)]
+    if (is.numeric(def)) {
+      val <- suppressWarnings(as.numeric(parts))
+      if (any(is.na(val))) stop(sprintf("%s: aes.plotopts %s = '%s' is not a number.", FN, p, v), call. = FALSE)
+    } else if (is.logical(def)) {
+      val <- if (toupper(parts[1]) %in% c("TRUE", "FALSE")) as.logical(toupper(parts[1])) else parts[1]
+    } else val <- parts
+    ## same as the built-in default (a choice list counts as its first value): nothing to change
+    if (isTRUE(all.equal(val, def)) || (is.character(def) && length(def) > 1 && identical(val, def[1]))) next
+    out[[p]] <- val
+  }
+  if (length(unknown)) cat(sprintf("NOTE: %s - aes.plotopts parameter(s) not used by this function: %s\n", FN, paste(unknown, collapse = ", ")))
+  if (length(out)) cat(sprintf("NOTE: %s - settings from aes.plotopts: %s\n", FN, paste(names(out), collapse = ", ")))
+  out
 }

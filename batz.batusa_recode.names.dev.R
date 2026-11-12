@@ -447,3 +447,11 @@ stopifnot(batz.batusa_recode.names("epfu", "label_name") == "Big brown (EPFU)",
           batz.batusa_recode.names("Silver-haired bat (LANO)", "scientific_name") == "Lasionycteris noctivagans")
 ## groups / frequency classes have no label columns: their common_name is returned
 print(batz.batusa_recode.names(c("EPFUMYLU", "40kMyo"), "label_name"))
+
+## label3_name (2026-11-10) - every label<N>_name column works the same way; for a
+## category label found first in the frequency-class table (e.g. "HiF"), the bat.names label is used
+stopifnot(batz.batusa_recode.names("myoc", "label3_name") == "Arizona bat (MYOC)",
+          batz.batusa_recode.names("Arizona bat (MYOC)", "code4") == "myoc",
+          batz.batusa_recode.names("HiF", "label2_name") == "High Frequency",
+          batz.batusa_recode.names("HiF", "common_name") == "Unidentifiable Species > 30 kHz")
+cat("label3_name PASSED\n")

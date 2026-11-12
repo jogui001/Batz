@@ -34,7 +34,7 @@
 #'   Only \code{$aru.name}, \code{$date}, \code{$sunset} (Dusk) and
 #'   \code{$sunrise.monitoringnight} (Dawn: the sunrise that ends the night
 #'   starting on \code{$date}) are used for drawing.
-#' @param aes.default Data frame of plot settings (plotopts), one row per
+#' @param aes.plotopts Data frame of plot settings (plotopts), one row per
 #'   parameter, e.g. \verb{plotopts_first.last.csv} from
 #'   \code{\link{batz.generate_plotopts}}. Required columns:
 #'   \code{$category}, \code{$parameter}, \code{$default.value}. The custom
@@ -43,18 +43,19 @@
 #'   Default \code{NULL}: the built-in settings are used (NOTE): the
 #'   \code{PLOTOPTS_plotdet_first.last} tab of Batz_reference_db, carried by the
 #'   package. A data frame given here is used instead.
+#'   (The old argument name \code{aes.default} is still read, with a WARNING.)
 #' @param project.name Character, default \code{"new.project"}. Put at the
 #'   start of every saved file name. A blank value leaves it out.
 #' @param ... Plot settings typed into the call, named as the
-#'   \code{aes.default} \code{$parameter} rows (or fig.list setting
+#'   \code{aes.plotopts} \code{$parameter} rows (or fig.list setting
 #'   columns), e.g. \code{legend.position = "bottom"},
 #'   \code{plot.width = 8}. A vector is joined with ";". Each setting is
-#'   taken from the function call, then the fig.list row, then \code{aes.default} (its custom-style column, then
+#'   taken from the function call, then the fig.list row, then \code{aes.plotopts} (its custom-style column, then
 #'   \code{$default.value}). A setting given here does not need a row in
-#'   \code{aes.default}. A NOTE lists the settings used and any name the
+#'   \code{aes.plotopts}. A NOTE lists the settings used and any name the
 #'   function does not use.
 #' @param aes.style Character, default \code{"override.value"}. Name of the
-#'   \code{aes.default} column checked first for each parameter. When that
+#'   \code{aes.plotopts} column checked first for each parameter. When that
 #'   column does not exist, or its cell is blank, \code{$default.value} is
 #'   used. With the default, an old \code{$overide.value} column is still
 #'   read when there is no \code{$override.value} column.
@@ -66,7 +67,7 @@
 #'   check. FALSE leaves them as they are.
 #' @param strip.special.plotopts Logical, default \code{FALSE}. Same
 #'   clean-up for the settings tables \code{fig.list} and
-#'   \code{aes.default}. FALSE leaves them untouched (plot text keeps its
+#'   \code{aes.plotopts}. FALSE leaves them untouched (plot text keeps its
 #'   symbols), but a cell that cannot be read in this R session stops the
 #'   function with an error naming the table, the number of bad characters
 #'   and the first rows per header. TRUE strips them instead.
@@ -148,7 +149,8 @@
 #'   \item{\code{$facet.label_format}}{Format of species facet titles:
 #'     \code{"common_name"} (used when blank), \code{"scientific_name"},
 #'     \code{"label_name"} (e.g. "Big brown (EPFU)"), \code{"label2_name"}
-#'     (e.g. "Big brown bat (EPFU)"), \code{"code4"}, \code{"code6"},
+#'     (e.g. "Big brown bat (EPFU)"), \code{"label3_name"} (e.g. "Arizona
+#'     bat (MYOC)"), \code{"code4"}, \code{"code6"},
 #'     \code{"both"}, or \code{"common"},
 #'     \code{"latin"}, \code{"scientific"}. Other values stop with an error
 #'     naming the row. Non-species facets keep their own name. An older
@@ -184,7 +186,7 @@
 #' \code{$plot.order} columns are ignored (NOTE). Exact duplicate rows
 #' (every column the same) are removed before plotting (NOTE).
 #'
-#' \strong{plotopts (aes.default).} Each setting is read from the first row
+#' \strong{plotopts (aes.plotopts).} Each setting is read from the first row
 #' whose \code{$parameter} matches the name (ignoring case and spaces).
 #' The value is the \code{aes.style} column when that cell is not blank,
 #' otherwise \code{$default.value}. For the optional fig.list settings above,
@@ -287,7 +289,7 @@
 #'   data = vetted.processed,
 #'   fig.list = fig.list,
 #'   suntimes = aru.suntimes,
-#'   aes.default = plotopts.first.last,
+#'   aes.plotopts = plotopts.first.last,
 #'   dir.save = "C:/path/to/output/folder"
 #' )
 #' result$ggplots[[1]]
@@ -295,7 +297,7 @@
 #'
 #' @export
 batz.plotdetections_first.last <- function(data, fig.list, suntimes,
-                                            aes.default = NULL, project.name = "new.project",
+                                            aes.plotopts = NULL, project.name = "new.project",
                                             aes.style = "override.value",
                                             dir.save = getwd(),
                                             strip.special = TRUE,
@@ -309,11 +311,12 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
   ## (header standardization/checks included). special.strip() returns
   ## non-data-frames unchanged and only modifies these local copies.
   objname.fig.list <- paste(deparse(substitute(fig.list)), collapse = "")
-  objname.aes.default <- paste(deparse(substitute(aes.default)), collapse = "")
+  objname.aes.plotopts <- paste(deparse(substitute(aes.plotopts)), collapse = "")
   fig.list <- plotutil_figlist_na(fig.list)       # "NA" = heading not used by this plot type
   fig.list <- plotutil_figlist_plot(fig.list, "batz.plotdetections_first.last")   # only rows with $plot = TRUE or 1
   if (is.data.frame(fig.list) && nrow(fig.list) == 0) return(invisible(list(plots = list(), ggplots = list())))
-  if (is.null(aes.default)) aes.default <- plotutil_default_plotopts("batz.plotdetections_first.last")   # built-in settings
+  if (is.null(aes.plotopts)) aes.plotopts <- plotutil_aes_legacy(plotutil_dots(...), "batz.plotdetections_first.last")   # old argument name aes.default / plotopts
+  if (is.null(aes.plotopts)) aes.plotopts <- plotutil_default_plotopts("batz.plotdetections_first.last")   # built-in settings
   data <- special.strip(data, strip.special)$df
   ## fig.list is a settings table, not data - stripped only when
   ## strip.special.plotopts = TRUE (2026-10-02, per Josh); otherwise checked
@@ -324,18 +327,18 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
     special.check.plotopts(fig.list, "fig.list", objname.fig.list, "batz.plotdetections_first.last")
   }
   suntimes <- special.strip(suntimes, strip.special)$df
-  ## aes.default is a settings table, not data - stripped only when
+  ## aes.plotopts is a settings table, not data - stripped only when
   ## strip.special.plotopts = TRUE (2026-10-02, per Josh); otherwise checked
   ## for characters that can't be read, with a readable error.
   if (isTRUE(strip.special.plotopts)) {
-    aes.default <- special.strip(aes.default, TRUE)$df
+    aes.plotopts <- special.strip(aes.plotopts, TRUE)$df
   } else {
-    special.check.plotopts(aes.default, "aes.default", objname.aes.default, "batz.plotdetections_first.last")
+    special.check.plotopts(aes.plotopts, "aes.plotopts", objname.aes.plotopts, "batz.plotdetections_first.last")
   }
 
   ## Header standardization (per Josh, 2026-09-14 project preference): NOT
   ## applied to any of the four *.REQUIRED*/DATA.REQUIRED constants below -
-  ## `data`/`fig.list`/`suntimes`/`aes.default` are already-loaded data
+  ## `data`/`fig.list`/`suntimes`/`aes.plotopts` are already-loaded data
   ## frames handed in by the caller (this function loads no file itself),
   ## and these names are this function's own interface contract with those
   ## upstream functions'/files' already-established output schemas, not raw
@@ -391,10 +394,10 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
   AES.DEFAULT.REQUIRED <- c("category", "parameter", "default.value")
 
   # 2026-08-27, later still - real bug hit on Josh's machine: his loaded
-  # aes.default was an OLDER copy of batactivity.plotoptions.csv
+  # aes.plotopts was an OLDER copy of batactivity.plotoptions.csv
   # from before $panel.spacing.x was added (see the round above). The
   # column-structure check right below (AES.DEFAULT.REQUIRED)
-  # only verifies aes.default HAS the right columns
+  # only verifies aes.plotopts HAS the right columns
   # (category/parameter/default.value) - it never checked that every
   # PARAMETER ROW this function actually depends on is present. With
   # $panel.spacing.x missing, get.default("panel.spacing.x") silently
@@ -404,7 +407,7 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
   # "Error in grid.Call.graphics(C_setviewport, vp, TRUE): non-finite
   # location and/or size for viewport" - which names no setting and gives
   # no hint that a CSV row is missing. Reproduced directly: calling
-  # get.default() on a parameter absent from a real aes.default
+  # get.default() on a parameter absent from a real aes.plotopts
   # data frame returns NA_character_, and unit(as.numeric(NA), "pt") does
   # print/render as a non-finite unit once used in theme(), confirming this
   # is exactly what happened. Every parameter name this function looks up
@@ -417,7 +420,7 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
   ## "output.filename.pattern" deliberately removed from this required list
   ## per Josh's nineteenth follow-up (2026-09-16) - the saved file name is
   ## now always "<project.name>_<ARU>_<timestamp>.png"; no longer read at
-  ## all. An $output.filename.pattern row left in an existing aes.default
+  ## all. An $output.filename.pattern row left in an existing aes.plotopts
   ## sheet is harmless (simply ignored).
   AES.DEFAULT.REQUIRED.PARAMETERS <- c(
     "facpan.numcol", "plot.title.size", "plot.title.hjust", "axis.title.size",
@@ -457,7 +460,7 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
   data.canon        <- canonicalize.headers(data, DATA.REQUIRED)
   suntimes.canon    <- canonicalize.headers(suntimes, SUNTIMES.REQUIRED)
   fig.list.canon    <- canonicalize.headers(fig.list, FIG.LIST.REQUIRED)
-  aes.default.canon <- canonicalize.headers(aes.default, AES.DEFAULT.REQUIRED)
+  aes.plotopts.canon <- canonicalize.headers(aes.plotopts, AES.DEFAULT.REQUIRED)
 
   missing.msg <- function(canon, label) {
     if (length(canon$missing) > 0) {
@@ -493,12 +496,12 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
     missing.msg(data.canon, "data"),
     missing.msg(suntimes.canon, "suntimes"),
     missing.msg(fig.list.canon, "fig.list"),
-    missing.msg(aes.default.canon, "aes.default"),
-    check.parameters(aes.default.canon$df, plotutil_required_left(AES.DEFAULT.REQUIRED.PARAMETERS, plot.inputs), "aes.default"),
+    missing.msg(aes.plotopts.canon, "aes.plotopts"),
+    check.parameters(aes.plotopts.canon$df, plotutil_required_left(AES.DEFAULT.REQUIRED.PARAMETERS, plot.inputs), "aes.plotopts"),
     check.duplicates(data, "data"),
     check.duplicates(suntimes, "suntimes"),
     check.duplicates(fig.list, "fig.list"),
-    check.duplicates(aes.default, "aes.default")
+    check.duplicates(aes.plotopts, "aes.plotopts")
   )
   if (length(problems) > 0) {
     ## blank line between each data frame's own missing-headers message,
@@ -509,7 +512,7 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
   data        <- data.canon$df
   suntimes    <- suntimes.canon$df
   fig.list    <- fig.list.canon$df
-  aes.default <- aes.default.canon$df
+  aes.plotopts <- aes.plotopts.canon$df
 
   ## 2026-10-02, per Josh: data from batz.generate_plotframe.bat() with a
   ## pool.interval under one day has several rows per species/group/date -
@@ -566,18 +569,18 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
   ## name (see the main loop below).
   get.default <- function(param) {
     if (!is.null(v.in <- plotutil_input_get(plot.inputs, param))) return(v.in)   # function call first
-    row.idx <- which(plotutil_param_key(aes.default$parameter) == plotutil_param_key(param))
+    row.idx <- which(plotutil_param_key(aes.plotopts$parameter) == plotutil_param_key(param))
     if (length(row.idx) == 0) return(NA_character_)
-    val <- as.character(aes.default$default.value[row.idx[1]])
-    if (!is.na(aes.col <- plotutil_aes_style_col(aes.default, aes.style))) {
-      override <- aes.default[[aes.col]][row.idx[1]]
+    val <- as.character(aes.plotopts$default.value[row.idx[1]])
+    if (!is.na(aes.col <- plotutil_aes_style_col(aes.plotopts, aes.style))) {
+      override <- aes.plotopts[[aes.col]][row.idx[1]]
       if (!is.na(override) && nzchar(trimws(as.character(override)))) {
         val <- as.character(override)
       }
     }
     val
   }
-  plotutil_plot_inputs_check(plot.inputs, c(AES.DEFAULT.REQUIRED.PARAMETERS, aes.default$parameter, names(fig.list), "plot.dimensions", "plot.dimentions"), "batz.plotdetections_first.last")
+  plotutil_plot_inputs_check(plot.inputs, c(AES.DEFAULT.REQUIRED.PARAMETERS, aes.plotopts$parameter, names(fig.list), "plot.dimensions", "plot.dimentions"), "batz.plotdetections_first.last")
 
   get.setting <- function(job, param) {
     if (!is.null(v.in <- plotutil_input_get(plot.inputs, param))) return(v.in)   # function call, then fig.list, then plotopts
@@ -769,7 +772,7 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
     yaxe.limit.max <- get.setting(job, "yaxe.limit.max")
     if (!grepl("^[0-9]{1,2}:[0-9]{2}$", yaxe.limit.min) || !grepl("^[0-9]{1,2}:[0-9]{2}$", yaxe.limit.max)) {
       stop(sprintf(paste("$yaxe.limit.min/$yaxe.limit.max ('%s'/'%s') don't look like HH:MM time-of-day",
-                          "values - aes.default may be an old, numeric-minutes-based copy of",
+                          "values - aes.plotopts may be an old, numeric-minutes-based copy of",
                           "plotopts_first.last.csv. Please use the current time-of-day version."),
                     yaxe.limit.min, yaxe.limit.max))
     }
@@ -859,7 +862,7 @@ batz.plotdetections_first.last <- function(data, fig.list, suntimes,
       # never get.setting(p$job, "xaxe.interval") - so a plot's OWN
       # $xaxe.interval value (e.g. Josh's real plot.meta.csv row) was
       # silently ignored no matter what it said, always falling through to
-      # aes.default's generic value instead - the exact same
+      # aes.plotopts's generic value instead - the exact same
       # class of settings-resolution bug as the "gome"/project.name mismatch
       # found earlier this session, just in a different call site that
       # never got updated when the get.setting()/get.default() split was

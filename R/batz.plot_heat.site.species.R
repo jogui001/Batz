@@ -23,7 +23,7 @@
 #'   \code{$plot.set}, \code{$date.start}, \code{$date.end},
 #'   \code{$xaxe.title}, \code{$yaxe.title}. Optional:
 #'   \code{$plot.group}, \code{$group.labels}, \code{$site.exclude},
-#'   \code{$site.bold}. A row can also override any \code{aes.default}
+#'   \code{$site.bold}. A row can also override any \code{aes.plotopts}
 #'   parameter with a column of the same name (e.g. \code{$bin.minutes},
 #'   \code{$time.start}). See Details.
 #'   Cells holding "NA" (a heading not used by this plot type, as in
@@ -32,7 +32,7 @@
 #'   plotted; rows with \code{FALSE}, any other entry or a blank are
 #'   skipped (NOTE). A fig.list with no \code{$plot} column has every
 #'   row plotted (NOTE).
-#' @param aes.default Data frame of plot settings (plotopts), normally
+#' @param aes.plotopts Data frame of plot settings (plotopts), normally
 #'   \verb{plotopts_heat.site.species.csv}. Required columns:
 #'   \code{$category}, \code{$parameter}, \code{$default.value}. The custom
 #'   style column (named by \code{aes.style}) and \code{$notes} are
@@ -40,6 +40,7 @@
 #'   Default \code{NULL}: the built-in settings are used (NOTE): the
 #'   \code{PLOTOPTS_plot_heat.site.species} tab of Batz_reference_db, carried by the
 #'   package. A data frame given here is used instead.
+#'   (The old argument name \code{aes.default} is still read, with a WARNING.)
 #' @param spp.id Character, default \code{"species"}. Name of the species
 #'   column in \code{data}.
 #' @param groupby.date Character, default \code{"date.monitoringnight"}.
@@ -55,15 +56,15 @@
 #' @param project.name Character, default \code{"new.project"}. First part
 #'   of each saved file name.
 #' @param ... Plot settings typed into the call, named as the
-#'   \code{aes.default} \code{$parameter} rows (or fig.list setting
+#'   \code{aes.plotopts} \code{$parameter} rows (or fig.list setting
 #'   columns), e.g. \code{legend.position = "bottom"},
 #'   \code{plot.width = 8}. A vector is joined with ";". Each setting is
-#'   taken from the function call, then the fig.list row, then \code{aes.default} (its custom-style column, then
+#'   taken from the function call, then the fig.list row, then \code{aes.plotopts} (its custom-style column, then
 #'   \code{$default.value}). A setting given here does not need a row in
-#'   \code{aes.default}. A NOTE lists the settings used and any name the
+#'   \code{aes.plotopts}. A NOTE lists the settings used and any name the
 #'   function does not use.
 #' @param aes.style Character, default \code{"override.value"}. Name of the
-#'   \code{aes.default} column checked first for each parameter. When that
+#'   \code{aes.plotopts} column checked first for each parameter. When that
 #'   column does not exist, or its cell is blank, \code{$default.value} is
 #'   used. With the default, an old \code{$overide.value} column is still
 #'   read when there is no \code{$override.value} column. A non-blank
@@ -74,7 +75,7 @@
 #'   accented letters and removes other non-ASCII characters in \code{data}
 #'   (local copy only) before matching. FALSE leaves them as they are.
 #' @param strip.special.plotopts Logical, default \code{FALSE}. Same
-#'   clean-up for \code{fig.list} and \code{aes.default}. FALSE keeps their
+#'   clean-up for \code{fig.list} and \code{aes.plotopts}. FALSE keeps their
 #'   text, but a cell that cannot be read in this R session stops the
 #'   function with an error. TRUE strips them instead.
 #'
@@ -168,7 +169,7 @@
 #' KA01, KA02). Blocks are separated by a line (\code{group.divider.color},
 #' \code{group.divider.linewidth}).
 #'
-#' \strong{plotopts (aes.default).} These \code{$parameter} rows must exist,
+#' \strong{plotopts (aes.plotopts).} These \code{$parameter} rows must exist,
 #' or the function stops listing the missing ones: \code{time.start},
 #' \code{time.end} (HH:MM), \code{bin.minutes}, \code{yaxe.break.hours},
 #' \code{value.type}, \code{bin.breaks}, \code{bin.colors},
@@ -217,7 +218,7 @@
 #' }
 #'
 #' @export
-batz.plot_heat.site.species <- function(data, fig.list, aes.default = NULL,
+batz.plot_heat.site.species <- function(data, fig.list, aes.plotopts = NULL,
                                         spp.id = "species",
                                         groupby.date = "date.monitoringnight",
                                         groupby.time = "time",
@@ -236,21 +237,22 @@ batz.plot_heat.site.species <- function(data, fig.list, aes.default = NULL,
 
   ## ---- special characters ----------------------------------------------
   objname.fig.list <- paste(deparse(substitute(fig.list)), collapse = "")
-  objname.aes.default <- paste(deparse(substitute(aes.default)), collapse = "")
+  objname.aes.plotopts <- paste(deparse(substitute(aes.plotopts)), collapse = "")
   fig.list <- plotutil_figlist_na(fig.list)       # "NA" = heading not used by this plot type
   fig.list <- plotutil_figlist_plot(fig.list, "batz.plot_heat.site.species")   # only rows with $plot = TRUE or 1
   if (is.data.frame(fig.list) && nrow(fig.list) == 0) return(invisible(list(plots = list(), ggplots = list())))
-  if (is.null(aes.default)) aes.default <- plotutil_default_plotopts("batz.plot_heat.site.species")   # built-in settings
+  if (is.null(aes.plotopts)) aes.plotopts <- plotutil_aes_legacy(plotutil_dots(...), "batz.plot_heat.site.species")   # old argument name aes.default / plotopts
+  if (is.null(aes.plotopts)) aes.plotopts <- plotutil_default_plotopts("batz.plot_heat.site.species")   # built-in settings
   if (!is.data.frame(data)) stop(FN, ": `data` must be a data frame.")
   if (!is.data.frame(fig.list)) stop(FN, ": `fig.list` must be a data frame.")
-  if (!is.data.frame(aes.default)) stop(FN, ": `aes.default` must be a data frame.")
+  if (!is.data.frame(aes.plotopts)) stop(FN, ": `aes.plotopts` must be a data frame.")
   data <- special.strip(data, strip.special)$df
   if (isTRUE(strip.special.plotopts)) {
     fig.list <- special.strip(fig.list, TRUE)$df
-    aes.default <- special.strip(aes.default, TRUE)$df
+    aes.plotopts <- special.strip(aes.plotopts, TRUE)$df
   } else {
     special.check.plotopts(fig.list, "fig.list", objname.fig.list, FN)
-    special.check.plotopts(aes.default, "aes.default", objname.aes.default, FN)
+    special.check.plotopts(aes.plotopts, "aes.plotopts", objname.aes.plotopts, FN)
   }
 
   ## ---- header checks -----------------------------------------------------
@@ -273,7 +275,7 @@ batz.plot_heat.site.species <- function(data, fig.list, aes.default = NULL,
   data.canon <- canonicalize.headers(data, DATA.REQUIRED)
   fig.canon <- canonicalize.headers(fig.list, c(FIG.LIST.REQUIRED, FIG.LIST.OPTIONAL))
   fig.canon$missing <- setdiff(fig.canon$missing, FIG.LIST.OPTIONAL)
-  aes.canon <- canonicalize.headers(aes.default, AES.DEFAULT.REQUIRED)
+  aes.canon <- canonicalize.headers(aes.plotopts, AES.DEFAULT.REQUIRED)
 
   missing.msg <- function(canon, label) {
     if (length(canon$missing) > 0) sprintf("%s is missing these headers: %s", label,
@@ -281,20 +283,20 @@ batz.plot_heat.site.species <- function(data, fig.list, aes.default = NULL,
   }
   problems <- c(missing.msg(data.canon, "data"),
                 missing.msg(fig.canon, "fig.list"),
-                missing.msg(aes.canon, "aes.default"))
+                missing.msg(aes.canon, "aes.plotopts"))
   if ("parameter" %in% names(aes.canon$df)) {
     req.par <- plotutil_required_left(AES.DEFAULT.REQUIRED.PARAMETERS, plot.inputs)
     miss.par <- req.par[!plotutil_param_key(req.par) %in% plotutil_param_key(aes.canon$df$parameter)]
     if (length(miss.par) > 0) {
       problems <- c(problems, sprintf(
-        "aes.default is missing these required $parameter rows: %s - it may be an older copy of plotopts_heat.site.species.csv",
+        "aes.plotopts is missing these required $parameter rows: %s - it may be an older copy of plotopts_heat.site.species.csv",
         paste(miss.par, collapse = ", ")))
     }
   }
   if (length(problems) > 0) stop(paste(problems, collapse = "\n\n"), call. = FALSE)
   data <- data.canon$df
   fig.list <- fig.canon$df
-  aes.default <- aes.canon$df
+  aes.plotopts <- aes.canon$df
 
   if (isTRUE(duplicates.remove)) {
     dup <- duplicated(data)
@@ -314,16 +316,16 @@ batz.plot_heat.site.species <- function(data, fig.list, aes.default = NULL,
   key <- function(v) tolower(trimws(as.character(v)))
   get.default <- function(param) {
     if (!is.null(v.in <- plotutil_input_get(plot.inputs, param))) return(v.in)   # function call first
-    i <- which(plotutil_param_key(aes.default$parameter) == plotutil_param_key(param))[1]
+    i <- which(plotutil_param_key(aes.plotopts$parameter) == plotutil_param_key(param))[1]
     if (is.na(i)) return(NA_character_)
-    val <- as.character(aes.default$default.value[i])
-    if (!is.na(aes.col <- plotutil_aes_style_col(aes.default, aes.style))) {
-      ov <- aes.default[[aes.col]][i]
+    val <- as.character(aes.plotopts$default.value[i])
+    if (!is.na(aes.col <- plotutil_aes_style_col(aes.plotopts, aes.style))) {
+      ov <- aes.plotopts[[aes.col]][i]
       if (!blank(ov)) val <- as.character(ov)
     }
     if (is.na(val)) "" else val
   }
-  plotutil_plot_inputs_check(plot.inputs, c(AES.DEFAULT.REQUIRED.PARAMETERS, aes.default$parameter, names(fig.list), "plot.dimensions", "plot.dimentions"), "batz.plot_heat.site.species")
+  plotutil_plot_inputs_check(plot.inputs, c(AES.DEFAULT.REQUIRED.PARAMETERS, aes.plotopts$parameter, names(fig.list), "plot.dimensions", "plot.dimentions"), "batz.plot_heat.site.species")
   get.setting <- function(job, param) {
     if (!is.null(v.in <- plotutil_input_get(plot.inputs, param))) return(v.in)   # function call, then fig.list, then plotopts
     if (param %in% names(job) && !blank(job[[param]])) return(as.character(job[[param]]))

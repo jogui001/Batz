@@ -21,6 +21,8 @@ columns character, same names) is returned.}
 format: any column of the bat reference table - \code{"scientific_name"},
 \code{"common_name"}, \code{"label_name"} (e.g. \code{"Big brown
   (EPFU)"}), \code{"label2_name"} (e.g. \code{"Big brown bat (EPFU)"}),
+\code{"label3_name"} (e.g. \code{"Arizona bat (MYOC)"}; every
+\code{label<N>_name} column of the table can be used),
 \code{"code4"}, \code{"code6"}, \code{"family"},
 \code{"region"}, \code{"listing.status_federal"},
 \code{"listing.status_iucn"}, \code{"states.listed"},
@@ -33,7 +35,8 @@ underscores and dashes are ignored (\code{"Common Name"} =
 \code{"common_name"}), and short names work: \code{"common"},
 \code{"latin"}/\code{"scientific"}/\code{"sci"}/\code{"species"},
 \code{"code"} (= \code{code4}), \code{"label"} (= \code{label_name}),
-\code{"label2"} (= \code{label2_name}). Any other value stops with an error
+\code{"label2"} (= \code{label2_name}), \code{"label3"} (= \code{label3_name}).
+Any other value stops with an error
 listing the accepted values.}
 
 \item{grammar.dash}{Logical, default \code{TRUE}. Output only:
@@ -93,11 +96,13 @@ American species marked \code{NABAT}, plus 8 category labels marked
 \code{All}: \code{All detections}, \code{40KHzMyo}, \code{HiF},
 \code{LoF}, \code{HiFrag}, \code{LoFrag}, \code{Multiple},
 \code{Social}) is searched on \code{scientific_name},
-\code{common_name}, \code{label_name}, \code{label2_name},
+\code{common_name}, every \code{label<N>_name} column
+(\code{label_name}, \code{label2_name}, \code{label3_name}),
 \code{code4}, \code{code6}.
 }
-The first two tables have no label columns: for \code{"label_name"} and
-\code{"label2_name"} their \code{common_name} is returned. They only
+The first two tables have no label columns: for a label format, a value
+found there takes its \code{bat.names} label when \code{bat.names} also
+has it (e.g. \code{"HiF"}), otherwise their \code{common_name}. They only
 have name/code columns, so any other
 \code{batname.format.out} (e.g. \code{listing.status_federal},
 \code{family}, \code{region}) returns \code{""} for values found there.

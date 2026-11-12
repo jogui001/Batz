@@ -12,7 +12,7 @@ batz.plotactivity_daily.count(
   trim.noid = FALSE,
   date.start = NULL,
   date.end = NULL,
-  aes.default = NULL,
+  aes.plotopts = NULL,
   project.name = "new.project",
   aes.style = "override.value",
   site.label = "",
@@ -49,19 +49,20 @@ and last monitoring night to plot. A \code{NULL} value defaults to
 July 1 (start) or December 31 (end) of the year of the earliest
 monitoring night in \code{data}.}
 
-\item{aes.default}{Data frame of plot settings (a plotopts table, e.g.
+\item{aes.plotopts}{Data frame of plot settings (a plotopts table, e.g.
 \verb{plotopts_dailycount.csv}), one row per parameter. Required columns:
 \code{$category}, \code{$parameter}, \code{$default.value}. Optional:
 the column named by \code{aes.style}, \code{$notes}.
 Default \code{NULL}: the built-in settings are used (NOTE): the
 \code{PLOTOPTS_plotact_daily.count} tab of Batz_reference_db, carried by the
-package. A data frame given here is used instead.}
+package. A data frame given here is used instead.
+(The old argument name \code{aes.default} is still read, with a WARNING.)}
 
 \item{project.name}{Character, default \code{"new.project"}. First part of
 each saved file name.}
 
 \item{aes.style}{Character, default \code{"override.value"}. Column of
-\code{aes.default} checked first for each parameter; a blank cell (or a
+\code{aes.plotopts} checked first for each parameter; a blank cell (or a
 missing column) falls back to \code{$default.value}. An old
 \code{overide.value} column is still read when \code{aes.style =
   "override.value"}.}
@@ -88,19 +89,19 @@ the multiplication sign to \code{X}) and removes other non-ASCII characters (e.g
 degree and micro signs), before any header check.}
 
 \item{strip.special.plotopts}{Logical, default \code{FALSE}. Same for
-\code{aes.default}. With \code{FALSE}, plot text such as
+\code{aes.plotopts}. With \code{FALSE}, plot text such as
 \code{"Temperature (degree sign C)"} is kept; a cell that cannot be read in this R
 session (e.g. a Latin-1 degree-sign byte) stops the function with an error
 naming the table, the number of bad characters and the first 5 rows per
 column.}
 
 \item{...}{Plot settings typed into the call, named as the
-\code{aes.default} \code{$parameter} rows (or fig.list setting
+\code{aes.plotopts} \code{$parameter} rows (or fig.list setting
 columns), e.g. \code{legend.position = "bottom"},
 \code{plot.width = 8}. A vector is joined with ";". Each setting is
-taken from the function call, then \code{aes.default} (its custom-style column, then
+taken from the function call, then \code{aes.plotopts} (its custom-style column, then
 \code{$default.value}). A setting given here does not need a row in
-\code{aes.default}. A NOTE lists the settings used and any name the
+\code{aes.plotopts}. A NOTE lists the settings used and any name the
 function does not use.}
 }
 \value{
@@ -127,7 +128,7 @@ night and draws the counts as bars on a log-scaled Y axis with fixed break
 values. Saves the plot as a PNG and returns the prepared data.
 }
 \details{
-\strong{Checks.} \code{aes.default} must have the required columns, unique
+\strong{Checks.} \code{aes.plotopts} must have the required columns, unique
 column names and these \code{$parameter} rows (matched ignoring case):
 \code{y.custom}, \code{bar.fill}, \code{bar.width}, \code{xaxe.date.format},
 \code{xaxe.date.buffer.days}, \code{plot.title.size},
@@ -197,7 +198,7 @@ CSV (when \code{write.csv.data = TRUE}) uses the same name with
 \dontrun{
 result <- batz.plotactivity_daily.count(
   data = readxl::read_excel("mine_only.xlsx"),
-  aes.default = read.csv("plotopts_dailycount.csv", stringsAsFactors = FALSE),
+  aes.plotopts = read.csv("plotopts_dailycount.csv", stringsAsFactors = FALSE),
   trim.noid = TRUE,
   date.start = "2025-07-01", date.end = "2025-12-31"
 )
@@ -206,13 +207,13 @@ result$ggplot
 # chain into the heatmap
 batz.plotactivity_heatmap(
   data = result$data,
-  aes.default = read.csv("plotopts_heatmap.csv", stringsAsFactors = FALSE)
+  aes.plotopts = read.csv("plotopts_heatmap.csv", stringsAsFactors = FALSE)
 )
 
 # also write the prepared data as a CSV with snake_case headers
 batz.plotactivity_daily.count(
   data = readxl::read_excel("mine_only.xlsx"),
-  aes.default = read.csv("plotopts_dailycount.csv", stringsAsFactors = FALSE),
+  aes.plotopts = read.csv("plotopts_dailycount.csv", stringsAsFactors = FALSE),
   write.csv.data = TRUE, snake_case = TRUE
 )
 }

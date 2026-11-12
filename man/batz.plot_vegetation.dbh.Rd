@@ -14,7 +14,7 @@ batz.plot_vegetation.dbh(
   size = c("page", "half page", "powerpoint", "half powerpoint"),
   table = TRUE,
   dir.save = getwd(),
-  plotopts = NULL,
+  aes.plotopts = NULL,
   aes.style = "override.value",
   ...
 )
@@ -58,7 +58,8 @@ as a CSV next to the PNG.}
 \item{dir.save}{Character, default \code{getwd()}. Folder the PNG (and
 table) is saved in (created if needed). \code{NULL} = nothing saved.}
 
-\item{plotopts}{Plot settings: \code{NULL} (default; built-in defaults),
+\item{aes.plotopts}{Plot settings (the old argument name \code{plotopts}
+is still read, with a WARNING): \code{NULL} (default; built-in defaults),
 a data frame, or the path to a \code{.csv} or \code{.xlsx} file, laid
 out like \verb{plotopts_vegetation.dbh.csv}: columns \code{$category},
 \code{$parameter}, \code{$default.value}, and optionally
@@ -66,12 +67,12 @@ out like \verb{plotopts_vegetation.dbh.csv}: columns \code{$category},
 built-in default. See "Settings" in Details.}
 
 \item{aes.style}{Character, default \code{"override.value"}. Name of the
-\code{plotopts} column read before \code{$default.value} (an old
+\code{aes.plotopts} column read before \code{$default.value} (an old
 \code{$overide.value} column is still read).}
 
 \item{...}{Any other setting listed in Details ("Settings"), typed into
 the call by name (e.g. \code{yaxe.max = 20}); used before
-\code{plotopts}.}
+\code{aes.plotopts}.}
 }
 \value{
 Invisibly, a list: \code{$plot} (the ggplot), \code{$dbh} (one
@@ -97,11 +98,11 @@ axis, DBH on the Y axis. Trees: \code{$vegetation.tree_tree1.dbh.overall}
 \item the value typed into the function call in this R session
 (\code{site.names}, \code{type.colors}, \code{units},
 \code{legend.position}, \code{size}, \code{table}, or any other setting by name in \code{...});
-\item \code{plotopts}: \code{$override.value} (\code{aes.style}) when
+\item \code{aes.plotopts}: \code{$override.value} (\code{aes.style}) when
 filled, else \code{$default.value};
 \item the built-in default (\code{batz.plot_vegetation.dbh.defaults()}).
 }
-\code{plotopts} can hold the five inputs above as \code{$parameter} rows
+\code{aes.plotopts} can hold the five inputs above as \code{$parameter} rows
 as well as these: \code{site.column}, \code{tree.columns},
 \code{snag.columns}, \code{snag.include} (TRUE/FALSE), \code{tree.label},
 \code{snag.label}, \code{units.column}, \code{xaxe.title},

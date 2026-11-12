@@ -8,7 +8,7 @@ batz.plotactivity_observations(
   data,
   fig.list,
   suntimes,
-  aes.default = NULL,
+  aes.plotopts = NULL,
   project.name = "new.project",
   aes.style = "override.value",
   dir.save = getwd(),
@@ -46,7 +46,7 @@ row plotted (NOTE).}
 old \code{schedual1} / \code{schedual2} are still accepted), but the
 values are not used in the plot.}
 
-\item{aes.default}{Data frame of plot settings (plotopts), one row per
+\item{aes.plotopts}{Data frame of plot settings (plotopts), one row per
 parameter, e.g. \verb{plotopts_callobs.csv} from
 \code{\link{batz.generate_plotopts}}. Required columns:
 \code{$category}, \code{$parameter}, \code{$default.value}. The custom
@@ -54,13 +54,14 @@ style column (named by \code{aes.style}) and \code{$notes} are optional.
 See "plotopts" in Details.
 Default \code{NULL}: the built-in settings are used (NOTE): the
 \code{PLOTOPTS_plotact_observations} tab of Batz_reference_db, carried by the
-package. A data frame given here is used instead.}
+package. A data frame given here is used instead.
+(The old argument name \code{aes.default} is still read, with a WARNING.)}
 
 \item{project.name}{Character, default \code{"new.project"}. Put at the
 start of every saved file name. A blank value leaves it out.}
 
 \item{aes.style}{Character, default \code{"override.value"}. Name of the
-\code{aes.default} column checked first for each parameter. When that
+\code{aes.plotopts} column checked first for each parameter. When that
 column does not exist, or its cell is blank, \code{$default.value} is
 used. With the default, an old \code{$overide.value} column is still
 read when there is no \code{$override.value} column.}
@@ -75,18 +76,18 @@ check. FALSE leaves them as they are.}
 
 \item{strip.special.plotopts}{Logical, default \code{FALSE}. Same
 clean-up for the settings tables \code{fig.list} and
-\code{aes.default}. FALSE leaves them untouched (plot text keeps its
+\code{aes.plotopts}. FALSE leaves them untouched (plot text keeps its
 symbols), but a cell that cannot be read in this R session stops the
 function with an error naming the table, the number of bad characters
 and the first rows per header. TRUE strips them instead.}
 
 \item{...}{Plot settings typed into the call, named as the
-\code{aes.default} \code{$parameter} rows (or fig.list setting
+\code{aes.plotopts} \code{$parameter} rows (or fig.list setting
 columns), e.g. \code{legend.position = "bottom"},
 \code{plot.width = 8}. A vector is joined with ";". Each setting is
-taken from the function call, then the fig.list row, then \code{aes.default} (its custom-style column, then
+taken from the function call, then the fig.list row, then \code{aes.plotopts} (its custom-style column, then
 \code{$default.value}). A setting given here does not need a row in
-\code{aes.default}. A NOTE lists the settings used and any name the
+\code{aes.plotopts}. A NOTE lists the settings used and any name the
 function does not use.}
 }
 \value{
@@ -185,7 +186,8 @@ own last facet. The 40kHzMyo legend key is shown whenever this is on.}
 \item{\code{$facet.label_format}}{Format of species facet titles:
 \code{"common_name"} (used when blank), \code{"scientific_name"},
 \code{"label_name"} (e.g. "Big brown (EPFU)"), \code{"label2_name"}
-(e.g. "Big brown bat (EPFU)"), \code{"code4"}, \code{"code6"},
+(e.g. "Big brown bat (EPFU)"), \code{"label3_name"} (e.g. "Arizona
+bat (MYOC)"), \code{"code4"}, \code{"code6"},
 \code{"both"}, or \code{"common"},
 \code{"latin"}, \code{"scientific"}. Other values stop with an error
 naming the row. Non-species facets keep their own name. An older
@@ -251,7 +253,7 @@ is used as \code{$facet.header}, \code{$Alldect} /
 ignored (NOTE). Exact duplicate rows (every column the same) are removed
 before plotting (NOTE).
 
-\strong{plotopts (aes.default).} Each setting is read from the first row
+\strong{plotopts (aes.plotopts).} Each setting is read from the first row
 whose \code{$parameter} matches the name (ignoring case and spaces).
 The value is the \code{aes.style} column when that cell is not blank,
 otherwise \code{$default.value}. For the fig.list settings above, a
@@ -343,7 +345,7 @@ result <- batz.plotactivity_observations(
   data = plfr.bats,
   fig.list = fig.list,
   suntimes = aru.suntimes,
-  aes.default = plotopts.callobs,
+  aes.plotopts = plotopts.callobs,
   dir.save = "C:/path/to/output/folder"
 )
 result$ggplots[[1]]
