@@ -78,7 +78,7 @@
 #'   in minutes; must divide evenly into 1440 (e.g. 15, 20, 30, 60),
 #'   otherwise the function stops.
 #' @param aes.plotopts Data frame of plot settings, one row per parameter
-#'   (e.g. \code{plotopts_heatmap.csv}), with \code{$category},
+#'   (e.g. \code{pltop.heatmap_activity.time.csv}), with \code{$category},
 #'   \code{$parameter}, \code{$default.value} and optionally an
 #'   \code{$override.value} column (see Details).
 #'   Default \code{NULL}: the built-in settings are used (NOTE): the
@@ -140,7 +140,7 @@
 #' heatmap.result <- batz.plot.heatmap_activity.time(
 #'   data = readxl::read_excel("mine_only.xlsx"),   # one row per detection: monnight, time
 #'   date.col = "monnight",
-#'   aes.plotopts = read.csv("plotopts_heatmap.csv", stringsAsFactors = FALSE),
+#'   aes.plotopts = read.csv("pltop.heatmap_activity.time.csv", stringsAsFactors = FALSE),
 #'   bin.minutes = 30,
 #'   project.name = "myproject",
 #'   site.label = "site1"

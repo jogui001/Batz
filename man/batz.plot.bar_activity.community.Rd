@@ -41,7 +41,7 @@ skipped (NOTE). A fig.list with no \code{$plot} column has every
 row plotted (NOTE).}
 
 \item{aes.plotopts}{Data frame of plot settings (plotopts), normally
-\verb{plotopts_bar.bat.group.csv}. Required columns: \code{$category},
+\verb{pltop.bar_activity.community.csv}. Required columns: \code{$category},
 \code{$parameter}, \code{$default.value}. The custom style column
 (named by \code{aes.style}) and \code{$notes} are optional. See
 "plotopts" in Details.
@@ -220,7 +220,7 @@ vetted <- read.csv("South_North_combined_vetted_1.csv", check.names = FALSE)
 plfr <- batz.generate_plotframe.bat.group(vetted, groupby.date = "date-12",
                                           write.output = FALSE)
 fig.list <- read.csv("fig.list_bar.bat.group.csv", check.names = FALSE)
-plotopts <- read.csv("plotopts_bar.bat.group.csv", check.names = FALSE)
+plotopts <- read.csv("pltop.bar_activity.community.csv", check.names = FALSE)
 res <- batz.plot.bar_activity.community(plfr, fig.list, plotopts,
                                project.name = "south.north")
 res$plots[[1]]$bars

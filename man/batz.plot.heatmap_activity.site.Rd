@@ -46,7 +46,7 @@ skipped (NOTE). A fig.list with no \code{$plot} column has every
 row plotted (NOTE).}
 
 \item{aes.plotopts}{Data frame of plot settings (plotopts), normally
-\verb{plotopts_heat.site.species.csv}. Required columns:
+\verb{pltop.heatmap_activity.site.csv}. Required columns:
 \code{$category}, \code{$parameter}, \code{$default.value}. The custom
 style column (named by \code{aes.style}) and \code{$notes} are
 optional. See "plotopts" in Details.
@@ -253,7 +253,7 @@ also be set in plotopts or typed into the call (plot.zero = TRUE).}
 \dontrun{
 vetted <- read.csv("South_North_combined_vetted_1.csv", check.names = FALSE)
 fig.list <- read.csv("fig.list_heat.site.species.csv", check.names = FALSE)
-plotopts <- read.csv("plotopts_heat.site.species.csv", check.names = FALSE)
+plotopts <- read.csv("pltop.heatmap_activity.site.csv", check.names = FALSE)
 res <- batz.plot.heatmap_activity.site(vetted, fig.list, plotopts,
                                    groupby.date = "date-12",
                                    project.name = "south.north")

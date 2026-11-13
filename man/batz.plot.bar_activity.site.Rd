@@ -62,7 +62,7 @@ old \code{schedual1} / \code{schedual2} are still accepted), but the
 values are not used in the plot.}
 
 \item{aes.plotopts}{Data frame of plot settings (plotopts), one row per
-parameter, e.g. \verb{plotopts_callobs.csv} from
+parameter, e.g. \verb{pltop.bar_activity.site.csv} from
 \code{\link{batz.generate_plotopts}}. Required columns:
 \code{$category}, \code{$parameter}, \code{$default.value}. The custom
 style column (named by \code{aes.style}) and \code{$notes} are optional.

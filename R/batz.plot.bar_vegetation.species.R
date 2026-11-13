@@ -51,7 +51,7 @@
 #' @param aes.plotopts Plot settings (the old argument name \code{plotopts}
 #'   is still read, with a WARNING): \code{NULL} (default; built-in defaults),
 #'   a data frame, or the path to a \code{.csv} or \code{.xlsx} file, laid
-#'   out like \verb{plotopts_vegetation.species.csv}: columns
+#'   out like \verb{pltop.bar_vegetation.species.csv}: columns
 #'   \code{$category}, \code{$parameter}, \code{$default.value}, and
 #'   optionally \code{$override.value} and \code{$notes}. A parameter left
 #'   out uses the built-in default. See "Settings" in Details.
@@ -474,7 +474,7 @@ batz.plot.bar_vegetation.species <- function(data, project.name = "", site.names
 #' gives a value. They are kept in Batz_reference_db (tab \code{pltop.bar_vegetation.species}) and
 #' carried by the package (\code{\link{batz.util_refdb.sync}}). Write it out as a starting \code{aes.plotopts} file with
 #' \code{write.csv(batz.plot.bar_vegetation.species.defaults(),
-#' "plotopts_vegetation.species.csv", row.names = FALSE)}.
+#' "pltop.bar_vegetation.species.csv", row.names = FALSE)}.
 #'
 #' @return Data frame: \code{$category}, \code{$parameter},
 #'   \code{$default.value}, \code{$override.value} (blank), \code{$notes}.

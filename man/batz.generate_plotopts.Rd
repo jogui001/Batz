@@ -32,7 +32,7 @@ of each output file name, and the name of the column that holds the
 project's own settings (written as \code{$override.value} in the
 built-in table). \code{""}: the column keeps the name
 \code{override.value} and the files are named
-\verb{plotopts_<function.name>.csv}.}
+\verb{pltop.<function name without batz.plot.>.csv}.}
 
 \item{dir.save}{Directory the settings files are written to (created if
 missing). Default \code{getwd()}.}
@@ -49,7 +49,9 @@ file name is printed.
 }
 \description{
 Writes the built-in plot settings of each requested plot function to a
-new project file named \verb{<project.name>_plotopts_<function.name>.csv}.
+new project file named after the function's settings tab in
+Batz_reference_db: \verb{<project.name>_pltop.<function name without batz.plot.>.csv}
+(e.g. \verb{acme_pltop.heatmap_aru.time.csv}).
 The \code{$override.value} column is named after the project
 (\code{project.name}). Edit that column of the copy to customise a
 project's plots, then pass the file as the function's
@@ -58,7 +60,7 @@ read before \code{$default.value}).
 }
 \details{
 \strong{Source.} The settings come from Batz_reference_db, the one master
-copy of the Batz tables: its \code{PLOTOPTS_*} tabs, listed in the
+copy of the Batz tables: its \code{pltop.*} tabs, listed in the
 \code{database.names} tab as \code{plotopts.<function name>}. The package
 carries a copy of them (\code{\link{batz.util_refdb.sync}}), so the file
 written matches the installed version. They are the same settings each
@@ -77,7 +79,7 @@ an error that lists the recognised names.
 batz.generate_plotopts(project.name = "acme.wetlands.2026", dir.save = "acme_project")
 # then, e.g.:
 # batz.plot.heatmap_aru.time(data, fig.list,
-#   aes.plotopts = read.csv("acme_project/acme.wetlands.2026_plotopts_batz.plot.heatmap_aru.time.csv",
+#   aes.plotopts = read.csv("acme_project/acme.wetlands.2026_pltop.heatmap_aru.time.csv",
 #                           check.names = FALSE),
 #   aes.style = "acme.wetlands.2026")
 

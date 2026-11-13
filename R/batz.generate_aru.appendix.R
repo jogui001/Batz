@@ -80,7 +80,7 @@
 #'   case/separator), whose lines are counted as minutes per 15-minute
 #'   interval.
 #' @param plotopts.bullseye,plotopts.sm4heatmap Data frame or path to the
-#'   \code{plotopts_bullseye.csv} / \code{plotopts_sm4heatmap.csv} settings
+#'   \code{pltop.bullseye_clutter.mic.csv} / \code{pltop.heatmap_aru.time.csv} settings
 #'   table, default \code{NULL} (the built-in settings carried by the
 #'   package from Batz_reference_db, tabs \code{pltop.bullseye_clutter.mic}
 #'   and \code{pltop.heatmap_aru.time}). Passed to
@@ -1128,8 +1128,8 @@ batz.generate_aru.appendix <- function(data,
   ## default = the built-in settings (Batz_reference_db, carried in R/sysdata.rda)
   load.opts <- function(x, file) {
     if (is.null(x))                                         # built-in settings (Batz_reference_db)
-      return(tryCatch(batz.db(paste0("plotopts.", c(plotopts_bullseye.csv = "batz.plot.bullseye_clutter.mic",
-                                                     plotopts_sm4heatmap.csv = "batz.plot.heatmap_aru.time")[[file]])),
+      return(tryCatch(batz.db(paste0("plotopts.", c(pltop.bullseye_clutter.mic.csv = "batz.plot.bullseye_clutter.mic",
+                                                     pltop.heatmap_aru.time.csv = "batz.plot.heatmap_aru.time")[[file]])),
                       error = function(e) NULL))
     if (is.character(x)) x <- utils::read.csv(x, check.names = FALSE, stringsAsFactors = FALSE, encoding = "UTF-8")
     x
@@ -1202,7 +1202,7 @@ batz.generate_aru.appendix <- function(data,
   }
 
   ## Figure 4 - batz.plot.bullseye_clutter.mic() per site
-  aes.bull <- load.opts(plotopts.bullseye, "plotopts_bullseye.csv")
+  aes.bull <- load.opts(plotopts.bullseye, "pltop.bullseye_clutter.mic.csv")
   if (!is.null(aes.bull)) {
     ## the mic icons ship in inst/img
     icon <- aes.bull$default.value[plotutil_param_key(aes.bull$parameter) == plotutil_param_key("icon.dir")]
@@ -1264,11 +1264,11 @@ batz.generate_aru.appendix <- function(data,
     }
   } else {
     for (s in sites) site.values[[s]]$figure.bullseye <- if (is.null(aes.bull))
-      "No plotopts_bullseye.csv found (plotopts.bullseye)" else "No quadrant cover data"
+      "No pltop.bullseye_clutter.mic.csv found (plotopts.bullseye)" else "No quadrant cover data"
   }
 
   ## Figure 5 - batz.plot.heatmap_aru.time() per site, from the merged SM4 log
-  aes.sm4 <- load.opts(plotopts.sm4heatmap, "plotopts_sm4heatmap.csv")
+  aes.sm4 <- load.opts(plotopts.sm4heatmap, "pltop.heatmap_aru.time.csv")
   if (!is.null(sm4.data) && !is.null(aes.sm4)) {
     if (is.character(sm4.data)) sm4.data <- special.read.csv(sm4.data, stringsAsFactors = FALSE, check.names = FALSE)
     sm <- as.data.frame(sm4.data, stringsAsFactors = FALSE)
@@ -1366,7 +1366,7 @@ batz.generate_aru.appendix <- function(data,
     }
   } else {
     for (s in sites) site.values[[s]]$figure.sm4 <- if (is.null(sm4.data)) "No SM4 log data given (sm4.data)" else
-      "No plotopts_sm4heatmap.csv found (plotopts.sm4heatmap)"
+      "No pltop.heatmap_aru.time.csv found (plotopts.sm4heatmap)"
   }
 
   ## --- 5. fill the template ----------------------------------------------------

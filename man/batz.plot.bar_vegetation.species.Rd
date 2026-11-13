@@ -68,7 +68,7 @@ extra legend height so the panels keep their size.}
 \item{aes.plotopts}{Plot settings (the old argument name \code{plotopts}
 is still read, with a WARNING): \code{NULL} (default; built-in defaults),
 a data frame, or the path to a \code{.csv} or \code{.xlsx} file, laid
-out like \verb{plotopts_vegetation.species.csv}: columns
+out like \verb{pltop.bar_vegetation.species.csv}: columns
 \code{$category}, \code{$parameter}, \code{$default.value}, and
 optionally \code{$override.value} and \code{$notes}. A parameter left
 out uses the built-in default. See "Settings" in Details.

@@ -70,7 +70,7 @@ print(r5c$dbh.mean)
 r5d <- batz.plot.bar_vegetation.species(q, DBH = FALSE, dir.save = NULL); stopifnot(is.null(r5d$dbh.mean))
 
 ## 6. Starting plotopts file (edit it, then pass it as plotopts = "<file>.csv")
-write.csv(batz.plot.bar_vegetation.species.defaults(), file.path(dir.out, "plotopts_vegetation.species.csv"), row.names = FALSE)
+write.csv(batz.plot.bar_vegetation.species.defaults(), file.path(dir.out, "pltop.bar_vegetation.species.csv"), row.names = FALSE)
 
 ## 7. Real data: the merged Survey123 workbook (quad tab)
 if (file.exists(merged.file)) {

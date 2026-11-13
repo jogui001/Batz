@@ -37,7 +37,7 @@
 #'   \code{$sunrise.monitoringnight} (Dawn: the sunrise that ends the night
 #'   starting on \code{$date}) are used for drawing.
 #' @param aes.plotopts Data frame of plot settings (plotopts), one row per
-#'   parameter, e.g. \verb{plotopts_first.last.csv} from
+#'   parameter, e.g. \verb{pltop.floatbar_detect.1st.last.csv} from
 #'   \code{\link{batz.generate_plotopts}}. Required columns:
 #'   \code{$category}, \code{$parameter}, \code{$default.value}. The custom
 #'   style column (named by \code{aes.style}) and \code{$notes} are optional.
@@ -797,7 +797,7 @@ batz.plot.floatbar_detect.1st.last <- function(data, fig.list, suntimes,
     if (!grepl("^[0-9]{1,2}:[0-9]{2}$", yaxe.limit.min) || !grepl("^[0-9]{1,2}:[0-9]{2}$", yaxe.limit.max)) {
       stop(sprintf(paste("$yaxe.limit.min/$yaxe.limit.max ('%s'/'%s') don't look like HH:MM time-of-day",
                           "values - aes.plotopts may be an old, numeric-minutes-based copy of",
-                          "plotopts_first.last.csv. Please use the current time-of-day version."),
+                          "pltop.floatbar_detect.1st.last.csv. Please use the current time-of-day version."),
                     yaxe.limit.min, yaxe.limit.max))
     }
     y.start <- as.POSIXct(paste(y.ref.date, yaxe.limit.min), tz = tz)

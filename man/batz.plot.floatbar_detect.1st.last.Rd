@@ -50,7 +50,7 @@ Only \code{$aru.name}, \code{$date}, \code{$sunset} (Dusk) and
 starting on \code{$date}) are used for drawing.}
 
 \item{aes.plotopts}{Data frame of plot settings (plotopts), one row per
-parameter, e.g. \verb{plotopts_first.last.csv} from
+parameter, e.g. \verb{pltop.floatbar_detect.1st.last.csv} from
 \code{\link{batz.generate_plotopts}}. Required columns:
 \code{$category}, \code{$parameter}, \code{$default.value}. The custom
 style column (named by \code{aes.style}) and \code{$notes} are optional.

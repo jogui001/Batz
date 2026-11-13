@@ -35,7 +35,7 @@
 #' \code{xaxe.interval} (blank = automatic; a number of 2 or more gives that
 #' many evenly spaced date labels), \code{xaxe.title} (blank = "Monitoring
 #' Night" or "Date"), \code{yaxe.title} ("Time of Day"). See
-#' \code{plotopts_heatmap2.csv}.
+#' \code{pltop.heatmap_activity.species.csv}.
 #'
 #' \strong{Day layout.} With \code{date.col = "date.monitoringnight"} the Y
 #' axis runs from noon to noon and a line (\code{midline.color}) marks
@@ -159,7 +159,7 @@
 #'   skipped (NOTE). A fig.list with no \code{$plot} column has every
 #'   row plotted (NOTE).
 #' @param aes.plotopts Optional plot-settings data frame
-#'   (\code{plotopts_heatmap2.csv}) with \code{$category},
+#'   (\code{pltop.heatmap_activity.species.csv}) with \code{$category},
 #'   \code{$parameter}, \code{$default.value}, plus the \code{aes.style}
 #'   column. Default \code{NULL}: the built-in settings are used (NOTE): the
 #'   \code{pltop.heatmap_activity.species} tab of Batz_reference_db, carried by the
@@ -255,7 +255,7 @@
 #'
 #' # fig.list + plot settings files
 #' heat2.figlist <- read.csv("heat2.figlist.csv", check.names = FALSE)
-#' plotopts <- read.csv("plotopts_heatmap2.csv", check.names = FALSE)
+#' plotopts <- read.csv("pltop.heatmap_activity.species.csv", check.names = FALSE)
 #' batz.plot.heatmap_activity.species(plfr, fig.list = heat2.figlist,
 #'   aes.plotopts = plotopts, dir.save = "C:/path/to/figures")
 #' }
@@ -311,7 +311,7 @@ batz.plot.heatmap_activity.species <- function(data,
   if (is.null(aes.plotopts)) aes.plotopts <- plotutil_aes_legacy(plotutil_dots(...), FN)   # old argument name aes.default / plotopts
   if (is.null(aes.plotopts)) aes.plotopts <- plotutil_default_plotopts(FN)   # built-in settings
   if (!is.null(aes.plotopts)) {
-    if (!is.data.frame(aes.plotopts)) stop("`aes.plotopts` must be a data frame (e.g. read.csv(\"plotopts_heatmap2.csv\")).")
+    if (!is.data.frame(aes.plotopts)) stop("`aes.plotopts` must be a data frame (e.g. read.csv(\"pltop.heatmap_activity.species.csv\")).")
     ad.canon <- canonicalize.headers(aes.plotopts, c("category", "parameter", "default.value"))
     if (length(ad.canon$missing) > 0) {
       stop("aes.plotopts is missing these headers: ", paste(ad.canon$missing, collapse = ", "))

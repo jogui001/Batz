@@ -38,7 +38,7 @@ skipped (NOTE). A fig.list with no \code{$plot} column has every
 row plotted (NOTE).}
 
 \item{aes.plotopts}{Optional plot-settings data frame
-(\code{plotopts_heatmap2.csv}) with \code{$category},
+(\code{pltop.heatmap_activity.species.csv}) with \code{$category},
 \code{$parameter}, \code{$default.value}, plus the \code{aes.style}
 column. Default \code{NULL}: the built-in settings are used (NOTE): the
 \code{pltop.heatmap_activity.species} tab of Batz_reference_db, carried by the
@@ -170,7 +170,7 @@ per facet row when faceted), \code{plot.width} (10), \code{plot.height}
 \code{xaxe.interval} (blank = automatic; a number of 2 or more gives that
 many evenly spaced date labels), \code{xaxe.title} (blank = "Monitoring
 Night" or "Date"), \code{yaxe.title} ("Time of Day"). See
-\code{plotopts_heatmap2.csv}.
+\code{pltop.heatmap_activity.species.csv}.
 
 \strong{Day layout.} With \code{date.col = "date.monitoringnight"} the Y
 axis runs from noon to noon and a line (\code{midline.color}) marks
@@ -296,7 +296,7 @@ batz.plot.heatmap_activity.species(plfr, bin.scale = "continuous",
 
 # fig.list + plot settings files
 heat2.figlist <- read.csv("heat2.figlist.csv", check.names = FALSE)
-plotopts <- read.csv("plotopts_heatmap2.csv", check.names = FALSE)
+plotopts <- read.csv("pltop.heatmap_activity.species.csv", check.names = FALSE)
 batz.plot.heatmap_activity.species(plfr, fig.list = heat2.figlist,
   aes.plotopts = plotopts, dir.save = "C:/path/to/figures")
 }

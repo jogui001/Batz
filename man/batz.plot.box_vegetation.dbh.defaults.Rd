@@ -15,5 +15,5 @@ The settings used when neither the function call nor \code{aes.plotopts}
 gives a value. They are kept in Batz_reference_db (tab \code{pltop.box_vegetation.dbh}) and
 carried by the package (\code{\link{batz.util_refdb.sync}}). Write it out as a starting \code{aes.plotopts} file with
 \code{write.csv(batz.plot.box_vegetation.dbh.defaults(),
-"plotopts_vegetation.dbh.csv", row.names = FALSE)}.
+"pltop.box_vegetation.dbh.csv", row.names = FALSE)}.
 }

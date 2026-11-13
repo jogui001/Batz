@@ -21,7 +21,7 @@
 #'   and \code{"Vertical Microphone Orientation"} (degrees: 0 = level,
 #'   90 = straight up, 270 = straight down).
 #' @param aes.plotopts Data frame of plot settings, one row per parameter
-#'   (e.g. \code{plotopts_bullseye.csv}, see
+#'   (e.g. \code{pltop.bullseye_clutter.mic.csv}, see
 #'   \code{\link{batz.generate_plotopts}}). Needs \code{$category},
 #'   \code{$parameter} and \code{$default.value}; an \code{$override.value}
 #'   column and \code{$notes} are optional. Its headers are not standardized.
@@ -215,7 +215,7 @@
 #' @export
 #' @examples
 #' \dontrun{
-#' aes.plotopts <- read.csv("plotopts_bullseye.csv", stringsAsFactors = FALSE)
+#' aes.plotopts <- read.csv("pltop.bullseye_clutter.mic.csv", stringsAsFactors = FALSE)
 #' cover <- read.csv("cover.csv", stringsAsFactors = FALSE, check.names = FALSE)
 #' mic <- read.csv("mic.csv", stringsAsFactors = FALSE, check.names = FALSE)
 #' batz.plot.bullseye_clutter.mic(cover, mic, aes.plotopts, project.name = "site1",
@@ -1100,7 +1100,7 @@ batz.plot.bullseye_clutter.mic <- function(data, mic, aes.plotopts = NULL, proje
     ## that same equal-share width, matching the "same font size as the
     ## other two plots" request, but its RENDERED column is narrower than
     ## that share. Flagged: if "Microphone Vertical Orientation" (this
-    ## round's new mic.bar title, see plotopts_bullseye.csv) reads as
+    ## round's new mic.bar title, see pltop.bullseye_clutter.mic.csv) reads as
     ## visually tight/crowded in its now-narrower column, the fix would be
     ## generalizing the auto-shrink fit-check to each panel's own actual
     ## (possibly unequal) column width rather than a uniform share - not

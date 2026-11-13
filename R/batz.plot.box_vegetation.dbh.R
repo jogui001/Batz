@@ -43,7 +43,7 @@
 #' @param aes.plotopts Plot settings (the old argument name \code{plotopts}
 #'   is still read, with a WARNING): \code{NULL} (default; built-in defaults),
 #'   a data frame, or the path to a \code{.csv} or \code{.xlsx} file, laid
-#'   out like \verb{plotopts_vegetation.dbh.csv}: columns \code{$category},
+#'   out like \verb{pltop.box_vegetation.dbh.csv}: columns \code{$category},
 #'   \code{$parameter}, \code{$default.value}, and optionally
 #'   \code{$override.value} and \code{$notes}. A parameter left out uses the
 #'   built-in default. See "Settings" in Details.
@@ -359,7 +359,7 @@ batz.plot.box_vegetation.dbh <- function(data, project.name = "", site.names = N
 #' gives a value. They are kept in Batz_reference_db (tab \code{pltop.box_vegetation.dbh}) and
 #' carried by the package (\code{\link{batz.util_refdb.sync}}). Write it out as a starting \code{aes.plotopts} file with
 #' \code{write.csv(batz.plot.box_vegetation.dbh.defaults(),
-#' "plotopts_vegetation.dbh.csv", row.names = FALSE)}.
+#' "pltop.box_vegetation.dbh.csv", row.names = FALSE)}.
 #'
 #' @return Data frame: \code{$category}, \code{$parameter},
 #'   \code{$default.value}, \code{$override.value} (blank), \code{$notes}.

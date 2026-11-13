@@ -14,7 +14,7 @@
 # **JUDGMENT CALL / LIMITATION, flagged to Josh** (same as
 # batz.plot.floatbar_detect.1st.last.dev.R): this dev script previously read
 # Josh's own real device test-data files (plfr.bats.csv, processed.csv,
-# fig.list.csv, plotopts_callobs.csv). The device bridge is not available in
+# fig.list.csv, pltop.bar_activity.site.csv). The device bridge is not available in
 # this session, so this round's dev script builds its own SYNTHETIC
 # stand-ins for all four inputs directly in R code below, using the exact
 # column layouts documented for the real files. This fully exercises the
@@ -806,7 +806,7 @@ fl.luso <- function(type, facet.set) data.frame(plot.type = type, plot.name = pa
   plot.set = "A1", pool = FALSE, date.format = "%b-%d", date.start = "2026-07-01", date.end = "2026-07-05",
   xaxe.interval = "1 day", xaxe.title = "Date", check.names = FALSE)
 facets.of <- function(r) unique(as.character(r$ggplots[[1]]$data$facet.panel.value))
-aes.obs <- read.csv("plotopts_callobs.csv", stringsAsFactors = FALSE, check.names = FALSE)
+aes.obs <- read.csv("pltop.bar_activity.site.csv", stringsAsFactors = FALSE, check.names = FALSE)
 r.luso <- batz.plot.bar_activity.site(mk(c("MYLU", "MYSO", "EPFU")), fl.luso("call.observations", "MYLU;EPFU"), st, aes.obs, dir.save = tempdir())
 cat("MYLU present -> facets (expect LUSO, epfu):", facets.of(r.luso), "\n")
 r.myso <- batz.plot.bar_activity.site(mk(c("MYSO", "EPFU")), fl.luso("call.observations", "EPFU"), st, aes.obs, dir.save = tempdir())

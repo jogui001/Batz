@@ -31,7 +31,7 @@
 #'   skipped (NOTE). A fig.list with no \code{$plot} column has every
 #'   row plotted (NOTE).
 #' @param aes.plotopts Data frame of plot settings (plotopts), normally
-#'   \verb{plotopts_bar.bat.group.csv}. Required columns: \code{$category},
+#'   \verb{pltop.bar_activity.community.csv}. Required columns: \code{$category},
 #'   \code{$parameter}, \code{$default.value}. The custom style column
 #'   (named by \code{aes.style}) and \code{$notes} are optional. See
 #'   "plotopts" in Details.
@@ -196,7 +196,7 @@
 #' plfr <- batz.generate_plotframe.bat.group(vetted, groupby.date = "date-12",
 #'                                           write.output = FALSE)
 #' fig.list <- read.csv("fig.list_bar.bat.group.csv", check.names = FALSE)
-#' plotopts <- read.csv("plotopts_bar.bat.group.csv", check.names = FALSE)
+#' plotopts <- read.csv("pltop.bar_activity.community.csv", check.names = FALSE)
 #' res <- batz.plot.bar_activity.community(plfr, fig.list, plotopts,
 #'                                project.name = "south.north")
 #' res$plots[[1]]$bars
@@ -270,7 +270,7 @@ batz.plot.bar_activity.community <- function(data, fig.list, aes.plotopts = NULL
     req.par <- plotutil_required_left(AES.DEFAULT.REQUIRED.PARAMETERS, plot.inputs)
     miss.par <- req.par[!plotutil_param_key(req.par) %in% plotutil_param_key(aes.canon$df$parameter)]
     if (length(miss.par) > 0) problems <- c(problems, sprintf(
-      "aes.plotopts is missing these required $parameter rows: %s - it may be an older copy of plotopts_bar.bat.group.csv",
+      "aes.plotopts is missing these required $parameter rows: %s - it may be an older copy of pltop.bar_activity.community.csv",
       paste(miss.par, collapse = ", ")))
   }
   if (length(problems) > 0) stop(paste(problems, collapse = "\n\n"), call. = FALSE)

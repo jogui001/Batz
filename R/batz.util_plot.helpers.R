@@ -514,7 +514,7 @@ plotutil_required_left <- function(required, inputs) required[!plotutil_param_ke
 #'
 #' Every plot function that takes \code{aes.plotopts} uses its built-in
 #' settings table when \code{aes.plotopts} is not given (\code{NULL}). The
-#' tables are kept in Batz_reference_db (tabs \code{PLOTOPTS_*}, listed in
+#' tables are kept in Batz_reference_db (tabs \code{pltop.*}, listed in
 #' its \code{database.names} tab as \code{plotopts.<function name>}) and
 #' carried by the package in \verb{R/sysdata.rda}
 #' (\code{\link{batz.util_refdb.sync}}). A NOTE says when they are used. A

@@ -131,7 +131,7 @@ case/separator), whose lines are counted as minutes per 15-minute
 interval.}
 
 \item{plotopts.bullseye, plotopts.sm4heatmap}{Data frame or path to the
-\code{plotopts_bullseye.csv} / \code{plotopts_sm4heatmap.csv} settings
+\code{pltop.bullseye_clutter.mic.csv} / \code{pltop.heatmap_aru.time.csv} settings
 table, default \code{NULL} (the built-in settings carried by the
 package from Batz_reference_db, tabs \code{pltop.bullseye_clutter.mic}
 and \code{pltop.heatmap_aru.time}). Passed to

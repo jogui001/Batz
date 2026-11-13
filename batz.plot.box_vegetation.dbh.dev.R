@@ -55,7 +55,7 @@ print(r4$settings[r4$settings$source != "default", ])
 ok(r4$plot$theme$legend.position == "left" && !"Snag" %in% r4$dbh$type, "call beats plotopts; plotopts beats default")
 
 ## 5. Starting plotopts file (edit it, then pass it as plotopts = "<file>.csv")
-write.csv(batz.plot.box_vegetation.dbh.defaults(), file.path(dir.out, "plotopts_vegetation.dbh.csv"), row.names = FALSE)
+write.csv(batz.plot.box_vegetation.dbh.defaults(), file.path(dir.out, "pltop.box_vegetation.dbh.csv"), row.names = FALSE)
 
 ## 6. Real data: the merged Survey123 workbook (quad tab, .overall columns)
 if (file.exists(merged.file)) {

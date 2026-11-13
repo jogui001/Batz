@@ -47,7 +47,7 @@
 #'   (Dusk) and \code{$sunrise.monitoringnight} (Dawn: the sunrise that ends
 #'   the night starting on \code{$date}) are used for drawing.
 #' @param aes.plotopts Data frame of plot settings (plotopts), one row per
-#'   parameter, e.g. \verb{plotopts_sm4heatmap.csv}. Required columns:
+#'   parameter, e.g. \verb{pltop.heatmap_aru.time.csv}. Required columns:
 #'   \code{$category}, \code{$parameter}, \code{$default.value}. The custom
 #'   style column (named by \code{aes.style}) and \code{$notes} are
 #'   optional. See "plotopts" in Details.

@@ -1,7 +1,9 @@
 #' Generate a project settings ("plotopts") CSV file for Batz plot functions
 #'
 #' Writes the built-in plot settings of each requested plot function to a
-#' new project file named \verb{<project.name>_plotopts_<function.name>.csv}.
+#' new project file named after the function's settings tab in
+#' Batz_reference_db: \verb{<project.name>_pltop.<function name without batz.plot.>.csv}
+#' (e.g. \verb{acme_pltop.heatmap_aru.time.csv}).
 #' The \code{$override.value} column is named after the project
 #' (\code{project.name}). Edit that column of the copy to customise a
 #' project's plots, then pass the file as the function's
@@ -22,7 +24,7 @@
 #'   project's own settings (written as \code{$override.value} in the
 #'   built-in table). \code{""}: the column keeps the name
 #'   \code{override.value} and the files are named
-#'   \verb{plotopts_<function.name>.csv}.
+#'   \verb{pltop.<function name without batz.plot.>.csv}.
 #' @param dir.save Directory the settings files are written to (created if
 #'   missing). Default \code{getwd()}.
 #' @param strip.special.plotopts Logical, default \code{FALSE}. \code{FALSE}
@@ -32,7 +34,7 @@
 #'
 #' @details
 #' \strong{Source.} The settings come from Batz_reference_db, the one master
-#' copy of the Batz tables: its \code{PLOTOPTS_*} tabs, listed in the
+#' copy of the Batz tables: its \code{pltop.*} tabs, listed in the
 #' \code{database.names} tab as \code{plotopts.<function name>}. The package
 #' carries a copy of them (\code{\link{batz.util_refdb.sync}}), so the file
 #' written matches the installed version. They are the same settings each
@@ -55,7 +57,7 @@
 #' batz.generate_plotopts(project.name = "acme.wetlands.2026", dir.save = "acme_project")
 #' # then, e.g.:
 #' # batz.plot.heatmap_aru.time(data, fig.list,
-#' #   aes.plotopts = read.csv("acme_project/acme.wetlands.2026_plotopts_batz.plot.heatmap_aru.time.csv",
+#' #   aes.plotopts = read.csv("acme_project/acme.wetlands.2026_pltop.heatmap_aru.time.csv",
 #' #                           check.names = FALSE),
 #' #   aes.style = "acme.wetlands.2026")
 #'
@@ -96,7 +98,8 @@ batz.generate_plotopts <- function(generate.files = c("batz.plot.bar_activity.co
     for (h in names(opts)) opts[[h]] <- as.character(opts[[h]])
     ## $override.value is named after the project (2026-11-10); blank project.name keeps override.value
     if (!is.null(pj.col) && "override.value" %in% names(opts)) names(opts)[names(opts) == "override.value"] <- pj.col
-    out.name <- if (nzchar(pj)) sprintf("%s_plotopts_%s.csv", pj, fn.name) else sprintf("plotopts_%s.csv", fn.name)
+    tab.name <- paste0("pltop.", sub("^batz\\.plot\\.", "", fn.name))   # same name as the Batz_reference_db tab
+    out.name <- if (nzchar(pj)) sprintf("%s_%s.csv", pj, tab.name) else sprintf("%s.csv", tab.name)
     utils::write.csv(opts, file.path(dir.save, out.name), row.names = FALSE)
     cat("Saved:", out.name, "\n")
     saved <- c(saved, out.name)

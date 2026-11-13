@@ -92,7 +92,7 @@ stopifnot("wind.speed.ms" %in% names(r11s$data), "wind.gust.ms" %in% names(r11g$
 ## ---- aes.plotopts / aes.style (2026-11-10): settings from a plotopts file ----------
 ## order: function call > aes.plotopts > built-in defaults; a value equal to the default changes nothing
 batz.generate_plotopts("batz.plot.line_weather.daily", project.name = "Bristol NH", dir.save = tempdir())
-po <- read.csv(file.path(tempdir(), "Bristol NH_plotopts_batz.plot.line_weather.daily.csv"), check.names = FALSE)
+po <- read.csv(file.path(tempdir(), "Bristol NH_pltop.line_weather.daily.csv"), check.names = FALSE)
 po$`Bristol NH`[po$parameter == "panels"] <- "4"                   # 4 nights per PNG
 po$`Bristol NH`[po$parameter == "temp.range"] <- "5;30"
 r12 <- batz.plot.line_weather.daily(weather, suntimes = suntimes, aes.plotopts = po, aes.style = "Bristol NH",
