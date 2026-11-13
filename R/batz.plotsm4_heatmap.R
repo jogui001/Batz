@@ -80,6 +80,9 @@
 #'   read when there is no \code{$override.value} column.
 #' @param dir.save Character, default \code{getwd()}. Folder every PNG is
 #'   saved into.
+#'   A legend at the top or bottom that is wider than the saved image is
+#'   wrapped over two or more lines, and the saved height grows by the
+#'   extra legend height so the panels keep their size.
 #' @param strip.special Logical, default \code{TRUE}. TRUE simplifies
 #'   accented letters and removes other non-ASCII characters (e.g. degree or
 #'   micro signs) in \code{data} and \code{suntimes}, before any header
@@ -769,7 +772,7 @@ batz.plotsm4_heatmap <- function(data, fig.list, suntimes = NULL,
       fname <- file.path(dir.save, fname)
 
       dims <- plotutil_plot_dimensions(p$job, plot.inputs, job.label, "batz.plotsm4_heatmap")   # $plot.dimensions (inches)
-      ggplot2::ggsave(fname, plot = g,
+      plotutil_ggsave(fname, plot = g,
                         width = if (!is.null(dims)) dims[1] else as.numeric(get.default("plot.width")) + as.numeric(get.default("ggsave.width.pad")),
                         height = if (!is.null(dims)) dims[2] else as.numeric(get.default("plot.height")) * ceiling(p$n.facet / 2) + as.numeric(get.default("ggsave.height.pad")),
                         units = if (!is.null(dims)) "in" else get.default("ggsave.units"),

@@ -209,6 +209,9 @@
 #'   \code{override.value} column.
 #' @param dir.save Character, default \code{getwd()}. Folder the PNG(s) are
 #'   saved in (created if needed).
+#'   A legend at the top or bottom that is wider than the saved image is
+#'   wrapped over two or more lines, and the saved height grows by the
+#'   extra legend height so the panels keep their size.
 #'
 #' @return Invisibly, a list:
 #'   \describe{
@@ -542,7 +545,7 @@ batz.plotactivity_heatmap2 <- function(data,
       n.rows <- if (pu$faceted) ceiling(length(pu$facets) / max(1, num.opt(job, "facpan.numcol"))) else 1
       height <- if (pu$faceted && n.rows > 1) num.opt(job, "facpan.hgt") * n.rows + 1.5 else num.opt(job, "plot.height")
       dims <- plotutil_plot_dimensions(job, plot.inputs, job.label, FN)   # $plot.dimensions (inches)
-      ggplot2::ggsave(fname, plot = out$plot, width = if (!is.null(dims)) dims[1] else num.opt(job, "plot.width"),
+      plotutil_ggsave(fname, plot = out$plot, width = if (!is.null(dims)) dims[1] else num.opt(job, "plot.width"),
                       height = if (!is.null(dims)) dims[2] else height,
                       units = if (!is.null(dims)) "in" else setting(job, "ggsave.units"), dpi = num.opt(job, "ggsave.dpi"))
       cat("Saved:", fname, "\n")

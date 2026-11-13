@@ -110,6 +110,9 @@
 #'   file name (\code{"-heatmap"} is appended); blank uses \code{"heatmap"}.
 #' @param dir.save Character, default \code{getwd()}. Directory the PNG is
 #'   saved to.
+#'   A legend at the top or bottom that is wider than the saved image is
+#'   wrapped over two or more lines, and the saved height grows by the
+#'   extra legend height so the panels keep their size.
 #' @param strip.special Logical, default \code{TRUE}. If \code{TRUE},
 #'   simplify or remove non-ASCII characters in \code{data} (see Details).
 #' @param strip.special.plotopts Logical, default \code{FALSE}. If
@@ -411,7 +414,7 @@ batz.plotactivity_heatmap <- function(data,
     ## underscore between the date and time halves).
     fname <- sprintf("%s_%s_%s_%s.png", project.name, site.token, daterange.token, format(Sys.time(), "%Y%m%d%H%M%S"))
     fname <- file.path(dir.save, fname)
-    ggplot2::ggsave(fname, plot = ggplot.obj,
+    plotutil_ggsave(fname, plot = ggplot.obj,
       width = as.numeric(get.default("plot.width")) + as.numeric(get.default("ggsave.width.pad")),
       height = as.numeric(get.default("plot.height")) + as.numeric(get.default("ggsave.height.pad")),
       units = get.default("ggsave.units"), dpi = as.numeric(get.default("ggsave.dpi")))

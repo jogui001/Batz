@@ -94,7 +94,10 @@ old \code{overide.value} column is still read when
 \code{override.value} column.}
 
 \item{dir.save}{Character, default \code{getwd()}. Folder the PNG(s) are
-saved in (created if needed).}
+saved in (created if needed).
+A legend at the top or bottom that is wider than the saved image is
+wrapped over two or more lines, and the saved height grows by the
+extra legend height so the panels keep their size.}
 
 \item{...}{Plotopts settings typed into the call (e.g.
 \code{legend.position = "top"}, \code{plot.width = 8}); a vector is

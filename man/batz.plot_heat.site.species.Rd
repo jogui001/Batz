@@ -88,7 +88,10 @@ read when there is no \code{$override.value} column. A non-blank
 fig.list value of the same name wins over both.}
 
 \item{dir.save}{Character, default \code{getwd()}. Folder the PNGs are
-saved in (created if needed).}
+saved in (created if needed).
+A legend at the top or bottom that is wider than the saved image is
+wrapped over two or more lines, and the saved height grows by the
+extra legend height so the panels keep their size.}
 
 \item{strip.special}{Logical, default \code{TRUE}. TRUE simplifies
 accented letters and removes other non-ASCII characters in \code{data}

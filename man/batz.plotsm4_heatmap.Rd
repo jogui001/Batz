@@ -84,7 +84,10 @@ used. With the default, an old \code{$overide.value} column is still
 read when there is no \code{$override.value} column.}
 
 \item{dir.save}{Character, default \code{getwd()}. Folder every PNG is
-saved into.}
+saved into.
+A legend at the top or bottom that is wider than the saved image is
+wrapped over two or more lines, and the saved height grows by the
+extra legend height so the panels keep their size.}
 
 \item{strip.special}{Logical, default \code{TRUE}. TRUE simplifies
 accented letters and removes other non-ASCII characters (e.g. degree or

@@ -179,7 +179,10 @@ values as they are.}
 saved file name starts with it.}
 
 \item{dir.save}{Character, default \code{getwd()}. Folder the PNGs are
-saved in (created if missing). \code{NULL} saves nothing.}
+saved in (created if missing). \code{NULL} saves nothing.
+A legend at the top or bottom that is wider than the saved image is
+wrapped over two or more lines, and the saved height grows by the
+extra legend height so the panels keep their size.}
 
 \item{plot.width}{Numeric, default \code{9}. PNG width (inches). The
 height is 1.9 inches per row of panels plus 1 inch.}

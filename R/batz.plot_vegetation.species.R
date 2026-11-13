@@ -45,6 +45,9 @@
 #'   bars). See "DBH labels" in Details.
 #' @param dir.save Character, default \code{getwd()}. Folder the PNG is
 #'   saved in (created if needed). \code{NULL} = no PNG.
+#'   A legend at the top or bottom that is wider than the saved image is
+#'   wrapped over two or more lines, and the saved height grows by the
+#'   extra legend height so the panels keep their size.
 #' @param aes.plotopts Plot settings (the old argument name \code{plotopts}
 #'   is still read, with a WARNING): \code{NULL} (default; built-in defaults),
 #'   a data frame, or the path to a \code{.csv} or \code{.xlsx} file, laid
@@ -88,16 +91,26 @@
 #' \code{snag.columns}, \code{snag.include} (TRUE/FALSE), \code{snag.label},
 #' \code{site.column}, \code{species.titlecase} (TRUE/FALSE),
 #' \code{dbh.units}, \code{units.column}, \code{dbh.digits},
-#' \code{dbh.label.suffix}, \code{dbh.text.size},
+#' \code{dbh.label.suffix}, \code{dbh.text.size}, \code{dbh.text.size.max},
 #' \code{panel.order} ("sapling;tree"), \code{panel.title.sapling},
 #' \code{panel.title.tree}, \code{xaxe.title}, \code{yaxe.title},
 #' \code{legend.title}, \code{yaxe.max} (blank = from the data),
 #' \code{xaxe.text.angle} ("auto" = 45 degrees when there are more than 8
 #' species),
-#' \code{bar.width}, \code{bar.outline.color}, \code{zero.show},
-#' \code{zero.linewidth}, \code{strip.text.size},
-#' \code{axis.title.size}, \code{axis.text.size}, \code{legend.text.size},
-#' \code{legend.key.size}, \code{ggsave.dpi}. Lists are separated by ";".
+#' \code{bar.width}, \code{bar.outline.color}, \code{plot.zero},
+#' \code{zero.show}, \code{zero.linewidth}, \code{strip.text.size},
+#' \code{axis.title.size}, \code{axis.title.face}, \code{axis.text.size},
+#' \code{legend.title.size}, \code{legend.title.face},
+#' \code{legend.text.size}, \code{legend.key.size}, \code{ggsave.dpi}.
+#' Lists are separated by ";".
+#'
+#' \strong{Zero values} (\code{plot.zero}, default \code{FALSE}). A site
+#' with none of a species gets no visible bar: with \code{bar = "grouped"}
+#' its place is kept (the other bars do not move) but left empty. With
+#' \code{plot.zero = TRUE} the 0 is shown, as a short line in the site's
+#' color when \code{zero.show} is TRUE. Set it in the call (e.g.
+#' \code{plot.zero = TRUE}) or as a \code{plot.zero} row in
+#' \code{aes.plotopts}.
 #'
 #' \strong{Counting.} Each filled species cell is one plant: a quadrant with
 #' Maple as tree 1 and tree 3 adds 2 to Maple. Species names are trimmed
@@ -117,6 +130,11 @@
 #' (records in the other unit, from \code{$measurement.units}, are
 #' converted). Bars with no DBH (all saplings, and trees with no DBH entered)
 #' have no label. The Y axis gets a little extra room for the labels.
+#' Label size: \code{dbh.text.size = "bar.width"} (default) sizes the labels
+#' so the widest one is as wide as one bar (one site's bar when
+#' \code{bar = "grouped"}), at the saved \code{size}, but no larger than
+#' \code{dbh.text.size.max} (pt, default 10) and no smaller than 4 pt; a
+#' number sets a fixed size in pt.
 #' \code{$dbh.mean} in the result holds the values.
 #'
 #' \strong{File name.}
@@ -410,13 +428,24 @@ batz.plot_vegetation.species <- function(data, project.name = "", site.names = N
     lab <- lab[!is.na(lab$y) & !is.na(lab$x), , drop = FALSE]
     lab$label <- fmt(lab$dbh.mean)
     g <- g + ggplot2::geom_text(data = lab, ggplot2::aes(x = x, y = y, label = label), inherit.aes = FALSE,
-                                vjust = -0.4, size = num("dbh.text.size"))
+                                vjust = -0.4, size = 3)
+    lab.layer <- length(g$layers)
+    lab.bw <- if (bar == "grouped") bw / length(sites) else bw          # one bar, in X-axis units
   }
   ang <- key(setting("xaxe.text.angle"))
   ang <- if (ang == "auto") (if (length(spp) > 8) 45 else 0) else suppressWarnings(as.numeric(ang))
   if (is.na(ang)) stop(FN, ': xaxe.text.angle must be "auto" or a number.', call. = FALSE)
   if (ang != 0) g <- g + ggplot2::theme(axis.text.x = ggplot2::element_text(angle = ang, hjust = 1, vjust = 1))
   if (legend.position %in% c("top", "bottom")) g <- g + ggplot2::guides(fill = ggplot2::guide_legend(nrow = 1))
+  if (!is.null(dbh.mean) && nrow(lab) > 0) {     # DBH label size: "bar.width" = as wide as one bar; a number = that size (pt)
+    ts <- key(setting("dbh.text.size"))
+    if (ts %in% c("bar.width", "auto", "")) {
+      g <- plotutil_label_fit(g, lab.layer, lab$label, length(spp), lab.bw, wh[1], wh[2],
+                              max.pt = num("dbh.text.size.max"))
+    } else {
+      g$layers[[lab.layer]]$aes_params$size <- num("dbh.text.size") / ggplot2::.pt
+    }
+  }
 
   file <- NA_character_
   if (!is.null(dir.save)) {
@@ -426,7 +455,7 @@ batz.plot_vegetation.species <- function(data, project.name = "", site.names = N
                                        format(Sys.time(), "%Y%m%d%H%M%S"), ".png"))
     k <- 1; base <- sub("\\.png$", "", file)
     while (file.exists(file)) { k <- k + 1; file <- paste0(base, "_", k, ".png") }   # same second
-    ggplot2::ggsave(file, g, width = wh[1], height = wh[2], units = "in", dpi = num("ggsave.dpi"), bg = "white")
+    plotutil_ggsave(file, g, width = wh[1], height = wh[2], units = "in", dpi = num("ggsave.dpi"), bg = "white")
     cat("Saved:", file, "\n")
   }
 

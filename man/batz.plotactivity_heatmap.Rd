@@ -62,7 +62,10 @@ still read when \code{aes.style = "override.value"} and there is no
 file name (\code{"-heatmap"} is appended); blank uses \code{"heatmap"}.}
 
 \item{dir.save}{Character, default \code{getwd()}. Directory the PNG is
-saved to.}
+saved to.
+A legend at the top or bottom that is wider than the saved image is
+wrapped over two or more lines, and the saved height grows by the
+extra legend height so the panels keep their size.}
 
 \item{strip.special}{Logical, default \code{TRUE}. If \code{TRUE},
 simplify or remove non-ASCII characters in \code{data} (see Details).}

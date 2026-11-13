@@ -123,3 +123,29 @@ h9 <- batz.plotactivity_heatmap(c4$data, aes.plotopts = po.p, aes.style = "acme"
 ok(h9$ggplot$theme$plot.title$size == 27, "aes.style names the project column")
 
 cat("\nALL TESTS PASSED - PNGs in", dir.out, "\n")
+
+## ---------------------------------------------------------------------------
+## 2026-11-13: a top/bottom legend wider than the saved image is wrapped over
+## 2+ lines and the saved height grows by the extra legend height (all plot
+## functions save through Batz:::plotutil_ggsave())
+## ---------------------------------------------------------------------------
+lg <- data.frame(x = 1:8, y = 1:8, site = paste("A long detector name", 1:8))
+g.lg <- ggplot2::ggplot(lg, ggplot2::aes(x, y, fill = site)) + ggplot2::geom_col() +
+  ggplot2::theme_bw() + ggplot2::theme(legend.position = "bottom")
+f.lg <- file.path(tempdir(), "legend_wrap.png")
+s.lg <- Batz:::plotutil_ggsave(f.lg, g.lg, width = 6, height = 4, units = "in", dpi = 100)
+cat("legend lines:", s.lg$legend.rows, " saved height:", round(s.lg$height, 2), "in\n")
+ok(s.lg$legend.rows >= 2 && s.lg$height > 4, "wide legend wrapped and height increased")
+s.ok <- Batz:::plotutil_ggsave(f.lg, g.lg, width = 30, height = 4, units = "in", dpi = 50)
+ok(is.na(s.ok$legend.rows) && s.ok$height == 4, "legend that fits is left alone")
+
+## 2026-11-13: a facet with no bars in a dodged layer no longer prints
+## "no non-missing arguments to max; returning -Inf" when the PNG is saved
+em <- data.frame(x = c("a", "b"), y = 1:2, s = c("A", "B"), f = factor(c("p1", "p1"), levels = c("p1", "p2")))
+g.em <- ggplot2::ggplot(em, ggplot2::aes(x, y, fill = s)) +
+  ggplot2::geom_col(position = ggplot2::position_dodge(preserve = "single")) +
+  ggplot2::facet_wrap(~f, drop = FALSE)
+w.em <- character(0)
+withCallingHandlers(Batz:::plotutil_ggsave(file.path(tempdir(), "empty_facet.png"), g.em, 6, 4, dpi = 50),
+                    warning = function(w) { w.em <<- c(w.em, conditionMessage(w)); invokeRestart("muffleWarning") })
+ok(length(w.em) == 0, "empty facet saves without the max/-Inf warning")

@@ -17,7 +17,9 @@
 #'   \code{40kMyo} or \code{40kHzMyo} (any case or punctuation) are treated
 #'   as 40kHzMyo.
 #' @param fig.list Data frame, one row per plot. See "fig.list columns" in
-#'   Details. Column names must be unique.
+#'   Details. Column names must be unique. A header that
+#'   \code{read.csv()} turned into \code{X40khzmyo} is read as
+#'   \code{40khzmyo}.
 #'   Cells holding "NA" (a heading not used by this plot type, as in
 #'   \code{\link{batz.generate_figlist}}) are treated as blank.
 #'   Only rows whose \code{$plot} is \code{TRUE} or \code{1} are
@@ -69,6 +71,9 @@
 #'   read when there is no \code{$override.value} column.
 #' @param dir.save Character, default \code{getwd()}. Folder every PNG is
 #'   saved into.
+#'   A legend at the top or bottom that is wider than the saved image is
+#'   wrapped over two or more lines, and the saved height grows by the
+#'   extra legend height so the panels keep their size.
 #' @param strip.special Logical, default \code{TRUE}. TRUE simplifies
 #'   accented letters and removes other non-ASCII characters (e.g. degree or
 #'   micro signs) in \code{data} and \code{suntimes}, before any header
@@ -698,13 +703,12 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
     spp.plot <- unique(trimws(spp.plot))
     facpan <- unique(trimws(facpan))
 
-    spp.plot <- batz.batusa_recode.names(spp.plot, batname.format.out = "common_name")
-    facpan <- batz.batusa_recode.names(facpan, batname.format.out = "common_name")
+    ## 40kHzMyo stays "40khzmyo" (the NABAT frequency class table would turn it into "Unidentifiable Myotis Species")
+    spp.plot <- plotutil_recode_keep40k(spp.plot)
+    facpan <- plotutil_recode_keep40k(facpan)
 
     pd <- data
-    is.khz.raw <- norm.simple(pd$spp.id) %in% KHZ.ALIASES
-    pd$spp.common <- batz.batusa_recode.names(pd$spp.id, batname.format.out = "common_name")
-    pd$spp.common[is.khz.raw] <- "40khzmyo"
+    pd$spp.common <- plotutil_recode_keep40k(pd$spp.id)
 
     # --- $plot.group: which column of `data` to filter/group by (2026-08-28
     # follow-up - see Details). Follow-up, 2026-09-23, per Josh: no longer a
@@ -1057,7 +1061,7 @@ batz.plotactivity_observations <- function(data, fig.list, suntimes,
       fname <- file.path(dir.save, fname)
 
       dims <- plotutil_plot_dimensions(p$job, plot.inputs, job.label, "batz.plotactivity_observations")   # $plot.dimensions (inches)
-      ggplot2::ggsave(fname, plot = g,
+      plotutil_ggsave(fname, plot = g,
         width = if (!is.null(dims)) dims[1] else as.numeric(get.default("plot.width")) + as.numeric(get.default("ggsave.width.pad")),
         height = if (!is.null(dims)) dims[2] else as.numeric(get.default("plot.height")) + as.numeric(get.default("ggsave.height.pad")),
         units = if (!is.null(dims)) "in" else get.default("ggsave.units"), dpi = as.numeric(get.default("ggsave.dpi")))

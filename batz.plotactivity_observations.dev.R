@@ -849,3 +849,12 @@ f.sc <- f.na; f.sc$plot.set <- paste(" ", unique(mk("EPFU")$group)[1], " ; ")   
 r.sc <- batz.plotactivity_observations(mk("EPFU"), f.sc, st, aes.obs, dir.save = tempdir())
 stopifnot(identical(tolower(r.sc$plots[[1]]$plot.sets.vals), tolower(unique(mk("EPFU")$group)[1])))
 cat("2026-11-09 checks passed\n")
+
+## 2026-11-13: 40kHzMyo bars are drawn again (the NABAT frequency class table had renamed them
+## "Unidentifiable Myotis Species"); an X40khzmyo header (read.csv check.names = TRUE) is accepted
+f40 <- fl.luso("call.observations", "AllDet;EPFU"); f40$myso <- FALSE; f40$all.detections <- TRUE
+f40[["40khzmyo"]] <- TRUE; names(f40)[names(f40) == "40khzmyo"] <- "X40khzmyo"
+r40 <- batz.plotactivity_observations(mk(c("All Detections", "40KHzMyo", "EPFU")), f40, st, aes.obs, dir.save = tempdir())
+stopifnot(isTRUE(r40$plots[[1]]$khz.flag), "40kHzMyo" %in% r40$plots[[1]]$pd$bar.type)
+print(r40$ggplots[[1]])                                               # black 40kHzMyo bars inside "All detections"
+cat("40kHzMyo check passed\n")

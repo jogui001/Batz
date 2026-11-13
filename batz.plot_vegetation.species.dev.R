@@ -85,3 +85,17 @@ z1 <- batz.plot_vegetation.species(q, project.name = "Falmouth", bar = "grouped"
 b0 <- ggplot2::layer_data(z0$plot, 1); b1 <- ggplot2::layer_data(z1$plot, 1)
 stopifnot(isTRUE(all.equal(b0$x, b1$x)), all(b0$alpha[b0$y == 0] == 0))   # same bar positions; 0 bars transparent
 cat("plot.zero: bar positions kept, 0 bars hidden\n")
+
+## Help page lists plot.zero (2026-11-13)
+# ?batz.plot_vegetation.species  -> Details: settings list and "Zero values" paragraph
+stopifnot(any(grepl("plot.zero", capture.output(tools::Rd2txt(utils:::.getHelpFile(help("batz.plot_vegetation.species", package = "Batz")))))))
+
+## 2026-11-13: DBH labels as wide as one bar (dbh.text.size = "bar.width", the default; at most dbh.text.size.max pt)
+dir.lw <- file.path(tempdir(), "veg_label_width"); dir.create(dir.lw, showWarnings = FALSE)
+for (b in c("stacked", "grouped")) for (s in c("page", "powerpoint")) {
+  rl <- batz.plot_vegetation.species(q, project.name = "Falmouth", bar = b, size = s, dir.save = dir.lw)
+  file.rename(rl$file, file.path(dir.lw, paste0(b, "_", s, ".png"))); cat(b, s, "label pt:", round(attr(rl$plot, "label.pt"), 1), "\n")
+}
+rf <- batz.plot_vegetation.species(q, project.name = "Falmouth", dbh.text.size = 6, dir.save = NULL)   # fixed 6 pt
+stopifnot(abs(rf$plot$layers[[length(rf$plot$layers)]]$aes_params$size * ggplot2::.pt - 6) < 1e-6)
+cat("PNGs in:", dir.lw, "\n")

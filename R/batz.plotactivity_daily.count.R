@@ -61,6 +61,9 @@
 #'   \code{dir.save}.
 #' @param dir.save Character, default \code{getwd()}. Folder the PNG (and CSV)
 #'   are saved in.
+#'   A legend at the top or bottom that is wider than the saved image is
+#'   wrapped over two or more lines, and the saved height grows by the
+#'   extra legend height so the panels keep their size.
 #' @param snake_case Logical, default \code{FALSE}. \code{TRUE} replaces every
 #'   \code{"."} in the written CSV's column names with \code{"_"} (e.g.
 #'   \code{date.monitoringnight} becomes \code{date_monitoringnight}). The
@@ -474,7 +477,7 @@ batz.plotactivity_daily.count <- function(data,
     ## @details, "Timestamp format (round twenty-two)").
     fname <- sprintf("%s_%s_%s_%s.png", project.name, site.token, daterange.token, format(Sys.time(), "%Y%m%d%H%M%S"))
     fname <- file.path(dir.save, fname)
-    ggplot2::ggsave(fname, plot = ggplot.obj,
+    plotutil_ggsave(fname, plot = ggplot.obj,
       width = as.numeric(get.default("plot.width")) + as.numeric(get.default("ggsave.width.pad")),
       height = as.numeric(get.default("plot.height")) + as.numeric(get.default("ggsave.height.pad")),
       units = get.default("ggsave.units"), dpi = as.numeric(get.default("ggsave.dpi")))

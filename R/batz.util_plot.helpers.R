@@ -541,6 +541,11 @@ plotutil_default_plotopts <- function(fn) {
 #' @noRd
 plotutil_figlist_na <- function(fig.list) {
   if (!is.data.frame(fig.list)) return(fig.list)
+  ## read.csv(check.names = TRUE) adds "X" to headers that start with a digit
+  ## ("40khzmyo" -> "X40khzmyo"): take the "X" off again
+  nm <- names(fig.list)
+  xd <- grepl("^X[0-9]", nm) & !(sub("^X", "", nm) %in% nm)
+  names(fig.list)[xd] <- sub("^X", "", nm[xd])
   for (cl in names(fig.list)) {
     v <- fig.list[[cl]]
     if (is.character(v) || is.factor(v)) {
@@ -754,4 +759,166 @@ plotutil_zero_set <- function(name, inputs, job, plotopts.get) {
   for (k in keys) { v <- plotutil_job_text(job, k); if (given(v)) return(plotutil_plot_zero(v)) }
   for (k in keys) { v <- tryCatch(plotopts.get(k), error = function(e) NA); if (given(v)) return(plotutil_plot_zero(v)) }
   FALSE
+}
+
+
+#' Recode species names to common_name, keeping 40kHzMyo as "40khzmyo"
+#'
+#' Internal. \code{batz.batusa_recode.names()} looks values up in the NABAT
+#' frequency class table first, which turns \code{40KHzMyo} / \code{40kMyo}
+#' into "Unidentifiable Myotis Species". The observation and first/last
+#' plots draw 40kHzMyo as its own bar or crossbar, so those values are kept
+#' as \code{"40khzmyo"} and everything else is recoded to common_name.
+#' @param x Character vector of species names or codes.
+#' @return Character vector, same length as \code{x}.
+#' @keywords internal
+#' @noRd
+plotutil_recode_keep40k <- function(x) {
+  x <- as.character(x)
+  k <- gsub("[^a-z0-9]", "", tolower(trimws(x))) %in% c("40khzmyo", "40kmyo")
+  out <- x
+  if (any(!k)) out[!k] <- batz.batusa_recode.names(x[!k], batname.format.out = "common_name")
+  out[k] <- "40khzmyo"
+  out
+}
+
+
+#' Fit a top/bottom legend to the saved width, then save (internal)
+#'
+#' Used by every plot function in place of \code{ggplot2::ggsave()}. When the
+#' legend is at the top or bottom and is wider than the saved image, the
+#' legends are first stacked (one under the other) and then each legend's
+#' keys are wrapped over 2, 3, ... lines (up to 8) until it fits. The saved
+#' height grows by the extra legend height, so the panels keep their size.
+#' Colour bars (continuous legends) are not wrapped. ggplot2's warning
+#' "no non-missing arguments to max; returning -Inf" (a facet with no bars in
+#' a side-by-side bar layer) is not shown.
+#' @param filename,plot,width,height,units,dpi,... As for \code{ggplot2::ggsave()}.
+#' @return Invisibly, a list: \code{$plot} (the plot as saved), \code{$width},
+#'   \code{$height} (in \code{units}) and \code{$legend.rows}.
+#' @keywords internal
+#' @noRd
+plotutil_ggsave <- function(filename, plot, width, height, units = "in", dpi = 300, ...) {
+  ## a facet with no bars in a dodged layer makes ggplot2 warn "no non-missing
+  ## arguments to max; returning -Inf" (once per layer) - harmless, so not shown
+  quiet <- function(expr) withCallingHandlers(expr, warning = function(w) {
+    if (grepl("no non-missing arguments to max", conditionMessage(w), fixed = TRUE)) invokeRestart("muffleWarning")
+  })
+  fit <- quiet(tryCatch(plotutil_legend_fit(plot, width, height, units, dpi),
+                        error = function(e) list(plot = plot, height = height, rows = NA)))
+  quiet(ggplot2::ggsave(filename, plot = fit$plot, width = width, height = fit$height, units = units, dpi = dpi, ...))
+  invisible(list(plot = fit$plot, width = width, height = fit$height, legend.rows = fit$rows))
+}
+
+#' @rdname plotutil_ggsave
+#' @keywords internal
+#' @noRd
+plotutil_legend_fit <- function(plot, width, height, units = "in", dpi = 300) {
+  same <- list(plot = plot, height = height, rows = NA)
+  if (!inherits(plot, "ggplot") || inherits(plot, "patchwork")) return(same)
+  pos <- plot$theme$legend.position
+  if (is.null(pos)) pos <- ggplot2::theme_get()$legend.position
+  if (!is.character(pos) || !(pos[1] %in% c("top", "bottom"))) return(same)
+  to.in <- switch(tolower(units), "in" = 1, "cm" = 1 / 2.54, "mm" = 1 / 25.4, "px" = 1 / dpi, 1)
+  w.in <- width * to.in; h.in <- height * to.in
+
+  measure <- function(p) {                       # legend box width / height in inches
+    grDevices::pdf(NULL, width = w.in, height = h.in)
+    on.exit(grDevices::dev.off())
+    g <- ggplot2::ggplotGrob(p)
+    i <- grep("^guide-box", g$layout$name)
+    i <- i[!vapply(g$grobs[i], inherits, logical(1), "zeroGrob")]
+    if (length(i) == 0) return(c(0, 0))
+    gb <- g$grobs[[i[1]]]
+    c(grid::convertWidth(sum(gb$widths), "in", valueOnly = TRUE),
+      grid::convertHeight(sum(gb$heights), "in", valueOnly = TRUE))
+  }
+  avail <- w.in - 0.3                            # left/right plot margins
+  m0 <- measure(plot)
+  if (m0[1] <= avail) return(same)
+
+  ## legend aesthetics drawn as keys (not colour bars)
+  b <- ggplot2::ggplot_build(plot)
+  aes.keys <- character(0)
+  for (sc in b$plot$scales$scales) {
+    a <- intersect(sc$aesthetics, c("fill", "colour", "color", "shape", "linetype", "alpha", "size"))[1]
+    if (is.na(a) || !sc$is_discrete()) next
+    gd <- sc$guide
+    if (identical(gd, "none") || isFALSE(gd)) next
+    aes.keys <- c(aes.keys, if (a == "color") "colour" else a)
+  }
+  old.guide <- function(a) {                     # guide set with guides() or in the scale
+    gl <- plot$guides
+    if (inherits(gl, "ggproto") && !is.null(gl$guides)) gl <- gl$guides
+    gd <- if (is.list(gl)) gl[[a]] else NULL
+    if (is.null(gd)) gd <- plot$scales$get_scales(a)$guide
+    gd
+  }
+  wrap <- function(n) {
+    p <- plot + ggplot2::theme(legend.box = "vertical")
+    gl <- list()
+    for (a in unique(aes.keys)) {
+      gd <- old.guide(a)
+      if (inherits(gd, "ggproto") && !is.null(gd$params)) {            # ggplot2 >= 3.5
+        if (!inherits(gd, "GuideLegend")) next
+        gd$params$nrow <- n; gd$params$ncol <- NULL; gd$params$byrow <- TRUE
+      } else if (is.list(gd) && inherits(gd, "guide")) {               # ggplot2 < 3.5
+        if (!inherits(gd, "legend")) next
+        gd$nrow <- n; gd$ncol <- NULL; gd$byrow <- TRUE
+      } else if (is.null(gd) || identical(gd, "legend")) {
+        gd <- ggplot2::guide_legend(nrow = n, byrow = TRUE)
+      } else next
+      gl[[a]] <- gd
+    }
+    if (length(gl)) p <- p + do.call(ggplot2::guides, gl)
+    p
+  }
+  best <- NULL
+  for (n in 1:8) {                               # n = 1: legends stacked, keys on one line
+    p <- wrap(n)
+    m <- measure(p)
+    best <- list(plot = p, m = m, rows = n)
+    if (m[1] <= avail) break
+  }
+  extra <- max(0, best$m[2] - m0[2]) / to.in
+  list(plot = best$plot, height = height + extra, rows = best$rows)
+}
+
+
+#' Size bar labels so they are as wide as one bar (internal)
+#'
+#' The panel width of the finished plot is measured at the saved size; one
+#' bar is \code{bar.width} of the space between two X-axis categories (a
+#' discrete axis has \code{n.x} categories plus 0.6 on each side). The text
+#' size is set so the widest label is as wide as one bar, but never larger
+#' than \code{max.pt} or smaller than \code{min.pt} (points).
+#' @param g Finished ggplot.
+#' @param layer The layer number of the label (geom_text) layer.
+#' @param labels Character vector of the labels drawn.
+#' @param n.x Number of X-axis categories.
+#' @param bar.width Width of one bar, in X-axis units (e.g. 0.9, or 0.9 / 3
+#'   for three grouped bars).
+#' @param width,height Saved size in inches.
+#' @param max.pt,min.pt Largest and smallest text size (pt).
+#' @return The plot with the layer's text size set. Attribute
+#'   \code{"label.pt"} holds the size used (pt).
+#' @keywords internal
+#' @noRd
+plotutil_label_fit <- function(g, layer, labels, n.x, bar.width, width, height, max.pt = 10, min.pt = 4) {
+  labels <- as.character(labels[!is.na(labels) & nzchar(labels)])
+  if (!length(labels) || !is.finite(bar.width) || bar.width <= 0) return(g)
+  grDevices::pdf(NULL, width = width, height = height)
+  on.exit(grDevices::dev.off())
+  gt <- ggplot2::ggplotGrob(g)
+  panel.w <- width - sum(vapply(seq_along(gt$widths), function(i)
+    grid::convertWidth(gt$widths[i], "in", valueOnly = TRUE), numeric(1)))     # panel column = "null" unit = 0
+  ncol.panels <- length(unique(gt$layout$l[grepl("^panel", gt$layout$name)]))
+  panel.w <- panel.w / max(1, ncol.panels)
+  bar.in <- panel.w * bar.width / (n.x + 1.2)
+  w10 <- max(vapply(labels, function(l)
+    grid::convertWidth(grid::grobWidth(grid::textGrob(l, gp = grid::gpar(fontsize = 10))), "in", valueOnly = TRUE), numeric(1)))
+  pt <- min(max.pt, max(min.pt, 10 * bar.in / w10))
+  g$layers[[layer]]$aes_params$size <- pt / ggplot2::.pt
+  attr(g, "label.pt") <- pt
+  g
 }

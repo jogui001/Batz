@@ -54,3 +54,18 @@ fl3 <- fb[1, setdiff(names(fb), "facet.label_format")]; fl3$facet.label <- "code
 r3 <- batz.plotdetections_first.last(data = bat, fig.list = fl3, suntimes = st, dir.save = dir.out)   # WARNING: ... used as $facet.label_format
 ok("EPFU" %in% toupper(levels(r3$plots[[1]]$pd$facet.panel.value)), "old $facet.label = code4 read as $facet.label_format")
 cat("PNGs in:", dir.out, "\n")
+
+## 2026-11-13: 40kHzMyo crossbars are drawn again (the NABAT frequency class table had renamed them
+## "Unidentifiable Myotis Species", so they became a species facet); X40khzmyo header accepted
+d.sum <- "C:/Users/josh.guilbert/OneDrive - Biodiversity Research Institute/Documents/ActiveProjects/MAMM-IN25-092 HEB, Bristol NH/5data/2Summary"
+if (dir.exists(d.sum)) {
+  d40  <- read.csv(file.path(d.sum, "plfr.heb.bat.csv"))
+  st40 <- read.csv(list.files(d.sum, pattern = "suntimes", full.names = TRUE)[1])
+  f40  <- read.csv(list.files(d.sum, pattern = "fig.list.csv$", full.names = TRUE)[1])   # check.names = TRUE -> X40khzmyo
+  f40  <- f40[tolower(f40$plot.type) == "call.observations" & f40$plot %in% c(TRUE, "TRUE", 1), ][1, ]
+  f40$plot.type <- "bat.detection"; f40$plot.set <- "CEMETERY"; f40$date.start <- "6/26/2026"; f40$date.end <- "7/2/2026"
+  r40 <- batz.plotdetections_first.last(d40, f40, st40, dir.save = tempdir())
+  stopifnot(isTRUE(r40$plots[[1]]$khz.flag), "40kHzMyo" %in% r40$plots[[1]]$pd$crossbar.type)
+  print(r40$ggplots[[1]])
+  cat("40kHzMyo check passed\n")
+}

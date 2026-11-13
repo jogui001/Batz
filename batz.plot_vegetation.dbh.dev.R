@@ -63,3 +63,9 @@ if (file.exists(merged.file)) {
   print(r6$summary)
 }
 cat("PNGs in:", dir.out, "\n")
+
+## Help page lists plot.zero (2026-11-13)
+# ?batz.plot_vegetation.dbh -> Details settings list includes plot.zero, axis/legend title size and face
+stopifnot(any(grepl("plot.zero", capture.output(tools::Rd2txt(utils:::.getHelpFile(help("batz.plot_vegetation.dbh", package = "Batz")))))))
+d0 <- batz.plot_vegetation.dbh(q, dir.save = NULL); d1 <- batz.plot_vegetation.dbh(q, dir.save = NULL, plot.zero = TRUE)
+cat("plot.zero dbh rows drawn: FALSE =", nrow(ggplot2::layer_data(d0$plot, 1)), " TRUE =", nrow(ggplot2::layer_data(d1$plot, 1)), "\n")

@@ -37,6 +37,9 @@
 #'   as a CSV next to the PNG.
 #' @param dir.save Character, default \code{getwd()}. Folder the PNG (and
 #'   table) is saved in (created if needed). \code{NULL} = nothing saved.
+#'   A legend at the top or bottom that is wider than the saved image is
+#'   wrapped over two or more lines, and the saved height grows by the
+#'   extra legend height so the panels keep their size.
 #' @param aes.plotopts Plot settings (the old argument name \code{plotopts}
 #'   is still read, with a WARNING): \code{NULL} (default; built-in defaults),
 #'   a data frame, or the path to a \code{.csv} or \code{.xlsx} file, laid
@@ -84,7 +87,9 @@
 #' \code{box.width}, \code{box.outline.color}, \code{box.linewidth},
 #' \code{whisker.caps},
 #' \code{outliers.show}, \code{points.show}, \code{point.size},
-#' \code{axis.title.size}, \code{axis.text.size}, \code{legend.text.size},
+#' \code{plot.zero} (FALSE = a DBH of 0 is not drawn), \code{axis.title.size},
+#' \code{axis.title.face}, \code{axis.text.size}, \code{legend.title.size},
+#' \code{legend.title.face}, \code{legend.text.size},
 #' \code{legend.key.size}, \code{ggsave.dpi}. Lists are separated by ";".
 #'
 #' \strong{DBH values.} One value per tree or snag: its \code{.overall}
@@ -329,7 +334,7 @@ batz.plot_vegetation.dbh <- function(data, project.name = "", site.names = NULL,
                                        format(Sys.time(), "%Y%m%d%H%M%S"), ".png"))
     k <- 1; base <- sub("\\.png$", "", file)
     while (file.exists(file)) { k <- k + 1; file <- paste0(base, "_", k, ".png") }   # same second
-    ggplot2::ggsave(file, g, width = wh[1], height = wh[2], units = "in", dpi = num("ggsave.dpi"), bg = "white")
+    plotutil_ggsave(file, g, width = wh[1], height = wh[2], units = "in", dpi = num("ggsave.dpi"), bg = "white")
     cat("Saved:", file, "\n")
   }
 

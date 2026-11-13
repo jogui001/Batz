@@ -28,7 +28,9 @@ first and last detection. Old header \code{$obs} is still accepted (used
 as \code{$observations.count}, with a WARNING).}
 
 \item{fig.list}{Data frame, one row per plot. See "fig.list columns" in
-Details. Column names must be unique.
+Details. Column names must be unique. A header that
+\code{read.csv()} turned into \code{X40khzmyo} is read as
+\code{40khzmyo}.
 Cells holding "NA" (a heading not used by this plot type, as in
 \code{\link{batz.generate_figlist}}) are treated as blank.
 Only rows whose \code{$plot} is \code{TRUE} or \code{1} are
@@ -76,7 +78,10 @@ used. With the default, an old \code{$overide.value} column is still
 read when there is no \code{$override.value} column.}
 
 \item{dir.save}{Character, default \code{getwd()}. Folder every PNG is
-saved into.}
+saved into.
+A legend at the top or bottom that is wider than the saved image is
+wrapped over two or more lines, and the saved height grows by the
+extra legend height so the panels keep their size.}
 
 \item{strip.special}{Logical, default \code{TRUE}. TRUE simplifies
 accented letters and removes other non-ASCII characters (e.g. degree or

@@ -56,7 +56,10 @@ table (one row per site and type: \code{$site}, \code{$type},
 as a CSV next to the PNG.}
 
 \item{dir.save}{Character, default \code{getwd()}. Folder the PNG (and
-table) is saved in (created if needed). \code{NULL} = nothing saved.}
+table) is saved in (created if needed). \code{NULL} = nothing saved.
+A legend at the top or bottom that is wider than the saved image is
+wrapped over two or more lines, and the saved height grows by the
+extra legend height so the panels keep their size.}
 
 \item{aes.plotopts}{Plot settings (the old argument name \code{plotopts}
 is still read, with a WARNING): \code{NULL} (default; built-in defaults),
@@ -117,7 +120,9 @@ as well as these: \code{site.column}, \code{tree.columns},
 \code{box.width}, \code{box.outline.color}, \code{box.linewidth},
 \code{whisker.caps},
 \code{outliers.show}, \code{points.show}, \code{point.size},
-\code{axis.title.size}, \code{axis.text.size}, \code{legend.text.size},
+\code{plot.zero} (FALSE = a DBH of 0 is not drawn), \code{axis.title.size},
+\code{axis.title.face}, \code{axis.text.size}, \code{legend.title.size},
+\code{legend.title.face}, \code{legend.text.size},
 \code{legend.key.size}, \code{ggsave.dpi}. Lists are separated by ";".
 
 \strong{DBH values.} One value per tree or snag: its \code{.overall}

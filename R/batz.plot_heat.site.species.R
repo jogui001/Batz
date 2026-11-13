@@ -77,6 +77,9 @@
 #'   fig.list value of the same name wins over both.
 #' @param dir.save Character, default \code{getwd()}. Folder the PNGs are
 #'   saved in (created if needed).
+#'   A legend at the top or bottom that is wider than the saved image is
+#'   wrapped over two or more lines, and the saved height grows by the
+#'   extra legend height so the panels keep their size.
 #' @param strip.special Logical, default \code{TRUE}. TRUE simplifies
 #'   accented letters and removes other non-ASCII characters in \code{data}
 #'   (local copy only) before matching. FALSE leaves them as they are.
@@ -643,7 +646,7 @@ batz.plot_heat.site.species <- function(data, fig.list, aes.plotopts = NULL,
     fname <- sprintf("%s_%s_%s_%s.png", project.name, job.label, daterange.token,
                      format(Sys.time(), "%Y%m%d%H%M%S"))
     dims <- plotutil_plot_dimensions(job, plot.inputs, job.label, "batz.plot_heat.site.species")   # $plot.dimensions (inches)
-    ggplot2::ggsave(file.path(dir.save, fname), plot = g,
+    plotutil_ggsave(file.path(dir.save, fname), plot = g,
                     width = if (!is.null(dims)) dims[1] else num.setting(job, "plot.width") + num.setting(job, "ggsave.width.pad"),
                     height = if (!is.null(dims)) dims[2] else num.setting(job, "plot.height") + num.setting(job, "ggsave.height.pad"),
                     units = if (!is.null(dims)) "in" else get.setting(job, "ggsave.units"), dpi = num.setting(job, "ggsave.dpi"),

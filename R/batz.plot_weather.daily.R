@@ -131,6 +131,9 @@
 #'   saved file name starts with it.
 #' @param dir.save Character, default \code{getwd()}. Folder the PNGs are
 #'   saved in (created if missing). \code{NULL} saves nothing.
+#'   A legend at the top or bottom that is wider than the saved image is
+#'   wrapped over two or more lines, and the saved height grows by the
+#'   extra legend height so the panels keep their size.
 #' @param aes.plotopts Optional, default \code{NULL}. Plot settings table:
 #'   a data frame, or the path of a \code{.csv} / \code{.xlsx}, laid out like
 #'   \code{batz.generate_plotopts("batz.plot_weather.daily")} writes it
@@ -646,7 +649,7 @@ batz.plot_weather.daily <- function(data, suntimes = NULL, date.start = NULL, da
         parts <- c(if (!blank(project.name)) clean(project.name), "weather.daily", if (nzchar(ws$site[1])) clean(ws$site[1]), clean(s),
                    paste0(gsub("-", "", nn[1]), "to", gsub("-", "", nn[length(nn)])), format(Sys.time(), "%Y%m%d%H%M%S"))
         f <- file.path(dir.save, paste0(paste(parts[nzchar(parts)], collapse = "_"), ".png"))
-        ggplot2::ggsave(f, g, width = plot.width, height = 1.9 * ceiling(length(nn) / facet.ncol) + 1, units = "in", dpi = 300)
+        plotutil_ggsave(f, g, width = plot.width, height = 1.9 * ceiling(length(nn) / facet.ncol) + 1, units = "in", dpi = 300)
         cat("Saved:", f, "\n"); files <- c(files, f)
       }
     }
