@@ -1,0 +1,71 @@
+# =============================================================================
+# batz.plot.floatbar_detect.1st.last.dev.R
+# -----------------------------------------------------------------------------
+# Dev / test script for batz.plot.floatbar_detect.1st.last() (Batz package).
+# Uses a bat plotframe (e.g. plfr.heb.bat.csv) and a suntimes table made by
+# batz.generate_suntimes.arulist(). One "bat.detection" fig.list row per site.
+# Tests: a site with no suntimes rows (no Dawn/Dusk lines, plot still made),
+# and a trailing comma in the call. Set the paths, then run the whole script.
+# =============================================================================
+
+library(Batz)
+
+dir.in  <- "C:/path/to/test/files"                     # holds the two files below
+dir.out <- file.path(tempdir(), "first.last_test"); dir.create(dir.out, showWarnings = FALSE)
+ok <- function(cond, msg) { if (!isTRUE(cond)) stop("FAILED: ", msg, call. = FALSE); cat("ok -", msg, "\n") }
+
+bat <- read.csv(file.path(dir.in, "plfr.heb.bat.csv"), check.names = FALSE)
+bat <- bat[, names(bat) != ""]                          # drop the row-number column
+
+## suntimes in the current format, from an arulist (aru.name must match the plot.set / $group)
+arul <- data.frame(aru.name = c("Ayers", "Cemetery", "SugarHill"),
+                   longitude = c(-71.7203, -71.7250, -71.7315), latitude = c(43.6004, 43.5990, 43.5943),
+                   date.start = "2026-06-01", date.end = "2026-07-07", time.zone = "America/New_York",
+                   sunregion.type = "fixed.unique", schedule1 = "", schedule2 = "")
+arul$sunregion <- arul$aru.name
+arul$sunregion.longitude <- arul$longitude; arul$sunregion.latitude <- arul$latitude
+dir.arul <- file.path(dir.out, "arulist"); dir.create(dir.arul, showWarnings = FALSE)
+write.csv(arul, file.path(dir.arul, "test_arulist.csv"), row.names = FALSE)
+st <- batz.generate_suntimes.arulist(dir.load = dir.arul, dir.save = dir.arul, project.name = "test")$aru.suntimes
+
+## fig.list: every header "NA", then fill the bat.detection settings
+fb <- batz.generate_figlist(functions = "batz.plot.floatbar_detect.1st.last", dir.save = dir.out)$fig.list
+fb <- fb[rep(1, 4), ]
+fb$plot <- TRUE; fb$plot.type <- "bat.detection"; fb$plot.set <- c("Ayers", "Cemetery", "Clerk", "Sugar Hill")
+fb$plot.name <- paste("HEB", fb$plot.set); fb$facet.header <- "sppid"; fb$facet.plot <- "TRUE"
+fb$facet.set <- "NE"; fb$myso <- "FALSE"; fb$all.detections <- "TRUE"; fb$`40khzmyo` <- "TRUE"
+fb$facet.label_format <- "common_name"; fb$facet.label <- ""; fb$date.format <- "%b-%d"
+fb$date.start <- "6/26/2026"; fb$date.end <- "7/2/2026"; fb$xaxe.interval <- "4"
+fb$xaxe.title <- "Date"; fb$yaxe.title <- "Time"
+
+## Clerk has no suntimes rows and "Sugar Hill" does not match "SugarHill": NOTE, plot made without sun lines
+r <- batz.plot.floatbar_detect.1st.last(data = bat, fig.list = fb, suntimes = st, aes.default = NULL,
+                                    project.name = "new.project", dir.save = dir.out,
+                                    strip.special = TRUE, strip.special.plotopts = FALSE, )   # trailing comma
+ok(length(r$ggplots) == 4, "4 plots, including sites with no suntimes rows")
+ok(nrow(r$plots[[3]]$sdb) == 0, "Clerk: 0 suntimes rows, no error")
+## $facet.label: alternative panel names (2026-11-09); an old $facet.label holding a name format still works
+fl2 <- fb[1, ]; fl2$facet.label <- "AllDet=All bats;epfu=Big brown"
+r2 <- batz.plot.floatbar_detect.1st.last(data = bat, fig.list = fl2, suntimes = st, dir.save = dir.out)
+labs2 <- levels(r2$plots[[1]]$pd$facet.panel.value)
+print(labs2)
+ok(labs2[1] == "All bats" && "Big brown" %in% labs2, "$facet.label renames panels")
+fl3 <- fb[1, setdiff(names(fb), "facet.label_format")]; fl3$facet.label <- "code4"   # old fig.list
+r3 <- batz.plot.floatbar_detect.1st.last(data = bat, fig.list = fl3, suntimes = st, dir.save = dir.out)   # WARNING: ... used as $facet.label_format
+ok("EPFU" %in% toupper(levels(r3$plots[[1]]$pd$facet.panel.value)), "old $facet.label = code4 read as $facet.label_format")
+cat("PNGs in:", dir.out, "\n")
+
+## 2026-11-13: 40kHzMyo crossbars are drawn again (the NABAT frequency class table had renamed them
+## "Unidentifiable Myotis Species", so they became a species facet); X40khzmyo header accepted
+d.sum <- "C:/Users/josh.guilbert/OneDrive - Biodiversity Research Institute/Documents/ActiveProjects/MAMM-IN25-092 HEB, Bristol NH/5data/2Summary"
+if (dir.exists(d.sum)) {
+  d40  <- read.csv(file.path(d.sum, "plfr.heb.bat.csv"))
+  st40 <- read.csv(list.files(d.sum, pattern = "suntimes", full.names = TRUE)[1])
+  f40  <- read.csv(list.files(d.sum, pattern = "fig.list.csv$", full.names = TRUE)[1])   # check.names = TRUE -> X40khzmyo
+  f40  <- f40[tolower(f40$plot.type) == "call.observations" & f40$plot %in% c(TRUE, "TRUE", 1), ][1, ]
+  f40$plot.type <- "bat.detection"; f40$plot.set <- "CEMETERY"; f40$date.start <- "6/26/2026"; f40$date.end <- "7/2/2026"
+  r40 <- batz.plot.floatbar_detect.1st.last(d40, f40, st40, dir.save = tempdir())
+  stopifnot(isTRUE(r40$plots[[1]]$khz.flag), "40kHzMyo" %in% r40$plots[[1]]$pd$crossbar.type)
+  print(r40$ggplots[[1]])
+  cat("40kHzMyo check passed\n")
+}
