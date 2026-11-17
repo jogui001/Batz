@@ -17,6 +17,14 @@
 #'   (SM5 logs have no \code{$mic0.type}).
 #' @param dir.save Character, default \code{getwd()}. Folder the plot frame
 #'   CSV is written to (created if needed). \code{NULL} writes no file.
+#' @param save.auto Default \code{TRUE}: the files are saved in \code{dir.save}.
+#'   \code{FALSE}: no files are saved. \code{"print"}: nothing is saved; each
+#'   output (plot or table) is printed instead. \code{"generate <number>"}
+#'   (e.g. \code{"generate 5"}): nothing is saved; up to \code{<number>}
+#'   outputs are created as objects in the R global environment, each named
+#'   after the file it would have been saved as, without the extension and the
+#'   time stamp (e.g. \code{acme_vegetation.dbh}); \code{"generate"} alone
+#'   creates every output.
 #' @param project.name Character, default \code{""}. First part of the file
 #'   name: \verb{<project.name>_plotframe.sm4_<YYYYMMDDHHMMSS>.csv}
 #'   (\verb{plotframe.sm4_<YYYYMMDDHHMMSS>.csv} when blank).
@@ -178,7 +186,7 @@
 #'
 #' @export
 batz.generate_plotframe.sm4 <- function(data,
-                                        dir.save = getwd(),
+                                        dir.save = getwd(), save.auto = TRUE,
                                         project.name = "",
                                         mic.type = c("U2"),
                                         interval = 15,
@@ -188,6 +196,7 @@ batz.generate_plotframe.sm4 <- function(data,
                                         aru.schedule = "USFWS.compliance",
                                         aru.scheduals_new = NULL,
                                         schedule.buffer = 5) {
+  sv <- util_saver(save.auto, "batz.generate_plotframe.sm4")   # TRUE save / FALSE / "print" / "generate <n>"
   FN <- "batz.generate_plotframe.sm4"
   REQUIRED <- c("aru.name", "date", "time", "mic0.type", "power.v", "temperature.c", "files", "scrubbed")
 
@@ -346,12 +355,11 @@ batz.generate_plotframe.sm4 <- function(data,
 
   ## ---- save --------------------------------------------------------------
   if (!is.null(dir.save) && length(dir.save) && !is.na(dir.save[1]) && nzchar(dir.save[1])) {
-    if (!dir.exists(dir.save)) dir.create(dir.save, recursive = TRUE)
+    if (sv$save && !dir.exists(dir.save)) dir.create(dir.save, recursive = TRUE)
     pj <- if (is.null(project.name) || !length(project.name) || is.na(project.name[1]) || !nzchar(trimws(project.name[1]))) "" else
       paste0(gsub("\\s+", "-", gsub('[\\\\/:*?"<>|]+', "", trimws(project.name[1]))), "_")
     path <- file.path(dir.save, paste0(pj, "plotframe.sm4_", format(Sys.time(), "%Y%m%d%H%M%S"), ".csv"))
-    utils::write.csv(out, path, row.names = FALSE)
-    cat("Saved:", path, "\n")
+    sv$out(out, path, function(.f) utils::write.csv(out, .f, row.names = FALSE))
   }
   invisible(out)
 }

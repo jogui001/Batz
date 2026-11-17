@@ -90,6 +90,14 @@
 #'   A legend at the top or bottom that is wider than the saved image is
 #'   wrapped over two or more lines, and the saved height grows by the
 #'   extra legend height so the panels keep their size.
+#' @param save.auto Default \code{TRUE}: the files are saved in \code{dir.save}.
+#'   \code{FALSE}: no files are saved. \code{"print"}: nothing is saved; each
+#'   output (plot or table) is printed instead. \code{"generate <number>"}
+#'   (e.g. \code{"generate 5"}): nothing is saved; up to \code{<number>}
+#'   outputs are created as objects in the R global environment, each named
+#'   after the file it would have been saved as, without the extension and the
+#'   time stamp (e.g. \code{acme_vegetation.dbh}); \code{"generate"} alone
+#'   creates every output.
 #' @param strip.special Logical, default \code{TRUE}. TRUE simplifies
 #'   accented letters and removes other non-ASCII characters (e.g. degree or
 #'   micro signs) in \code{data} and \code{suntimes}, before any header
@@ -324,9 +332,10 @@
 batz.plot.heatmap_aru.time <- function(data, fig.list, suntimes = NULL,
                                   aes.plotopts = NULL, project.name = "new.project",
                                   aes.style = "override.value",
-                                  dir.save = getwd(),
+                                  dir.save = getwd(), save.auto = TRUE,
                                   strip.special = TRUE,
                                   strip.special.plotopts = FALSE, ...) {
+  sv <- util_saver(save.auto, "batz.plot.heatmap_aru.time")   # TRUE save / FALSE / "print" / "generate <n>"
 
   ## settings typed into the call: used before fig.list and plotopts
   plot.inputs <- plotutil_plot_inputs(plotutil_dots(...), "batz.plot.heatmap_aru.time")
@@ -814,12 +823,11 @@ batz.plot.heatmap_aru.time <- function(data, fig.list, suntimes = NULL,
       fname <- file.path(dir.save, fname)
 
       dims <- plotutil_plot_dimensions(p$job, plot.inputs, job.label, "batz.plot.heatmap_aru.time")   # $plot.dimensions (inches)
-      plotutil_ggsave(fname, plot = g,
+      sv$out(g, fname, function(.f) plotutil_ggsave(.f, plot = g,
                         width = if (!is.null(dims)) dims[1] else as.numeric(get.default("plot.width")) + as.numeric(get.default("ggsave.width.pad")),
                         height = if (!is.null(dims)) dims[2] else as.numeric(get.default("plot.height")) * ceiling(p$n.facet / 2) + as.numeric(get.default("ggsave.height.pad")),
                         units = if (!is.null(dims)) "in" else get.default("ggsave.units"),
-                        dpi = as.numeric(get.default("ggsave.dpi")))
-      cat("Saved:", fname, "\n")
+                        dpi = as.numeric(get.default("ggsave.dpi"))))
     }
   } else {
     cat("ggplot2 is not installed - returning prepared data only, no plot object/PNG produced.\n")

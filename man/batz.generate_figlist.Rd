@@ -9,7 +9,8 @@ batz.generate_figlist(
     "batz.plot.bar_activity.site", "batz.plot.barfloat_detect.1st.last",
     "batz.plot.heatmap_aru.time", "batz.plot.heatmap_activity.species"),
   project.name = "",
-  dir.save = getwd()
+  dir.save = getwd(),
+  save.auto = TRUE
 )
 }
 \arguments{
@@ -27,6 +28,15 @@ name. Blank = no project part.}
 
 \item{dir.save}{Character, default \code{getwd()}. Folder the workbook is
 saved in (created if needed). \code{NULL} = no file.}
+
+\item{save.auto}{Default \code{TRUE}: the files are saved in \code{dir.save}.
+\code{FALSE}: no files are saved. \code{"print"}: nothing is saved; each
+output (plot or table) is printed instead. \code{"generate <number>"}
+(e.g. \code{"generate 5"}): nothing is saved; up to \code{<number>}
+outputs are created as objects in the R global environment, each named
+after the file it would have been saved as, without the extension and the
+time stamp (e.g. \code{acme_vegetation.dbh}); \code{"generate"} alone
+creates every output.}
 }
 \value{
 Invisibly, a list: \code{$fig.list} (the template data frame),

@@ -42,6 +42,14 @@
 #'   Nothing is saved when no data was downloaded (NOTE).
 #' @param dir.save Character, default \code{getwd()}. Folder the CSV is saved
 #'   in (created if needed).
+#' @param save.auto Default \code{TRUE}: the files are saved in \code{dir.save}.
+#'   \code{FALSE}: no files are saved. \code{"print"}: nothing is saved; each
+#'   output (plot or table) is printed instead. \code{"generate <number>"}
+#'   (e.g. \code{"generate 5"}): nothing is saved; up to \code{<number>}
+#'   outputs are created as objects in the R global environment, each named
+#'   after the file it would have been saved as, without the extension and the
+#'   time stamp (e.g. \code{acme_vegetation.dbh}); \code{"generate"} alone
+#'   creates every output.
 #' @param project.name Character, default \code{""}. First part of the file
 #'   name (spaces become "-").
 #'
@@ -150,8 +158,9 @@ batz.generate_weatherstation.data <- function(data,
                                               date.start = NULL,
                                               date.end = NULL,
                                               save = TRUE,
-                                              dir.save = getwd(),
+                                              dir.save = getwd(), save.auto = TRUE,
                                               project.name = "") {
+  sv <- util_saver(save.auto, "batz.generate_weatherstation.data")   # TRUE save / FALSE / "print" / "generate <n>"
   FN <- "batz.generate_weatherstation.data"
   if (missing(units)) units <- "metric"
   units <- unique(match.arg(units, c("metric", "imperial", "both"), several.ok = TRUE))
@@ -249,11 +258,10 @@ batz.generate_weatherstation.data <- function(data,
       dts <- as.Date(substr(as.character(wd$date.time), 1, 10))
       pj <- if (is.null(project.name) || !length(project.name) || is.na(project.name[1]) || !nzchar(trimws(project.name[1]))) "" else
         paste0(gsub("\\s+", "-", gsub('[\\\\/:*?"<>|]+', "", trimws(project.name[1]))), "_")
-      if (!dir.exists(dir.save)) dir.create(dir.save, recursive = TRUE)
+      if (sv$save && !dir.exists(dir.save)) dir.create(dir.save, recursive = TRUE)
       file <- file.path(dir.save, sprintf("%sweatherdata_%sto%s_%s.csv", pj, format(min(dts, na.rm = TRUE), "%Y%m%d"),
                                           format(max(dts, na.rm = TRUE), "%Y%m%d"), format(Sys.time(), "%Y%m%d%H%M%S")))
-      utils::write.csv(wd, file, row.names = FALSE)
-      cat("Saved:", file, "\n")
+      file <- sv$out(wd, file, function(.f) utils::write.csv(wd, .f, row.names = FALSE))
     }
   }
   invisible(list(weatherstation.list = wl, weatherstation.data = wd, file = file))

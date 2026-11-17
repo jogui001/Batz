@@ -36,6 +36,14 @@
 #'   pooled workbook with a tab per function. Both: both.
 #' @param dir.save Directory the settings files are written to (created if
 #'   missing). Default \code{getwd()}.
+#' @param save.auto Default \code{TRUE}: the files are saved in \code{dir.save}.
+#'   \code{FALSE}: no files are saved. \code{"print"}: nothing is saved; each
+#'   output (plot or table) is printed instead. \code{"generate <number>"}
+#'   (e.g. \code{"generate 5"}): nothing is saved; up to \code{<number>}
+#'   outputs are created as objects in the R global environment, each named
+#'   after the file it would have been saved as, without the extension and the
+#'   time stamp (e.g. \code{acme_vegetation.dbh}); \code{"generate"} alone
+#'   creates every output.
 #' @param strip.special.plotopts Logical, default \code{FALSE}. \code{FALSE}
 #'   keeps every character (e.g. an axis label with a degree sign).
 #'   \code{TRUE} simplifies accented letters (e.g. e-acute to \code{"e"}) and
@@ -98,8 +106,9 @@ batz.generate_plotopts <- function(generate.files = c("batz.plot.bar_activity.co
                                                       "batz.plot.box_vegetation.dbh", "batz.plot.line_weather.daily"),
                                    project.name = "new project",
                                    file.format = c("csv", "xlsx"),
-                                   dir.save = getwd(),
+                                   dir.save = getwd(), save.auto = TRUE,
                                    strip.special.plotopts = FALSE) {
+  sv <- util_saver(save.auto, "batz.generate_plotopts")   # TRUE save / FALSE / "print" / "generate <n>"
   FN <- "batz.generate_plotopts"
   if (length(generate.files) == 0 || !is.character(generate.files))
     stop(FN, ": generate.files must be a non-empty character vector of plot function names.", call. = FALSE)
@@ -113,7 +122,7 @@ batz.generate_plotopts <- function(generate.files = c("batz.plot.bar_activity.co
   bad.ff <- setdiff(ff, c("csv", "xlsx"))
   if (!length(ff) || length(bad.ff))
     stop(FN, ": file.format must be \"csv\", \"xlsx\" or both - not: ", paste(bad.ff, collapse = ", "), call. = FALSE)
-  if (!dir.exists(dir.save)) dir.create(dir.save, recursive = TRUE)
+  if (sv$save && !dir.exists(dir.save)) dir.create(dir.save, recursive = TRUE)
   pj <- if (is.null(project.name) || !length(project.name) || is.na(project.name[1])) "" else trimws(as.character(project.name[1]))
   pj.col <- if (nzchar(pj)) pj else NULL
 
@@ -129,9 +138,8 @@ batz.generate_plotopts <- function(generate.files = c("batz.plot.bar_activity.co
     pooled[[tab.name]] <- opts
     if ("csv" %in% ff) {
       out.name <- if (nzchar(pj)) sprintf("%s_%s.csv", pj, tab.name) else sprintf("%s.csv", tab.name)
-      utils::write.csv(opts, file.path(dir.save, out.name), row.names = FALSE)
-      cat("Saved:", out.name, "\n")
-      saved <- c(saved, out.name)
+      if (!is.na(sv$out(opts, file.path(dir.save, out.name), function(.f) utils::write.csv(opts, .f, row.names = FALSE))))
+        saved <- c(saved, out.name)
     }
   }
   if ("xlsx" %in% ff) {
@@ -146,9 +154,10 @@ batz.generate_plotopts <- function(generate.files = c("batz.plot.bar_activity.co
       openxlsx::setColWidths(wb, tab.name, seq_along(d), widths = w)
       openxlsx::freezePane(wb, tab.name, firstRow = TRUE)
     }
-    openxlsx::saveWorkbook(wb, file.path(dir.save, out.name), overwrite = TRUE)
-    cat("Saved:", out.name, sprintf("(%d tab(s): %s)", length(pooled), paste(names(pooled), collapse = ", ")), "\n")
-    saved <- c(saved, out.name)
+    if (!is.na(sv$out(pooled, file.path(dir.save, out.name), function(.f) openxlsx::saveWorkbook(wb, .f, overwrite = TRUE)))) {
+      cat(sprintf("  %d tab(s): %s\n", length(pooled), paste(names(pooled), collapse = ", ")))
+      saved <- c(saved, out.name)
+    }
   }
   invisible(saved)
 }

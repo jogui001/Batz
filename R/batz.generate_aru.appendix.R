@@ -41,6 +41,14 @@
 #'   \code{collate}/\code{separate} must be \code{TRUE}.
 #' @param dir.save Character, default \code{getwd()}. Output folder (created
 #'   if needed).
+#' @param save.auto Default \code{TRUE}: the files are saved in \code{dir.save}.
+#'   \code{FALSE}: no files are saved. \code{"print"}: nothing is saved; each
+#'   output (plot or table) is printed instead. \code{"generate <number>"}
+#'   (e.g. \code{"generate 5"}): nothing is saved; up to \code{<number>}
+#'   outputs are created as objects in the R global environment, each named
+#'   after the file it would have been saved as, without the extension and the
+#'   time stamp (e.g. \code{acme_vegetation.dbh}); \code{"generate"} alone
+#'   creates every output.
 #' @param time.zone Character, default \code{"America/New_York"}. Survey123
 #'   date-times (stored in UTC) are shown in this time zone; also used for
 #'   the dawn/dusk times of Figure 5. \code{"UTC"} shows them as stored.
@@ -377,7 +385,7 @@ batz.generate_aru.appendix <- function(data,
                                        pdf = FALSE,
                                        collate = TRUE,
                                        separate = TRUE,
-                                       dir.save = getwd(),
+                                       dir.save = getwd(), save.auto = TRUE,
                                        time.zone = "America/New_York",
                                        continue.missing = NULL,
                                        template = NULL,
@@ -393,6 +401,7 @@ batz.generate_aru.appendix <- function(data,
                                        text.size_data = 10, text.font_data = "Arial", text.format_data = "",
                                        text.size_labels = 10, text.font_labels = "Arial", text.format_labels = "bold",
                                        text.size_captions = 10, text.font_captions = "Arial", text.format_captions = "") {
+  sv <- util_saver(save.auto, "batz.generate_aru.appendix")   # TRUE save / FALSE / "print" / "generate <n>"
   ## service.events: TRUE / FALSE (logical or text), "optional", "note"
   service.events <- if (is.logical(service.events)) as.character(service.events[1]) else as.character(service.events)[1]
   service.events <- switch(tolower(trimws(service.events)), "true" = "TRUE", "false" = "FALSE",
@@ -441,7 +450,7 @@ batz.generate_aru.appendix <- function(data,
   if (!nzchar(template) || !file.exists(template)) {
     stop("Template not found - pass `template` = path to batz.aru.appendix.template.docx.", call. = FALSE)
   }
-  if (!dir.exists(dir.save)) dir.create(dir.save, recursive = TRUE)
+  if (sv$save && !dir.exists(dir.save)) dir.create(dir.save, recursive = TRUE)
 
   is.blank <- function(x) is.na(x) | !nzchar(trimws(as.character(x))) |
     tolower(trimws(as.character(x))) %in% c("na", "n/a")
@@ -1707,6 +1716,10 @@ batz.generate_aru.appendix <- function(data,
     symbolize.footnotes(doc)
     number.figures(doc)
     apply.text.styles(doc)
+    if (!sv$save) {                                     # save.auto FALSE / "print" / "generate <n>"
+      sv$out(doc, file.path(dir.save, paste0(base, if (isTRUE(word)) ".docx" else ".pdf")))
+      return(character(0))
+    }
     docx.path <- file.path(if (isTRUE(word)) dir.save else tempdir(), paste0(base, ".docx"))
     print(doc, target = docx.path)
     out <- character(0)

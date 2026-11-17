@@ -22,6 +22,14 @@
 #'   reported with \code{message()}.
 #' @param dir.save Character, default \code{getwd()}. Folder the output CSV is
 #'   written to when \code{write.output = TRUE}.
+#' @param save.auto Default \code{TRUE}: the files are saved in \code{dir.save}.
+#'   \code{FALSE}: no files are saved. \code{"print"}: nothing is saved; each
+#'   output (plot or table) is printed instead. \code{"generate <number>"}
+#'   (e.g. \code{"generate 5"}): nothing is saved; up to \code{<number>}
+#'   outputs are created as objects in the R global environment, each named
+#'   after the file it would have been saved as, without the extension and the
+#'   time stamp (e.g. \code{acme_vegetation.dbh}); \code{"generate"} alone
+#'   creates every output.
 #' @param write.output Logical, default \code{TRUE}. Write the output CSV
 #'   to \code{dir.save} as
 #'   \verb{<project.name>_bat.group_<DATE1>to<DATE2>_<timestamp>.csv}
@@ -130,12 +138,13 @@ batz.generate_plotframe.bat.group <- function(data,
                                               species.list = NULL,
                                               groupby.date = "date.monitoringnight",
                                               duplicates.remove = TRUE,
-                                              dir.save = getwd(),
+                                              dir.save = getwd(), save.auto = TRUE,
                                               write.output = TRUE,
                                               project.name = "",
                                               family.ref = NULL,
                                               snake_case = FALSE,
                                               strip.special = TRUE) {
+  sv <- util_saver(save.auto, "batz.generate_plotframe.bat.group")   # TRUE save / FALSE / "print" / "generate <n>"
 
   if (!is.data.frame(data)) stop("`data` must be a data frame.")
   if (!is.null(species.list) && !is.character(species.list)) {
@@ -268,8 +277,7 @@ batz.generate_plotframe.bat.group <- function(data,
     base.name <- if (identical(project.name, "")) "plotframe" else project.name
     file.name <- sprintf("%s_bat.group_%s_%s.csv", base.name, daterange.token,
                          format(Sys.time(), "%Y%m%d%H%M%S"))
-    utils::write.csv(out, file.path(dir.save, file.name), row.names = FALSE)
-    cat("Saved:", file.name, "\n")
+    sv$out(out, file.path(dir.save, file.name), function(.f) utils::write.csv(out, .f, row.names = FALSE))
   }
 
   out

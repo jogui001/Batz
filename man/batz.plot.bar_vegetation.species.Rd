@@ -14,6 +14,7 @@ batz.plot.bar_vegetation.species(
   size = c("page", "half page", "powerpoint", "half powerpoint"),
   DBH = TRUE,
   dir.save = getwd(),
+  save.auto = TRUE,
   aes.plotopts = NULL,
   aes.style = "override.value",
   ...
@@ -64,6 +65,15 @@ saved in (created if needed). \code{NULL} = no PNG.
 A legend at the top or bottom that is wider than the saved image is
 wrapped over two or more lines, and the saved height grows by the
 extra legend height so the panels keep their size.}
+
+\item{save.auto}{Default \code{TRUE}: the files are saved in \code{dir.save}.
+\code{FALSE}: no files are saved. \code{"print"}: nothing is saved; each
+output (plot or table) is printed instead. \code{"generate <number>"}
+(e.g. \code{"generate 5"}): nothing is saved; up to \code{<number>}
+outputs are created as objects in the R global environment, each named
+after the file it would have been saved as, without the extension and the
+time stamp (e.g. \code{acme_vegetation.dbh}); \code{"generate"} alone
+creates every output.}
 
 \item{aes.plotopts}{Plot settings (the old argument name \code{plotopts}
 is still read, with a WARNING): \code{NULL} (default; built-in defaults),

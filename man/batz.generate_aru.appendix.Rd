@@ -17,6 +17,7 @@ batz.generate_aru.appendix(
   collate = TRUE,
   separate = TRUE,
   dir.save = getwd(),
+  save.auto = TRUE,
   time.zone = "America/New_York",
   continue.missing = NULL,
   template = NULL,
@@ -83,6 +84,15 @@ site, each starting on a new page:
 
 \item{dir.save}{Character, default \code{getwd()}. Output folder (created
 if needed).}
+
+\item{save.auto}{Default \code{TRUE}: the files are saved in \code{dir.save}.
+\code{FALSE}: no files are saved. \code{"print"}: nothing is saved; each
+output (plot or table) is printed instead. \code{"generate <number>"}
+(e.g. \code{"generate 5"}): nothing is saved; up to \code{<number>}
+outputs are created as objects in the R global environment, each named
+after the file it would have been saved as, without the extension and the
+time stamp (e.g. \code{acme_vegetation.dbh}); \code{"generate"} alone
+creates every output.}
 
 \item{time.zone}{Character, default \code{"America/New_York"}. Survey123
 date-times (stored in UTC) are shown in this time zone; also used for

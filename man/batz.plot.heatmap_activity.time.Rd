@@ -14,6 +14,7 @@ batz.plot.heatmap_activity.time(
   aes.style = "override.value",
   site.label = "",
   dir.save = getwd(),
+  save.auto = TRUE,
   strip.special = TRUE,
   strip.special.plotopts = FALSE,
   ...
@@ -69,6 +70,15 @@ saved to.
 A legend at the top or bottom that is wider than the saved image is
 wrapped over two or more lines, and the saved height grows by the
 extra legend height so the panels keep their size.}
+
+\item{save.auto}{Default \code{TRUE}: the files are saved in \code{dir.save}.
+\code{FALSE}: no files are saved. \code{"print"}: nothing is saved; each
+output (plot or table) is printed instead. \code{"generate <number>"}
+(e.g. \code{"generate 5"}): nothing is saved; up to \code{<number>}
+outputs are created as objects in the R global environment, each named
+after the file it would have been saved as, without the extension and the
+time stamp (e.g. \code{acme_vegetation.dbh}); \code{"generate"} alone
+creates every output.}
 
 \item{strip.special}{Logical, default \code{TRUE}. If \code{TRUE},
 simplify or remove non-ASCII characters in \code{data} (see Details).}

@@ -48,6 +48,14 @@
 #'   A legend at the top or bottom that is wider than the saved image is
 #'   wrapped over two or more lines, and the saved height grows by the
 #'   extra legend height so the panels keep their size.
+#' @param save.auto Default \code{TRUE}: the files are saved in \code{dir.save}.
+#'   \code{FALSE}: no files are saved. \code{"print"}: nothing is saved; each
+#'   output (plot or table) is printed instead. \code{"generate <number>"}
+#'   (e.g. \code{"generate 5"}): nothing is saved; up to \code{<number>}
+#'   outputs are created as objects in the R global environment, each named
+#'   after the file it would have been saved as, without the extension and the
+#'   time stamp (e.g. \code{acme_vegetation.dbh}); \code{"generate"} alone
+#'   creates every output.
 #' @param aes.plotopts Plot settings (the old argument name \code{plotopts}
 #'   is still read, with a WARNING): \code{NULL} (default; built-in defaults),
 #'   a data frame, or the path to a \code{.csv} or \code{.xlsx} file, laid
@@ -159,7 +167,8 @@ batz.plot.bar_vegetation.species <- function(data, project.name = "", site.names
                                          legend.position = c("right", "bottom", "left", "top"),
                                          bar = c("stacked", "grouped"),
                                          size = c("page", "half page", "powerpoint", "half powerpoint"),
-                                         DBH = TRUE, dir.save = getwd(), aes.plotopts = NULL, aes.style = "override.value", ...) {
+                                         DBH = TRUE, dir.save = getwd(), save.auto = TRUE, aes.plotopts = NULL, aes.style = "override.value", ...) {
+  sv <- util_saver(save.auto, "batz.plot.bar_vegetation.species")   # TRUE save / FALSE / "print" / "generate <n>"
   FN <- "batz.plot.bar_vegetation.species"
   blank <- function(v) is.null(v) || length(v) == 0 || all(is.na(v)) || all(!nzchar(trimws(as.character(v))))
   split.list <- function(v) {
@@ -453,14 +462,13 @@ batz.plot.bar_vegetation.species <- function(data, project.name = "", site.names
 
   file <- NA_character_
   if (!is.null(dir.save)) {
-    if (!dir.exists(dir.save)) dir.create(dir.save, recursive = TRUE)
+    if (sv$save && !dir.exists(dir.save)) dir.create(dir.save, recursive = TRUE)
     cl <- function(x) gsub("\\s+", "-", gsub('[\\\\/:*?"<>|]+', "", trimws(x)))
     file <- file.path(dir.save, paste0(if (!blank(project.name)) paste0(cl(project.name), "_"), "vegetation.species_",
                                        format(Sys.time(), "%Y%m%d%H%M%S"), ".png"))
     k <- 1; base <- sub("\\.png$", "", file)
-    while (file.exists(file)) { k <- k + 1; file <- paste0(base, "_", k, ".png") }   # same second
-    plotutil_ggsave(file, g, width = wh[1], height = wh[2], units = "in", dpi = num("ggsave.dpi"), bg = "white")
-    cat("Saved:", file, "\n")
+    while (sv$save && file.exists(file)) { k <- k + 1; file <- paste0(base, "_", k, ".png") }   # same second
+    sv$out(g, file, function(.f) plotutil_ggsave(.f, g, width = wh[1], height = wh[2], units = "in", dpi = num("ggsave.dpi"), bg = "white"))
   }
 
   used <- c("site.names", "site.colors", "legend.position", "bar", "size", "DBH", defs$parameter)

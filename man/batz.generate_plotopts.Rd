@@ -14,6 +14,7 @@ batz.generate_plotopts(
   project.name = "new project",
   file.format = c("csv", "xlsx"),
   dir.save = getwd(),
+  save.auto = TRUE,
   strip.special.plotopts = FALSE
 )
 }
@@ -42,6 +43,15 @@ pooled workbook with a tab per function. Both: both.}
 
 \item{dir.save}{Directory the settings files are written to (created if
 missing). Default \code{getwd()}.}
+
+\item{save.auto}{Default \code{TRUE}: the files are saved in \code{dir.save}.
+\code{FALSE}: no files are saved. \code{"print"}: nothing is saved; each
+output (plot or table) is printed instead. \code{"generate <number>"}
+(e.g. \code{"generate 5"}): nothing is saved; up to \code{<number>}
+outputs are created as objects in the R global environment, each named
+after the file it would have been saved as, without the extension and the
+time stamp (e.g. \code{acme_vegetation.dbh}); \code{"generate"} alone
+creates every output.}
 
 \item{strip.special.plotopts}{Logical, default \code{FALSE}. \code{FALSE}
 keeps every character (e.g. an axis label with a degree sign).

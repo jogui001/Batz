@@ -40,6 +40,14 @@
 #'   A legend at the top or bottom that is wider than the saved image is
 #'   wrapped over two or more lines, and the saved height grows by the
 #'   extra legend height so the panels keep their size.
+#' @param save.auto Default \code{TRUE}: the files are saved in \code{dir.save}.
+#'   \code{FALSE}: no files are saved. \code{"print"}: nothing is saved; each
+#'   output (plot or table) is printed instead. \code{"generate <number>"}
+#'   (e.g. \code{"generate 5"}): nothing is saved; up to \code{<number>}
+#'   outputs are created as objects in the R global environment, each named
+#'   after the file it would have been saved as, without the extension and the
+#'   time stamp (e.g. \code{acme_vegetation.dbh}); \code{"generate"} alone
+#'   creates every output.
 #' @param aes.plotopts Plot settings (the old argument name \code{plotopts}
 #'   is still read, with a WARNING): \code{NULL} (default; built-in defaults),
 #'   a data frame, or the path to a \code{.csv} or \code{.xlsx} file, laid
@@ -125,7 +133,8 @@ batz.plot.box_vegetation.dbh <- function(data, project.name = "", site.names = N
                                      units = c("in", "cm"),
                                      legend.position = c("right", "bottom", "left", "top"),
                                      size = c("page", "half page", "powerpoint", "half powerpoint"),
-                                     table = TRUE, dir.save = getwd(), aes.plotopts = NULL, aes.style = "override.value", ...) {
+                                     table = TRUE, dir.save = getwd(), save.auto = TRUE, aes.plotopts = NULL, aes.style = "override.value", ...) {
+  sv <- util_saver(save.auto, "batz.plot.box_vegetation.dbh")   # TRUE save / FALSE / "print" / "generate <n>"
   FN <- "batz.plot.box_vegetation.dbh"
   blank <- function(v) is.null(v) || length(v) == 0 || all(is.na(v)) || all(!nzchar(trimws(as.character(v))))
   split.list <- function(v) {
@@ -332,14 +341,13 @@ batz.plot.box_vegetation.dbh <- function(data, project.name = "", site.names = N
 
   file <- NA_character_
   if (!is.null(dir.save)) {
-    if (!dir.exists(dir.save)) dir.create(dir.save, recursive = TRUE)
+    if (sv$save && !dir.exists(dir.save)) dir.create(dir.save, recursive = TRUE)
     cl <- function(x) gsub("\\s+", "-", gsub('[\\\\/:*?"<>|]+', "", trimws(x)))
     file <- file.path(dir.save, paste0(if (!blank(project.name)) paste0(cl(project.name), "_"), "vegetation.dbh_",
                                        format(Sys.time(), "%Y%m%d%H%M%S"), ".png"))
     k <- 1; base <- sub("\\.png$", "", file)
-    while (file.exists(file)) { k <- k + 1; file <- paste0(base, "_", k, ".png") }   # same second
-    plotutil_ggsave(file, g, width = wh[1], height = wh[2], units = "in", dpi = num("ggsave.dpi"), bg = "white")
-    cat("Saved:", file, "\n")
+    while (sv$save && file.exists(file)) { k <- k + 1; file <- paste0(base, "_", k, ".png") }   # same second
+    sv$out(g, file, function(.f) plotutil_ggsave(.f, g, width = wh[1], height = wh[2], units = "in", dpi = num("ggsave.dpi"), bg = "white"))
   }
 
   used <- c("site.names", "type.colors", "units", "legend.position", "size", "table", defs$parameter)
@@ -350,8 +358,8 @@ batz.plot.box_vegetation.dbh <- function(data, project.name = "", site.names = N
   file.table <- NA_character_
   if (flag("table") && !is.null(dir.save)) {
     file.table <- sub("\\.png$", ".csv", sub("vegetation\\.dbh_", "vegetation.dbh_table_", file))
-    utils::write.csv(smry[c("site", "type", "n", "min", "median", "mean", "max")], file.table, row.names = FALSE)
-    cat("Saved:", file.table, "\n")
+    tb <- smry[c("site", "type", "n", "min", "median", "mean", "max")]
+    file.table <- sv$out(tb, file.table, function(.f) utils::write.csv(tb, .f, row.names = FALSE))
   }
   invisible(list(plot = g, dbh = dbh, summary = smry, settings = settings, file = file, file.table = file.table))
 }

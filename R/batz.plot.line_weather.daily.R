@@ -134,6 +134,14 @@
 #'   A legend at the top or bottom that is wider than the saved image is
 #'   wrapped over two or more lines, and the saved height grows by the
 #'   extra legend height so the panels keep their size.
+#' @param save.auto Default \code{TRUE}: the files are saved in \code{dir.save}.
+#'   \code{FALSE}: no files are saved. \code{"print"}: nothing is saved; each
+#'   output (plot or table) is printed instead. \code{"generate <number>"}
+#'   (e.g. \code{"generate 5"}): nothing is saved; up to \code{<number>}
+#'   outputs are created as objects in the R global environment, each named
+#'   after the file it would have been saved as, without the extension and the
+#'   time stamp (e.g. \code{acme_vegetation.dbh}); \code{"generate"} alone
+#'   creates every output.
 #' @param aes.plotopts Optional, default \code{NULL}. Plot settings table:
 #'   a data frame, or the path of a \code{.csv} / \code{.xlsx}, laid out like
 #'   \code{batz.generate_plotopts("batz.plot.line_weather.daily")} writes it
@@ -247,9 +255,10 @@ batz.plot.line_weather.daily <- function(data, suntimes = NULL, date.start = NUL
                                     temp.range = c(0, 25), wind.range = c(0, 10),
                                     wind.absent = c("hide", "show"), precipitation.absent = c("hide", "show"),
                                     precip.cumulative = TRUE, facet.ncol = 2,
-                                    project.name = "", dir.save = getwd(), plot.width = 9,
+                                    project.name = "", dir.save = getwd(), save.auto = TRUE, plot.width = 9,
                                     plot.zero = FALSE, plot.zero_wind = FALSE, plot.zero_precipitation = FALSE,
                                     aes.plotopts = NULL, aes.style = "override.value") {
+  sv <- util_saver(save.auto, "batz.plot.line_weather.daily")   # TRUE save / FALSE / "print" / "generate <n>"
   FN <- "batz.plot.line_weather.daily"
   ## settings (2026-11-10): function call > aes.plotopts > built-in defaults
   given <- setdiff(names(match.call())[-1], "")
@@ -648,13 +657,13 @@ batz.plot.line_weather.daily <- function(data, suntimes = NULL, date.start = NUL
                        axis.title = ggplot2::element_text(size = 10, face = "bold"))
       plots[[s]][[ci]] <- g
       if (!is.null(dir.save)) {
-        if (!dir.exists(dir.save)) dir.create(dir.save, recursive = TRUE)
+        if (sv$save && !dir.exists(dir.save)) dir.create(dir.save, recursive = TRUE)
         clean <- function(x) { x <- gsub('[\\\\/:*?"<>|]+', "", trimws(as.character(x))); x <- gsub("\\s*-\\s*", "-", x); gsub("\\s+", "-", x) }
         parts <- c(if (!blank(project.name)) clean(project.name), "weather.daily", if (nzchar(ws$site[1])) clean(ws$site[1]), clean(s),
                    paste0(gsub("-", "", nn[1]), "to", gsub("-", "", nn[length(nn)])), format(Sys.time(), "%Y%m%d%H%M%S"))
         f <- file.path(dir.save, paste0(paste(parts[nzchar(parts)], collapse = "_"), ".png"))
-        plotutil_ggsave(f, g, width = plot.width, height = 1.9 * ceiling(length(nn) / facet.ncol) + 1, units = "in", dpi = 300)
-        cat("Saved:", f, "\n"); files <- c(files, f)
+        sv$out(g, f, function(.f) plotutil_ggsave(.f, g, width = plot.width, height = 1.9 * ceiling(length(nn) / facet.ncol) + 1, units = "in", dpi = 300))
+        if (sv$save) files <- c(files, f)
       }
     }
     all.data[[s]] <- ws[c("site", "station.name", "station.code", "night", "t", "hours", "temperature.c", "wind.ms",

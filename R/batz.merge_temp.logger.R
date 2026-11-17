@@ -19,6 +19,14 @@
 #'   or it will not be found.
 #' @param dir.save Character. Directory the two CSVs are written to when
 #'   \code{write.output = TRUE}. Default \code{getwd()}.
+#' @param save.auto Default \code{TRUE}: the files are saved in \code{dir.save}.
+#'   \code{FALSE}: no files are saved. \code{"print"}: nothing is saved; each
+#'   output (plot or table) is printed instead. \code{"generate <number>"}
+#'   (e.g. \code{"generate 5"}): nothing is saved; up to \code{<number>}
+#'   outputs are created as objects in the R global environment, each named
+#'   after the file it would have been saved as, without the extension and the
+#'   time stamp (e.g. \code{acme_vegetation.dbh}); \code{"generate"} alone
+#'   creates every output.
 #' @param write.output Logical, default \code{TRUE}. If \code{TRUE}, write
 #'   \code{templog.notes} and \code{templog.merged} to CSV in
 #'   \code{dir.save} (see Value). \code{$rh} is rounded to 3 decimal places
@@ -165,11 +173,12 @@
 batz.merge_temp.logger <- function(dir.load = getwd(),
                                           load.pattern = c("*templog.csv", "*templog.meta.csv"),
                                           dir.sub = FALSE,
-                                          dir.save = getwd(),
+                                          dir.save = getwd(), save.auto = TRUE,
                                           write.output = TRUE,
                                           project.name = "",
                                           snake_case = FALSE,
                                           strip.special = TRUE) {
+  sv <- util_saver(save.auto, "batz.merge_temp.logger")   # TRUE save / FALSE / "print" / "generate <n>"
 
   ## ---- internal helpers ----------------------------------------------------
   ## convert a plain wildcard/glob suffix pattern (or vector of them) into one
@@ -691,10 +700,10 @@ batz.merge_temp.logger <- function(dir.load = getwd(),
     base.name <- if (identical(project.name, "")) "templog" else project.name
     timestamp <- format(Sys.time(), "%Y%m%d%H%M%S")
 
-    write.csv(templog.notes, file.path(dir.save, sprintf(
-      "%s_templog.notes_%s_%s.csv", base.name, daterange.token, timestamp)), row.names = FALSE)
-    write.csv(templog.merged.out, file.path(dir.save, sprintf(
-      "%s_templog.merged_%s_%s.csv", base.name, daterange.token, timestamp)), row.names = FALSE)
+    sv$out(templog.notes, file.path(dir.save, sprintf("%s_templog.notes_%s_%s.csv", base.name, daterange.token, timestamp)),
+           function(.f) write.csv(templog.notes, .f, row.names = FALSE))
+    sv$out(templog.merged.out, file.path(dir.save, sprintf("%s_templog.merged_%s_%s.csv", base.name, daterange.token, timestamp)),
+           function(.f) write.csv(templog.merged.out, .f, row.names = FALSE))
   }
 
   invisible(list(templog.merged = templog.merged, templog.notes = templog.notes))

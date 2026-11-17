@@ -7,6 +7,7 @@
 batz.generate_plotframe.sm4(
   data,
   dir.save = getwd(),
+  save.auto = TRUE,
   project.name = "",
   mic.type = c("U2"),
   interval = 15,
@@ -30,6 +31,15 @@ element with these headers is used, the others are skipped with a NOTE
 
 \item{dir.save}{Character, default \code{getwd()}. Folder the plot frame
 CSV is written to (created if needed). \code{NULL} writes no file.}
+
+\item{save.auto}{Default \code{TRUE}: the files are saved in \code{dir.save}.
+\code{FALSE}: no files are saved. \code{"print"}: nothing is saved; each
+output (plot or table) is printed instead. \code{"generate <number>"}
+(e.g. \code{"generate 5"}): nothing is saved; up to \code{<number>}
+outputs are created as objects in the R global environment, each named
+after the file it would have been saved as, without the extension and the
+time stamp (e.g. \code{acme_vegetation.dbh}); \code{"generate"} alone
+creates every output.}
 
 \item{project.name}{Character, default \code{""}. First part of the file
 name: \verb{<project.name>_plotframe.sm4_<YYYYMMDDHHMMSS>.csv}

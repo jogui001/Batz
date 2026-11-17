@@ -11,6 +11,7 @@ batz.plot.bullseye_clutter.mic(
   project.name = "new.project",
   aes.style = "override.value",
   dir.save = getwd(),
+  save.auto = TRUE,
   sub.plots = c("canopy.bull", "mic.bar", "mic.bull", "understory.bull"),
   cover.arrows = TRUE,
   arrow.panel = "first",
@@ -74,6 +75,15 @@ is used when that column is missing or blank for the row. An old
 
 \item{dir.save}{Character, default \code{getwd()}. Folder the PNG files are
 saved in (it must exist).}
+
+\item{save.auto}{Default \code{TRUE}: the files are saved in \code{dir.save}.
+\code{FALSE}: no files are saved. \code{"print"}: nothing is saved; each
+output (plot or table) is printed instead. \code{"generate <number>"}
+(e.g. \code{"generate 5"}): nothing is saved; up to \code{<number>}
+outputs are created as objects in the R global environment, each named
+after the file it would have been saved as, without the extension and the
+time stamp (e.g. \code{acme_vegetation.dbh}); \code{"generate"} alone
+creates every output.}
 
 \item{sub.plots}{Character vector, default \code{c("canopy.bull", "mic.bar",
   "mic.bull", "understory.bull")}. Which panels to draw, left to right.

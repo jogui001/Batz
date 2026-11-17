@@ -116,6 +116,14 @@
 #'   A legend at the top or bottom that is wider than the saved image is
 #'   wrapped over two or more lines, and the saved height grows by the
 #'   extra legend height so the panels keep their size.
+#' @param save.auto Default \code{TRUE}: the files are saved in \code{dir.save}.
+#'   \code{FALSE}: no files are saved. \code{"print"}: nothing is saved; each
+#'   output (plot or table) is printed instead. \code{"generate <number>"}
+#'   (e.g. \code{"generate 5"}): nothing is saved; up to \code{<number>}
+#'   outputs are created as objects in the R global environment, each named
+#'   after the file it would have been saved as, without the extension and the
+#'   time stamp (e.g. \code{acme_vegetation.dbh}); \code{"generate"} alone
+#'   creates every output.
 #' @param strip.special Logical, default \code{TRUE}. If \code{TRUE},
 #'   simplify or remove non-ASCII characters in \code{data} (see Details).
 #' @param strip.special.plotopts Logical, default \code{FALSE}. If
@@ -160,9 +168,10 @@ batz.plot.heatmap_activity.time <- function(data,
                                        project.name = "new.project",
                                        aes.style = "override.value",
                                        site.label = "",
-                                       dir.save = getwd(),
+                                       dir.save = getwd(), save.auto = TRUE,
                                        strip.special = TRUE,
                                        strip.special.plotopts = FALSE, ...) {
+  sv <- util_saver(save.auto, "batz.plot.heatmap_activity.time")   # TRUE save / FALSE / "print" / "generate <n>"
 
   ## settings typed into the call: used before fig.list and plotopts
   plot.inputs <- plotutil_plot_inputs(plotutil_dots(...), "batz.plot.heatmap_activity.time")
@@ -414,11 +423,10 @@ batz.plot.heatmap_activity.time <- function(data,
     ## underscore between the date and time halves).
     fname <- sprintf("%s_%s_%s_%s.png", project.name, site.token, daterange.token, format(Sys.time(), "%Y%m%d%H%M%S"))
     fname <- file.path(dir.save, fname)
-    plotutil_ggsave(fname, plot = ggplot.obj,
+    sv$out(ggplot.obj, fname, function(.f) plotutil_ggsave(.f, plot = ggplot.obj,
       width = as.numeric(get.default("plot.width")) + as.numeric(get.default("ggsave.width.pad")),
       height = as.numeric(get.default("plot.height")) + as.numeric(get.default("ggsave.height.pad")),
-      units = get.default("ggsave.units"), dpi = as.numeric(get.default("ggsave.dpi")))
-    cat("Saved:", fname, "\n")
+      units = get.default("ggsave.units"), dpi = as.numeric(get.default("ggsave.dpi"))))
   } else {
     cat("ggplot2 is not installed - returning prepared data only, no plot object/PNG produced.\n")
   }

@@ -24,6 +24,14 @@
 #'   Details, "Adding forms").
 #' @param dir.save Character, default \code{getwd()}. Folder the merged
 #'   workbooks are written to (created if needed).
+#' @param save.auto Default \code{TRUE}: the files are saved in \code{dir.save}.
+#'   \code{FALSE}: no files are saved. \code{"print"}: nothing is saved; each
+#'   output (plot or table) is printed instead. \code{"generate <number>"}
+#'   (e.g. \code{"generate 5"}): nothing is saved; up to \code{<number>}
+#'   outputs are created as objects in the R global environment, each named
+#'   after the file it would have been saved as, without the extension and the
+#'   time stamp (e.g. \code{acme_vegetation.dbh}); \code{"generate"} alone
+#'   creates every output.
 #' @param save.name Character, default \code{NULL}: each workbook is named
 #'   \verb{<project.name>_aru.site.metadata_<YYYYMMDDHHMMSS>.xlsx}, and the
 #'   all-projects workbook \verb{Multipleprojects_aru.site.metadata_<YYYYMMDDHHMMSS>.xlsx}
@@ -360,7 +368,7 @@ batz.merge_sitevisit.acoustics <- function(dir.load = getwd(),
                                                             "*aruMaintenance*.csv"),
                                            dir.sub = TRUE,
                                            form.list = NA,
-                                           dir.save = getwd(),
+                                           dir.save = getwd(), save.auto = TRUE,
                                            save.name = NULL,
                                            project.name = "",
                                            project.merged = FALSE,
@@ -371,6 +379,7 @@ batz.merge_sitevisit.acoustics <- function(dir.load = getwd(),
                                            sunregion = "discrete",
                                            date.buffer = "1 month",
                                            time.zone = "America/New_York") {
+  sv <- util_saver(save.auto, "batz.merge_sitevisit.acoustics")   # TRUE save / FALSE / "print" / "generate <n>"
 
   if (!requireNamespace("readxl", quietly = TRUE)) stop("The readxl package is needed: install.packages(\"readxl\")", call. = FALSE)
   if (!dir.exists(dir.load)) stop("dir.load not found: ", dir.load, call. = FALSE)
@@ -748,13 +757,12 @@ batz.merge_sitevisit.acoustics <- function(dir.load = getwd(),
     paste0("aru.site.metadata_", stamp, ".xlsx") else trimws(save.name[1])
   if (!grepl("\\.xlsx$", tail.name, ignore.case = TRUE)) tail.name <- paste0(sub("\\.[^.]*$", "", tail.name), ".xlsx")
   clean <- function(x) gsub("\\s+", "-", gsub('[\\\\/:*?"<>|]+', "", trimws(x)))
-  if (!dir.exists(dir.save)) dir.create(dir.save, recursive = TRUE)
+  if (sv$save && !dir.exists(dir.save)) dir.create(dir.save, recursive = TRUE)
   write.one <- function(tabs.out, lead) {
     path <- file.path(dir.save, paste0(clean(lead), "_", tail.name))
     sheets <- tabs.out; names(sheets)[names(sheets) == "deployment.history"] <- "deployment history"
-    openxlsx::write.xlsx(sheets, path, overwrite = TRUE)
-    cat("Saved:", path, "\n")
-    for (t in names(sheets)) cat("  ", t, ": ", nrow(sheets[[t]]), " row(s)\n", sep = "")
+    path <- sv$out(sheets, path, function(.f) openxlsx::write.xlsx(sheets, .f, overwrite = TRUE))
+    if (sv$save) for (t in names(sheets)) cat("  ", t, ": ", nrow(sheets[[t]]), " row(s)\n", sep = "")
     path
   }
   path <- character(0)
@@ -782,8 +790,8 @@ batz.merge_sitevisit.acoustics <- function(dir.load = getwd(),
   write.al <- function(d, lead) {
     f <- file.path(dir.save, paste0(clean(lead), "_", al.tail))
     d <- d[, setdiff(names(d), "project.name"), drop = FALSE]
-    utils::write.csv(d, f, row.names = FALSE, na = "")
-    cat("Saved:", f, "(", nrow(d), "site(s) )\n")
+    f <- sv$out(d, f, function(.f) utils::write.csv(d, .f, row.names = FALSE, na = ""))
+    if (sv$save) cat("  ", nrow(d), " site(s)\n", sep = "")
     f
   }
   path.al <- character(0)

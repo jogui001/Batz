@@ -56,6 +56,14 @@
 #'   "override.value"} and that column is absent.
 #' @param dir.save Character, default \code{getwd()}. Folder the PNG files are
 #'   saved in (it must exist).
+#' @param save.auto Default \code{TRUE}: the files are saved in \code{dir.save}.
+#'   \code{FALSE}: no files are saved. \code{"print"}: nothing is saved; each
+#'   output (plot or table) is printed instead. \code{"generate <number>"}
+#'   (e.g. \code{"generate 5"}): nothing is saved; up to \code{<number>}
+#'   outputs are created as objects in the R global environment, each named
+#'   after the file it would have been saved as, without the extension and the
+#'   time stamp (e.g. \code{acme_vegetation.dbh}); \code{"generate"} alone
+#'   creates every output.
 #' @param sub.plots Character vector, default \code{c("canopy.bull", "mic.bar",
 #'   "mic.bull", "understory.bull")}. Which panels to draw, left to right.
 #'   Allowed values: \code{"canopy.bull"} (canopy cover bullseye),
@@ -231,7 +239,7 @@
 #' }
 batz.plot.bullseye_clutter.mic <- function(data, mic, aes.plotopts = NULL, project.name = "new.project",
                                      aes.style = "override.value",
-                                     dir.save = getwd(),
+                                     dir.save = getwd(), save.auto = TRUE,
                                      sub.plots = c("canopy.bull", "mic.bar",
                                                    "mic.bull", "understory.bull"),
                                      cover.arrows = TRUE, arrow.panel = "first",
@@ -243,6 +251,7 @@ batz.plot.bullseye_clutter.mic <- function(data, mic, aes.plotopts = NULL, proje
                                      subplot.size.width = 2,
                                      strip.special = TRUE,
                                      strip.special.plotopts = FALSE, ...) {
+  sv <- util_saver(save.auto, "batz.plot.bullseye_clutter.mic")   # TRUE save / FALSE / "print" / "generate <n>"
 
   ## settings typed into the call: used before fig.list and plotopts
   plot.inputs <- plotutil_plot_inputs(plotutil_dots(...), "batz.plot.bullseye_clutter.mic")
@@ -1130,11 +1139,10 @@ batz.plot.bullseye_clutter.mic <- function(data, mic, aes.plotopts = NULL, proje
     fname <- sprintf("%s_%s_%s.png", project.name, aru, format(Sys.time(), "%Y%m%d%H%M%S"))
     fname <- file.path(dir.save, fname)
 
-    ggplot2::ggsave(fname, combined,
+    sv$out(combined, fname, function(.f) ggplot2::ggsave(.f, combined,
                      width = plot.width + ggsave.width.pad,
                      height = plot.height + ggsave.height.pad,
-                     units = ggsave.units, dpi = ggsave.dpi, bg = "white")
-    cat("Saved:", fname, "\n")
+                     units = ggsave.units, dpi = ggsave.dpi, bg = "white"))
 
     result.plots[[aru]] <- list(canopy = canopy.values, understory = understory.values,
                                  mic = mic.row, file = fname)

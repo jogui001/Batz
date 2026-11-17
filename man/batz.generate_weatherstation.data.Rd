@@ -20,6 +20,7 @@ batz.generate_weatherstation.data(
   date.end = NULL,
   save = TRUE,
   dir.save = getwd(),
+  save.auto = TRUE,
   project.name = ""
 )
 }
@@ -95,6 +96,15 @@ Nothing is saved when no data was downloaded (NOTE).}
 
 \item{dir.save}{Character, default \code{getwd()}. Folder the CSV is saved
 in (created if needed).}
+
+\item{save.auto}{Default \code{TRUE}: the files are saved in \code{dir.save}.
+\code{FALSE}: no files are saved. \code{"print"}: nothing is saved; each
+output (plot or table) is printed instead. \code{"generate <number>"}
+(e.g. \code{"generate 5"}): nothing is saved; up to \code{<number>}
+outputs are created as objects in the R global environment, each named
+after the file it would have been saved as, without the extension and the
+time stamp (e.g. \code{acme_vegetation.dbh}); \code{"generate"} alone
+creates every output.}
 
 \item{project.name}{Character, default \code{""}. First part of the file
 name (spaces become "-").}

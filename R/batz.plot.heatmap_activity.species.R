@@ -215,6 +215,14 @@
 #'   A legend at the top or bottom that is wider than the saved image is
 #'   wrapped over two or more lines, and the saved height grows by the
 #'   extra legend height so the panels keep their size.
+#' @param save.auto Default \code{TRUE}: the files are saved in \code{dir.save}.
+#'   \code{FALSE}: no files are saved. \code{"print"}: nothing is saved; each
+#'   output (plot or table) is printed instead. \code{"generate <number>"}
+#'   (e.g. \code{"generate 5"}): nothing is saved; up to \code{<number>}
+#'   outputs are created as objects in the R global environment, each named
+#'   after the file it would have been saved as, without the extension and the
+#'   time stamp (e.g. \code{acme_vegetation.dbh}); \code{"generate"} alone
+#'   creates every output.
 #'
 #' @return Invisibly, a list:
 #'   \describe{
@@ -278,7 +286,8 @@ batz.plot.heatmap_activity.species <- function(data,
                                        time.interval = "1 hour",
                                        project.name = "new.project",
                                        aes.style = "override.value",
-                                       dir.save = getwd(), ...) {
+                                       dir.save = getwd(), save.auto = TRUE, ...) {
+  sv <- util_saver(save.auto, "batz.plot.heatmap_activity.species")   # TRUE save / FALSE / "print" / "generate <n>"
 
   FN <- "batz.plot.heatmap_activity.species"
   ## settings typed into the call: used before fig.list and plotopts
@@ -389,7 +398,7 @@ batz.plot.heatmap_activity.species <- function(data,
     if (length(jobs) == 0) stop("fig.list has no plot.type = \"", PLOT.TYPE, "\" rows - nothing to plot.")
   }
 
-  dir.create(dir.save, showWarnings = FALSE, recursive = TRUE)
+  if (sv$save) dir.create(dir.save, showWarnings = FALSE, recursive = TRUE)
   all.binned <- list()
   plots <- list()
   files <- character(0)
@@ -549,10 +558,9 @@ batz.plot.heatmap_activity.species <- function(data,
       n.rows <- if (pu$faceted) ceiling(length(pu$facets) / max(1, num.opt(job, "facpan.numcol"))) else 1
       height <- if (pu$faceted && n.rows > 1) num.opt(job, "facpan.hgt") * n.rows + 1.5 else num.opt(job, "plot.height")
       dims <- plotutil_plot_dimensions(job, plot.inputs, job.label, FN)   # $plot.dimensions (inches)
-      plotutil_ggsave(fname, plot = out$plot, width = if (!is.null(dims)) dims[1] else num.opt(job, "plot.width"),
+      sv$out(out$plot, fname, function(.f) plotutil_ggsave(.f, plot = out$plot, width = if (!is.null(dims)) dims[1] else num.opt(job, "plot.width"),
                       height = if (!is.null(dims)) dims[2] else height,
-                      units = if (!is.null(dims)) "in" else setting(job, "ggsave.units"), dpi = num.opt(job, "ggsave.dpi"))
-      cat("Saved:", fname, "\n")
+                      units = if (!is.null(dims)) "in" else setting(job, "ggsave.units"), dpi = num.opt(job, "ggsave.dpi")))
       key <- sub("\\.png$", "", basename(fname))
       plots[[key]] <- out$plot
       out$grid$plot <- key

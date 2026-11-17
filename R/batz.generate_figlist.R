@@ -30,6 +30,14 @@
 #'   name. Blank = no project part.
 #' @param dir.save Character, default \code{getwd()}. Folder the workbook is
 #'   saved in (created if needed). \code{NULL} = no file.
+#' @param save.auto Default \code{TRUE}: the files are saved in \code{dir.save}.
+#'   \code{FALSE}: no files are saved. \code{"print"}: nothing is saved; each
+#'   output (plot or table) is printed instead. \code{"generate <number>"}
+#'   (e.g. \code{"generate 5"}): nothing is saved; up to \code{<number>}
+#'   outputs are created as objects in the R global environment, each named
+#'   after the file it would have been saved as, without the extension and the
+#'   time stamp (e.g. \code{acme_vegetation.dbh}); \code{"generate"} alone
+#'   creates every output.
 #'
 #' @return Invisibly, a list: \code{$fig.list} (the template data frame),
 #'   \code{$descriptions} (data frame: \code{$header}, \code{$required.in},
@@ -77,7 +85,8 @@
 batz.generate_figlist <- function(functions = c("batz.plot.bar_activity.community", "batz.plot.heatmap_activity.site",
                                                 "batz.plot.bar_activity.site", "batz.plot.barfloat_detect.1st.last",
                                                 "batz.plot.heatmap_aru.time", "batz.plot.heatmap_activity.species"),
-                                  project.name = "", dir.save = getwd()) {
+                                  project.name = "", dir.save = getwd(), save.auto = TRUE) {
+  sv <- util_saver(save.auto, "batz.generate_figlist")   # TRUE save / FALSE / "print" / "generate <n>"
   FN <- "batz.generate_figlist"
   ALL <- c("batz.plot.bar_activity.community", "batz.plot.heatmap_activity.site", "batz.plot.bar_activity.site",
            "batz.plot.barfloat_detect.1st.last", "batz.plot.heatmap_aru.time", "batz.plot.heatmap_activity.species")
@@ -184,7 +193,7 @@ batz.generate_figlist <- function(functions = c("batz.plot.bar_activity.communit
   ## ---- write ------------------------------------------------------------------
   file <- NA_character_
   if (!is.null(dir.save)) {
-    if (!dir.exists(dir.save)) dir.create(dir.save, recursive = TRUE)
+    if (sv$save && !dir.exists(dir.save)) dir.create(dir.save, recursive = TRUE)
     pj <- if (!is.null(project.name) && nzchar(trimws(project.name)))
       paste0(gsub("\\s+", "-", gsub('[\\\\/:*?"<>|]+', "", trimws(project.name))), "_") else ""
     file <- file.path(dir.save, paste0(pj, "fig.list_template_", format(Sys.time(), "%Y%m%d%H%M%S"), ".xlsx"))
@@ -200,8 +209,7 @@ batz.generate_figlist <- function(functions = c("batz.plot.bar_activity.communit
     openxlsx::setColWidths(wb, "descriptions", 1:4, widths = c(20, 34, 34, 100))
     openxlsx::addStyle(wb, "descriptions", wrap, rows = 2:(nrow(desc) + 1), cols = 1:4, gridExpand = TRUE)
     openxlsx::freezePane(wb, "descriptions", firstRow = TRUE)
-    openxlsx::saveWorkbook(wb, file, overwrite = TRUE)
-    cat("Saved:", file, "\n")
+    file <- sv$out(list(fig.list = fl, descriptions = desc), file, function(.f) openxlsx::saveWorkbook(wb, .f, overwrite = TRUE))
   }
   cat(sprintf("%d fig.list heading(s) from %d plot function(s).\n", length(all.h), length(functions)))
   invisible(list(fig.list = fl, descriptions = desc, file = file))

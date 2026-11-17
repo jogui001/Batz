@@ -19,6 +19,7 @@ batz.datawrangler_format.vetted(
   longitude.sign = "asis",
   duplicates.remove = FALSE,
   dir.save = getwd(),
+  save.auto = TRUE,
   write.output = TRUE,
   project.name = "",
   snake_case = FALSE,
@@ -88,6 +89,15 @@ themselves.}
 
 \item{dir.save}{Character, default \code{getwd()}. Folder the CSV is
 written to (created if needed).}
+
+\item{save.auto}{Default \code{TRUE}: the files are saved in \code{dir.save}.
+\code{FALSE}: no files are saved. \code{"print"}: nothing is saved; each
+output (plot or table) is printed instead. \code{"generate <number>"}
+(e.g. \code{"generate 5"}): nothing is saved; up to \code{<number>}
+outputs are created as objects in the R global environment, each named
+after the file it would have been saved as, without the extension and the
+time stamp (e.g. \code{acme_vegetation.dbh}); \code{"generate"} alone
+creates every output.}
 
 \item{write.output}{Logical, default \code{TRUE}. Write the result as
 \verb{<project.name>_vetted.format_<DATE1>to<DATE2>_<timestamp>.csv}

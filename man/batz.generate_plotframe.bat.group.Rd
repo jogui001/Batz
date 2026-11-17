@@ -10,6 +10,7 @@ batz.generate_plotframe.bat.group(
   groupby.date = "date.monitoringnight",
   duplicates.remove = TRUE,
   dir.save = getwd(),
+  save.auto = TRUE,
   write.output = TRUE,
   project.name = "",
   family.ref = NULL,
@@ -36,6 +37,15 @@ reported with \code{message()}.}
 
 \item{dir.save}{Character, default \code{getwd()}. Folder the output CSV is
 written to when \code{write.output = TRUE}.}
+
+\item{save.auto}{Default \code{TRUE}: the files are saved in \code{dir.save}.
+\code{FALSE}: no files are saved. \code{"print"}: nothing is saved; each
+output (plot or table) is printed instead. \code{"generate <number>"}
+(e.g. \code{"generate 5"}): nothing is saved; up to \code{<number>}
+outputs are created as objects in the R global environment, each named
+after the file it would have been saved as, without the extension and the
+time stamp (e.g. \code{acme_vegetation.dbh}); \code{"generate"} alone
+creates every output.}
 
 \item{write.output}{Logical, default \code{TRUE}. Write the output CSV
 to \code{dir.save} as

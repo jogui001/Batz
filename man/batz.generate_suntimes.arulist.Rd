@@ -10,6 +10,7 @@ batz.generate_suntimes.arulist(
   dir.sub = FALSE,
   write.output = TRUE,
   dir.save = getwd(),
+  save.auto = TRUE,
   project.name = "",
   snake_case = FALSE,
   strip.special = TRUE,
@@ -33,6 +34,15 @@ search subfolders of \code{dir.load}.}
 \code{aru.suntimes} to a CSV in \code{dir.save} (see Details).}
 
 \item{dir.save}{Directory for the output CSV. Default \code{getwd()}.}
+
+\item{save.auto}{Default \code{TRUE}: the files are saved in \code{dir.save}.
+\code{FALSE}: no files are saved. \code{"print"}: nothing is saved; each
+output (plot or table) is printed instead. \code{"generate <number>"}
+(e.g. \code{"generate 5"}): nothing is saved; up to \code{<number>}
+outputs are created as objects in the R global environment, each named
+after the file it would have been saved as, without the extension and the
+time stamp (e.g. \code{acme_vegetation.dbh}); \code{"generate"} alone
+creates every output.}
 
 \item{project.name}{Character, default \code{""}. Base name of the
 output CSV; \code{""} uses \code{"aru"}. If the value ends with a

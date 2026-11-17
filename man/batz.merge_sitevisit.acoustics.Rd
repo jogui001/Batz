@@ -12,6 +12,7 @@ batz.merge_sitevisit.acoustics(
   dir.sub = TRUE,
   form.list = NA,
   dir.save = getwd(),
+  save.auto = TRUE,
   save.name = NULL,
   project.name = "",
   project.merged = FALSE,
@@ -48,6 +49,15 @@ Details, "Adding forms").}
 
 \item{dir.save}{Character, default \code{getwd()}. Folder the merged
 workbooks are written to (created if needed).}
+
+\item{save.auto}{Default \code{TRUE}: the files are saved in \code{dir.save}.
+\code{FALSE}: no files are saved. \code{"print"}: nothing is saved; each
+output (plot or table) is printed instead. \code{"generate <number>"}
+(e.g. \code{"generate 5"}): nothing is saved; up to \code{<number>}
+outputs are created as objects in the R global environment, each named
+after the file it would have been saved as, without the extension and the
+time stamp (e.g. \code{acme_vegetation.dbh}); \code{"generate"} alone
+creates every output.}
 
 \item{save.name}{Character, default \code{NULL}: each workbook is named
 \verb{<project.name>_aru.site.metadata_<YYYYMMDDHHMMSS>.xlsx}, and the

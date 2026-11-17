@@ -137,6 +137,14 @@
 #' @param write.output Logical, default \code{TRUE}. If \code{TRUE}, write
 #'   \code{aru.suntimes} to a CSV in \code{dir.save} (see Details).
 #' @param dir.save Directory for the output CSV. Default \code{getwd()}.
+#' @param save.auto Default \code{TRUE}: the files are saved in \code{dir.save}.
+#'   \code{FALSE}: no files are saved. \code{"print"}: nothing is saved; each
+#'   output (plot or table) is printed instead. \code{"generate <number>"}
+#'   (e.g. \code{"generate 5"}): nothing is saved; up to \code{<number>}
+#'   outputs are created as objects in the R global environment, each named
+#'   after the file it would have been saved as, without the extension and the
+#'   time stamp (e.g. \code{acme_vegetation.dbh}); \code{"generate"} alone
+#'   creates every output.
 #' @param project.name Character, default \code{""}. Base name of the
 #'   output CSV; \code{""} uses \code{"aru"}. If the value ends with a
 #'   suffix this function adds (\code{_suntimes}, date range, timestamp,
@@ -206,12 +214,13 @@ batz.generate_suntimes.arulist <- function(dir.load = getwd(),
                                     load.pattern = "*arulist.csv",
                                     dir.sub = FALSE,
                                     write.output = TRUE,
-                                    dir.save = getwd(),
+                                    dir.save = getwd(), save.auto = TRUE,
                                     project.name = "",
                                     snake_case = FALSE,
                                     strip.special = TRUE,
                                     sunregion.update = FALSE,
                                     sunregion.list = NULL) {
+  sv <- util_saver(save.auto, "batz.generate_suntimes.arulist")   # TRUE save / FALSE / "print" / "generate <n>"
   fixed <- if (is.null(sunregion.list)) NULL else suntimes.read.sunregion.list(sunregion.list, strip.special)
 
   ## convert a plain wildcard/glob suffix pattern (or vector of them) into
@@ -621,7 +630,7 @@ batz.generate_suntimes.arulist <- function(dir.load = getwd(),
     ## parameter).
     if (snake_case) names(aru.suntimes.out) <- snake.headers(names(aru.suntimes.out))
 
-    write.csv(aru.suntimes.out, file.path(dir.save, out.file), row.names = FALSE)
+    sv$out(aru.suntimes.out, file.path(dir.save, out.file), function(.f) write.csv(aru.suntimes.out, .f, row.names = FALSE))
   }
 
   ## snake_case applied to the invisibly-returned aru.suntimes itself, as

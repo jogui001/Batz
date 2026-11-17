@@ -9,6 +9,7 @@ batz.merge_temp.logger(
   load.pattern = c("*templog.csv", "*templog.meta.csv"),
   dir.sub = FALSE,
   dir.save = getwd(),
+  save.auto = TRUE,
   write.output = TRUE,
   project.name = "",
   snake_case = FALSE,
@@ -31,6 +32,15 @@ or it will not be found.}
 
 \item{dir.save}{Character. Directory the two CSVs are written to when
 \code{write.output = TRUE}. Default \code{getwd()}.}
+
+\item{save.auto}{Default \code{TRUE}: the files are saved in \code{dir.save}.
+\code{FALSE}: no files are saved. \code{"print"}: nothing is saved; each
+output (plot or table) is printed instead. \code{"generate <number>"}
+(e.g. \code{"generate 5"}): nothing is saved; up to \code{<number>}
+outputs are created as objects in the R global environment, each named
+after the file it would have been saved as, without the extension and the
+time stamp (e.g. \code{acme_vegetation.dbh}); \code{"generate"} alone
+creates every output.}
 
 \item{write.output}{Logical, default \code{TRUE}. If \code{TRUE}, write
 \code{templog.notes} and \code{templog.merged} to CSV in

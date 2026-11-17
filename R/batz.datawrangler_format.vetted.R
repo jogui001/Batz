@@ -57,6 +57,14 @@
 #'   themselves.
 #' @param dir.save Character, default \code{getwd()}. Folder the CSV is
 #'   written to (created if needed).
+#' @param save.auto Default \code{TRUE}: the files are saved in \code{dir.save}.
+#'   \code{FALSE}: no files are saved. \code{"print"}: nothing is saved; each
+#'   output (plot or table) is printed instead. \code{"generate <number>"}
+#'   (e.g. \code{"generate 5"}): nothing is saved; up to \code{<number>}
+#'   outputs are created as objects in the R global environment, each named
+#'   after the file it would have been saved as, without the extension and the
+#'   time stamp (e.g. \code{acme_vegetation.dbh}); \code{"generate"} alone
+#'   creates every output.
 #' @param write.output Logical, default \code{TRUE}. Write the result as
 #'   \verb{<project.name>_vetted.format_<DATE1>to<DATE2>_<timestamp>.csv}
 #'   (dates = earliest/latest value of \code{$date-12} or, failing that,
@@ -124,11 +132,12 @@ batz.datawrangler_format.vetted <- function(data,
                                             latitude.sign = "asis",
                                             longitude.sign = "asis",
                                             duplicates.remove = FALSE,
-                                            dir.save = getwd(),
+                                            dir.save = getwd(), save.auto = TRUE,
                                             write.output = TRUE,
                                             project.name = "",
                                             snake_case = FALSE,
                                             strip.special = TRUE) {
+  sv <- util_saver(save.auto, "batz.datawrangler_format.vetted")   # TRUE save / FALSE / "print" / "generate <n>"
 
   FN <- "batz.datawrangler_format.vetted"
   if (!is.data.frame(data)) stop(FN, ": `data` must be a data frame.", call. = FALSE)
@@ -315,9 +324,8 @@ batz.datawrangler_format.vetted <- function(data,
     }
     base <- if (nzchar(project.name)) project.name else if (nzchar(trimws(project))) trimws(project) else "vetted"
     fname <- sprintf("%s_vetted.format_%s_%s.csv", base, token, format(Sys.time(), "%Y%m%d%H%M%S"))
-    if (!dir.exists(dir.save)) dir.create(dir.save, recursive = TRUE)
-    utils::write.csv(data, file.path(dir.save, fname), row.names = FALSE)
-    cat("Saved:", fname, "\n")
+    if (sv$save && !dir.exists(dir.save)) dir.create(dir.save, recursive = TRUE)
+    sv$out(data, file.path(dir.save, fname), function(.f) utils::write.csv(data, .f, row.names = FALSE))
   }
 
   attr(data, "format.log") <- log
