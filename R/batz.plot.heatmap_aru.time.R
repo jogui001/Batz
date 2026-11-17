@@ -4,12 +4,12 @@
 #' detector was recording in each interval of the night, from an
 #' already-summarized per-interval table (\code{$mins.oper},
 #' \code{$mins2.noon.mon}). Dawn, Dusk and Midnight reference lines are drawn
-#' as in \code{\link{batz.plot.floatbar_detect.1st.last}}. The Y axis is the
+#' as in \code{\link{batz.plot.barfloat_detect.1st.last}}. The Y axis is the
 #' time of night on a Noon-to-Noon axis, limited by \code{time.start} and
 #' \code{time.end} (or by the ARUs' recording schedule); the X axis is the
-#' date. One single-panel PNG is
+#' date. All text is in \code{font.family} (default Arial). One single-panel PNG is
 #' saved per \code{fig.list} row whose \code{$plot.type} is
-#' \code{"sm4.heatmap"}.
+#' \code{"heatmap_aru.time"}.
 #'
 #' @param data Data frame of per-ARU, per-interval operational-time records.
 #'   Required columns: \code{$aru.name}, \code{$date.monitoringnight},
@@ -63,11 +63,18 @@
 #'   draws them.
 #'   Optional row \code{strip.text.size}: size of the facet panel titles
 #'   (a missing row gives 10).
+#'   Optional rows \code{font.family} (default \code{"Arial"}) and
+#'   \code{legend.scalebar} (\code{"below"} or \code{"right"}, default
+#'   \code{"below"}); see "plotopts" in Details.
+#'   \code{aes.plotopts} can also be the path to a settings .csv file, or to a
+#'   pooled .xlsx workbook (e.g. from \code{\link{batz.generate_plotopts}} or
+#'   Batz_reference_db): its tab \verb{pltop.heatmap_aru.time} is read.
 #' @param project.name Character, default \code{"new.project"}. First part
 #'   of each saved file name.
 #' @param ... Plot settings typed into the call, named as the
 #'   \code{aes.plotopts} \code{$parameter} rows (or fig.list setting
 #'   columns), e.g. \code{legend.position = "bottom"},
+#'   \code{legend.scalebar = "right"}, \code{font.family = "Arial"},
 #'   \code{plot.width = 8}. A vector is joined with ";". Each setting is
 #'   taken from the function call, then the fig.list row, then \code{aes.plotopts} (its custom-style column, then
 #'   \code{$default.value}). A setting given here does not need a row in
@@ -126,7 +133,7 @@
 #' \strong{fig.list columns.} Required headers are matched ignoring case and
 #' "." / "_" / space differences.
 #' \describe{
-#'   \item{\code{$plot.type}}{Only \code{"sm4.heatmap"} rows are plotted;
+#'   \item{\code{$plot.type}}{Only \code{"heatmap_aru.time"} (the function name without \code{batz.plot.}; the full name and the old value \code{"sm4.heatmap"} are also read, NOTE) rows are plotted;
 #'     other values are skipped with a NOTE. Rows with a blank
 #'     \code{$plot.type} are dropped. Exact duplicate rows are removed
 #'     (NOTE).}
@@ -166,7 +173,11 @@
 #' \strong{Y axis.}
 #' \itemize{
 #'   \item \code{time.start}: lowest time on the Y axis, \code{"HH:MM"}
-#'     (e.g. \code{"18:00"}).
+#'     (e.g. \code{"18:00"}). Blank (default): 1 hour before the earliest
+#'     Dusk (\code{$sunset}) of the plotted \code{suntimes}, rounded down to
+#'     the full hour (e.g. Dusk 20:35 -> 19:35 -> \code{"19:00"}). Without
+#'     \code{suntimes} (or no matching rows) a blank \code{time.start} comes
+#'     from \code{$aru.schedule} (below).
 #'   \item \code{time.end}: highest time on the Y axis, \code{"HH:MM"}
 #'     (e.g. \code{"08:00"}, the next morning). The axis runs Noon to Noon,
 #'     so a time before noon is the next morning; \code{"12:00"} is the
@@ -177,7 +188,8 @@
 #'     Labels are on clock times that are multiples of it (60: every full
 #'     hour; 30: every hour and half hour; 120: every second hour from
 #'     midnight).
-#'   \item A blank \code{time.start} or \code{time.end} comes from the
+#'   \item A blank \code{time.end} (and a blank \code{time.start} when there
+#'     is no Dusk) comes from the
 #'     \code{$aru.schedule} of the plotted rows: the earliest
 #'     \code{$time.on} and the latest \code{$time.off} of those schedules
 #'     in the \code{aru.scheduals} tab of Batz_reference_db (several
@@ -244,8 +256,24 @@
 #'     \code{fill.colors} (fewer than 2 colors gives a 7-color viridis
 #'     ramp), from 0 to \code{fill.max} (an unusable value gives 15).
 #'     Values above \code{fill.max} are out of range and drawn grey.
-#'   \item The colorbar runs left to right when \code{legend.position} is
-#'     \code{"bottom"}, otherwise bottom to top.
+#'   \item \code{legend.position}: \code{"bottom"} (default), \code{"top"},
+#'     \code{"left"} or \code{"right"}; any other value gives a NOTE and
+#'     \code{"bottom"}. The colorbar runs left to right when the legend is at
+#'     the bottom or top, otherwise bottom to top.
+#'   \item \code{legend.scalebar}: where the colorbar sits next to its title
+#'     (\code{fill.legend.title}): \code{"below"} (default) = the bar under
+#'     the words; \code{"right"} = the bar to the right of the words. Any other
+#'     value gives a NOTE and \code{"below"}. A missing row gives
+#'     \code{"below"}.
+#'   \item \code{font.family}: font of all text (titles, axis labels, legend,
+#'     panel titles), default \code{"Arial"} (a missing or blank row gives
+#'     Arial). A font that is not installed gives a NOTE and R's default sans
+#'     font.
+#'   \item Default text: every label 10 pt (\code{axis.text.size},
+#'     \code{legend.text.size}, \code{strip.text.size}); every title 10 pt
+#'     bold (\code{plot.title.size} / \code{plot.title.face},
+#'     \code{axis.title.size} / \code{axis.title.face},
+#'     \code{legend.title.size} / \code{legend.title.face}).
 #'   \item The Midnight line width is half of \code{panel.border.linewidth},
 #'     so it looks as thick as the panel border.
 #'   \item The PNG size is \code{plot.width} + \code{ggsave.width.pad} by
@@ -276,7 +304,7 @@
 #'     also be set in plotopts or typed into the call (plot.zero = TRUE).}
 #' }
 #'
-#' @seealso \code{\link{batz.plot.floatbar_detect.1st.last}},
+#' @seealso \code{\link{batz.plot.barfloat_detect.1st.last}},
 #'   \code{\link{batz.generate_suntimes.arulist}},
 #'   \code{\link{batz.generate_plotopts}}
 #'
@@ -314,6 +342,7 @@ batz.plot.heatmap_aru.time <- function(data, fig.list, suntimes = NULL,
   fig.list <- plotutil_figlist_labelformat(fig.list, "batz.plot.heatmap_aru.time")   # old $facet.label (a name format)
   if (is.data.frame(fig.list) && nrow(fig.list) == 0) return(invisible(list(plots = list(), ggplots = list())))
   if (is.null(aes.plotopts)) aes.plotopts <- plotutil_aes_legacy(plotutil_dots(...), "batz.plot.heatmap_aru.time")   # old argument name aes.default / plotopts
+  aes.plotopts <- plotutil_read_plotopts(aes.plotopts, "batz.plot.heatmap_aru.time")   # data frame, settings .csv path or pooled .xlsx path
   if (is.null(aes.plotopts)) aes.plotopts <- plotutil_default_plotopts("batz.plot.heatmap_aru.time")   # built-in settings
   data <- special.strip(data, strip.special)$df
   ## fig.list is a settings table, not data - stripped only when
@@ -342,7 +371,7 @@ batz.plot.heatmap_aru.time <- function(data, fig.list, suntimes = NULL,
     names(data)[names(data) == "aru"] <- "aru.name"
   }
 
-  PLOT.TYPE <- "sm4.heatmap"
+  PLOT.TYPE <- "heatmap_aru.time"
 
   DATA.REQUIRED <- c("aru.name", "date.monitoringnight", "mins.oper", "mins2.noon.mon")
   ## Round twenty-six, 2026-09-25 (per Josh's package-wide suntimes header
@@ -459,7 +488,7 @@ batz.plot.heatmap_aru.time <- function(data, fig.list, suntimes = NULL,
     }
     val
   }
-  plotutil_plot_inputs_check(plot.inputs, c(AES.DEFAULT.REQUIRED.PARAMETERS, aes.plotopts$parameter, names(fig.list), "plot.dimensions", "plot.dimentions"), "batz.plot.heatmap_aru.time")
+  plotutil_plot_inputs_check(plot.inputs, c(AES.DEFAULT.REQUIRED.PARAMETERS, aes.plotopts$parameter, names(fig.list), "plot.dimensions", "plot.dimentions", "font.family", "legend.scalebar"), "batz.plot.heatmap_aru.time")
 
   get.setting <- function(job, param) {
     if (!is.null(v.in <- plotutil_input_get(plot.inputs, param))) return(v.in)   # function call, then fig.list, then plotopts
@@ -493,7 +522,7 @@ batz.plot.heatmap_aru.time <- function(data, fig.list, suntimes = NULL,
     job.label <- if (nzchar(trimws(job$plot.name))) job$plot.name else sprintf("row %d", j)
     job.key <- as.character(j)
 
-    if (!identical(tolower(trimws(job$plot.type)), tolower(PLOT.TYPE))) {
+    if (!plotutil_plot_type_ok(job$plot.type, "batz.plot.heatmap_aru.time")) {
       cat(sprintf("NOTE: fig.list row for '%s' has plot.type = '%s' - skipped.\n", job.label, job$plot.type))
       next
     }
@@ -581,7 +610,7 @@ batz.plot.heatmap_aru.time <- function(data, fig.list, suntimes = NULL,
     # Dawn ending THIS monitoring night is $sunrise.monitoringnight (sunrise
     # the FOLLOWING day), not $sunrise (sunrise ON $date, ending the
     # PREVIOUS night) - same reasoning as
-    # batz.plot.floatbar_detect.1st.last()'s own BUGFIX for this.
+    # batz.plot.barfloat_detect.1st.last()'s own BUGFIX for this.
     dawn.real <- parse.flex.datetime(sdb$sunrise.monitoringnight, tz)
     local.noon <- as.POSIXct(paste(format(sdb$date.parsed), rep("12:00:00", nrow(sdb))), tz = tz)
     sdb$dusk.time     <- y.ref.noon + as.numeric(difftime(dusk.real, local.noon, units = "secs"))
@@ -680,7 +709,7 @@ batz.plot.heatmap_aru.time <- function(data, fig.list, suntimes = NULL,
 
       panel.border.lw <- as.numeric(get.default("panel.border.linewidth"))
       # Same 2x geom-line-vs-panel-border rendering quirk documented in
-      # batz.plot.floatbar_detect.1st.last()'s own @details ("BUGFIX...midnight
+      # batz.plot.barfloat_detect.1st.last()'s own @details ("BUGFIX...midnight
       # line looks thicker than the box line"") - halved here identically.
       midnight.render.lw <- panel.border.lw / 2
 
@@ -707,8 +736,20 @@ batz.plot.heatmap_aru.time <- function(data, fig.list, suntimes = NULL,
       # naturally in a legend row docked under the plot. barheight/barwidth
       # are swapped together so the "long" dimension always matches
       # whichever way the bar is actually drawn.
-      legend.pos <- get.default("legend.position")
-      colorbar.horizontal <- identical(tolower(trimws(legend.pos)), "bottom")
+      legend.pos <- tolower(trimws(as.character(get.setting(p$job, "legend.position"))))
+      if (length(legend.pos) != 1 || is.na(legend.pos) || !legend.pos %in% c("bottom", "top", "left", "right")) {
+        cat(sprintf("NOTE: '%s' - legend.position '%s' is not bottom, top, left or right - \"bottom\" used.\n", job.label, paste(legend.pos, collapse = ";")))
+        legend.pos <- "bottom"
+      }
+      scalebar <- tolower(trimws(as.character(get.setting(p$job, "legend.scalebar"))))
+      if (length(scalebar) != 1 || is.na(scalebar) || !nzchar(scalebar)) scalebar <- "below"
+      if (!scalebar %in% c("below", "right")) {
+        cat(sprintf("NOTE: '%s' - legend.scalebar '%s' is not below or right - \"below\" used.\n", job.label, scalebar))
+        scalebar <- "below"
+      }
+      colorbar.title.pos <- if (scalebar == "right") "left" else "top"   # right: words, then the bar; below: words over the bar
+      font.family <- plotutil_heat_font(get.setting(p$job, "font.family"), job.label)
+      colorbar.horizontal <- legend.pos %in% c("bottom", "top")
       colorbar.direction <- if (colorbar.horizontal) "horizontal" else "vertical"
       colorbar.barheight <- if (colorbar.horizontal) grid::unit(0.4, "cm") else grid::unit(3.2, "cm")
       colorbar.barwidth  <- if (colorbar.horizontal) grid::unit(3.2, "cm") else grid::unit(0.4, "cm")
@@ -734,7 +775,7 @@ batz.plot.heatmap_aru.time <- function(data, fig.list, suntimes = NULL,
                                         limits = c(0, fill.max), breaks = fill.breaks,
                                         guide = ggplot2::guide_colorbar(direction = colorbar.direction,
                                           barheight = colorbar.barheight, barwidth = colorbar.barwidth,
-                                          title.position = "top")) +
+                                          title.position = colorbar.title.pos, title.vjust = if (scalebar == "right") 0.5 else NULL)) +
         ggplot2::scale_y_datetime(breaks = y.breaks, labels = y.break.labels,
                                     expand = c(0, 0),
                                     name = paste0("\n", get.setting(p$job, "yaxe.title"))) +
@@ -749,7 +790,8 @@ batz.plot.heatmap_aru.time <- function(data, fig.list, suntimes = NULL,
         ggplot2::theme(panel.grid.major = ggplot2::element_blank(),
                         panel.grid.minor = ggplot2::element_blank(),
                         panel.border = ggplot2::element_rect(linewidth = panel.border.lw, colour = "grey20", fill = NA),
-                        legend.position = get.default("legend.position"),
+                        text = ggplot2::element_text(family = font.family),
+                        legend.position = legend.pos,
                         legend.box = "horizontal",
                         plot.title = ggplot2::element_text(hjust = as.numeric(get.default("plot.title.hjust")), face = plotutil_face(get.default("plot.title.face")),
                                                              size = as.numeric(get.default("plot.title.size"))),
@@ -789,8 +831,9 @@ batz.plot.heatmap_aru.time <- function(data, fig.list, suntimes = NULL,
 
 #' Y-axis window of batz.plot.heatmap_aru.time (internal)
 #'
-#' time.start / time.end ("HH:MM") as given; a blank one comes from the
-#' $aru.schedule of the plotted rows (earliest time.on, latest time.off of
+#' time.start / time.end ("HH:MM") as given; a blank time.start is 1 hour
+#' before the earliest Dusk rounded down to the full hour; otherwise a blank
+#' one comes from the $aru.schedule of the plotted rows (earliest time.on, latest time.off of
 #' their schedules in the aru.scheduals table, sunset / sunrise from the
 #' plotted suntimes), rounded down (start) or up (end) to a clock time that
 #' is a multiple of time.interval. time.interval: minutes ("60", "30",
@@ -820,6 +863,12 @@ sm4heat_y_window <- function(job, get.setting, pd, sdb, y.ref.noon, bin.minutes,
     ((as.numeric(m[2]) * 60 + as.numeric(m[3])) - 720) %% 1440
   }
   st <- if (nzchar(val("time.start"))) clock(val("time.start"), "time.start") else NA_real_
+  ## blank time.start: 1 hour before the earliest Dusk, rounded down to the full hour
+  if (is.na(st) && !is.null(sdb) && nrow(sdb) && "dusk.time" %in% names(sdb)) {
+    dk <- as.numeric(difftime(sdb$dusk.time, y.ref.noon, units = "mins"))
+    dk <- dk[!is.na(dk)]
+    if (length(dk)) st <- max(0, floor((min(dk) - 60 + 720) / 60 + 1e-9) * 60 - 720)
+  }
   en <- if (nzchar(val("time.end"))) clock(val("time.end"), "time.end") else NA_real_
   if (!is.na(en) && en == 0) en <- 1440                         # "12:00" as the end = the next noon
   ## blank: from $aru.schedule
@@ -897,4 +946,30 @@ sm4heat_schedule_window <- function(pd, sdb, y.ref.noon, bin.minutes, job.label)
   if (nosun) cat(sprintf("NOTE: '%s' - a sunset / sunrise schedule needs suntimes for the plotted ARUs and dates - the range of the plotted intervals is used for it.\n", job.label))
   if (length(unknown) || nosun) { ons <- c(ons, tiles[1]); offs <- c(offs, tiles[2]) }
   c(max(0, min(ons)), min(1440, max(offs)))
+}
+
+
+#' Font family for batz.plot.heatmap_aru.time (internal)
+#'
+#' Blank or missing: "Arial". On Windows without the ragg package the font is
+#' registered with windowsFonts() so the png device can use it. A font that
+#' systemfonts cannot find gives a NOTE and "" (R's default sans font).
+#' @keywords internal
+#' @noRd
+plotutil_heat_font <- function(v, job.label) {
+  v <- if (is.null(v) || !length(v) || is.na(v[1])) "" else trimws(as.character(v[1]))
+  if (!nzchar(v) || toupper(v) == "NA") v <- "Arial"
+  if (requireNamespace("systemfonts", quietly = TRUE)) {
+    m <- tryCatch(systemfonts::match_font(v)$path, error = function(e) "")
+    fam <- tryCatch(systemfonts::system_fonts()$family, error = function(e) character(0))
+    if (length(fam) && !tolower(v) %in% tolower(fam)) {
+      cat(sprintf("NOTE: '%s' - font.family '%s' is not installed on this computer - the closest match (%s) is used.\n",
+                  job.label, v, if (nzchar(m)) basename(m) else "default sans"))
+    }
+  }
+  if (.Platform$OS.type == "windows" && !requireNamespace("ragg", quietly = TRUE)) {
+    wf <- grDevices::windowsFonts()
+    if (is.null(wf[[v]])) { a <- list(grDevices::windowsFont(v)); names(a) <- v; do.call(grDevices::windowsFonts, a) }
+  }
+  v
 }

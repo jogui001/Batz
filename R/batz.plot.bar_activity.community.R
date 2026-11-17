@@ -7,7 +7,7 @@
 #' scale). Communities can be split into labelled panels (e.g. by
 #' \code{$project}). The input is the table made by
 #' \code{\link{batz.generate_plotframe.bat.group}}. One PNG is saved per
-#' \code{fig.list} row whose \code{$plot.type} is \code{"bar.bat.group"}.
+#' \code{fig.list} row whose \code{$plot.type} is \code{"bar_activity.community"}.
 #'
 #' @param data Data frame from \code{\link{batz.generate_plotframe.bat.group}}.
 #'   Headers are matched ignoring case and "." / "_" / space differences.
@@ -45,6 +45,9 @@
 #'   \code{plot.zero} (the fig.list column \code{$plot.zero}, the plotopts row or typed into the call), default
 #'   \code{FALSE}: values of 0 (bars, tiles, cells) are not drawn; \code{TRUE}
 #'   draws them.
+#'   \code{aes.plotopts} can also be the path to a settings .csv file, or to a
+#'   pooled .xlsx workbook (e.g. from \code{\link{batz.generate_plotopts}} or
+#'   Batz_reference_db): its tab \verb{pltop.bar_activity.community} is read.
 #' @param project.name Character, default \code{"new.project"}. First part
 #'   of each saved file name.
 #' @param ... Plot settings typed into the call, named as the
@@ -96,7 +99,7 @@
 #' @details
 #' \strong{fig.list columns.} List cells are separated by ";" or ",".
 #' \describe{
-#'   \item{\code{$plot.type}}{Must be \code{"bar.bat.group"}; other rows are
+#'   \item{\code{$plot.type}}{Must be \code{"bar_activity.community"} (the function name without \code{batz.plot.}; the full name and the old value \code{"bar.bat.group"} are also read, NOTE); other rows are
 #'     skipped with a NOTE. Rows with a blank \code{$plot.type} are dropped,
 #'     and exact duplicate rows are removed.}
 #'   \item{\code{$plot.name}}{Used in the file name and as the list name.}
@@ -214,7 +217,7 @@ batz.plot.bar_activity.community <- function(data, fig.list, aes.plotopts = NULL
   plot.inputs <- plotutil_plot_inputs(plotutil_dots(...), "batz.plot.bar_activity.community")
 
   FN <- "batz.plot.bar_activity.community"
-  PLOT.TYPE <- "bar.bat.group"
+  PLOT.TYPE <- "bar_activity.community"
 
   ## ---- special characters ----------------------------------------------
   objname.fig.list <- paste(deparse(substitute(fig.list)), collapse = "")
@@ -223,6 +226,7 @@ batz.plot.bar_activity.community <- function(data, fig.list, aes.plotopts = NULL
   fig.list <- plotutil_figlist_plot(fig.list, "batz.plot.bar_activity.community")   # only rows with $plot = TRUE or 1
   if (is.data.frame(fig.list) && nrow(fig.list) == 0) return(invisible(list(plots = list(), ggplots = list())))
   if (is.null(aes.plotopts)) aes.plotopts <- plotutil_aes_legacy(plotutil_dots(...), "batz.plot.bar_activity.community")   # old argument name aes.default / plotopts
+  aes.plotopts <- plotutil_read_plotopts(aes.plotopts, "batz.plot.bar_activity.community")   # data frame, settings .csv path or pooled .xlsx path
   if (is.null(aes.plotopts)) aes.plotopts <- plotutil_default_plotopts("batz.plot.bar_activity.community")   # built-in settings
   for (a in c("data", "fig.list", "aes.plotopts")) {
     if (!is.data.frame(get(a))) stop(sprintf("%s: `%s` must be a data frame.", FN, a), call. = FALSE)
@@ -333,7 +337,7 @@ batz.plot.bar_activity.community <- function(data, fig.list, aes.plotopts = NULL
   for (j in seq_len(nrow(jobs))) {
     job <- jobs[j, , drop = FALSE]
     job.label <- if (blank(job$plot.name)) sprintf("row%d", j) else trimws(job$plot.name)
-    if (!identical(key(job$plot.type), PLOT.TYPE)) {
+    if (!plotutil_plot_type_ok(job$plot.type, "batz.plot.bar_activity.community")) {
       cat(sprintf("NOTE: fig.list row '%s' has plot.type = '%s' - skipped.\n", job.label, job$plot.type))
       next
     }

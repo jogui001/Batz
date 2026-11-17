@@ -49,7 +49,10 @@ Optional rows \code{plot.title.face}, \code{axis.title.face} and
 \code{"bold.italic"}) set the title fonts; a missing row gives bold.
 \code{plot.zero} (the fig.list column \code{$plot.zero}, the plotopts row or typed into the call), default
 \code{FALSE}: values of 0 (bars, tiles, cells) are not drawn; \code{TRUE}
-draws them.}
+draws them.
+\code{aes.plotopts} can also be the path to a settings .csv file, or to a
+pooled .xlsx workbook (e.g. from \code{\link{batz.generate_plotopts}} or
+Batz_reference_db): its tab \verb{pltop.heatmap_activity.species} is read.}
 
 \item{date.col}{Character, default \code{"date.monitoringnight"}. Date
 column, and the day layout: \code{"date.monitoringnight"} (noon to
@@ -146,7 +149,7 @@ with a date column, a time column and a count column.
 per \code{$group} x \code{$spp.id} combination in \code{data}, named
 \verb{<project.name>_<group>_<spp.id>_<YYYYMMDD>to<YYYYMMDD>.png} (first
 and last date of that combination). With a \code{fig.list}, each row with
-\code{$plot.type = "activity.heatmap"} makes one faceted plot or one plot
+\code{$plot.type = "heatmap_activity.species"} makes one faceted plot or one plot
 per facet (see \strong{fig.list} below).
 
 \strong{Where each setting comes from.} Every setting (\code{date.col}
@@ -234,7 +237,7 @@ the others come with Batz.
 \strong{fig.list.} Same format as the other batz fig.list plot
 functions. Required columns:
 \describe{
-\item{\code{$plot.type}}{\code{"activity.heatmap"}; other rows are
+\item{\code{$plot.type}}{\code{"heatmap_activity.species"} (the function name without \code{batz.plot.}; the full name and the old value \code{"activity.heatmap"} are also read, NOTE); other rows are
 skipped with a NOTE.}
 \item{\code{$plot.name}}{Plot title and first part of the file name.}
 \item{\code{$facet.header}}{\code{"sppid"} (the only value

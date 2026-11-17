@@ -256,7 +256,7 @@ df$h <- list(1, "a")
 ok(identical(ss(df)$df, df) && length(ss(df)$headers) == 0, "special.strip: clean df of all column types returned identical")
 ## 2. plot functions: strip runs, then function reaches its own header check (bad input on purpose)
 bad <- data.frame(x = "a°")
-for (fn in c("batz.plot.bar_activity.site","batz.plot.floatbar_detect.1st.last","batz.plot.heatmap_aru.time")) {
+for (fn in c("batz.plot.bar_activity.site","batz.plot.barfloat_detect.1st.last","batz.plot.heatmap_aru.time")) {
   e <- tryCatch({run(NEW, fn, data = bad, fig.list = bad, suntimes = bad, aes.default = bad, dir.save = tempdir()); "ran"}, error = function(e) conditionMessage(e))
   eo <- tryCatch({run(OLD, fn, data = bad, fig.list = bad, suntimes = bad, aes.default = bad, dir.save = tempdir()); "ran"}, error = function(e) conditionMessage(e))
   ok(grepl("missing these headers", e) && identical(gsub("°","",eo), e) || identical(e, eo), paste(fn, ": reaches same header check as before"))
@@ -293,7 +293,7 @@ ok(all(grepl("^TRUE ; mon.ngh", lg$strip.special)), "datawrangler_headers.accept
 cat("   filename recorded:", unique(lg[[intersect(c("filename","file.name"), names(lg))[1]]]), "\n")
 ## 6. generate_plotopts: writes the built-in settings (Batz_reference_db), no master files
 so2 <- file.path(tempdir(),"pon"); dir.create(so2, showWarnings = FALSE)
-f6 <- batz.generate_plotopts(c("batz.plot.bullseye_clutter.mic", "batz.plot.floatbar_detect.1st.last", "batz.plot.bar_activity.site"), dir.save = so2, project.name = "t")
+f6 <- batz.generate_plotopts(c("batz.plot.bullseye_clutter.mic", "batz.plot.barfloat_detect.1st.last", "batz.plot.bar_activity.site"), dir.save = so2, project.name = "t")
 ok(length(f6) == 3 && identical(read.csv(file.path(so2, f6[1]), check.names = FALSE, colClasses = "character", na.strings = character(0))$parameter,
                                 Batz:::batz.db("plotopts.batz.plot.bullseye_clutter.mic")$parameter), "generate_plotopts: written from the built-in settings")
 ## 7. treeusa (helper's reference file)
@@ -436,7 +436,7 @@ source("/home/claude/ss/vt/harness.R")
 mk <- function(name) { d <- file.path(tempdir(), name); unlink(d, TRUE); dir.create(d); d }
 U <- "/mnt/user-data/uploads/Batz"
 callobs <- Batz:::batz.db("plotopts.batz.plot.bar_activity.site")   # built-in settings (Batz_reference_db)
-firstlast <- Batz:::batz.db("plotopts.batz.plot.floatbar_detect.1st.last"); firstlast <- rbind(firstlast, data.frame(category = "Save", parameter = c("plot.width","plot.height"), default.value = c("8","6"), override.value = "", notes = "", check.names = FALSE))
+firstlast <- Batz:::batz.db("plotopts.batz.plot.barfloat_detect.1st.last"); firstlast <- rbind(firstlast, data.frame(category = "Save", parameter = c("plot.width","plot.height"), default.value = c("8","6"), override.value = "", notes = "", check.names = FALSE))
 ## recode aliases
 r <- function(f) suppressWarnings(capture.output(x <- NEW$batz.batusa_recode.names(c("EPFU", "Big brown bat", "All detections"), f))) ; 
 rr <- function(f) { capture.output(x <- NEW$batz.batusa_recode.names(c("EPFU", "Big brown bat", "All detections"), f)); x }
@@ -465,8 +465,8 @@ fig <- function(type, label) data.frame(plot.type = type, plot.name = "T", facet
   pool = FALSE, date.format = "%m/%d", date.start = "2026-06-01", date.end = "2026-06-03", xaxe.interval = 3, xaxe.title = "Night",
   facpan = "Big brown bat;Little brown bat;Eastern red bat", check.names = FALSE, stringsAsFactors = FALSE)
 OUT <- mk("plots7")
-for (fn in c("batz.plot.bar_activity.site", "batz.plot.floatbar_detect.1st.last")) {
-  type <- if (grepl("observations", fn)) "call.observations" else "bat.detection"
+for (fn in c("batz.plot.bar_activity.site", "batz.plot.barfloat_detect.1st.last")) {
+  type <- if (grepl("observations", fn)) "bar_activity.site" else "barfloat_detect.1st.last"
   aes <- if (grepl("observations", fn)) callobs else firstlast
   go <- function(env, data, label) run(env, fn, data = data, fig.list = fig(type, label), suntimes = sun, aes.default = aes, dir.save = OUT)$ret
   o <- tryCatch(go(OLD, d.old, "common_name"), error = function(e) conditionMessage(e))

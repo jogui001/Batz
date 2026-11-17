@@ -2,7 +2,7 @@
 # batz.plot.bar_activity.site.dev.R
 # -----------------------------------------------------------------------------
 # ROUND NINETEEN, per Josh's 2026-09-16 follow-up (see
-# batz.plot.floatbar_detect.1st.last.dev.R's own header comment for the full
+# batz.plot.barfloat_detect.1st.last.dev.R's own header comment for the full
 # text of the request - identical mechanism applied here):
 #   - project.name no longer selects an aes.default override column - it
 #     ONLY builds the saved file name now: "<project.name>_<ARU>_<timestamp>.png".
@@ -12,7 +12,7 @@
 #   - $output.filename.pattern is DEPRECATED and no longer read at all.
 #
 # **JUDGMENT CALL / LIMITATION, flagged to Josh** (same as
-# batz.plot.floatbar_detect.1st.last.dev.R): this dev script previously read
+# batz.plot.barfloat_detect.1st.last.dev.R): this dev script previously read
 # Josh's own real device test-data files (plfr.bats.csv, processed.csv,
 # fig.list.csv, pltop.bar_activity.site.csv). The device bridge is not available in
 # this session, so this round's dev script builds its own SYNTHETIC
@@ -42,7 +42,7 @@
 #       FIG.LIST.REQUIRED; a blank value, or the column missing from
 #       fig.list entirely, now defaults to the fixed column name "group"
 #       (matching batz.generate_plotframe.bat()'s own output column and
-#       batz.plot.floatbar_detect.1st.last()'s fixed grouping column) instead of
+#       batz.plot.barfloat_detect.1st.last()'s fixed grouping column) instead of
 #       skipping the row. A row can still supply its own $plot.group to
 #       override this default - aru.metadata.db.synth's existing
 #       $plot.group = "aru.groupby" continues to exercise that override
@@ -187,7 +187,7 @@ suntimes.synth <- data.frame(
 )
 
 aru.metadata.db.synth <- data.frame(
-  plot.type      = "call.observations",
+  plot.type      = "bar_activity.site",
   plot.name      = "Test Site - Call Observations",
   facet          = "sppid",
   facet.set      = "NE",
@@ -249,7 +249,7 @@ print(head(default.plotaesthetics.synth))
 # -----------------------------------------------------------------------------
 # batz.plot.bar_activity.site() - dev copy, mirrors the package .R file
 # -----------------------------------------------------------------------------
-PLOT.TYPE <- "call.observations"
+PLOT.TYPE <- "bar_activity.site"
 
 DATA.REQUIRED <- c("spp.id", "date", "obs")
 # Renamed 2026-09-22 (per Josh, see the header comment above): matches
@@ -471,7 +471,7 @@ batz.plot.bar_activity.site <- function(data, fig.list, suntimes,
     # 2026-09-23, per Josh: no longer a REQUIRED fig.list header - a blank
     # value, or the column not existing in fig.list at all, now defaults to
     # "group" (matching batz.generate_plotframe.bat()'s own output column
-    # and batz.plot.floatbar_detect.1st.last()'s fixed grouping column) instead
+    # and batz.plot.barfloat_detect.1st.last()'s fixed grouping column) instead
     # of skipping the row. A row can still supply its own $plot.group value
     # to override this. ---
     group.col <- if ("plot.group" %in% names(job)) trimws(as.character(job$plot.group)) else ""
@@ -807,9 +807,9 @@ fl.luso <- function(type, facet.set) data.frame(plot.type = type, plot.name = pa
   xaxe.interval = "1 day", xaxe.title = "Date", check.names = FALSE)
 facets.of <- function(r) unique(as.character(r$ggplots[[1]]$data$facet.panel.value))
 aes.obs <- read.csv("pltop.bar_activity.site.csv", stringsAsFactors = FALSE, check.names = FALSE)
-r.luso <- batz.plot.bar_activity.site(mk(c("MYLU", "MYSO", "EPFU")), fl.luso("call.observations", "MYLU;EPFU"), st, aes.obs, dir.save = tempdir())
+r.luso <- batz.plot.bar_activity.site(mk(c("MYLU", "MYSO", "EPFU")), fl.luso("bar_activity.site", "MYLU;EPFU"), st, aes.obs, dir.save = tempdir())
 cat("MYLU present -> facets (expect LUSO, epfu):", facets.of(r.luso), "\n")
-r.myso <- batz.plot.bar_activity.site(mk(c("MYSO", "EPFU")), fl.luso("call.observations", "EPFU"), st, aes.obs, dir.save = tempdir())
+r.myso <- batz.plot.bar_activity.site(mk(c("MYSO", "EPFU")), fl.luso("bar_activity.site", "EPFU"), st, aes.obs, dir.save = tempdir())
 cat("no MYLU -> facets (expect epfu, myso):", facets.of(r.myso), "\n")
 
 ## ---------------------------------------------------------------------------
@@ -817,13 +817,13 @@ cat("no MYLU -> facets (expect epfu, myso):", facets.of(r.myso), "\n")
 ## ---------------------------------------------------------------------------
 aes.case <- aes.obs; aes.case$parameter <- paste0(" ", toupper(aes.case$parameter), " ")
 dir.pn <- file.path(tempdir(), "project_name_test"); dir.create(dir.pn, showWarnings = FALSE)
-r.pn <- batz.plot.bar_activity.site(mk("EPFU"), fl.luso("call.observations", "EPFU"), st, aes.case, project.name = "SevenIslands", dir.save = dir.pn)
+r.pn <- batz.plot.bar_activity.site(mk("EPFU"), fl.luso("bar_activity.site", "EPFU"), st, aes.case, project.name = "SevenIslands", dir.save = dir.pn)
 cat("saved (expect SevenIslands_...png):", list.files(dir.pn), "\n")
 
 ## ---------------------------------------------------------------------------
 ## several dates in $date.start / $date.end (2026-11-06): only those days are plotted
 ## ---------------------------------------------------------------------------
-fl.days <- function(ds, de) { f <- fl.luso("call.observations", "EPFU"); f$myso <- FALSE; f$xaxe.interval <- "8"
+fl.days <- function(ds, de) { f <- fl.luso("bar_activity.site", "EPFU"); f$myso <- FALSE; f$xaxe.interval <- "8"
   f$date.start <- ds; f$date.end <- de; f }
 L <- '"2026-07-01"; "2026-07-03"; "2026-07-05"'                       # same list in both = just these days
 r.days <- batz.plot.bar_activity.site(mk("EPFU"), fl.days(L, L), st, aes.obs, dir.save = tempdir())
@@ -852,7 +852,7 @@ cat("2026-11-09 checks passed\n")
 
 ## 2026-11-13: 40kHzMyo bars are drawn again (the NABAT frequency class table had renamed them
 ## "Unidentifiable Myotis Species"); an X40khzmyo header (read.csv check.names = TRUE) is accepted
-f40 <- fl.luso("call.observations", "AllDet;EPFU"); f40$myso <- FALSE; f40$all.detections <- TRUE
+f40 <- fl.luso("bar_activity.site", "AllDet;EPFU"); f40$myso <- FALSE; f40$all.detections <- TRUE
 f40[["40khzmyo"]] <- TRUE; names(f40)[names(f40) == "40khzmyo"] <- "X40khzmyo"
 r40 <- batz.plot.bar_activity.site(mk(c("All Detections", "40KHzMyo", "EPFU")), f40, st, aes.obs, dir.save = tempdir())
 stopifnot(isTRUE(r40$plots[[1]]$khz.flag), "40kHzMyo" %in% r40$plots[[1]]$pd$bar.type)
@@ -863,7 +863,7 @@ cat("40kHzMyo check passed\n")
 d.al <- rbind(transform(mk(c("All Detections", "EPFU")), group = "A1"), transform(mk(c("All Detections", "EPFU")), group = "B2"),
               transform(mk("40KHzMyo"), group = "B2")[1, ])
 d.al$aru.name <- d.al$group
-f.al <- fl.luso("call.observations", "AllDet;EPFU"); f.al$myso <- FALSE; f.al$all.detections <- TRUE
+f.al <- fl.luso("bar_activity.site", "AllDet;EPFU"); f.al$myso <- FALSE; f.al$all.detections <- TRUE
 f.al[["40khzmyo"]] <- TRUE; f.al$plot.set <- "A1;B2"; f.al$pool <- FALSE
 r.al <- batz.plot.bar_activity.site(d.al, f.al, st, aes.obs, dir.save = tempdir())
 l.all <- ggplot2::layer_data(r.al$ggplots[[1]], 1); l.khz <- ggplot2::layer_data(r.al$ggplots[[1]], 2)
@@ -887,3 +887,19 @@ r.trim <- batz.plot.bar_activity.site(raw.det, spp.id = "kpauto", groupby.date =
 stopifnot(sum(r.trim$plots[[1]]$pd$observations.count) == sum(!raw.det$kpauto %in% c("NoID", "")))
 print(r.trim$ggplots[[1]])                                            # old daily.count plot: one bar per night
 cat("raw detections (was batz.plotactivity_daily.count): passed\n")
+
+## ---------------------------------------------------------------------------
+## 2026-11-13: legend - detectors on one row, 40kHzMyo on the row below
+## ---------------------------------------------------------------------------
+lg.dir <- file.path(tempdir(), "legend_rows"); dir.create(lg.dir, showWarnings = FALSE)
+for (k in c(3, 9)) {                                                  # 9 detectors wrap; 40kHzMyo stays below
+  g.k <- paste0("Detector-", LETTERS[1:k])
+  d.k <- do.call(rbind, lapply(g.k, function(x) transform(mk(c("All Detections", "40KHzMyo", "EPFU")), group = x, aru.name = x)))
+  f.k <- f.al; f.k$plot.set <- paste(g.k, collapse = ";"); f.k$plot.name <- paste0("legend ", k, " detectors")
+  r.k <- batz.plot.bar_activity.site(d.k, f.k, st, aes.obs, dir.save = lg.dir)
+  b.k <- ggplot2::ggplot_build(r.k$ggplots[[1]])
+  stopifnot(identical(as.character(b.k$plot$scales$get_scales("fill")$get_breaks()), g.k),               # fill legend: detectors only
+            identical(as.character(b.k$plot$scales$get_scales("colour")$get_breaks()), "40kHzMyo"))       # second legend: 40kHzMyo
+}
+print(list.files(lg.dir))                                             # open the PNGs: detectors, then 40kHzMyo below
+cat("legend rows: passed\n")

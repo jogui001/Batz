@@ -79,7 +79,10 @@ Optional rows \code{plot.title.face}, \code{axis.title.face} and
 draws them. A 0 bar keeps its place (grouped / side-by-side bars do
 not move); it is only made invisible.
 Optional row \code{strip.text.size}: size of the facet panel titles
-(a missing row gives 10).}
+(a missing row gives 10).
+\code{aes.plotopts} can also be the path to a settings .csv file, or to a
+pooled .xlsx workbook (e.g. from \code{\link{batz.generate_plotopts}} or
+Batz_reference_db): its tab \verb{pltop.bar_activity.site} is read.}
 
 \item{project.name}{Character, default \code{"new.project"}. Put at the
 start of every saved file name. A blank value leaves it out.}
@@ -188,14 +191,14 @@ species facet (plus an optional "All detections" facet and an optional
 40kHzMyo overlay) it shows one bar per night with that night's
 \code{$observations.count}. Several groups (e.g. ARUs) can be pooled into
 one bar or drawn side by side. One PNG is saved per \code{fig.list} row
-whose \code{$plot.type} is \code{"call.observations"} (or one per facet
+whose \code{$plot.type} is \code{"bar_activity.site"} (or one per facet
 when \code{$facet.plot = FALSE}).
 }
 \details{
 \strong{fig.list columns.} Required and optional headers are matched
 ignoring case and "." / "_" / space differences.
 \describe{
-\item{\code{$plot.type}}{Only \code{"call.observations"} rows are
+\item{\code{$plot.type}}{Only \code{"bar_activity.site"} (the function name without \code{batz.plot.}; the full name and the old value \code{"call.observations"} are also read, NOTE) rows are
 plotted; other values are skipped with a NOTE. Rows with a blank
 \code{$plot.type} are dropped.}
 \item{\code{$plot.name}}{Plot title and second part of the file name (after \code{project.name}).
@@ -359,7 +362,10 @@ top, so the overlay is never hidden. With side-by-side bars each
 \item Colors: with side-by-side bars and \code{$legend} TRUE, each group
 value gets its own color from \code{legend.groupval.colors} (legend
 title \code{legend.groupval.title}) and 40kHzMyo keeps
-\code{bar.40khzmyo.fill}. Otherwise bars use
+\code{bar.40khzmyo.fill}. The legend shows the detectors (group
+values) on one row and 40kHzMyo on the row below. When the detectors
+do not fit across the saved width they wrap over more rows, and
+40kHzMyo stays on its own row below them. Otherwise bars use
 \code{bar.alldetections.fill} and \code{bar.40khzmyo.fill} (legend
 title \code{bar.fill.legend.title}, showing only the 40kHzMyo key).
 \item The X axis runs from \code{$date.start} to \code{$date.end} plus
@@ -411,5 +417,5 @@ result$ggplots[[1]]
 \seealso{
 \code{\link{batz.generate_plotframe.bat}},
 \code{\link{batz.generate_plotopts}},
-\code{\link{batz.plot.floatbar_detect.1st.last}}
+\code{\link{batz.plot.barfloat_detect.1st.last}}
 }

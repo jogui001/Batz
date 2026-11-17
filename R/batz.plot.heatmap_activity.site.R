@@ -8,7 +8,7 @@
 #' over 150). Sites can be grouped into labelled blocks (e.g. communities),
 #' selected sites dropped, and selected sites shown in bold. One PNG is
 #' saved per \code{fig.list} row whose \code{$plot.type} is
-#' \code{"heat.site.species"}.
+#' \code{"heatmap_activity.site"}.
 #'
 #' @param data Data frame of vetted detections, one row per recording
 #'   (pass). Required columns: \code{$aru.name}, the species column named by
@@ -47,6 +47,9 @@
 #'   \code{plot.zero} (the fig.list column \code{$plot.zero}, the plotopts row or typed into the call), default
 #'   \code{FALSE}: values of 0 (bars, tiles, cells) are not drawn; \code{TRUE}
 #'   draws them.
+#'   \code{aes.plotopts} can also be the path to a settings .csv file, or to a
+#'   pooled .xlsx workbook (e.g. from \code{\link{batz.generate_plotopts}} or
+#'   Batz_reference_db): its tab \verb{pltop.heatmap_activity.site} is read.
 #' @param spp.id Character, default \code{"species"}. Name of the species
 #'   column in \code{data}.
 #' @param groupby.date Character, default \code{"date.monitoringnight"}.
@@ -113,7 +116,7 @@
 #' @details
 #' \strong{fig.list columns.} List cells are separated by ";" or ",".
 #' \describe{
-#'   \item{\code{$plot.type}}{Must be \code{"heat.site.species"}; other rows
+#'   \item{\code{$plot.type}}{Must be \code{"heatmap_activity.site"} (the function name without \code{batz.plot.}; the full name and the old value \code{"heat.site.species"} are also read, NOTE); other rows
 #'     are skipped with a NOTE, so one shared fig.list can hold rows for
 #'     several plot functions. Rows with a blank \code{$plot.type} are
 #'     dropped, and exact duplicate rows are removed.}
@@ -245,7 +248,7 @@ batz.plot.heatmap_activity.site <- function(data, fig.list, aes.plotopts = NULL,
   plot.inputs <- plotutil_plot_inputs(plotutil_dots(...), "batz.plot.heatmap_activity.site")
 
   FN <- "batz.plot.heatmap_activity.site"
-  PLOT.TYPE <- "heat.site.species"
+  PLOT.TYPE <- "heatmap_activity.site"
 
   ## ---- special characters ----------------------------------------------
   objname.fig.list <- paste(deparse(substitute(fig.list)), collapse = "")
@@ -254,6 +257,7 @@ batz.plot.heatmap_activity.site <- function(data, fig.list, aes.plotopts = NULL,
   fig.list <- plotutil_figlist_plot(fig.list, "batz.plot.heatmap_activity.site")   # only rows with $plot = TRUE or 1
   if (is.data.frame(fig.list) && nrow(fig.list) == 0) return(invisible(list(plots = list(), ggplots = list())))
   if (is.null(aes.plotopts)) aes.plotopts <- plotutil_aes_legacy(plotutil_dots(...), "batz.plot.heatmap_activity.site")   # old argument name aes.default / plotopts
+  aes.plotopts <- plotutil_read_plotopts(aes.plotopts, "batz.plot.heatmap_activity.site")   # data frame, settings .csv path or pooled .xlsx path
   if (is.null(aes.plotopts)) aes.plotopts <- plotutil_default_plotopts("batz.plot.heatmap_activity.site")   # built-in settings
   if (!is.data.frame(data)) stop(FN, ": `data` must be a data frame.")
   if (!is.data.frame(fig.list)) stop(FN, ": `fig.list` must be a data frame.")
@@ -419,7 +423,7 @@ batz.plot.heatmap_activity.site <- function(data, fig.list, aes.plotopts = NULL,
     job <- jobs[j, , drop = FALSE]
     job.label <- if (blank(job$plot.name)) sprintf("row%d", j) else trimws(job$plot.name)
 
-    if (!identical(key(job$plot.type), PLOT.TYPE)) {
+    if (!plotutil_plot_type_ok(job$plot.type, "batz.plot.heatmap_activity.site")) {
       cat(sprintf("NOTE: fig.list row '%s' has plot.type = '%s' - skipped.\n", job.label, job$plot.type))
       next
     }

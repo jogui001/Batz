@@ -6,7 +6,7 @@
 \usage{
 batz.generate_figlist(
   functions = c("batz.plot.bar_activity.community", "batz.plot.heatmap_activity.site",
-    "batz.plot.bar_activity.site", "batz.plot.floatbar_detect.1st.last",
+    "batz.plot.bar_activity.site", "batz.plot.barfloat_detect.1st.last",
     "batz.plot.heatmap_aru.time", "batz.plot.heatmap_activity.species"),
   project.name = "",
   dir.save = getwd()
@@ -17,7 +17,7 @@ batz.generate_figlist(
 fig.list: \code{"batz.plot.bar_activity.community"},
 \code{"batz.plot.heatmap_activity.site"},
 \code{"batz.plot.bar_activity.site"},
-\code{"batz.plot.floatbar_detect.1st.last"},
+\code{"batz.plot.barfloat_detect.1st.last"},
 \code{"batz.plot.heatmap_aru.time"}, \code{"batz.plot.heatmap_activity.species"}.
 Plot functions to include. \code{""} (or \code{NULL}) = all of them,
 one row for every plot type.}

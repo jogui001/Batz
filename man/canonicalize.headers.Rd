@@ -40,7 +40,7 @@ the corrected header when the corrected one is not already present.
 Used by the plot, plot-frame and summary functions, e.g.
 \code{\link{batz.generate_plotframe.bat}},
 \code{\link{batz.plot.bar_activity.site}},
-\code{\link{batz.plot.floatbar_detect.1st.last}} and
+\code{\link{batz.plot.barfloat_detect.1st.last}} and
 \code{\link{batz.generate_suntimes.arulist}}.
 }
 \examples{

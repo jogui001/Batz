@@ -16,14 +16,14 @@
 #
 # NAMING (per project convention - see preferences.md "Naming conventions"):
 #   batz.<family>_<action>.<subject>() -> family = "plotcover" (verb "plot"
-#   baked into the family name, same pattern as batz.plot.floatbar_detect.1st.last
+#   baked into the family name, same pattern as batz.plot.barfloat_detect.1st.last
 #   / batz.plotframe_batactivity), action/subject = "bullseye". Not yet
 #   confirmed with Josh - flagged in the .R file's own roxygen @details.
 #
 # PLOTOPT CONVENTION (per Josh: "use the same identifiers as in the plotopt
 # for the other functions"): reuses the exact aes.default / get.default() /
 # project.name / dir.save pattern established in
-# batz.plot.floatbar_detect.1st.last() and batz.plot.bar_activity.site() -
+# batz.plot.barfloat_detect.1st.last() and batz.plot.bar_activity.site() -
 # $category/$parameter/$default.value(/$notes/$<project.name>) settings CSV,
 # job-row > project.name column > default.value precedence (no per-job
 # override table is needed here - there's no fig.list-style sheet, so only

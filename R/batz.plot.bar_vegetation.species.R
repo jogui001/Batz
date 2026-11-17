@@ -62,6 +62,9 @@
 #'   \code{FALSE}: values of 0 (bars, tiles, cells) are not drawn; \code{TRUE}
 #'   draws them. A 0 bar keeps its place (grouped / side-by-side bars do
 #'   not move); it is only made invisible.
+#'   \code{aes.plotopts} can also be the path to a settings .csv file, or to a
+#'   pooled .xlsx workbook (e.g. from \code{\link{batz.generate_plotopts}} or
+#'   Batz_reference_db): its tab \verb{pltop.bar_vegetation.species} is read.
 #' @param ... Any other setting listed in Details ("Settings"), typed into
 #'   the call by name (e.g. \code{yaxe.max = 20}); used before
 #'   \code{aes.plotopts}.
@@ -170,6 +173,7 @@ batz.plot.bar_vegetation.species <- function(data, project.name = "", site.names
   defs <- batz.plot.bar_vegetation.species.defaults()
   po <- NULL
   if (is.null(aes.plotopts)) aes.plotopts <- plotutil_aes_legacy(plotutil_dots(...), FN)   # old argument name plotopts
+  aes.plotopts <- plotutil_read_plotopts(aes.plotopts, "batz.plot.bar_vegetation.species")   # data frame, settings .csv path or pooled .xlsx path
   if (!is.null(aes.plotopts)) {
     if (is.character(aes.plotopts)) {
       if (!file.exists(aes.plotopts[1])) stop(FN, ": aes.plotopts file not found: ", aes.plotopts[1], call. = FALSE)

@@ -54,7 +54,10 @@ Optional rows \code{plot.title.face}, \code{axis.title.face} and
 \code{"bold.italic"}) set the title fonts; a missing row gives bold.
 \code{plot.zero} (the fig.list column \code{$plot.zero}, the plotopts row or typed into the call), default
 \code{FALSE}: values of 0 (bars, tiles, cells) are not drawn; \code{TRUE}
-draws them.}
+draws them.
+\code{aes.plotopts} can also be the path to a settings .csv file, or to a
+pooled .xlsx workbook (e.g. from \code{\link{batz.generate_plotopts}} or
+Batz_reference_db): its tab \verb{pltop.bar_activity.community} is read.}
 
 \item{project.name}{Character, default \code{"new.project"}. First part
 of each saved file name.}
@@ -118,12 +121,12 @@ narrow black bar for passes per monitoring night (left axis, log
 scale). Communities can be split into labelled panels (e.g. by
 \code{$project}). The input is the table made by
 \code{\link{batz.generate_plotframe.bat.group}}. One PNG is saved per
-\code{fig.list} row whose \code{$plot.type} is \code{"bar.bat.group"}.
+\code{fig.list} row whose \code{$plot.type} is \code{"bar_activity.community"}.
 }
 \details{
 \strong{fig.list columns.} List cells are separated by ";" or ",".
 \describe{
-\item{\code{$plot.type}}{Must be \code{"bar.bat.group"}; other rows are
+\item{\code{$plot.type}}{Must be \code{"bar_activity.community"} (the function name without \code{batz.plot.}; the full name and the old value \code{"bar.bat.group"} are also read, NOTE); other rows are
 skipped with a NOTE. Rows with a blank \code{$plot.type} are dropped,
 and exact duplicate rows are removed.}
 \item{\code{$plot.name}}{Used in the file name and as the list name.}

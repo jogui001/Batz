@@ -145,6 +145,9 @@
 #'   \code{aes.plotopts}, then the defaults shown here. A blank cell keeps
 #'   the default. Text sizes are fixed: axis and panel labels 10 pt, axis
 #'   titles 10 pt bold.
+#'   \code{aes.plotopts} can also be the path to a settings .csv file, or to a
+#'   pooled .xlsx workbook (e.g. from \code{\link{batz.generate_plotopts}} or
+#'   Batz_reference_db): its tab \verb{pltop.line_weather.daily} is read.
 #' @param aes.style Character, default \code{"override.value"}. Name of the
 #'   \code{aes.plotopts} column read before \code{$default.value} (e.g. the
 #'   project-name column written by \code{\link{batz.generate_plotopts}}).
@@ -250,6 +253,7 @@ batz.plot.line_weather.daily <- function(data, suntimes = NULL, date.start = NUL
   FN <- "batz.plot.line_weather.daily"
   ## settings (2026-11-10): function call > aes.plotopts > built-in defaults
   given <- setdiff(names(match.call())[-1], "")
+  aes.plotopts <- plotutil_read_plotopts(aes.plotopts, FN)   # data frame, settings .csv path or pooled .xlsx path
   po.vals <- weather.daily.plotopts(aes.plotopts, aes.style, given, FN)
   for (nm in names(po.vals)) assign(nm, po.vals[[nm]])
   temp.given <- !missing(temp.range) || "temp.range" %in% names(po.vals)

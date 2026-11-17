@@ -22,7 +22,7 @@
 #'   fig.list: \code{"batz.plot.bar_activity.community"},
 #'   \code{"batz.plot.heatmap_activity.site"},
 #'   \code{"batz.plot.bar_activity.site"},
-#'   \code{"batz.plot.floatbar_detect.1st.last"},
+#'   \code{"batz.plot.barfloat_detect.1st.last"},
 #'   \code{"batz.plot.heatmap_aru.time"}, \code{"batz.plot.heatmap_activity.species"}.
 #'   Plot functions to include. \code{""} (or \code{NULL}) = all of them,
 #'   one row for every plot type.
@@ -75,12 +75,12 @@
 #' }
 #' @export
 batz.generate_figlist <- function(functions = c("batz.plot.bar_activity.community", "batz.plot.heatmap_activity.site",
-                                                "batz.plot.bar_activity.site", "batz.plot.floatbar_detect.1st.last",
+                                                "batz.plot.bar_activity.site", "batz.plot.barfloat_detect.1st.last",
                                                 "batz.plot.heatmap_aru.time", "batz.plot.heatmap_activity.species"),
                                   project.name = "", dir.save = getwd()) {
   FN <- "batz.generate_figlist"
   ALL <- c("batz.plot.bar_activity.community", "batz.plot.heatmap_activity.site", "batz.plot.bar_activity.site",
-           "batz.plot.floatbar_detect.1st.last", "batz.plot.heatmap_aru.time", "batz.plot.heatmap_activity.species")
+           "batz.plot.barfloat_detect.1st.last", "batz.plot.heatmap_aru.time", "batz.plot.heatmap_activity.species")
   functions <- if (is.null(functions)) character(0) else trimws(as.character(functions))
   functions <- functions[!is.na(functions) & nzchar(functions)]
   if (!length(functions)) functions <- ALL                 # "" = every plot type
@@ -145,8 +145,7 @@ batz.generate_figlist <- function(functions = c("batz.plot.bar_activity.communit
   if (length(ord)) all.h <- c(intersect(ord, all.h), setdiff(all.h, ord))
   ptype <- vapply(functions, function(f) {
     b <- body(get(f, envir = ns)); v <- find.assign(b, "PLOT.TYPE")
-    if (length(v)) v[1] else c(batz.plot.bar_activity.site = "call.observations",
-                               batz.plot.floatbar_detect.1st.last = "bat.detection")[[f]]
+    if (length(v)) v[1] else sub("^batz\\.plot\\.", "", f)            # $plot.type = function name without batz.plot.
   }, character(1))
   fl <- as.data.frame(matrix("", nrow = length(functions), ncol = length(all.h), dimnames = list(NULL, all.h)),
                       stringsAsFactors = FALSE, check.names = FALSE)

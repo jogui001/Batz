@@ -74,7 +74,7 @@ e <- tryCatch(run(d = plfr[, setdiff(names(plfr), "sites_detected")],
                   fl = fig.list[, setdiff(names(fig.list), "plot.species")]), error = conditionMessage)
 stopifnot(grepl("data is missing these headers: sites_detected", e),
           grepl("fig.list is missing these headers: plot.species", e), grepl("\n\n", e))
-fl5 <- rbind(fig.list, fig.list); fl5$plot.type[2] <- "heat.site.species"; fl5$plot.name[2] <- "x"
+fl5 <- rbind(fig.list, fig.list); fl5$plot.type[2] <- "heatmap_activity.site"; fl5$plot.name[2] <- "x"
 stopifnot(length(run(fl5)$plots) == 1)
 pass("snake_case data accepted; missing headers reported together; other plot types skipped")
 

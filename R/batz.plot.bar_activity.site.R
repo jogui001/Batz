@@ -5,7 +5,7 @@
 #' 40kHzMyo overlay) it shows one bar per night with that night's
 #' \code{$observations.count}. Several groups (e.g. ARUs) can be pooled into
 #' one bar or drawn side by side. One PNG is saved per \code{fig.list} row
-#' whose \code{$plot.type} is \code{"call.observations"} (or one per facet
+#' whose \code{$plot.type} is \code{"bar_activity.site"} (or one per facet
 #' when \code{$facet.plot = FALSE}).
 #'
 #' @param data Data frame of per-species, per-night counts, normally the
@@ -76,6 +76,9 @@
 #'   not move); it is only made invisible.
 #'   Optional row \code{strip.text.size}: size of the facet panel titles
 #'   (a missing row gives 10).
+#'   \code{aes.plotopts} can also be the path to a settings .csv file, or to a
+#'   pooled .xlsx workbook (e.g. from \code{\link{batz.generate_plotopts}} or
+#'   Batz_reference_db): its tab \verb{pltop.bar_activity.site} is read.
 #' @param project.name Character, default \code{"new.project"}. Put at the
 #'   start of every saved file name. A blank value leaves it out.
 #' @param ... Plot settings typed into the call, named as the
@@ -160,7 +163,7 @@
 #' \strong{fig.list columns.} Required and optional headers are matched
 #' ignoring case and "." / "_" / space differences.
 #' \describe{
-#'   \item{\code{$plot.type}}{Only \code{"call.observations"} rows are
+#'   \item{\code{$plot.type}}{Only \code{"bar_activity.site"} (the function name without \code{batz.plot.}; the full name and the old value \code{"call.observations"} are also read, NOTE) rows are
 #'     plotted; other values are skipped with a NOTE. Rows with a blank
 #'     \code{$plot.type} are dropped.}
 #'   \item{\code{$plot.name}}{Plot title and second part of the file name (after \code{project.name}).
@@ -324,7 +327,10 @@
 #'   \item Colors: with side-by-side bars and \code{$legend} TRUE, each group
 #'     value gets its own color from \code{legend.groupval.colors} (legend
 #'     title \code{legend.groupval.title}) and 40kHzMyo keeps
-#'     \code{bar.40khzmyo.fill}. Otherwise bars use
+#'     \code{bar.40khzmyo.fill}. The legend shows the detectors (group
+#'     values) on one row and 40kHzMyo on the row below. When the detectors
+#'     do not fit across the saved width they wrap over more rows, and
+#'     40kHzMyo stays on its own row below them. Otherwise bars use
 #'     \code{bar.alldetections.fill} and \code{bar.40khzmyo.fill} (legend
 #'     title \code{bar.fill.legend.title}, showing only the 40kHzMyo key).
 #'   \item The X axis runs from \code{$date.start} to \code{$date.end} plus
@@ -362,7 +368,7 @@
 #'
 #' @seealso \code{\link{batz.generate_plotframe.bat}},
 #'   \code{\link{batz.generate_plotopts}},
-#'   \code{\link{batz.plot.floatbar_detect.1st.last}}
+#'   \code{\link{batz.plot.barfloat_detect.1st.last}}
 #'
 #' @examples
 #' \dontrun{
@@ -398,7 +404,7 @@ batz.plot.bar_activity.site <- function(data, fig.list = NULL, suntimes = NULL,
   ## ---- no fig.list: one plot of every night, "All detections" ------------
   if (is.null(fig.list)) {
     dd <- plotutil_parse_date(data$date)
-    fig.list <- data.frame(plot = TRUE, plot.type = "call.observations", plot.name = "observations",
+    fig.list <- data.frame(plot = TRUE, plot.type = "bar_activity.site", plot.name = "observations",
                            facet.header = "sppid", facet.plot = TRUE, facet.set = "AllDet", myso = FALSE,
                            all.detections = TRUE, `40khzmyo` = FALSE, facet.label_format = "common_name",
                            plot.set = "", pool = TRUE, date.format = "",
@@ -418,6 +424,7 @@ batz.plot.bar_activity.site <- function(data, fig.list = NULL, suntimes = NULL,
   fig.list <- plotutil_figlist_plot(fig.list, "batz.plot.bar_activity.site")   # only rows with $plot = TRUE or 1
   if (is.data.frame(fig.list) && nrow(fig.list) == 0) return(invisible(list(plots = list(), ggplots = list())))
   if (is.null(aes.plotopts)) aes.plotopts <- plotutil_aes_legacy(plotutil_dots(...), "batz.plot.bar_activity.site")   # old argument name aes.default / plotopts
+  aes.plotopts <- plotutil_read_plotopts(aes.plotopts, "batz.plot.bar_activity.site")   # data frame, settings .csv path or pooled .xlsx path
   if (is.null(aes.plotopts)) aes.plotopts <- plotutil_default_plotopts("batz.plot.bar_activity.site")   # built-in settings
   data <- special.strip(data, strip.special)$df
   ## fig.list is a settings table, not data - stripped only when
@@ -439,7 +446,7 @@ batz.plot.bar_activity.site <- function(data, fig.list = NULL, suntimes = NULL,
   }
 
   # See @details above for why this value was chosen and how to change it.
-  PLOT.TYPE <- "call.observations"
+  PLOT.TYPE <- "bar_activity.site"
 
   ## $aru.groupby is NOT in this list anymore - which column of `data` to
   ## filter/group by is now named per fig.list row via $plot.group (see
@@ -448,7 +455,7 @@ batz.plot.bar_activity.site <- function(data, fig.list = NULL, suntimes = NULL,
   ## $plot.group is no longer REQUIRED here at all - it's now resolved
   ## per-row below, defaulting to "group" when blank/absent - see Details.
   ## $plot.sets was also renamed to $plot.set this same round, standardizing
-  ## on the singular spelling batz.plot.floatbar_detect.1st.last() already used.
+  ## on the singular spelling batz.plot.barfloat_detect.1st.last() already used.
   ##
   ## Header standardization (per Josh, 2026-09-14 project preference):
   ## standardize.headers() itself is still NOT applied directly to any of
@@ -709,7 +716,7 @@ batz.plot.bar_activity.site <- function(data, fig.list = NULL, suntimes = NULL,
 
   # Exact full-row fig.list duplicates are collapsed to their first
   # occurrence before any plotting happens - same fix as
-  # batz.plot.floatbar_detect.1st.last() (see that function's own @details for
+  # batz.plot.barfloat_detect.1st.last() (see that function's own @details for
   # the real bug that led to it); included here from the start.
   n.jobs.before.dedup <- nrow(jobs)
   jobs <- jobs[!duplicated(jobs), , drop = FALSE]
@@ -726,7 +733,7 @@ batz.plot.bar_activity.site <- function(data, fig.list = NULL, suntimes = NULL,
     job.label <- if (nzchar(trimws(job$plot.name))) job$plot.name else sprintf("row %d", j)
     job.key <- as.character(j)
 
-    if (!identical(tolower(trimws(job$plot.type)), tolower(PLOT.TYPE))) {
+    if (!plotutil_plot_type_ok(job$plot.type, "batz.plot.bar_activity.site")) {
       cat(sprintf("NOTE: fig.list row for '%s' has plot.type = '%s' - skipped (this function only handles plot.type = '%s').\n",
                    job.label, job$plot.type, PLOT.TYPE))
       next
@@ -771,7 +778,7 @@ batz.plot.bar_activity.site <- function(data, fig.list = NULL, suntimes = NULL,
     # REQUIRED fig.list header - a blank value, or the column not existing
     # in fig.list at all, now defaults to "group" (matching
     # batz.generate_plotframe.bat()'s own output column and
-    # batz.plot.floatbar_detect.1st.last()'s fixed grouping column) instead of
+    # batz.plot.barfloat_detect.1st.last()'s fixed grouping column) instead of
     # skipping the row - see Details for the full history/judgment call. A
     # row can still supply its own $plot.group value to override this. ---
     group.col <- plotutil_job_text(job, "plot.group")             # blank, NA or "NA" -> ""
@@ -1062,18 +1069,26 @@ batz.plot.bar_activity.site <- function(data, fig.list = NULL, suntimes = NULL,
 
         pd.fill <- p$pd
         pd.fill$fill.val <- ifelse(pd.fill$bar.type == "40kHzMyo", "40kHzMyo", pd.fill$group.val)
-        fill.values <- c(groupval.colors, `40kHzMyo` = get.default("bar.40khzmyo.fill"))
-        fill.breaks <- if (isTRUE(p$khz.flag)) c(groupval.levels, "40kHzMyo") else groupval.levels
+        khz.fill <- get.default("bar.40khzmyo.fill")
 
+        ## 2026-11-13, per Josh: detectors on one legend row, 40kHzMyo on the
+        ## row below. The detectors are the fill legend; the 40kHzMyo bars get
+        ## their own legend (a colour key with no outline, drawn with the
+        ## 40kHzMyo fill), placed under the detector legend.
         g <- ggplot2::ggplot(pd.fill, ggplot2::aes(x = x.val)) +
           ggplot2::geom_col(data = pd.fill[pd.fill$bar.type == "All detections", , drop = FALSE],
                              ggplot2::aes(y = obs.plot, fill = fill.val, group = group.val, alpha = .alpha),
                              width = bar.width.val, position = bar.position) +
           ggplot2::geom_col(data = pd.fill[pd.fill$bar.type == "40kHzMyo", , drop = FALSE],
-                             ggplot2::aes(y = obs.plot, fill = fill.val, group = group.val, alpha = .alpha),
-                             width = bar.width.val, position = bar.position) +
+                             ggplot2::aes(y = obs.plot, group = group.val, alpha = .alpha, colour = "40kHzMyo"),
+                             fill = khz.fill, linewidth = 0, width = bar.width.val, position = bar.position,
+                             show.legend = c(colour = isTRUE(p$khz.flag), fill = FALSE)) +
           ggplot2::scale_fill_manual(name = get.default("legend.groupval.title"),
-                                      breaks = fill.breaks, limits = names(fill.values), values = fill.values)
+                                      breaks = groupval.levels, limits = groupval.levels, values = groupval.colors,
+                                      guide = ggplot2::guide_legend(order = 1, nrow = 1, byrow = TRUE)) +
+          ggplot2::scale_colour_manual(name = NULL, breaks = "40kHzMyo", limits = "40kHzMyo", values = c(`40kHzMyo` = NA),
+                                        guide = ggplot2::guide_legend(order = 2, nrow = 1,
+                                          override.aes = list(fill = khz.fill, colour = NA, alpha = 1)))
       } else {
         g <- ggplot2::ggplot(p$pd, ggplot2::aes(x = x.val)) +
           ggplot2::geom_col(data = p$pd[p$pd$bar.type == "All detections", , drop = FALSE],
@@ -1112,6 +1127,10 @@ batz.plot.bar_activity.site <- function(data, fig.list = NULL, suntimes = NULL,
           strip.background = ggplot2::element_blank(),
           panel.border = ggplot2::element_rect(linewidth = as.numeric(get.default("panel.border.linewidth")), colour = "grey20", fill = NA),
           legend.position = get.default("legend.position"),
+          legend.box = if (show.groupval.color) "vertical" else NULL,          # detectors, then 40kHzMyo on the row below
+          legend.box.just = if (show.groupval.color) "left" else NULL,
+          legend.spacing.y = if (show.groupval.color) grid::unit(0, "pt") else NULL,
+          legend.margin = if (show.groupval.color) ggplot2::margin(1, 5.5, 1, 5.5) else NULL,
           plot.title = ggplot2::element_text(hjust = as.numeric(get.default("plot.title.hjust")), face = plotutil_face(get.default("plot.title.face")), size = as.numeric(get.default("plot.title.size"))),
           axis.title = ggplot2::element_text(size = as.numeric(get.default("axis.title.size")), face = plotutil_face(get.default("axis.title.face"))),
           axis.text = ggplot2::element_text(size = as.numeric(get.default("axis.text.size"))),

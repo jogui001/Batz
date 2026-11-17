@@ -78,7 +78,10 @@ Optional rows \code{plot.title.face}, \code{axis.title.face} and
 \code{plot.zero} (the plotopts row or typed into the call), default
 \code{FALSE}: values of 0 (bars, tiles, cells) are not drawn; \code{TRUE}
 draws them. A 0 bar keeps its place (grouped / side-by-side bars do
-not move); it is only made invisible.}
+not move); it is only made invisible.
+\code{aes.plotopts} can also be the path to a settings .csv file, or to a
+pooled .xlsx workbook (e.g. from \code{\link{batz.generate_plotopts}} or
+Batz_reference_db): its tab \verb{pltop.bar_vegetation.species} is read.}
 
 \item{aes.style}{Character, default \code{"override.value"}. Name of the
 \code{aes.plotopts} column read before \code{$default.value} (an old

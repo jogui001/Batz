@@ -110,7 +110,7 @@ plotutil_collapse_pools <- function(data, fn.name) {
 ## ---------------------------------------------------------------------------
 ## fig.list format, 2026-10-09 (per Josh): $facet -> $facet.header,
 ## new $facet.plot, $facet.set = preset or ordered list, new file names.
-## Shared by batz.plot.bar_activity.site(), batz.plot.floatbar_detect.1st.last()
+## Shared by batz.plot.bar_activity.site(), batz.plot.barfloat_detect.1st.last()
 ## and batz.plot.heatmap_activity.species().
 ## ---------------------------------------------------------------------------
 
@@ -790,6 +790,7 @@ plotutil_recode_keep40k <- function(x) {
 #' legends are first stacked (one under the other) and then each legend's
 #' keys are wrapped over 2, 3, ... lines (up to 8) until it fits. The saved
 #' height grows by the extra legend height, so the panels keep their size.
+#' The legend is measured on the same kind of PNG device that saves the plot.
 #' Colour bars (continuous legends) are not wrapped. ggplot2's warning
 #' "no non-missing arguments to max; returning -Inf" (a facet with no bars in
 #' a side-by-side bar layer) is not shown.
@@ -823,8 +824,12 @@ plotutil_legend_fit <- function(plot, width, height, units = "in", dpi = 300) {
   w.in <- width * to.in; h.in <- height * to.in
 
   measure <- function(p) {                       # legend box width / height in inches
-    grDevices::pdf(NULL, width = w.in, height = h.in)
-    on.exit(grDevices::dev.off())
+    ## measured on the same kind of device ggsave() writes the PNG with, so the
+    ## text widths match the saved file (a pdf device measures text narrower)
+    tf <- tempfile(fileext = ".png")
+    if (requireNamespace("ragg", quietly = TRUE)) ragg::agg_png(tf, width = w.in, height = h.in, units = "in", res = dpi)
+    else grDevices::png(tf, width = w.in, height = h.in, units = "in", res = dpi)
+    on.exit({ grDevices::dev.off(); unlink(tf) })
     g <- ggplot2::ggplotGrob(p)
     i <- grep("^guide-box", g$layout$name)
     i <- i[!vapply(g$grobs[i], inherits, logical(1), "zeroGrob")]
@@ -1005,3 +1010,100 @@ plotutil_observations_raw <- function(data, spp.id = "spp.id", groupby.date = "d
               fn, sum(keep), length(unique(d$date)), if (is.na(i.g)) "one group \"all\"" else paste0("$", names(data)[i.g])))
   out
 }
+
+
+#' Read aes.plotopts given as a data frame, a CSV path or a pooled workbook (internal)
+#'
+#' \code{aes.plotopts} can be:
+#' \itemize{
+#'   \item a data frame (used as it is);
+#'   \item the path to one settings CSV, e.g.
+#'     \verb{acme_pltop.heatmap_aru.time.csv};
+#'   \item the path to an Excel workbook (.xlsx / .xls), e.g. the pooled file
+#'     from \code{batz.generate_plotopts()} or Batz_reference_db: the tab
+#'     \verb{pltop.<function name without batz.plot.>} is read (a workbook
+#'     with one tab: that tab, NOTE). A second element names another tab,
+#'     e.g. \code{c("file.xlsx", "my.settings")};
+#'   \item a named list of data frames (e.g. read from a pooled workbook):
+#'     the element named after the tab or the function.
+#' }
+#' Every cell is read as text, blanks as \code{""}. \code{NULL} stays
+#' \code{NULL} (the built-in settings are then used).
+#' @param x The \code{aes.plotopts} argument.
+#' @param fn Plot function name, e.g. \code{"batz.plot.heatmap_aru.time"}.
+#' @keywords internal
+#' @noRd
+plotutil_read_plotopts <- function(x, fn) {
+  if (is.null(x) || is.data.frame(x)) return(x)
+  tab <- paste0("pltop.", sub("^batz\\.plot\\.", "", fn))
+  txt <- function(d) {
+    d <- as.data.frame(d, stringsAsFactors = FALSE, check.names = FALSE)
+    for (cl in names(d)) { v <- as.character(d[[cl]]); v[is.na(v)] <- ""; d[[cl]] <- v }
+    d[rowSums(d != "") > 0, , drop = FALSE]
+  }
+  if (is.list(x)) {
+    k <- intersect(c(tab, fn), names(x))
+    if (!length(k)) stop(fn, ": aes.plotopts is a list without an element named ", tab, " or ", fn, ".", call. = FALSE)
+    return(plotutil_read_plotopts(x[[k[1]]], fn))
+  }
+  if (!is.character(x) || !length(x) || is.na(x[1]) || !nzchar(trimws(x[1])))
+    stop(fn, ": aes.plotopts must be a data frame, the path to a settings .csv file or the path to a pooled .xlsx file.", call. = FALSE)
+  f <- trimws(x[1])
+  if (!file.exists(f)) stop(fn, ": aes.plotopts file not found: ", f, call. = FALSE)
+  if (grepl("\\.xlsx?$", f, ignore.case = TRUE)) {
+    sh <- readxl::excel_sheets(f)
+    want <- if (length(x) > 1 && !is.na(x[2]) && nzchar(trimws(x[2]))) trimws(x[2]) else tab
+    hit <- sh[tolower(sh) == tolower(want)]
+    if (!length(hit)) {
+      if (length(sh) == 1 && length(x) < 2) {
+        cat(sprintf("NOTE: %s - %s has no tab %s - its only tab '%s' is used.\n", fn, basename(f), want, sh))
+        hit <- sh
+      } else stop(fn, ": ", basename(f), " has no tab '", want, "'. Tabs: ", paste(sh, collapse = ", "), call. = FALSE)
+    }
+    d <- readxl::read_excel(f, sheet = hit[1], col_types = "text", .name_repair = "minimal")
+    cat(sprintf("NOTE: %s - aes.plotopts read from %s, tab %s.\n", fn, basename(f), hit[1]))
+    return(txt(d))
+  }
+  if (!grepl("\\.csv$", f, ignore.case = TRUE)) warning(fn, ": aes.plotopts file is not .csv / .xlsx - read as a CSV: ", basename(f), call. = FALSE)
+  d <- utils::read.csv(f, check.names = FALSE, colClasses = "character", na.strings = character(0),
+                       fileEncoding = "UTF-8-BOM")
+  cat(sprintf("NOTE: %s - aes.plotopts read from %s.\n", fn, basename(f)))
+  txt(d)
+}
+
+
+#' Is a fig.list $plot.type this function's? (internal)
+#'
+#' \code{$plot.type} is the plot function name without \code{batz.plot.}
+#' (e.g. \code{"heatmap_aru.time"}); the full name is also accepted. Case,
+#' spaces at the ends and a leading \code{batz.plot.} are ignored. The old
+#' plot types (e.g. \code{"sm4.heatmap"}) are still read, with a NOTE.
+#' @param v The \code{$plot.type} value.
+#' @param fn Plot function name.
+#' @keywords internal
+#' @noRd
+plotutil_plot_type_ok <- function(v, fn) {
+  v <- tolower(trimws(as.character(v)))
+  if (!length(v) || is.na(v[1])) return(FALSE)
+  v <- sub("^batz\\.plot\\.", "", v[1])
+  new <- tolower(sub("^batz\\.plot\\.", "", fn))
+  if (identical(v, new)) return(TRUE)
+  old <- PLOTUTIL_PLOT_TYPE_OLD[[fn]]
+  if (!is.null(old) && v %in% old) {
+    cat(sprintf("NOTE: %s - $plot.type '%s' is the old name - now '%s' (still read).\n", fn, v, new))
+    return(TRUE)
+  }
+  FALSE
+}
+
+#' Old fig.list $plot.type values, by plot function (internal)
+#' @keywords internal
+#' @noRd
+PLOTUTIL_PLOT_TYPE_OLD <- list(
+  batz.plot.bar_activity.community   = "bar.bat.group",
+  batz.plot.heatmap_activity.site    = "heat.site.species",
+  batz.plot.bar_activity.site        = "call.observations",
+  batz.plot.barfloat_detect.1st.last = "bat.detection",
+  batz.plot.heatmap_activity.species = "activity.heatmap",
+  batz.plot.heatmap_aru.time         = "sm4.heatmap"
+)

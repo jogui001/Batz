@@ -101,7 +101,7 @@ stopifnot(sum(p7$cells$passes) >= sum(p$cells$passes))
 pass("bin.minutes = 30 and 18:00-06:00 from fig.list: 24 bins")
 
 ## ---- TEST 8: other plot types skipped; bad bin.colors falls back -------------
-fl8 <- rbind(fig.list, fig.list); fl8$plot.type[2] <- "sm4.heatmap"; fl8$plot.name[2] <- "other"
+fl8 <- rbind(fig.list, fig.list); fl8$plot.type[2] <- "heatmap_aru.time"; fl8$plot.name[2] <- "other"
 po8 <- plotopts; po8$overide.value[po8$parameter == "bin.colors"] <- "#FFFFFF;#000000"
 r8 <- run(fl8, po8)
 stopifnot(length(r8$plots) == 1, length(r8$plots[[1]]$settings$bin.colors) == 6)

@@ -53,6 +53,9 @@
 #'   \code{plot.zero} (the plotopts row or typed into the call), default
 #'   \code{FALSE}: values of 0 (bars, tiles, cells) are not drawn; \code{TRUE}
 #'   draws them.
+#'   \code{aes.plotopts} can also be the path to a settings .csv file, or to a
+#'   pooled .xlsx workbook (e.g. from \code{\link{batz.generate_plotopts}} or
+#'   Batz_reference_db): its tab \verb{pltop.box_vegetation.dbh} is read.
 #' @param ... Any other setting listed in Details ("Settings"), typed into
 #'   the call by name (e.g. \code{yaxe.max = 20}); used before
 #'   \code{aes.plotopts}.
@@ -136,6 +139,7 @@ batz.plot.box_vegetation.dbh <- function(data, project.name = "", site.names = N
   defs <- batz.plot.box_vegetation.dbh.defaults()
   po <- NULL
   if (is.null(aes.plotopts)) aes.plotopts <- plotutil_aes_legacy(plotutil_dots(...), FN)   # old argument name plotopts
+  aes.plotopts <- plotutil_read_plotopts(aes.plotopts, "batz.plot.box_vegetation.dbh")   # data frame, settings .csv path or pooled .xlsx path
   if (!is.null(aes.plotopts)) {
     if (is.character(aes.plotopts)) {
       if (!file.exists(aes.plotopts[1])) stop(FN, ": aes.plotopts file not found: ", aes.plotopts[1], call. = FALSE)

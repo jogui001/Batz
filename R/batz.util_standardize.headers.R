@@ -65,7 +65,7 @@ standardize.headers <- function(x) {
 #' Used by the plot, plot-frame and summary functions, e.g.
 #' \code{\link{batz.generate_plotframe.bat}},
 #' \code{\link{batz.plot.bar_activity.site}},
-#' \code{\link{batz.plot.floatbar_detect.1st.last}} and
+#' \code{\link{batz.plot.barfloat_detect.1st.last}} and
 #' \code{\link{batz.generate_suntimes.arulist}}.
 #'
 #' @return A list with \code{$df} (\code{df} with every matched column renamed

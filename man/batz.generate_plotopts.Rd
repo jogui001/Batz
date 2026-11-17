@@ -2,16 +2,17 @@
 % Please edit documentation in R/batz.generate_plotopts.R
 \name{batz.generate_plotopts}
 \alias{batz.generate_plotopts}
-\title{Generate a project settings ("plotopts") CSV file for Batz plot functions}
+\title{Generate project settings ("plotopts") files for Batz plot functions}
 \usage{
 batz.generate_plotopts(
   generate.files = c("batz.plot.bar_activity.community",
     "batz.plot.heatmap_activity.site", "batz.plot.bar_activity.site",
-    "batz.plot.floatbar_detect.1st.last", "batz.plot.bullseye_clutter.mic",
+    "batz.plot.barfloat_detect.1st.last", "batz.plot.bullseye_clutter.mic",
     "batz.plot.heatmap_activity.time", "batz.plot.heatmap_activity.species",
     "batz.plot.heatmap_aru.time", "batz.plot.bar_vegetation.species",
     "batz.plot.box_vegetation.dbh", "batz.plot.line_weather.daily"),
   project.name = "new project",
+  file.format = c("csv", "xlsx"),
   dir.save = getwd(),
   strip.special.plotopts = FALSE
 )
@@ -21,7 +22,7 @@ batz.generate_plotopts(
 every plot function with built-in settings:
 \code{"batz.plot.bar_activity.community"}, \code{"batz.plot.heatmap_activity.site"},
 \code{"batz.plot.bar_activity.site"},
-\code{"batz.plot.floatbar_detect.1st.last"},
+\code{"batz.plot.barfloat_detect.1st.last"},
 \code{"batz.plot.bullseye_clutter.mic"},
 \code{"batz.plot.heatmap_activity.time"}, \code{"batz.plot.heatmap_activity.species"},
 \code{"batz.plot.heatmap_aru.time"}, \code{"batz.plot.bar_vegetation.species"},
@@ -32,7 +33,12 @@ of each output file name, and the name of the column that holds the
 project's own settings (written as \code{$override.value} in the
 built-in table). \code{""}: the column keeps the name
 \code{override.value} and the files are named
-\verb{pltop.<function name without batz.plot.>.csv}.}
+\verb{pltop.<function name without batz.plot.>.csv} and
+\verb{pltop.pooled.xlsx}.}
+
+\item{file.format}{Character, default \code{c("csv", "xlsx")}: which
+files to write. \code{"csv"}: one CSV per function. \code{"xlsx"}: one
+pooled workbook with a tab per function. Both: both.}
 
 \item{dir.save}{Directory the settings files are written to (created if
 missing). Default \code{getwd()}.}
@@ -44,19 +50,24 @@ removes other non-ASCII characters in the copy.}
 }
 \value{
 Invisibly, a character vector of the file names written (names
-only, not full paths), in the order of \code{generate.files}. Each saved
-file name is printed.
+only, not full paths): the CSVs in the order of \code{generate.files},
+then the pooled workbook. Each saved file name is printed.
 }
 \description{
-Writes the built-in plot settings of each requested plot function to a
-new project file named after the function's settings tab in
-Batz_reference_db: \verb{<project.name>_pltop.<function name without batz.plot.>.csv}
-(e.g. \verb{acme_pltop.heatmap_aru.time.csv}).
+Writes the built-in plot settings of each requested plot function to
+project files: one CSV per function, named after the function's settings
+tab in Batz_reference_db,
+\verb{<project.name>_pltop.<function name without batz.plot.>.csv}
+(e.g. \verb{acme_pltop.heatmap_aru.time.csv}), and/or one pooled Excel
+workbook, \verb{<project.name>_pltop.pooled.xlsx}, with one
+\verb{pltop.<function name without batz.plot.>} tab per function.
 The \code{$override.value} column is named after the project
 (\code{project.name}). Edit that column of the copy to customise a
 project's plots, then pass the file as the function's
 \code{aes.plotopts} with \code{aes.style = <project.name>} (the column
-read before \code{$default.value}).
+read before \code{$default.value}). Every plot function takes
+\code{aes.plotopts} as a data frame, the path to its CSV, or the path to
+the pooled workbook (it reads its own \verb{pltop.*} tab).
 }
 \details{
 \strong{Source.} The settings come from Batz_reference_db, the one master
@@ -72,6 +83,11 @@ renamed to \code{project.name} (kept when \code{project.name = ""}). With \code{
 special characters are simplified or removed first. A name in
 \code{generate.files} with no built-in settings stops the function with
 an error that lists the recognised names.
+
+\strong{Pooled workbook.} One tab per function, in the order of
+\code{generate.files}, named as the Batz_reference_db tab (at most 31
+characters). Bold header row, frozen; column widths fitted. The cells are
+the same text as in the CSVs.
 }
 \examples{
 \dontrun{
@@ -81,6 +97,13 @@ batz.generate_plotopts(project.name = "acme.wetlands.2026", dir.save = "acme_pro
 # batz.plot.heatmap_aru.time(data, fig.list,
 #   aes.plotopts = read.csv("acme_project/acme.wetlands.2026_pltop.heatmap_aru.time.csv",
 #                           check.names = FALSE),
+#   aes.style = "acme.wetlands.2026")
+
+# Pooled workbook only, then any plot function reads its own tab
+batz.generate_plotopts(project.name = "acme.wetlands.2026", file.format = "xlsx",
+                       dir.save = "acme_project")
+# batz.plot.heatmap_aru.time(data, fig.list,
+#   aes.plotopts = "acme_project/acme.wetlands.2026_pltop.pooled.xlsx",
 #   aes.style = "acme.wetlands.2026")
 
 # One function only

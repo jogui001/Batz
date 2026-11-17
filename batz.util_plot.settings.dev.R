@@ -47,7 +47,7 @@ h1 <- batz.plot.heatmap_activity.site(v, fl2, po2, groupby.date = "date-12", dir
                                   xaxe.title = "INPUT X", legend.position = "top")
 ok(h1$ggplots[[1]]$labels$x == "INPUT X", "heat.site.species: function call before fig.list")
 
-## ---- batz.plot.bar_activity.site / batz.plot.floatbar_detect.1st.last ------------
+## ---- batz.plot.bar_activity.site / batz.plot.barfloat_detect.1st.last ------------
 dates <- seq(as.Date("2026-07-01"), as.Date("2026-07-05"), by = "day")
 d <- do.call(rbind, lapply(c("EPFU", "MYLU"), function(s) data.frame(spp.id = s, date = format(dates), group = "A1",
   observations.count = 3, mins2.noon.min = 500, mins2.noon.max = 900, vetting.type = "bat.detection")))
@@ -58,10 +58,10 @@ flx <- function(type) data.frame(plot.type = type, plot.name = "t", facet.header
   facet.set = "EPFU;MYLU", myso = FALSE, all.detections = FALSE, `40khzmyo` = FALSE, facet.label = "code4", plot.set = "A1",
   pool = FALSE, date.format = "%b-%d", date.start = "2026-07-01", date.end = "2026-07-05", xaxe.interval = "1 day",
   xaxe.title = "Date", check.names = FALSE)
-o1 <- batz.plot.bar_activity.site(d, flx("call.observations"), st, opts("batz.plot.bar_activity.site"), dir.save = dir.out,
+o1 <- batz.plot.bar_activity.site(d, flx("bar_activity.site"), st, opts("batz.plot.bar_activity.site"), dir.save = dir.out,
                                      legend.position = "left")
 ok(th(o1$ggplots[[1]], "legend.position") == "left", "observations: function call used")
-f1 <- batz.plot.floatbar_detect.1st.last(d, flx("bat.detection"), st, opts("batz.plot.floatbar_detect.1st.last"), dir.save = dir.out,
+f1 <- batz.plot.barfloat_detect.1st.last(d, flx("barfloat_detect.1st.last"), st, opts("batz.plot.barfloat_detect.1st.last"), dir.save = dir.out,
                                      legend.position = "left", plot.width = 11, plot.height = 8.5)
 ok(th(f1$ggplots[[1]], "legend.position") == "left", "first.last: function call used")
 
@@ -98,7 +98,7 @@ ok(h2$ggplot$theme$plot.title$size == 30, "heatmap: function call before plotopt
 ## each call prints "NOTE: <function> - no aes.default given: the built-in settings (...) are used."
 b4 <- batz.plot.bar_activity.community(pf, fl, dir.save = dir.out)
 ok(length(b4$ggplots) == 1, "bar: runs with no aes.default")
-o4 <- batz.plot.bar_activity.site(d, flx("call.observations"), st, dir.save = dir.out)
+o4 <- batz.plot.bar_activity.site(d, flx("bar_activity.site"), st, dir.save = dir.out)
 ok(length(o4$ggplots) >= 1, "observations: runs with no aes.default")
 k4 <- batz.plot.heatmap_activity.species(hm, dir.save = dir.out)
 c4 <- batz.plot.bar_activity.site(dd, spp.id = "kpauto", groupby.date = "monnight", dir.save = dir.out)

@@ -1337,7 +1337,7 @@ batz.generate_aru.appendix <- function(data,
       nm <- sm4.sites[match(key(s), key(sm4.sites))]
       if (is.na(nm)) { site.values[[s]]$figure.sm4 <- "No SM4 log data for this site"; next }
       nts <- sort(unique(sm4.sum$date.monitoringnight[sm4.sum$aru.name == nm]))
-      fl <- data.frame(plot.type = "sm4.heatmap", plot.name = s, plot.set = nm, date.format = "%m/%d",
+      fl <- data.frame(plot.type = "heatmap_aru.time", plot.name = s, plot.set = nm, date.format = "%m/%d",
                        date.start = nts[1], date.end = nts[length(nts)], xaxe.interval = "6",
                        xaxe.title = "Monitoring Night", yaxe.title = "Time", stringsAsFactors = FALSE)
       d.out <- file.path(img.dir, paste0("sm4.", key(s))); dir.create(d.out, showWarnings = FALSE)

@@ -36,6 +36,9 @@
 #'   \code{plot.zero} (the plotopts row or typed into the call), default
 #'   \code{FALSE}: values of 0 (bars, tiles, cells) are not drawn; \code{TRUE}
 #'   draws them.
+#'   \code{aes.plotopts} can also be the path to a settings .csv file, or to a
+#'   pooled .xlsx workbook (e.g. from \code{\link{batz.generate_plotopts}} or
+#'   Batz_reference_db): its tab \verb{pltop.bullseye_clutter.mic} is read.
 #' @param project.name Character, default \code{"new.project"}. First part of
 #'   each saved file name.
 #' @param ... Plot settings typed into the call, named as the
@@ -250,6 +253,7 @@ batz.plot.bullseye_clutter.mic <- function(data, mic, aes.plotopts = NULL, proje
   ## non-data-frames unchanged and only modifies these local copies.
   objname.aes.plotopts <- paste(deparse(substitute(aes.plotopts)), collapse = "")
   if (is.null(aes.plotopts)) aes.plotopts <- plotutil_aes_legacy(plotutil_dots(...), "batz.plot.bullseye_clutter.mic")   # old argument name aes.default / plotopts
+  aes.plotopts <- plotutil_read_plotopts(aes.plotopts, "batz.plot.bullseye_clutter.mic")   # data frame, settings .csv path or pooled .xlsx path
   if (is.null(aes.plotopts)) aes.plotopts <- plotutil_default_plotopts("batz.plot.bullseye_clutter.mic")   # built-in settings
   data <- special.strip(data, strip.special)$df
   mic <- special.strip(mic, strip.special)$df

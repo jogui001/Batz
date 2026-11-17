@@ -72,7 +72,13 @@ Optional rows \code{plot.title.face}, \code{axis.title.face} and
 \code{FALSE}: values of 0 (bars, tiles, cells) are not drawn; \code{TRUE}
 draws them.
 Optional row \code{strip.text.size}: size of the facet panel titles
-(a missing row gives 10).}
+(a missing row gives 10).
+Optional rows \code{font.family} (default \code{"Arial"}) and
+\code{legend.scalebar} (\code{"below"} or \code{"right"}, default
+\code{"below"}); see "plotopts" in Details.
+\code{aes.plotopts} can also be the path to a settings .csv file, or to a
+pooled .xlsx workbook (e.g. from \code{\link{batz.generate_plotopts}} or
+Batz_reference_db): its tab \verb{pltop.heatmap_aru.time} is read.}
 
 \item{project.name}{Character, default \code{"new.project"}. First part
 of each saved file name.}
@@ -104,6 +110,7 @@ and the first rows per header. TRUE strips them instead.}
 \item{...}{Plot settings typed into the call, named as the
 \code{aes.plotopts} \code{$parameter} rows (or fig.list setting
 columns), e.g. \code{legend.position = "bottom"},
+\code{legend.scalebar = "right"}, \code{font.family = "Arial"},
 \code{plot.width = 8}. A vector is joined with ";". Each setting is
 taken from the function call, then the fig.list row, then \code{aes.plotopts} (its custom-style column, then
 \code{$default.value}). A setting given here does not need a row in
@@ -144,18 +151,18 @@ Draws a night-by-time-of-night heatmap of how many minutes an SM4Bat
 detector was recording in each interval of the night, from an
 already-summarized per-interval table (\code{$mins.oper},
 \code{$mins2.noon.mon}). Dawn, Dusk and Midnight reference lines are drawn
-as in \code{\link{batz.plot.floatbar_detect.1st.last}}. The Y axis is the
+as in \code{\link{batz.plot.barfloat_detect.1st.last}}. The Y axis is the
 time of night on a Noon-to-Noon axis, limited by \code{time.start} and
 \code{time.end} (or by the ARUs' recording schedule); the X axis is the
-date. One single-panel PNG is
+date. All text is in \code{font.family} (default Arial). One single-panel PNG is
 saved per \code{fig.list} row whose \code{$plot.type} is
-\code{"sm4.heatmap"}.
+\code{"heatmap_aru.time"}.
 }
 \details{
 \strong{fig.list columns.} Required headers are matched ignoring case and
 "." / "_" / space differences.
 \describe{
-\item{\code{$plot.type}}{Only \code{"sm4.heatmap"} rows are plotted;
+\item{\code{$plot.type}}{Only \code{"heatmap_aru.time"} (the function name without \code{batz.plot.}; the full name and the old value \code{"sm4.heatmap"} are also read, NOTE) rows are plotted;
 other values are skipped with a NOTE. Rows with a blank
 \code{$plot.type} are dropped. Exact duplicate rows are removed
 (NOTE).}
@@ -195,7 +202,11 @@ given in \code{aes.plotopts}.}
 \strong{Y axis.}
 \itemize{
 \item \code{time.start}: lowest time on the Y axis, \code{"HH:MM"}
-(e.g. \code{"18:00"}).
+(e.g. \code{"18:00"}). Blank (default): 1 hour before the earliest
+Dusk (\code{$sunset}) of the plotted \code{suntimes}, rounded down to
+the full hour (e.g. Dusk 20:35 -> 19:35 -> \code{"19:00"}). Without
+\code{suntimes} (or no matching rows) a blank \code{time.start} comes
+from \code{$aru.schedule} (below).
 \item \code{time.end}: highest time on the Y axis, \code{"HH:MM"}
 (e.g. \code{"08:00"}, the next morning). The axis runs Noon to Noon,
 so a time before noon is the next morning; \code{"12:00"} is the
@@ -206,7 +217,8 @@ full Noon-to-Noon axis (NOTE).
 Labels are on clock times that are multiples of it (60: every full
 hour; 30: every hour and half hour; 120: every second hour from
 midnight).
-\item A blank \code{time.start} or \code{time.end} comes from the
+\item A blank \code{time.end} (and a blank \code{time.start} when there
+is no Dusk) comes from the
 \code{$aru.schedule} of the plotted rows: the earliest
 \code{$time.on} and the latest \code{$time.off} of those schedules
 in the \code{aru.scheduals} tab of Batz_reference_db (several
@@ -273,8 +285,24 @@ used (NOTE).
 \code{fill.colors} (fewer than 2 colors gives a 7-color viridis
 ramp), from 0 to \code{fill.max} (an unusable value gives 15).
 Values above \code{fill.max} are out of range and drawn grey.
-\item The colorbar runs left to right when \code{legend.position} is
-\code{"bottom"}, otherwise bottom to top.
+\item \code{legend.position}: \code{"bottom"} (default), \code{"top"},
+\code{"left"} or \code{"right"}; any other value gives a NOTE and
+\code{"bottom"}. The colorbar runs left to right when the legend is at
+the bottom or top, otherwise bottom to top.
+\item \code{legend.scalebar}: where the colorbar sits next to its title
+(\code{fill.legend.title}): \code{"below"} (default) = the bar under
+the words; \code{"right"} = the bar to the right of the words. Any other
+value gives a NOTE and \code{"below"}. A missing row gives
+\code{"below"}.
+\item \code{font.family}: font of all text (titles, axis labels, legend,
+panel titles), default \code{"Arial"} (a missing or blank row gives
+Arial). A font that is not installed gives a NOTE and R's default sans
+font.
+\item Default text: every label 10 pt (\code{axis.text.size},
+\code{legend.text.size}, \code{strip.text.size}); every title 10 pt
+bold (\code{plot.title.size} / \code{plot.title.face},
+\code{axis.title.size} / \code{axis.title.face},
+\code{legend.title.size} / \code{legend.title.face}).
 \item The Midnight line width is half of \code{panel.border.linewidth},
 so it looks as thick as the panel border.
 \item The PNG size is \code{plot.width} + \code{ggsave.width.pad} by
@@ -319,7 +347,7 @@ result$ggplots[[1]]
 
 }
 \seealso{
-\code{\link{batz.plot.floatbar_detect.1st.last}},
+\code{\link{batz.plot.barfloat_detect.1st.last}},
 \code{\link{batz.generate_suntimes.arulist}},
 \code{\link{batz.generate_plotopts}}
 }

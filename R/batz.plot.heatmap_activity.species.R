@@ -11,7 +11,7 @@
 #' per \code{$group} x \code{$spp.id} combination in \code{data}, named
 #' \verb{<project.name>_<group>_<spp.id>_<YYYYMMDD>to<YYYYMMDD>.png} (first
 #' and last date of that combination). With a \code{fig.list}, each row with
-#' \code{$plot.type = "activity.heatmap"} makes one faceted plot or one plot
+#' \code{$plot.type = "heatmap_activity.species"} makes one faceted plot or one plot
 #' per facet (see \strong{fig.list} below).
 #'
 #' \strong{Where each setting comes from.} Every setting (\code{date.col}
@@ -99,7 +99,7 @@
 #' \strong{fig.list.} Same format as the other batz fig.list plot
 #' functions. Required columns:
 #' \describe{
-#'   \item{\code{$plot.type}}{\code{"activity.heatmap"}; other rows are
+#'   \item{\code{$plot.type}}{\code{"heatmap_activity.species"} (the function name without \code{batz.plot.}; the full name and the old value \code{"activity.heatmap"} are also read, NOTE); other rows are
 #'     skipped with a NOTE.}
 #'   \item{\code{$plot.name}}{Plot title and first part of the file name.}
 #'   \item{\code{$facet.header}}{\code{"sppid"} (the only value
@@ -171,6 +171,9 @@
 #'   \code{plot.zero} (the fig.list column \code{$plot.zero}, the plotopts row or typed into the call), default
 #'   \code{FALSE}: values of 0 (bars, tiles, cells) are not drawn; \code{TRUE}
 #'   draws them.
+#'   \code{aes.plotopts} can also be the path to a settings .csv file, or to a
+#'   pooled .xlsx workbook (e.g. from \code{\link{batz.generate_plotopts}} or
+#'   Batz_reference_db): its tab \verb{pltop.heatmap_activity.species} is read.
 #' @param date.col Character, default \code{"date.monitoringnight"}. Date
 #'   column, and the day layout: \code{"date.monitoringnight"} (noon to
 #'   noon) or \code{"date.calendar"} (midnight to midnight).
@@ -283,7 +286,7 @@ batz.plot.heatmap_activity.species <- function(data,
   fig.list <- plotutil_figlist_na(fig.list)       # "NA" = heading not used by this plot type
   fig.list <- plotutil_figlist_plot(fig.list, "batz.plot.heatmap_activity.species")   # only rows with $plot = TRUE or 1
   if (is.data.frame(fig.list) && nrow(fig.list) == 0) return(invisible(list(data = NULL, plots = list(), files = character(0))))
-  PLOT.TYPE <- "activity.heatmap"
+  PLOT.TYPE <- "heatmap_activity.species"
   if (!is.data.frame(data)) stop("`data` must be a data frame.")
   if (nrow(data) == 0) stop("`data` has 0 rows - nothing to plot.")
   if (!requireNamespace("ggplot2", quietly = TRUE)) stop("ggplot2 is required - install.packages(\"ggplot2\").")
@@ -309,6 +312,7 @@ batz.plot.heatmap_activity.species <- function(data,
     date.format = "%d %b", xaxe.interval = "", xaxe.title = "", yaxe.title = "Time of Day"
   )
   if (is.null(aes.plotopts)) aes.plotopts <- plotutil_aes_legacy(plotutil_dots(...), FN)   # old argument name aes.default / plotopts
+  aes.plotopts <- plotutil_read_plotopts(aes.plotopts, "batz.plot.heatmap_activity.species")   # data frame, settings .csv path or pooled .xlsx path
   if (is.null(aes.plotopts)) aes.plotopts <- plotutil_default_plotopts(FN)   # built-in settings
   if (!is.null(aes.plotopts)) {
     if (!is.data.frame(aes.plotopts)) stop("`aes.plotopts` must be a data frame (e.g. read.csv(\"pltop.heatmap_activity.species.csv\")).")
@@ -375,7 +379,7 @@ batz.plot.heatmap_activity.species <- function(data,
     rows <- rows[!duplicated(rows), , drop = FALSE]
     jobs <- list()
     for (j in seq_len(nrow(rows))) {
-      if (!identical(tolower(trimws(rows$plot.type[j])), PLOT.TYPE)) {
+      if (!plotutil_plot_type_ok(rows$plot.type[j], FN)) {
         cat(sprintf("NOTE: %s - fig.list row %d has plot.type = '%s' - skipped (this function only draws plot.type = '%s').\n",
                     FN, j, rows$plot.type[j], PLOT.TYPE))
         next

@@ -47,7 +47,10 @@ Optional rows \code{plot.title.face}, \code{axis.title.face} and
 \code{"bold.italic"}) set the title fonts; a missing row gives bold.
 \code{plot.zero} (the plotopts row or typed into the call), default
 \code{FALSE}: values of 0 (bars, tiles, cells) are not drawn; \code{TRUE}
-draws them.}
+draws them.
+\code{aes.plotopts} can also be the path to a settings .csv file, or to a
+pooled .xlsx workbook (e.g. from \code{\link{batz.generate_plotopts}} or
+Batz_reference_db): its tab \verb{pltop.heatmap_activity.time} is read.}
 
 \item{project.name}{Character, default \code{"new.project"}. First part
 of the saved file name.}

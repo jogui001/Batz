@@ -59,7 +59,10 @@ Optional rows \code{plot.title.face}, \code{axis.title.face} and
 \code{"bold.italic"}) set the title fonts; a missing row gives bold.
 \code{plot.zero} (the fig.list column \code{$plot.zero}, the plotopts row or typed into the call), default
 \code{FALSE}: values of 0 (bars, tiles, cells) are not drawn; \code{TRUE}
-draws them.}
+draws them.
+\code{aes.plotopts} can also be the path to a settings .csv file, or to a
+pooled .xlsx workbook (e.g. from \code{\link{batz.generate_plotopts}} or
+Batz_reference_db): its tab \verb{pltop.heatmap_activity.site} is read.}
 
 \item{spp.id}{Character, default \code{"species"}. Name of the species
 column in \code{data}.}
@@ -143,12 +146,12 @@ passes per monitoring night (e.g. 0, 1-10, 11-50, 51-100, 101-150 and
 over 150). Sites can be grouped into labelled blocks (e.g. communities),
 selected sites dropped, and selected sites shown in bold. One PNG is
 saved per \code{fig.list} row whose \code{$plot.type} is
-\code{"heat.site.species"}.
+\code{"heatmap_activity.site"}.
 }
 \details{
 \strong{fig.list columns.} List cells are separated by ";" or ",".
 \describe{
-\item{\code{$plot.type}}{Must be \code{"heat.site.species"}; other rows
+\item{\code{$plot.type}}{Must be \code{"heatmap_activity.site"} (the function name without \code{batz.plot.}; the full name and the old value \code{"heat.site.species"} are also read, NOTE); other rows
 are skipped with a NOTE, so one shared fig.list can hold rows for
 several plot functions. Rows with a blank \code{$plot.type} are
 dropped, and exact duplicate rows are removed.}
