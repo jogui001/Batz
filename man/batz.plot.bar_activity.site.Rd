@@ -278,6 +278,13 @@ in both, or a list in one and the other blank, only those dates are
 plotted. Otherwise the two lists must be the same length. A blank
 \code{$date.start} is the first night in \code{data}, a blank
 \code{$date.end} the last.}
+\item{Optional: \code{$date.interval}}{X-axis label dates, separated by
+";" (e.g. \code{"6/26/2026; 7/1/2026; 7/15/2026"}; m/d/Y, Y-m-d or
+m/d/y). The dates within \code{$date.start} to \code{$date.end} are the
+labels and replace \code{$xaxe.interval}; dates outside the window or
+not readable are left out (NOTE). Blank: \code{$xaxe.interval} is
+used. With date windows, only listed dates that are plotted days are
+labelled.}
 \item{\code{$xaxe.interval}}{Number of evenly spaced labeled dates on
 the X axis, from \code{$date.start} to \code{$date.end}. An unusable
 value gives 2 labels (NOTE). With date windows, every plotted day is

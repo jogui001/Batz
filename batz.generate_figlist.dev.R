@@ -41,8 +41,10 @@ fl$plot.name[i] <- "my.site"; fl$plot.set[i] <- "my.site"            # ... fill 
 
 ## example entries in every heading a plot type uses, "NA" in the others; $facet.label_format and $facet.label (2026-11-09)
 bl <- which(as.matrix(f$fig.list) == "", arr.ind = TRUE)
-ok(all(names(f$fig.list)[bl[, "col"]] == "time.start" & f$fig.list$plot.type[bl[, "row"]] == "heatmap_aru.time"),
-   "every used heading has an example entry (heatmap_aru.time time.start blank: 1 h before Dusk)")
+bl.h <- names(f$fig.list)[bl[, "col"]]
+ok(all(bl.h == "date.interval" | (bl.h == "time.start" & f$fig.list$plot.type[bl[, "row"]] == "heatmap_aru.time")),
+   "every used heading has an example entry (blank: $date.interval, and heatmap_aru.time time.start = 1 h before Dusk)")
+ok(match("date.interval", names(f$fig.list)) == match("date.end", names(f$fig.list)) + 1, "$date.interval right after $date.end")
 ok(all(c("facet.label_format", "facet.label") %in% names(f$fig.list)), "$facet.label_format and $facet.label headings")
 print(f$fig.list[, c("plot.type", "facet.label_format", "facet.label")])
 

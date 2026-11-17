@@ -283,6 +283,12 @@ a count that doesn't match.}
 \code{;} or \code{,} (several are summed, with a NOTE); blank = all.}
 \item{\code{$date.start}, \code{$date.end}}{Date range; blank = range
 of the data.}
+\item{Optional: \code{$date.interval}}{X-axis label dates, separated by
+";" (e.g. \code{"6/26/2026; 7/1/2026; 7/15/2026"}; m/d/Y, Y-m-d or
+m/d/y). The dates within \code{$date.start} to \code{$date.end} are the
+labels and replace \code{$xaxe.interval}; dates outside the window or
+not readable are left out (NOTE). Blank: \code{$xaxe.interval} is
+used.}
 }
 Optional: any setting named above (e.g. \code{$bin.scale},
 \code{$bin.colors}, \code{$time.start}, \code{$date.format}). File names

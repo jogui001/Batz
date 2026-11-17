@@ -135,6 +135,12 @@
 #'     \code{;} or \code{,} (several are summed, with a NOTE); blank = all.}
 #'   \item{\code{$date.start}, \code{$date.end}}{Date range; blank = range
 #'     of the data.}
+#'   \item{Optional: \code{$date.interval}}{X-axis label dates, separated by
+#'     ";" (e.g. \code{"6/26/2026; 7/1/2026; 7/15/2026"}; m/d/Y, Y-m-d or
+#'     m/d/y). The dates within \code{$date.start} to \code{$date.end} are the
+#'     labels and replace \code{$xaxe.interval}; dates outside the window or
+#'     not readable are left out (NOTE). Blank: \code{$xaxe.interval} is
+#'     used.}
 #' }
 #' Optional: any setting named above (e.g. \code{$bin.scale},
 #' \code{$bin.colors}, \code{$time.start}, \code{$date.format}). File names
@@ -318,7 +324,7 @@ batz.plot.heatmap_activity.species <- function(data,
     plot.title.size = "10", axis.title.size = "10", axis.text.size = "10",
     strip.text.size = "10", legend.title.size = "10", legend.text.size = "10",
     plot.title.face = "bold", axis.title.face = "bold", legend.title.face = "bold", plot.zero = "FALSE",
-    date.format = "%d %b", xaxe.interval = "", xaxe.title = "", yaxe.title = "Time of Day"
+    date.format = "%d %b", date.interval = "", xaxe.interval = "", xaxe.title = "", yaxe.title = "Time of Day"
   )
   if (is.null(aes.plotopts)) aes.plotopts <- plotutil_aes_legacy(plotutil_dots(...), FN)   # old argument name aes.default / plotopts
   aes.plotopts <- plotutil_read_plotopts(aes.plotopts, "batz.plot.heatmap_activity.species")   # data frame, settings .csv path or pooled .xlsx path
@@ -728,7 +734,10 @@ heatmap2.draw <- function(pu, job, setting, num.opt, bin.mins, bin.vals, bin.col
   if (y.end == 1440 && !night.mode) y.labels[y.breaks == 1440] <- "24:00"
   date.fmt <- gsub("/n", "\n", setting(job, "date.format"), fixed = TRUE)
   n.x <- suppressWarnings(as.numeric(setting(job, "xaxe.interval")))
-  x.scale <- if (!is.na(n.x) && n.x >= 2) {
+  date.int <- plotutil_date_interval(setting(job, "date.interval"), pu$d.start, pu$d.end, pu$title)
+  x.scale <- if (!is.null(date.int)) {                                 # $date.interval replaces $xaxe.interval
+    ggplot2::scale_x_date(breaks = date.int, date_labels = date.fmt)
+  } else if (!is.na(n.x) && n.x >= 2) {
     ggplot2::scale_x_date(breaks = seq(pu$d.start, pu$d.end, length.out = round(n.x)), date_labels = date.fmt)
   } else {
     ggplot2::scale_x_date(date_labels = date.fmt)

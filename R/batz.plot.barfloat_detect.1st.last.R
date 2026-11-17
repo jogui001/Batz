@@ -195,6 +195,12 @@
 #'     e.g. \code{"\%b-\%d/n\%Y"}). A literal "/n" becomes a line break.}
 #'   \item{\code{$date.start}, \code{$date.end}}{Date window of the plot.
 #'     Read as m/d/Y, Y-m-d or m/d/y.}
+#'   \item{Optional: \code{$date.interval}}{X-axis label dates, separated by
+#'     ";" (e.g. \code{"6/26/2026; 7/1/2026; 7/15/2026"}; m/d/Y, Y-m-d or
+#'     m/d/y). The dates within \code{$date.start} to \code{$date.end} are the
+#'     labels and replace \code{$xaxe.interval}; dates outside the window or
+#'     not readable are left out (NOTE). Blank: \code{$xaxe.interval} is
+#'     used.}
 #'   \item{\code{$xaxe.interval}}{Number of evenly spaced labeled dates on
 #'     the X axis, from \code{$date.start} to \code{$date.end}. An unusable
 #'     value gives 2 labels (NOTE).}
@@ -426,7 +432,7 @@ batz.plot.barfloat_detect.1st.last <- function(data, fig.list, suntimes,
                                  "all.detections", "40khzmyo", "facet.label_format",
                                  "plot.set", "date.format", "date.start", "date.end",
                                  "xaxe.interval", "xaxe.title")
-  FIG.LIST.OPTIONAL <- c("facet.label", "plot.dimensions", "plot.zero",
+  FIG.LIST.OPTIONAL <- c("date.interval", "facet.label", "plot.dimensions", "plot.zero",
                          "plot.zero_all.detections", "plot.zero_40khzmyo")   # read directly when present
   AES.DEFAULT.REQUIRED <- c("category", "parameter", "default.value")
 
@@ -922,6 +928,8 @@ batz.plot.barfloat_detect.1st.last <- function(data, fig.list, suntimes,
         xaxe.n.labels <- 2
       }
       xaxe.breaks <- seq(p$date.start, p$date.end, length.out = round(xaxe.n.labels))
+      date.int <- plotutil_date_interval(get.setting(p$job, "date.interval"), p$date.start, p$date.end, job.label)
+      if (!is.null(date.int)) xaxe.breaks <- date.int                  # $date.interval replaces $xaxe.interval
 
       # $panel.border.linewidth (Theme category, default "0.5" - matches
       # ggplot2's own theme_bw() default for panel.border, so nothing

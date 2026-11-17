@@ -204,4 +204,18 @@ ok(length(rx$ggplots) == 1, "aes.plotopts = pooled .xlsx path: own tab read")
 e <- try(batz.plot.heatmap_aru.time(data = pf, fig.list = fl, aes.plotopts = c(file.path(dir.out, "acme_pltop.pooled.xlsx"), "nope"), dir.save = dir.out), silent = TRUE)
 ok(inherits(e, "try-error") && grepl("no tab 'nope'", e), "pooled .xlsx with a missing tab: error lists the tabs")
 
+## ---- 13. $date.interval: the X-axis labels (replaces $xaxe.interval) ----
+xb <- function(r) { b <- ggplot2::ggplot_build(r$ggplots[[1]])$layout$panel_params[[1]]$x$breaks; as.Date(b[!is.na(b)], origin = "1970-01-01") }
+ok("date.interval" %in% names(fl) && match("date.interval", names(fl)) == match("date.end", names(fl)) + 1,
+   "fig.list template: $date.interval right after $date.end")
+fdi <- fl; fdi$xaxe.interval <- "4"; fdi$date.interval <- "6/27/2026; 2026-06-29; 7/15/2026; 6/40/2026"   # NOTE: outside / not a date
+rdi <- batz.plot.heatmap_aru.time(data = pf, fig.list = fdi, project.name = "dint", dir.save = dir.out, save.auto = FALSE)
+ok(identical(xb(rdi), as.Date(c("2026-06-27", "2026-06-29"))), "$date.interval: listed dates in the window are the labels")
+fdi$date.interval <- ""
+rdb <- batz.plot.heatmap_aru.time(data = pf, fig.list = fdi, project.name = "dint", dir.save = dir.out, save.auto = FALSE)
+ok(length(xb(rdb)) == 4, "$date.interval blank: $xaxe.interval (4 labels)")
+fdi$date.interval <- "7/15/2026"                                                                     # NOTE: none in the window
+rdn <- batz.plot.heatmap_aru.time(data = pf, fig.list = fdi, project.name = "dint", dir.save = dir.out, save.auto = FALSE)
+ok(length(xb(rdn)) == 4, "$date.interval with no date in the window: $xaxe.interval")
+
 cat("\nALL TESTS PASSED - PNGs in", dir.out, "\n")

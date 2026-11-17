@@ -241,6 +241,13 @@
 #'     plotted. Otherwise the two lists must be the same length. A blank
 #'     \code{$date.start} is the first night in \code{data}, a blank
 #'     \code{$date.end} the last.}
+#'   \item{Optional: \code{$date.interval}}{X-axis label dates, separated by
+#'     ";" (e.g. \code{"6/26/2026; 7/1/2026; 7/15/2026"}; m/d/Y, Y-m-d or
+#'     m/d/y). The dates within \code{$date.start} to \code{$date.end} are the
+#'     labels and replace \code{$xaxe.interval}; dates outside the window or
+#'     not readable are left out (NOTE). Blank: \code{$xaxe.interval} is
+#'     used. With date windows, only listed dates that are plotted days are
+#'     labelled.}
 #'   \item{\code{$xaxe.interval}}{Number of evenly spaced labeled dates on
 #'     the X axis, from \code{$date.start} to \code{$date.end}. An unusable
 #'     value gives 2 labels (NOTE). With date windows, every plotted day is
@@ -509,7 +516,7 @@ batz.plot.bar_activity.site <- function(data, fig.list = NULL, suntimes = NULL,
   # whitespace/casing bug)" in Details.
   ## $plot.order/$facpan removed 2026-10-09 - $facet.set now sets the
   ## facets and their order
-  FIG.LIST.OPTIONAL <- c("facet.label", "plot.group", "yaxe.trans", "loglabels", "y.scale",
+  FIG.LIST.OPTIONAL <- c("date.interval", "facet.label", "plot.group", "yaxe.trans", "loglabels", "y.scale",
                           "y.custom", "ymax", "legend", "plot.dimensions", "plot.zero",
                           "plot.zero_all.detections", "plot.zero_40khzmyo")
   AES.DEFAULT.REQUIRED <- c("category", "parameter", "default.value")
@@ -1002,6 +1009,8 @@ batz.plot.bar_activity.site <- function(data, fig.list = NULL, suntimes = NULL,
         xaxe.n.labels <- 2
       }
       xaxe.breaks <- seq(p$date.start, p$date.end, length.out = round(xaxe.n.labels))
+      date.int <- plotutil_date_interval(get.setting(p$job, "date.interval"), p$date.start, p$date.end, job.label)
+      if (!is.null(date.int)) xaxe.breaks <- date.int                  # $date.interval replaces $xaxe.interval
       ## date windows: the X axis holds only the listed days, side by side
       p$pd$x.val <- if (is.null(p$date.days)) p$pd$date.parsed else
         factor(format(p$pd$date.parsed, "%Y-%m-%d"), levels = format(p$date.days, "%Y-%m-%d"))
@@ -1121,7 +1130,8 @@ batz.plot.bar_activity.site <- function(data, fig.list = NULL, suntimes = NULL,
             name = paste0("\n", get.setting(p$job, "xaxe.title")))
         else {
           lv <- format(p$date.days, "%Y-%m-%d")
-          br <- if (length(lv) <= round(xaxe.n.labels) || round(xaxe.n.labels) < 2) lv else
+          br <- if (!is.null(date.int)) intersect(format(date.int, "%Y-%m-%d"), lv) else
+            if (length(lv) <= round(xaxe.n.labels) || round(xaxe.n.labels) < 2) lv else
             lv[unique(round(seq(1, length(lv), length.out = round(xaxe.n.labels))))]
           ggplot2::scale_x_discrete(limits = lv, breaks = br, drop = FALSE,
             labels = stats::setNames(format(p$date.days, xaxe.date.labels.fmt), lv),

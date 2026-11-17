@@ -32,7 +32,7 @@ limits when \code{time.start} or \code{time.end} is blank.}
 \code{$plot.type}, \code{$plot.name}, \code{$plot.set},
 \code{$date.format}, \code{$date.start}, \code{$date.end},
 \code{$xaxe.interval}, \code{$xaxe.title}, \code{$yaxe.title}.
-Optional: \code{$facet.label}, \code{$time.start}, \code{$time.end},
+Optional: \code{$date.interval}, \code{$facet.label}, \code{$time.start}, \code{$time.end},
 \code{$time.interval}. Other columns (species and facet columns of a
 shared fig.list) are ignored.
 See Details.
@@ -194,6 +194,12 @@ ARU name ignoring case, spaces, dots and underscores) or labels in
 \item{\code{$date.start}, \code{$date.end}}{Date window of the plot
 (m/d/Y, Y-m-d or m/d/y). Both are needed: a blank or unreadable date
 leaves no rows. A row with no data left makes no plot (NOTE).}
+\item{Optional: \code{$date.interval}}{X-axis label dates, separated by
+";" (e.g. \code{"6/26/2026; 7/1/2026; 7/15/2026"}; m/d/Y, Y-m-d or
+m/d/y). The dates within \code{$date.start} to \code{$date.end} are the
+labels and replace \code{$xaxe.interval}; dates outside the window or
+not readable are left out (NOTE). Blank: \code{$xaxe.interval} is
+used.}
 \item{\code{$date.format}}{X-axis date label format (strftime style).
 A literal "/n" becomes a line break. Blank gives \code{"\%b-\%d"}
 (NOTE).}

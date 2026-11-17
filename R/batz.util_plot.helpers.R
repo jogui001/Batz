@@ -1107,3 +1107,47 @@ PLOTUTIL_PLOT_TYPE_OLD <- list(
   batz.plot.heatmap_activity.species = "activity.heatmap",
   batz.plot.heatmap_aru.time         = "sm4.heatmap"
 )
+
+
+#' X-axis label dates from fig.list $date.interval (internal)
+#'
+#' \code{$date.interval}: dates separated by ";" (or ","), e.g.
+#' \code{"6/26/2026; 7/1/2026; 7/15/2026"}, read as m/d/Y, Y-m-d or m/d/y.
+#' The dates within \code{date.start} to \code{date.end} are the X-axis
+#' labels, sorted, duplicates dropped; they replace \code{$xaxe.interval}.
+#' Dates outside the window or not readable are dropped (NOTE). Blank, or
+#' no usable date left: \code{NULL}, and \code{$xaxe.interval} is used.
+#' @param v The \code{$date.interval} value.
+#' @param date.start,date.end The plot's date window (Date).
+#' @param job.label Plot name, for messages.
+#' @keywords internal
+#' @noRd
+plotutil_date_interval <- function(v, date.start, date.end, job.label) {
+  v <- if (is.null(v) || !length(v) || is.na(v[1])) "" else trimws(as.character(v[1]))
+  if (!nzchar(v) || toupper(v) == "NA") return(NULL)
+  x <- trimws(unlist(strsplit(v, "[;,]")))
+  x <- x[nzchar(x)]
+  d <- as.Date(rep(NA_character_, length(x)))
+  for (fmt in c("%m/%d/%Y", "%Y-%m-%d", "%m/%d/%y")) {
+    na <- is.na(d)
+    if (!any(na)) break
+    p <- as.Date(x, format = fmt)
+    ok <- na & !is.na(p) & (fmt != "%m/%d/%Y" | grepl("/[0-9]{4}$", x))
+    d[ok] <- p[ok]
+  }
+  if (any(is.na(d))) cat(sprintf("NOTE: '%s' - $date.interval: not a date (m/d/Y or Y-m-d), left out: %s\n",
+                                 job.label, paste(x[is.na(d)], collapse = ", ")))
+  d <- d[!is.na(d)]
+  lo <- if (length(date.start) && !is.na(date.start[1])) as.Date(date.start[1]) else as.Date(-Inf)   # blank window end: open
+  hi <- if (length(date.end) && !is.na(date.end[1])) as.Date(date.end[1]) else as.Date(Inf)
+  date.start <- lo; date.end <- hi
+  out <- d[d < date.start | d > date.end]
+  if (length(out)) cat(sprintf("NOTE: '%s' - $date.interval: outside %s to %s, left out: %s\n",
+                               job.label, format(date.start), format(date.end), paste(format(out), collapse = ", ")))
+  d <- sort(unique(d[d >= date.start & d <= date.end]))
+  if (!length(d)) {
+    cat(sprintf("NOTE: '%s' - $date.interval has no date within the plot window - $xaxe.interval used.\n", job.label))
+    return(NULL)
+  }
+  d
+}

@@ -97,7 +97,7 @@ batz.generate_figlist <- function(functions = c("batz.plot.bar_activity.communit
   bad <- functions[!vapply(functions, exists, logical(1), envir = ns, inherits = FALSE)]
   if (length(bad)) stop(FN, ": not a Batz function: ", paste(bad, collapse = ", "), call. = FALSE)
   ## settings that heatmap2 reads from fig.list besides its checked headings
-  EXTRA.OPTIONAL <- list(batz.plot.heatmap_activity.species = c("date.format", "xaxe.interval", "xaxe.title", "yaxe.title", "facet.label",
+  EXTRA.OPTIONAL <- list(batz.plot.heatmap_activity.species = c("date.format", "date.interval", "xaxe.interval", "xaxe.title", "yaxe.title", "facet.label",
                                                          "plot.dimensions", "plot.zero"))
 
   ## ---- headings each function checks for (read from the function itself) -------
