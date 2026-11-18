@@ -20,7 +20,8 @@
 #' @param dir.save Character. Directory the two CSVs are written to when
 #'   \code{write.output = TRUE}. Default \code{getwd()}.
 #' @param save.auto Default \code{TRUE}: the files are saved in \code{dir.save}.
-#'   \code{FALSE}: no files are saved. \code{"print"}: nothing is saved; each
+#'   \code{FALSE}: no files are saved. \code{"BOTH"}: saved and printed.
+#'   \code{"print"}: nothing is saved; each
 #'   output (plot or table) is printed instead. \code{"generate <number>"}
 #'   (e.g. \code{"generate 5"}): nothing is saved; up to \code{<number>}
 #'   outputs are created as objects in the R global environment, each named

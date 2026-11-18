@@ -64,7 +64,9 @@
 #' @param dir.save Character, default \code{getwd()}. Folder the PNG files are
 #'   saved in (it must exist).
 #' @param save.auto Default \code{TRUE}: the files are saved in \code{dir.save}.
-#'   \code{FALSE}: no files are saved. \code{"print"}: nothing is saved; each
+#'   \code{FALSE}: no files are saved; each plot is only printed (drawn).
+#'   \code{"BOTH"}: each plot is saved and printed.
+#'   \code{"print"}: nothing is saved; each
 #'   output (plot or table) is printed instead. \code{"generate <number>"}
 #'   (e.g. \code{"generate 5"}): nothing is saved; up to \code{<number>}
 #'   outputs are created as objects in the R global environment, each named
@@ -258,7 +260,7 @@ batz.plot.bullseye_clutter.mic <- function(data, mic, aes.plotopts = NULL, proje
                                      subplot.size.width = 2,
                                      strip.special = TRUE,
                                      strip.special.plotopts = FALSE, ...) {
-  sv <- util_saver(save.auto, "batz.plot.bullseye_clutter.mic")   # TRUE save / FALSE / "print" / "generate <n>"
+  sv <- util_saver(save.auto, "batz.plot.bullseye_clutter.mic", plot = TRUE)   # TRUE save / FALSE / "print" / "generate <n>"
 
   ## settings typed into the call: used before fig.list and plotopts
   plot.inputs <- plotutil_plot_inputs(plotutil_dots(...), "batz.plot.bullseye_clutter.mic")

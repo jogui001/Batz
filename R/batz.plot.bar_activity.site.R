@@ -115,7 +115,9 @@
 #'   wrapped over two or more lines, and the saved height grows by the
 #'   extra legend height so the panels keep their size.
 #' @param save.auto Default \code{TRUE}: the files are saved in \code{dir.save}.
-#'   \code{FALSE}: no files are saved. \code{"print"}: nothing is saved; each
+#'   \code{FALSE}: no files are saved; each plot is only printed (drawn).
+#'   \code{"BOTH"}: each plot is saved and printed.
+#'   \code{"print"}: nothing is saved; each
 #'   output (plot or table) is printed instead. \code{"generate <number>"}
 #'   (e.g. \code{"generate 5"}): nothing is saved; up to \code{<number>}
 #'   outputs are created as objects in the R global environment, each named
@@ -422,7 +424,7 @@ batz.plot.bar_activity.site <- function(data, fig.list = NULL, suntimes = NULL,
                                             strip.special.plotopts = FALSE,
                                             spp.id = "spp.id", groupby.date = "date",
                                             trim.noid = FALSE, ...) {
-  sv <- util_saver(save.auto, "batz.plot.bar_activity.site")   # TRUE save / FALSE / "print" / "generate <n>"
+  sv <- util_saver(save.auto, "batz.plot.bar_activity.site", plot = TRUE)   # TRUE save / FALSE / "print" / "generate <n>"
 
   ## settings typed into the call: used before fig.list and plotopts
   plot.inputs <- plotutil_plot_inputs(plotutil_dots(...), "batz.plot.bar_activity.site")

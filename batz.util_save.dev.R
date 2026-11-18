@@ -23,6 +23,7 @@ ok(all(vapply(has.dir, function(f) identical(formals(get(f))$save.auto, TRUE), l
 md <- function(x) Batz:::util_save_mode(x, "test")$mode
 ok(identical(md(TRUE), "save") && identical(md("TRUE"), "save") && identical(md(FALSE), "none"), "TRUE / \"TRUE\" / FALSE")
 ok(identical(md("print"), "print") && identical(md(" Print "), "print"), "\"print\" (case and spaces ignored)")
+ok(identical(md("BOTH"), "both") && identical(md("both"), "both"), "\"BOTH\" (case ignored)")
 ok(identical(Batz:::util_save_mode("generate 3", "test")$n, 3) && is.infinite(Batz:::util_save_mode("generate", "test")$n),
    "\"generate 3\" = up to 3 objects; \"generate\" = all")
 e <- try(Batz:::util_save_mode("generate x", "test"), silent = TRUE); ok(inherits(e, "try-error"), "\"generate x\": error")
@@ -60,8 +61,12 @@ d <- new.dir("heat")
 r <- batz.plot.heatmap_aru.time(pf, fl2, project.name = "acme", dir.save = d)
 ok(n.files(d) == 2, "TRUE: 2 PNGs saved")
 d <- new.dir("heat.false")
-r <- batz.plot.heatmap_aru.time(pf, fl2, project.name = "acme", dir.save = d, save.auto = FALSE)
-ok(n.files(d) == 0 && length(r$ggplots) == 2, "FALSE: no PNG, plots still returned")
+pdf(file.path(tempdir(), "shown.pdf")); r <- batz.plot.heatmap_aru.time(pf, fl2, project.name = "acme", dir.save = d, save.auto = FALSE); dev.off()
+ok(n.files(d) == 0 && length(r$ggplots) == 2 && file.size(file.path(tempdir(), "shown.pdf")) > 5000,
+   "FALSE (plot function): no PNG; each plot printed instead; plots still returned")
+d2 <- new.dir("heat.both")
+pdf(file.path(tempdir(), "shown2.pdf")); r <- batz.plot.heatmap_aru.time(pf, fl2, project.name = "acme", dir.save = d2, save.auto = "BOTH"); dev.off()
+ok(n.files(d2) == 2 && file.size(file.path(tempdir(), "shown2.pdf")) > 5000, "\"BOTH\": 2 PNGs saved and the plots printed")
 pdf(NULL); out <- capture.output(batz.plot.heatmap_aru.time(pf, fl2, project.name = "acme", dir.save = d, save.auto = "print")); dev.off()
 ok(n.files(d) == 0 && sum(grepl("^---- acme_", out)) == 2, "\"print\": 2 plots printed, nothing saved")
 rm(list = ls(globalenv(), pattern = "^acme_(Test|Second)"), envir = globalenv())

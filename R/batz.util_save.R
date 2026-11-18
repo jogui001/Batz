@@ -6,7 +6,9 @@
 #'   \item{\code{TRUE} (default)}{The files are saved in \code{dir.save} as
 #'     usual.}
 #'   \item{\code{FALSE}}{No files are saved (and \code{dir.save} is not
-#'     created).}
+#'     created). The plot functions print (draw) each plot instead.}
+#'   \item{\code{"BOTH"}}{The files are saved as usual and each output
+#'     (plot or table) is also printed.}
 #'   \item{\code{"print"}}{No files are saved; each output (plot, table,
 #'     document) is printed instead, under its file name.}
 #'   \item{\code{"generate <number>"}}{No files are saved; up to
@@ -30,21 +32,27 @@
 #' @param fn Name of the calling function (for messages).
 #' @param envir Environment the generated objects are created in, default
 #'   the global environment.
+#' @param plot Logical, default \code{FALSE}. \code{TRUE} (the plot
+#'   functions): with \code{save.auto = FALSE} each plot is printed (drawn)
+#'   instead of saved; tables are not printed.
 #' @keywords internal
 #' @noRd
-util_saver <- function(save.auto, fn, envir = globalenv()) {
+util_saver <- function(save.auto, fn, envir = globalenv(), plot = FALSE) {
   m <- util_save_mode(save.auto, fn)
   st <- new.env(parent = emptyenv())
   st$made <- character(0); st$skipped <- 0L; st$noted <- FALSE
   out <- function(obj, file, write = NULL) {
     file <- as.character(file)[1]
-    if (m$mode == "save") {
+    if (m$mode %in% c("save", "both")) {
       if (is.function(write)) write(file)
       cat("Saved:", file, "\n")
+      if (m$mode == "both") util_save_print(obj)               # BOTH: saved and printed
       return(invisible(file))
     }
     if (m$mode == "none") {
-      if (!st$noted) { cat(sprintf("NOTE: %s - save.auto = FALSE: no files saved.\n", fn)); st$noted <- TRUE }
+      if (!st$noted) { cat(sprintf("NOTE: %s - save.auto = FALSE: no files saved%s.\n", fn,
+                                   if (isTRUE(plot)) " - the plots are printed instead" else "")); st$noted <- TRUE }
+      if (isTRUE(plot) && inherits(obj, c("ggplot", "patchwork", "gtable", "grob"))) util_save_print(obj)   # plot functions: shown
       return(invisible(NA_character_))
     }
     if (m$mode == "print") {
@@ -67,7 +75,7 @@ util_saver <- function(save.auto, fn, envir = globalenv()) {
     cat(sprintf("Created object: %s (instead of %s)\n", nm, basename(file)))
     invisible(NA_character_)
   }
-  list(mode = m$mode, save = identical(m$mode, "save"), n = m$n, out = out, made = function() st$made)
+  list(mode = m$mode, save = m$mode %in% c("save", "both"), n = m$n, out = out, made = function() st$made)
 }
 
 
@@ -79,7 +87,7 @@ util_saver <- function(save.auto, fn, envir = globalenv()) {
 #' @keywords internal
 #' @noRd
 util_save_mode <- function(save.auto, fn) {
-  bad <- function() stop(fn, ': save.auto must be TRUE, FALSE, "print" or "generate <number>" (e.g. "generate 5") - not: ',
+  bad <- function() stop(fn, ': save.auto must be TRUE, FALSE, "BOTH", "print" or "generate <number>" (e.g. "generate 5") - not: ',
                          paste(format(save.auto), collapse = " "), call. = FALSE)
   if (is.null(save.auto) || length(save.auto) != 1 || is.na(save.auto)) bad()
   if (is.logical(save.auto)) return(list(mode = if (save.auto) "save" else "none", n = Inf))
@@ -87,6 +95,7 @@ util_save_mode <- function(save.auto, fn) {
   if (v %in% c("true", "t")) return(list(mode = "save", n = Inf))
   if (v %in% c("false", "f")) return(list(mode = "none", n = Inf))
   if (v == "print") return(list(mode = "print", n = Inf))
+  if (v == "both") return(list(mode = "both", n = Inf))
   m <- regmatches(v, regexec("^generate\\s*([0-9]+)?$", v))[[1]]
   if (length(m)) {
     n <- if (nzchar(m[2])) as.numeric(m[2]) else Inf
@@ -119,7 +128,13 @@ util_save_objname <- function(file) {
 #' @noRd
 util_save_print <- function(obj) {
   if (inherits(obj, c("ggplot", "patchwork"))) {
-    print(obj)
+    ## a font the open graphics device cannot use (e.g. Arial on a pdf device): drawn with the device's own font
+    tryCatch(print(obj), error = function(e) {
+      if (!grepl("font", conditionMessage(e), ignore.case = TRUE)) stop(e)
+      cat("NOTE: this graphics device cannot use the plot's font - drawn with its default font.\n")
+      fix <- ggplot2::theme(text = ggplot2::element_text(family = ""))
+      print(if (inherits(obj, "patchwork")) obj & fix else obj + fix)
+    })
   } else if (inherits(obj, c("gtable", "grob"))) {
     grid::grid.newpage(); grid::grid.draw(obj)
   } else if (is.data.frame(obj)) {

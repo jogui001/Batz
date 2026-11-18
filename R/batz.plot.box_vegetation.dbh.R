@@ -41,7 +41,9 @@
 #'   wrapped over two or more lines, and the saved height grows by the
 #'   extra legend height so the panels keep their size.
 #' @param save.auto Default \code{TRUE}: the files are saved in \code{dir.save}.
-#'   \code{FALSE}: no files are saved. \code{"print"}: nothing is saved; each
+#'   \code{FALSE}: no files are saved; each plot is only printed (drawn).
+#'   \code{"BOTH"}: each plot is saved and printed.
+#'   \code{"print"}: nothing is saved; each
 #'   output (plot or table) is printed instead. \code{"generate <number>"}
 #'   (e.g. \code{"generate 5"}): nothing is saved; up to \code{<number>}
 #'   outputs are created as objects in the R global environment, each named
@@ -141,7 +143,7 @@ batz.plot.box_vegetation.dbh <- function(data, project.name = "", site.names = N
                                      legend.position = c("right", "bottom", "left", "top"),
                                      size = c("page", "half page", "powerpoint", "half powerpoint"),
                                      table = TRUE, dir.save = getwd(), save.auto = TRUE, aes.plotopts = NULL, aes.style = "override.value", ...) {
-  sv <- util_saver(save.auto, "batz.plot.box_vegetation.dbh")   # TRUE save / FALSE / "print" / "generate <n>"
+  sv <- util_saver(save.auto, "batz.plot.box_vegetation.dbh", plot = TRUE)   # TRUE save / FALSE / "print" / "generate <n>"
   FN <- "batz.plot.box_vegetation.dbh"
   blank <- function(v) is.null(v) || length(v) == 0 || all(is.na(v)) || all(!nzchar(trimws(as.character(v))))
   split.list <- function(v) {

@@ -103,7 +103,9 @@
 #'   wrapped over two or more lines, and the saved height grows by the
 #'   extra legend height so the panels keep their size.
 #' @param save.auto Default \code{TRUE}: the files are saved in \code{dir.save}.
-#'   \code{FALSE}: no files are saved. \code{"print"}: nothing is saved; each
+#'   \code{FALSE}: no files are saved; each plot is only printed (drawn).
+#'   \code{"BOTH"}: each plot is saved and printed.
+#'   \code{"print"}: nothing is saved; each
 #'   output (plot or table) is printed instead. \code{"generate <number>"}
 #'   (e.g. \code{"generate 5"}): nothing is saved; up to \code{<number>}
 #'   outputs are created as objects in the R global environment, each named
@@ -354,7 +356,7 @@ batz.plot.heatmap_aru.time <- function(data, fig.list, suntimes = NULL,
                                   dir.save = getwd(), save.auto = TRUE,
                                   strip.special = TRUE,
                                   strip.special.plotopts = FALSE, ...) {
-  sv <- util_saver(save.auto, "batz.plot.heatmap_aru.time")   # TRUE save / FALSE / "print" / "generate <n>"
+  sv <- util_saver(save.auto, "batz.plot.heatmap_aru.time", plot = TRUE)   # TRUE save / FALSE / "print" / "generate <n>"
 
   ## settings typed into the call: used before fig.list and plotopts
   plot.inputs <- plotutil_plot_inputs(plotutil_dots(...), "batz.plot.heatmap_aru.time")
@@ -991,7 +993,7 @@ sm4heat_schedule_window <- function(pd, sdb, y.ref.noon, bin.minutes, job.label)
 
 #' Font family for batz.plot.heatmap_aru.time (internal)
 #'
-#' Blank or missing: "Arial". On Windows without the ragg package the font is
+#' Blank or missing: "Arial". On Windows the font is
 #' registered with windowsFonts() so the png device can use it. A font that
 #' systemfonts cannot find gives a NOTE and "" (R's default sans font).
 #' @keywords internal
@@ -1007,7 +1009,7 @@ plotutil_heat_font <- function(v, job.label) {
                   job.label, v, if (nzchar(m)) basename(m) else "default sans"))
     }
   }
-  if (.Platform$OS.type == "windows" && !requireNamespace("ragg", quietly = TRUE)) {
+  if (.Platform$OS.type == "windows") {                     # the windows() screen / png devices
     wf <- grDevices::windowsFonts()
     if (is.null(wf[[v]])) { a <- list(grDevices::windowsFont(v)); names(a) <- v; do.call(grDevices::windowsFonts, a) }
   }
