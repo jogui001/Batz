@@ -26,6 +26,11 @@
 #'   plotted; rows with \code{FALSE}, any other entry or a blank are
 #'   skipped (NOTE). A fig.list with no \code{$plot} column has every
 #'   row plotted (NOTE).
+#'   \code{fig.list} can also be the path to a \code{.csv} or \code{.xlsx}
+#'   (its \code{fig.list} tab), or a list of data frames such as the template
+#'   workbook loaded with \code{batz.datawrangler_load.files()} (its
+#'   \code{$fig.list} table). Headers are matched ignoring case and
+#'   "." / "_" / space (\code{time_start} is read as \code{$time.start}).
 #' @param suntimes Data frame of sunrise and sunset times, e.g. the output of
 #'   \code{\link{batz.generate_suntimes.arulist}}. Required columns:
 #'   \code{$aru.name}, \code{$date}, \code{$date.monitoringnight},
@@ -57,6 +62,16 @@
 #'   \code{aes.plotopts} can also be the path to a settings .csv file, or to a
 #'   pooled .xlsx workbook (e.g. from \code{\link{batz.generate_plotopts}} or
 #'   Batz_reference_db): its tab \verb{pltop.barfloat_detect.1st.last} is read.
+#'   Text sizes and faces (rows \code{plot.title.size}, \code{plot.title.face},
+#'   \code{axis.title.size}, \code{axis.title.face}, \code{axis.title.x.size},
+#'   \code{axis.title.y.size}, \code{axis.text.size}, \code{axis.text.x.size},
+#'   \code{axis.text.y.size}, \code{legend.title.size}, \code{legend.title.face},
+#'   \code{legend.text.size}, \code{strip.text.size} (panel titles),
+#'   \code{strip.text.face}): a blank row keeps the function's own value; the
+#'   \code{.x} / \code{.y} rows override the general one for that axis.
+#'   Every setting is read from the function call first, then a fig.list
+#'   column of the same name, then plotopts (\code{aes.style} column, then
+#'   \code{$default.value}).
 #' @param project.name Character, default \code{"new.project"}. Put at the
 #'   start of every saved file name. A blank value leaves it out.
 #' @param ... Plot settings typed into the call, named as the
@@ -611,8 +626,13 @@ batz.plot.barfloat_detect.1st.last <- function(data, fig.list, suntimes,
   ## project.name-matches-a-column-name mechanism entirely - project.name
   ## no longer has any role in settings resolution, only in the saved file
   ## name (see the main loop below).
+  cur.job <- NULL                                  # fig.list row being plotted (set in the loops below)
   get.default <- function(param) {
     if (!is.null(v.in <- plotutil_input_get(plot.inputs, param))) return(v.in)   # function call first
+    if (!is.null(cur.job) && param %in% names(cur.job)) {                         # then the fig.list row
+      v <- cur.job[[param]]
+      if (length(v) == 1 && !is.na(v) && nzchar(trimws(as.character(v))) && toupper(trimws(as.character(v))) != "NA") return(as.character(v))
+    }
     row.idx <- which(plotutil_param_key(aes.plotopts$parameter) == plotutil_param_key(param))
     if (length(row.idx) == 0) return(NA_character_)
     val <- as.character(aes.plotopts$default.value[row.idx[1]])
@@ -665,6 +685,7 @@ batz.plot.barfloat_detect.1st.last <- function(data, fig.list, suntimes,
 
   for (j in seq_len(nrow(jobs))) {
     job <- jobs[j, ]
+    cur.job <- job
     job.label <- if (nzchar(trimws(job$plot.name))) job$plot.name else sprintf("row %d", j)
     ## job.key (not job.label!) is the list key `plots`/`ggplots` are stored
     ## under - job.label is only a DISPLAY string (used in messages/plot
@@ -852,6 +873,7 @@ batz.plot.barfloat_detect.1st.last <- function(data, fig.list, suntimes,
   ## faceted plot
   plots.expanded <- list()
   for (job.key in names(plots)) {
+    cur.job <- plots[[job.key]]$job
     p <- plots[[job.key]]
     if (isTRUE(p$facet.plot)) {
       plots.expanded[[job.key]] <- p
@@ -874,6 +896,7 @@ batz.plot.barfloat_detect.1st.last <- function(data, fig.list, suntimes,
   ggplots <- list()
   if (requireNamespace("ggplot2", quietly = TRUE)) {
     for (job.key in names(plots)) {
+      cur.job <- plots[[job.key]]$job
       p <- plots[[job.key]]
       job.label <- p$job.label   # display name only - see job.key note above
 
@@ -1119,12 +1142,12 @@ batz.plot.barfloat_detect.1st.last <- function(data, fig.list, suntimes,
         ggplot2::geom_crossbar(ggplot2::aes(ymin = time.min, ymax = time.max, y = time.min, fill = crossbar.type),
                                  linewidth = as.numeric(get.default("crossbar.linewidth")),
                                  width = 0.9) +
-        ggplot2::scale_color_manual(name = get.default("reference.line.legend.title"),
+        ggplot2::scale_color_manual(name = plotutil_title(get.default("reference.line.legend.title")),
                                       values = c("Dawn" = get.default("dawn.color"),
                                                  "Midnight" = midnight.legend.color,
                                                  "Dusk" = get.default("dusk.color"))) +
         ggplot2::guides(colour = ggplot2::guide_legend(override.aes = list(shape = reference.line.override.shape))) +
-        ggplot2::scale_fill_manual(name = get.default("crossbar.fill.legend.title"),
+        ggplot2::scale_fill_manual(name = plotutil_title(get.default("crossbar.fill.legend.title")),
                                      breaks = fill.legend.breaks,
                                      limits = fill.legend.limits,
                                      values = c("All detections" = get.default("crossbar.alldetections.fill"),
@@ -1163,6 +1186,7 @@ batz.plot.barfloat_detect.1st.last <- function(data, fig.list, suntimes,
                         strip.text = ggplot2::element_text(size = plotutil_num(get.default("strip.text.size"), 10)),
                         panel.spacing.x = grid::unit(as.numeric(get.default("panel.spacing.x")), "pt"))
 
+      g <- g + plotutil_text_theme(get.default)   # text sizes / faces (call, fig.list, plotopts)
       ggplots[[job.key]] <- g
 
       ## Round nineteen, per Josh (2026-09-16): every saved file name is now

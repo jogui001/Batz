@@ -64,6 +64,13 @@
 #'   \code{aes.plotopts} can also be the path to a settings .csv file, or to a
 #'   pooled .xlsx workbook (e.g. from \code{\link{batz.generate_plotopts}} or
 #'   Batz_reference_db): its tab \verb{pltop.box_vegetation.dbh} is read.
+#'   Text sizes and faces (rows \code{plot.title.size}, \code{plot.title.face},
+#'   \code{axis.title.size}, \code{axis.title.face}, \code{axis.title.x.size},
+#'   \code{axis.title.y.size}, \code{axis.text.size}, \code{axis.text.x.size},
+#'   \code{axis.text.y.size}, \code{legend.title.size}, \code{legend.title.face},
+#'   \code{legend.text.size}, \code{strip.text.size} (panel titles),
+#'   \code{strip.text.face}): a blank row keeps the function's own value; the
+#'   \code{.x} / \code{.y} rows override the general one for that axis.
 #' @param ... Any other setting listed in Details ("Settings"), typed into
 #'   the call by name (e.g. \code{yaxe.max = 20}); used before
 #'   \code{aes.plotopts}.
@@ -339,6 +346,7 @@ batz.plot.box_vegetation.dbh <- function(data, project.name = "", site.names = N
                    legend.position = legend.position)
   if (legend.position %in% c("top", "bottom")) g <- g + ggplot2::guides(fill = ggplot2::guide_legend(nrow = 1))
 
+  g <- g + plotutil_text_theme(setting)                      # text sizes / faces (call, plotopts)
   file <- NA_character_
   if (!is.null(dir.save)) {
     if (sv$save && !dir.exists(dir.save)) dir.create(dir.save, recursive = TRUE)

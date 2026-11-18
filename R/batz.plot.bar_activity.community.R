@@ -30,6 +30,11 @@
 #'   plotted; rows with \code{FALSE}, any other entry or a blank are
 #'   skipped (NOTE). A fig.list with no \code{$plot} column has every
 #'   row plotted (NOTE).
+#'   \code{fig.list} can also be the path to a \code{.csv} or \code{.xlsx}
+#'   (its \code{fig.list} tab), or a list of data frames such as the template
+#'   workbook loaded with \code{batz.datawrangler_load.files()} (its
+#'   \code{$fig.list} table). Headers are matched ignoring case and
+#'   "." / "_" / space (\code{time_start} is read as \code{$time.start}).
 #' @param aes.plotopts Data frame of plot settings (plotopts), normally
 #'   \verb{pltop.bar_activity.community.csv}. Required columns: \code{$category},
 #'   \code{$parameter}, \code{$default.value}. The custom style column
@@ -48,6 +53,13 @@
 #'   \code{aes.plotopts} can also be the path to a settings .csv file, or to a
 #'   pooled .xlsx workbook (e.g. from \code{\link{batz.generate_plotopts}} or
 #'   Batz_reference_db): its tab \verb{pltop.bar_activity.community} is read.
+#'   Text sizes and faces (rows \code{plot.title.size}, \code{plot.title.face},
+#'   \code{axis.title.size}, \code{axis.title.face}, \code{axis.title.x.size},
+#'   \code{axis.title.y.size}, \code{axis.text.size}, \code{axis.text.x.size},
+#'   \code{axis.text.y.size}, \code{legend.title.size}, \code{legend.title.face},
+#'   \code{legend.text.size}, \code{strip.text.size} (panel titles),
+#'   \code{strip.text.face}): a blank row keeps the function's own value; the
+#'   \code{.x} / \code{.y} rows override the general one for that axis.
 #' @param project.name Character, default \code{"new.project"}. First part
 #'   of each saved file name.
 #' @param ... Plot settings typed into the call, named as the
@@ -462,7 +474,7 @@ batz.plot.bar_activity.community <- function(data, fig.list, aes.plotopts = NULL
                         ggplot2::aes(y = y.passes, color = passes.lab), width = pw,
                         fill = get.setting(job, "passes.bar.color")) +
       ggplot2::scale_fill_manual(values = fills, breaks = names(fills),
-                                 name = get.setting(job, "community.legend.title"),
+                                 name = plotutil_title(get.setting(job, "community.legend.title")),
                                  guide = ggplot2::guide_legend(nrow = num.setting(job, "legend.nrow"), byrow = TRUE,
                                                                order = 2,
                                                                override.aes = list(alpha = 1))) +
@@ -490,6 +502,7 @@ batz.plot.bar_activity.community <- function(data, fig.list, aes.plotopts = NULL
                      legend.title = ggplot2::element_text(size = num.setting(job, "legend.title.size"),
                                                           face = plotutil_face(get.setting(job, "legend.title.face"))))
     if (nzchar(group.col)) g <- g + ggplot2::facet_grid(. ~ panel, scales = "free_x", space = "free_x")
+    g <- g + plotutil_text_theme(function(k) get.setting(job, k))   # text sizes / faces (fig.list, plotopts)
     ggplots[[job.label]] <- g
 
     fname <- sprintf("%s_%s_%s_%s.png", project.name, job.label, year, format(Sys.time(), "%Y%m%d%H%M%S"))

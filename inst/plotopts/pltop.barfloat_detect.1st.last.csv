@@ -58,3 +58,8 @@
 "Save / export","output.filename.pattern","Earliest and latest bat calls detected at <ARU> between <date.start> and <date.end> <timestamp>.png","","Output PNG file name pattern, with <ARU>/<date.start>/<date.end>/<timestamp> as placeholders. (Corrected 2026-08-27, per Josh: was ""Earlies and lastest ball calls"" - a typo flagged when this file was first built, now fixed at Josh's explicit request.) DEPRECATED as of Josh's nineteenth follow-up (2026-09-16) - no longer read; the saved file name is now always ""<project.name>_<site>_<timestamp>.png""."
 "Save / export","plot.width","6","","Width of the saved plot, in ggsave.units."
 "Save / export","plot.height","7","","Height of the saved plot, in ggsave.units."
+"Text","axis.title.x.size","","","Font size of the X-axis title (pt). Blank = axis.title.size."
+"Text","axis.title.y.size","","","Font size of the Y-axis title (pt). Blank = axis.title.size."
+"Text","axis.text.x.size","","","Font size of the X-axis labels (pt). Blank = axis.text.size."
+"Text","axis.text.y.size","","","Font size of the Y-axis labels (pt). Blank = axis.text.size."
+"Text","strip.text.face","","","Font face of the panel (facet) titles: plain, bold, italic or bold.italic. Blank = the function's own face."

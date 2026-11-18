@@ -165,6 +165,11 @@
 #'   plotted; rows with \code{FALSE}, any other entry or a blank are
 #'   skipped (NOTE). A fig.list with no \code{$plot} column has every
 #'   row plotted (NOTE).
+#'   \code{fig.list} can also be the path to a \code{.csv} or \code{.xlsx}
+#'   (its \code{fig.list} tab), or a list of data frames such as the template
+#'   workbook loaded with \code{batz.datawrangler_load.files()} (its
+#'   \code{$fig.list} table). Headers are matched ignoring case and
+#'   "." / "_" / space (\code{time_start} is read as \code{$time.start}).
 #' @param aes.plotopts Optional plot-settings data frame
 #'   (\code{pltop.heatmap_activity.species.csv}) with \code{$category},
 #'   \code{$parameter}, \code{$default.value}, plus the \code{aes.style}
@@ -181,6 +186,13 @@
 #'   \code{aes.plotopts} can also be the path to a settings .csv file, or to a
 #'   pooled .xlsx workbook (e.g. from \code{\link{batz.generate_plotopts}} or
 #'   Batz_reference_db): its tab \verb{pltop.heatmap_activity.species} is read.
+#'   Text sizes and faces (rows \code{plot.title.size}, \code{plot.title.face},
+#'   \code{axis.title.size}, \code{axis.title.face}, \code{axis.title.x.size},
+#'   \code{axis.title.y.size}, \code{axis.text.size}, \code{axis.text.x.size},
+#'   \code{axis.text.y.size}, \code{legend.title.size}, \code{legend.title.face},
+#'   \code{legend.text.size}, \code{strip.text.size} (panel titles),
+#'   \code{strip.text.face}): a blank row keeps the function's own value; the
+#'   \code{.x} / \code{.y} rows override the general one for that axis.
 #' @param date.col Character, default \code{"date.monitoringnight"}. Date
 #'   column, and the day layout: \code{"date.monitoringnight"} (noon to
 #'   noon) or \code{"date.calendar"} (midnight to midnight).
@@ -564,6 +576,7 @@ batz.plot.heatmap_activity.species <- function(data,
       fname <- file.path(dir.save, pu$fname)
       n.rows <- if (pu$faceted) ceiling(length(pu$facets) / max(1, num.opt(job, "facpan.numcol"))) else 1
       height <- if (pu$faceted && n.rows > 1) num.opt(job, "facpan.hgt") * n.rows + 1.5 else num.opt(job, "plot.height")
+      out$plot <- out$plot + plotutil_text_theme(function(k) setting(job, k))   # text sizes / faces (call, fig.list, plotopts)
       dims <- plotutil_plot_dimensions(job, plot.inputs, job.label, FN)   # $plot.dimensions (inches)
       sv$out(out$plot, fname, function(.f) plotutil_ggsave(.f, plot = out$plot, width = if (!is.null(dims)) dims[1] else num.opt(job, "plot.width"),
                       height = if (!is.null(dims)) dims[2] else height,
@@ -710,7 +723,7 @@ heatmap2.draw <- function(pu, job, setting, num.opt, bin.mins, bin.vals, bin.col
     ## show.legend = TRUE)
     fill.aes <- ggplot2::aes(fill = count.bin)
     fill.scale <- ggplot2::scale_fill_manual(values = stats::setNames(bin.cols, bin.labels), limits = bin.labels,
-                                             drop = FALSE, name = setting(job, "legend.title"))
+                                             drop = FALSE, name = plotutil_title(setting(job, "legend.title")))
     fill.guide <- ggplot2::guides(fill = ggplot2::guide_legend(nrow = 1, title.position = "top", title.hjust = 0.5,
                                                                override.aes = list(fill = unname(bin.cols))))
   } else {
@@ -720,7 +733,7 @@ heatmap2.draw <- function(pu, job, setting, num.opt, bin.mins, bin.vals, bin.col
     fill.aes <- ggplot2::aes(fill = count)
     fill.scale <- ggplot2::scale_fill_gradientn(colours = bin.cols, limits = lim, breaks = bin.vals, labels = brk.labels,
                                                 oob = function(x, range = c(0, 1), only.finite = TRUE) pmin(pmax(x, range[1]), range[2]),
-                                                name = setting(job, "legend.title"))
+                                                name = plotutil_title(setting(job, "legend.title")))
     fill.guide <- ggplot2::guides(fill = ggplot2::guide_colourbar(title.position = "top", title.hjust = 0.5,
                                                                   barwidth = grid::unit(12, "lines")))
   }

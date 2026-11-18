@@ -131,8 +131,9 @@ spaces trimmed (\code{"*suntimes*csv"} -> \code{suntimes};
 \code{"site_*.xlsx"} -> \code{site}). The files of one ID are handled as
 files with the same name (below): the same columns are merged into the
 object; different columns become \code{"<ID> [<file name>]"} (or are
-skipped with \code{duplicates.skip = TRUE}). An ID that matches no file
-gives a NOTE.
+skipped with \code{duplicates.skip = TRUE}). When one or more IDs match no
+file, one line lists them all:
+\code{Warning, The following files were not found: <ID1>, <ID2>}.
 
 \strong{Where each file goes}, in this order:
 \enumerate{

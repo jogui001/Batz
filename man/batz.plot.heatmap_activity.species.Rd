@@ -36,7 +36,12 @@ Cells holding "NA" (a heading not used by this plot type, as in
 Only rows whose \code{$plot} is \code{TRUE} or \code{1} are
 plotted; rows with \code{FALSE}, any other entry or a blank are
 skipped (NOTE). A fig.list with no \code{$plot} column has every
-row plotted (NOTE).}
+row plotted (NOTE).
+\code{fig.list} can also be the path to a \code{.csv} or \code{.xlsx}
+(its \code{fig.list} tab), or a list of data frames such as the template
+workbook loaded with \code{batz.datawrangler_load.files()} (its
+\code{$fig.list} table). Headers are matched ignoring case and
+"." / "_" / space (\code{time_start} is read as \code{$time.start}).}
 
 \item{aes.plotopts}{Optional plot-settings data frame
 (\code{pltop.heatmap_activity.species.csv}) with \code{$category},
@@ -53,7 +58,14 @@ Optional rows \code{plot.title.face}, \code{axis.title.face} and
 draws them.
 \code{aes.plotopts} can also be the path to a settings .csv file, or to a
 pooled .xlsx workbook (e.g. from \code{\link{batz.generate_plotopts}} or
-Batz_reference_db): its tab \verb{pltop.heatmap_activity.species} is read.}
+Batz_reference_db): its tab \verb{pltop.heatmap_activity.species} is read.
+Text sizes and faces (rows \code{plot.title.size}, \code{plot.title.face},
+\code{axis.title.size}, \code{axis.title.face}, \code{axis.title.x.size},
+\code{axis.title.y.size}, \code{axis.text.size}, \code{axis.text.x.size},
+\code{axis.text.y.size}, \code{legend.title.size}, \code{legend.title.face},
+\code{legend.text.size}, \code{strip.text.size} (panel titles),
+\code{strip.text.face}): a blank row keeps the function's own value; the
+\code{.x} / \code{.y} rows override the general one for that axis.}
 
 \item{date.col}{Character, default \code{"date.monitoringnight"}. Date
 column, and the day layout: \code{"date.monitoringnight"} (noon to

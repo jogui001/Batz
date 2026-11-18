@@ -39,6 +39,13 @@
 #'   \code{aes.plotopts} can also be the path to a settings .csv file, or to a
 #'   pooled .xlsx workbook (e.g. from \code{\link{batz.generate_plotopts}} or
 #'   Batz_reference_db): its tab \verb{pltop.bullseye_clutter.mic} is read.
+#'   Text sizes and faces (rows \code{plot.title.size}, \code{plot.title.face},
+#'   \code{axis.title.size}, \code{axis.title.face}, \code{axis.title.x.size},
+#'   \code{axis.title.y.size}, \code{axis.text.size}, \code{axis.text.x.size},
+#'   \code{axis.text.y.size}, \code{legend.title.size}, \code{legend.title.face},
+#'   \code{legend.text.size}, \code{strip.text.size} (panel titles),
+#'   \code{strip.text.face}): a blank row keeps the function's own value; the
+#'   \code{.x} / \code{.y} rows override the general one for that axis.
 #' @param project.name Character, default \code{"new.project"}. First part of
 #'   each saved file name.
 #' @param ... Plot settings typed into the call, named as the
@@ -1139,6 +1146,8 @@ batz.plot.bullseye_clutter.mic <- function(data, mic, aes.plotopts = NULL, proje
     fname <- sprintf("%s_%s_%s.png", project.name, aru, format(Sys.time(), "%Y%m%d%H%M%S"))
     fname <- file.path(dir.save, fname)
 
+    tt <- plotutil_text_theme(get.default)                    # text sizes / faces (call, plotopts), every panel
+    if (!is.null(tt)) combined <- combined & tt
     sv$out(combined, fname, function(.f) ggplot2::ggsave(.f, combined,
                      width = plot.width + ggsave.width.pad,
                      height = plot.height + ggsave.height.pad,

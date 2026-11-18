@@ -48,6 +48,11 @@
 #'   plotted; rows with \code{FALSE}, any other entry or a blank are
 #'   skipped (NOTE). A fig.list with no \code{$plot} column has every
 #'   row plotted (NOTE).
+#'   \code{fig.list} can also be the path to a \code{.csv} or \code{.xlsx}
+#'   (its \code{fig.list} tab), or a list of data frames such as the template
+#'   workbook loaded with \code{batz.datawrangler_load.files()} (its
+#'   \code{$fig.list} table). Headers are matched ignoring case and
+#'   "." / "_" / space (\code{time_start} is read as \code{$time.start}).
 #' @param suntimes Optional, default \code{NULL}. Data frame of sunrise and sunset times, e.g. the output of
 #'   \code{\link{batz.generate_suntimes.arulist}}. Its headers are checked
 #'   (\code{$aru.name}, \code{$date}, \code{$date.monitoringnight},
@@ -79,6 +84,16 @@
 #'   \code{aes.plotopts} can also be the path to a settings .csv file, or to a
 #'   pooled .xlsx workbook (e.g. from \code{\link{batz.generate_plotopts}} or
 #'   Batz_reference_db): its tab \verb{pltop.bar_activity.site} is read.
+#'   Text sizes and faces (rows \code{plot.title.size}, \code{plot.title.face},
+#'   \code{axis.title.size}, \code{axis.title.face}, \code{axis.title.x.size},
+#'   \code{axis.title.y.size}, \code{axis.text.size}, \code{axis.text.x.size},
+#'   \code{axis.text.y.size}, \code{legend.title.size}, \code{legend.title.face},
+#'   \code{legend.text.size}, \code{strip.text.size} (panel titles),
+#'   \code{strip.text.face}): a blank row keeps the function's own value; the
+#'   \code{.x} / \code{.y} rows override the general one for that axis.
+#'   Every setting is read from the function call first, then a fig.list
+#'   column of the same name, then plotopts (\code{aes.style} column, then
+#'   \code{$default.value}).
 #' @param project.name Character, default \code{"new.project"}. Put at the
 #'   start of every saved file name. A blank value leaves it out.
 #' @param ... Plot settings typed into the call, named as the
@@ -689,8 +704,13 @@ batz.plot.bar_activity.site <- function(data, fig.list = NULL, suntimes = NULL,
   ## column-name mechanism entirely - project.name no longer participates in
   ## settings resolution, only in the saved file name (see the main loop
   ## below).
+  cur.job <- NULL                                  # fig.list row being plotted (set in the loops below)
   get.default <- function(param) {
     if (!is.null(v.in <- plotutil_input_get(plot.inputs, param))) return(v.in)   # function call first
+    if (!is.null(cur.job) && param %in% names(cur.job)) {                         # then the fig.list row
+      v <- cur.job[[param]]
+      if (length(v) == 1 && !is.na(v) && nzchar(trimws(as.character(v))) && toupper(trimws(as.character(v))) != "NA") return(as.character(v))
+    }
     row.idx <- which(plotutil_param_key(aes.plotopts$parameter) == plotutil_param_key(param))
     if (length(row.idx) == 0) return(NA_character_)
     val <- as.character(aes.plotopts$default.value[row.idx[1]])
@@ -747,6 +767,7 @@ batz.plot.bar_activity.site <- function(data, fig.list = NULL, suntimes = NULL,
 
   for (j in seq_len(nrow(jobs))) {
     job <- jobs[j, ]
+    cur.job <- job
     job.label <- if (nzchar(trimws(job$plot.name))) job$plot.name else sprintf("row %d", j)
     job.key <- as.character(j)
 
@@ -976,6 +997,7 @@ batz.plot.bar_activity.site <- function(data, fig.list = NULL, suntimes = NULL,
   ## faceted plot
   plots.expanded <- list()
   for (job.key in names(plots)) {
+    cur.job <- plots[[job.key]]$job
     p <- plots[[job.key]]
     if (isTRUE(p$facet.plot)) {
       plots.expanded[[job.key]] <- p
@@ -994,6 +1016,7 @@ batz.plot.bar_activity.site <- function(data, fig.list = NULL, suntimes = NULL,
   ggplots <- list()
   if (requireNamespace("ggplot2", quietly = TRUE)) {
     for (job.key in names(plots)) {
+      cur.job <- plots[[job.key]]$job
       p <- plots[[job.key]]
       job.label <- p$job.label
 
@@ -1107,7 +1130,7 @@ batz.plot.bar_activity.site <- function(data, fig.list = NULL, suntimes = NULL,
                              ggplot2::aes(y = obs.plot, group = group.val, alpha = .alpha, colour = "40kHzMyo"),
                              fill = khz.fill, linewidth = 0, width = bar.width.val, position = bar.position,
                              show.legend = c(colour = isTRUE(p$khz.flag), fill = FALSE)) +
-          ggplot2::scale_fill_manual(name = get.default("legend.groupval.title"),
+          ggplot2::scale_fill_manual(name = plotutil_title(get.default("legend.groupval.title")),
                                       breaks = groupval.levels, limits = groupval.levels, values = groupval.colors,
                                       guide = ggplot2::guide_legend(order = 1, nrow = 1, byrow = TRUE)) +
           ggplot2::scale_colour_manual(name = NULL, breaks = "40kHzMyo", limits = "40kHzMyo", values = c(`40kHzMyo` = NA),
@@ -1121,7 +1144,7 @@ batz.plot.bar_activity.site <- function(data, fig.list = NULL, suntimes = NULL,
           ggplot2::geom_col(data = p$pd[p$pd$bar.type == "40kHzMyo", , drop = FALSE],
                              ggplot2::aes(y = obs.plot, fill = bar.type, group = group.val, alpha = .alpha),
                              width = bar.width.val, position = bar.position) +
-          ggplot2::scale_fill_manual(name = get.default("bar.fill.legend.title"),
+          ggplot2::scale_fill_manual(name = plotutil_title(get.default("bar.fill.legend.title")),
             breaks = fill.legend.breaks, limits = fill.legend.limits,
             values = c(`All detections` = get.default("bar.alldetections.fill"),
                        `40kHzMyo` = get.default("bar.40khzmyo.fill")))
@@ -1165,6 +1188,7 @@ batz.plot.bar_activity.site <- function(data, fig.list = NULL, suntimes = NULL,
           panel.spacing.x = grid::unit(as.numeric(get.default("panel.spacing.x")), "pt")
         )
 
+      g <- g + plotutil_text_theme(get.default)   # text sizes / faces (call, fig.list, plotopts)
       ggplots[[job.key]] <- g
 
       ## File naming (round twenty-one), per Josh (2026-09-24): "the plots

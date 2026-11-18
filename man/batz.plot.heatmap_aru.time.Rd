@@ -41,7 +41,12 @@ Cells holding "NA" (a heading not used by this plot type, as in
 Only rows whose \code{$plot} is \code{TRUE} or \code{1} are
 plotted; rows with \code{FALSE}, any other entry or a blank are
 skipped (NOTE). A fig.list with no \code{$plot} column has every
-row plotted (NOTE).}
+row plotted (NOTE).
+\code{fig.list} can also be the path to a \code{.csv} or \code{.xlsx}
+(its \code{fig.list} tab), or a list of data frames such as the template
+workbook loaded with \code{batz.datawrangler_load.files()} (its
+\code{$fig.list} table). Headers are matched ignoring case and
+"." / "_" / space (\code{time_start} is read as \code{$time.start}).}
 
 \item{suntimes}{Optional, default \code{NULL}: no Dawn and Dusk lines are
 drawn (the Midnight line still is). Otherwise a data frame of sunrise
@@ -79,7 +84,14 @@ Optional rows \code{font.family} (default \code{"Arial"}) and
 \code{"below"}); see "plotopts" in Details.
 \code{aes.plotopts} can also be the path to a settings .csv file, or to a
 pooled .xlsx workbook (e.g. from \code{\link{batz.generate_plotopts}} or
-Batz_reference_db): its tab \verb{pltop.heatmap_aru.time} is read.}
+Batz_reference_db): its tab \verb{pltop.heatmap_aru.time} is read.
+Text sizes and faces (rows \code{plot.title.size}, \code{plot.title.face},
+\code{axis.title.size}, \code{axis.title.face}, \code{axis.title.x.size},
+\code{axis.title.y.size}, \code{axis.text.size}, \code{axis.text.x.size},
+\code{axis.text.y.size}, \code{legend.title.size}, \code{legend.title.face},
+\code{legend.text.size}, \code{strip.text.size} (panel titles),
+\code{strip.text.face}): a blank row keeps the function's own value; the
+\code{.x} / \code{.y} rows override the general one for that axis.}
 
 \item{project.name}{Character, default \code{"new.project"}. First part
 of each saved file name.}
@@ -277,9 +289,9 @@ none). No matching suntimes rows only gives a NOTE (no lines).
 \strong{plotopts (aes.plotopts).} Each setting is read from the first row
 whose \code{$parameter} matches the name (ignoring case and
 spaces). The value is the \code{aes.style} column when that cell is not
-blank, otherwise \code{$default.value}. Only the fig.list columns listed
-above are read from \code{fig.list}; every other setting comes from
-plotopts. These \code{$parameter} rows must exist (case and spaces ignored), or
+blank, otherwise \code{$default.value}. Every setting is read from the
+function call first, then a fig.list column of the same name (e.g. a
+\code{$strip.text.size} column), then plotopts. These \code{$parameter} rows must exist (case and spaces ignored), or
 the function stops listing the missing ones:
 \code{yaxe.labelformat}, \code{yaxe.break.labels}, \code{dawn.linetype}, \code{dawn.color},
 \code{dusk.linetype}, \code{dusk.color}, \code{midnight.linetype},

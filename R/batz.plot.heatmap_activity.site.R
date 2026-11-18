@@ -32,6 +32,11 @@
 #'   plotted; rows with \code{FALSE}, any other entry or a blank are
 #'   skipped (NOTE). A fig.list with no \code{$plot} column has every
 #'   row plotted (NOTE).
+#'   \code{fig.list} can also be the path to a \code{.csv} or \code{.xlsx}
+#'   (its \code{fig.list} tab), or a list of data frames such as the template
+#'   workbook loaded with \code{batz.datawrangler_load.files()} (its
+#'   \code{$fig.list} table). Headers are matched ignoring case and
+#'   "." / "_" / space (\code{time_start} is read as \code{$time.start}).
 #' @param aes.plotopts Data frame of plot settings (plotopts), normally
 #'   \verb{pltop.heatmap_activity.site.csv}. Required columns:
 #'   \code{$category}, \code{$parameter}, \code{$default.value}. The custom
@@ -50,6 +55,13 @@
 #'   \code{aes.plotopts} can also be the path to a settings .csv file, or to a
 #'   pooled .xlsx workbook (e.g. from \code{\link{batz.generate_plotopts}} or
 #'   Batz_reference_db): its tab \verb{pltop.heatmap_activity.site} is read.
+#'   Text sizes and faces (rows \code{plot.title.size}, \code{plot.title.face},
+#'   \code{axis.title.size}, \code{axis.title.face}, \code{axis.title.x.size},
+#'   \code{axis.title.y.size}, \code{axis.text.size}, \code{axis.text.x.size},
+#'   \code{axis.text.y.size}, \code{legend.title.size}, \code{legend.title.face},
+#'   \code{legend.text.size}, \code{strip.text.size} (panel titles),
+#'   \code{strip.text.face}): a blank row keeps the function's own value; the
+#'   \code{.x} / \code{.y} rows override the general one for that axis.
 #' @param spp.id Character, default \code{"species"}. Name of the species
 #'   column in \code{data}.
 #' @param groupby.date Character, default \code{"date.monitoringnight"}.
@@ -653,6 +665,7 @@ batz.plot.heatmap_activity.site <- function(data, fig.list, aes.plotopts = NULL,
                                      linewidth = num.setting(job, "group.divider.linewidth"))
       }
     }
+    g <- g + plotutil_text_theme(function(k) get.setting(job, k))   # text sizes / faces (fig.list, plotopts)
     ggplots[[job.label]] <- g
 
     daterange.token <- sprintf("%sto%s", format(plot.dates[1], "%Y%m%d"), format(plot.dates[2], "%Y%m%d"))

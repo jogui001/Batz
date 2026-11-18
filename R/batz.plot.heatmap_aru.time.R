@@ -33,6 +33,11 @@
 #'   plotted; rows with \code{FALSE}, any other entry or a blank are
 #'   skipped (NOTE). A fig.list with no \code{$plot} column has every
 #'   row plotted (NOTE).
+#'   \code{fig.list} can also be the path to a \code{.csv} or \code{.xlsx}
+#'   (its \code{fig.list} tab), or a list of data frames such as the template
+#'   workbook loaded with \code{batz.datawrangler_load.files()} (its
+#'   \code{$fig.list} table). Headers are matched ignoring case and
+#'   "." / "_" / space (\code{time_start} is read as \code{$time.start}).
 #' @param suntimes Optional, default \code{NULL}: no Dawn and Dusk lines are
 #'   drawn (the Midnight line still is). Otherwise a data frame of sunrise
 #'   and sunset times, e.g. the output of
@@ -69,6 +74,13 @@
 #'   \code{aes.plotopts} can also be the path to a settings .csv file, or to a
 #'   pooled .xlsx workbook (e.g. from \code{\link{batz.generate_plotopts}} or
 #'   Batz_reference_db): its tab \verb{pltop.heatmap_aru.time} is read.
+#'   Text sizes and faces (rows \code{plot.title.size}, \code{plot.title.face},
+#'   \code{axis.title.size}, \code{axis.title.face}, \code{axis.title.x.size},
+#'   \code{axis.title.y.size}, \code{axis.text.size}, \code{axis.text.x.size},
+#'   \code{axis.text.y.size}, \code{legend.title.size}, \code{legend.title.face},
+#'   \code{legend.text.size}, \code{strip.text.size} (panel titles),
+#'   \code{strip.text.face}): a blank row keeps the function's own value; the
+#'   \code{.x} / \code{.y} rows override the general one for that axis.
 #' @param project.name Character, default \code{"new.project"}. First part
 #'   of each saved file name.
 #' @param ... Plot settings typed into the call, named as the
@@ -246,9 +258,9 @@
 #' \strong{plotopts (aes.plotopts).} Each setting is read from the first row
 #' whose \code{$parameter} matches the name (ignoring case and
 #' spaces). The value is the \code{aes.style} column when that cell is not
-#' blank, otherwise \code{$default.value}. Only the fig.list columns listed
-#' above are read from \code{fig.list}; every other setting comes from
-#' plotopts. These \code{$parameter} rows must exist (case and spaces ignored), or
+#' blank, otherwise \code{$default.value}. Every setting is read from the
+#' function call first, then a fig.list column of the same name (e.g. a
+#' \code{$strip.text.size} column), then plotopts. These \code{$parameter} rows must exist (case and spaces ignored), or
 #' the function stops listing the missing ones:
 #' \code{yaxe.labelformat}, \code{yaxe.break.labels}, \code{dawn.linetype}, \code{dawn.color},
 #' \code{dusk.linetype}, \code{dusk.color}, \code{midnight.linetype},
@@ -419,6 +431,7 @@ batz.plot.heatmap_aru.time <- function(data, fig.list, suntimes = NULL,
     "plot.width", "plot.height"
   )
 
+  data              <- canonicalize.headers(data, "aru.schedule")$df   # optional column, any case / separator
   data.canon        <- canonicalize.headers(data, DATA.REQUIRED)
   suntimes.canon    <- if (has.sun) canonicalize.headers(suntimes, SUNTIMES.REQUIRED) else list(df = NULL, missing = character(0))
   fig.list.canon    <- canonicalize.headers(fig.list, FIG.LIST.REQUIRED)
@@ -491,8 +504,13 @@ batz.plot.heatmap_aru.time <- function(data, fig.list, suntimes = NULL,
     out
   }
 
+  cur.job <- NULL                                  # fig.list row being plotted (set in the loops below)
   get.default <- function(param) {
     if (!is.null(v.in <- plotutil_input_get(plot.inputs, param))) return(v.in)   # function call first
+    if (!is.null(cur.job) && param %in% names(cur.job)) {                         # then the fig.list row
+      v <- cur.job[[param]]
+      if (length(v) == 1 && !is.na(v) && nzchar(trimws(as.character(v))) && toupper(trimws(as.character(v))) != "NA") return(as.character(v))
+    }
     row.idx <- which(plotutil_param_key(aes.plotopts$parameter) == plotutil_param_key(param))
     if (length(row.idx) == 0) return(NA_character_)
     val <- as.character(aes.plotopts$default.value[row.idx[1]])
@@ -535,6 +553,7 @@ batz.plot.heatmap_aru.time <- function(data, fig.list, suntimes = NULL,
 
   for (j in seq_len(nrow(jobs))) {
     job <- jobs[j, ]
+    cur.job <- job
     job.label <- if (nzchar(trimws(job$plot.name))) job$plot.name else sprintf("row %d", j)
     job.key <- as.character(j)
 
@@ -682,6 +701,7 @@ batz.plot.heatmap_aru.time <- function(data, fig.list, suntimes = NULL,
   ggplots <- list()
   if (requireNamespace("ggplot2", quietly = TRUE)) {
     for (job.key in names(plots)) {
+      cur.job <- plots[[job.key]]$job
       p <- plots[[job.key]]
       job.label <- p$job.label
 
@@ -786,12 +806,12 @@ batz.plot.heatmap_aru.time <- function(data, fig.list, suntimes = NULL,
                              inherit.aes = FALSE) +
         (if (has.sun) ggplot2::geom_line(data = p$sdb, ggplot2::aes(x = date.parsed, y = dawn.time, color = "Dawn"),
                              linetype = get.default("dawn.linetype"), inherit.aes = FALSE)) +
-        ggplot2::scale_color_manual(name = get.default("reference.line.legend.title"),
+        ggplot2::scale_color_manual(name = plotutil_title(get.default("reference.line.legend.title")),
                                       breaks = if (has.sun) c("Dawn", "Dusk", "Midnight") else "Midnight",
                                       values = c("Dawn" = get.default("dawn.color"),
                                                  "Dusk" = get.default("dusk.color"),
                                                  "Midnight" = get.default("midnight.color"))) +
-        ggplot2::scale_fill_gradientn(colors = fill.colors, name = get.default("fill.legend.title"),
+        ggplot2::scale_fill_gradientn(colors = fill.colors, name = plotutil_title(get.default("fill.legend.title")),
                                         limits = c(0, fill.max), breaks = fill.breaks,
                                         guide = ggplot2::guide_colorbar(direction = colorbar.direction,
                                           barheight = colorbar.barheight, barwidth = colorbar.barwidth,
@@ -822,6 +842,7 @@ batz.plot.heatmap_aru.time <- function(data, fig.list, suntimes = NULL,
                         strip.text = ggplot2::element_text(size = plotutil_num(get.default("strip.text.size"), 10)),
                         panel.spacing.x = grid::unit(as.numeric(get.default("panel.spacing.x")), "pt"))
 
+      g <- g + plotutil_text_theme(get.default)   # text sizes / faces (call, fig.list, plotopts)
       ggplots[[job.key]] <- g
 
       # File naming (round twenty-one), per Josh (2026-09-24): "the plots

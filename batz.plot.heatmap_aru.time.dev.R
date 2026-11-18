@@ -224,4 +224,46 @@ fdi$date.interval <- "soon"; fdi$xaxe.interval <- "4"                           
 rds <- batz.plot.heatmap_aru.time(data = pf, fig.list = fdi, project.name = "dint", dir.save = dir.out, save.auto = FALSE)
 ok(length(xb(rds)) == 4, "$date.interval with no readable date: as blank, $xaxe.interval used")
 
+## ---- 14. fig.list as a loaded workbook (list), a file path, or with snake_case headers ----
+fx <- fl; fx$time.start <- ""; fx$time.end <- "08:00"
+xl <- file.path(dir.out, "fig.list_test.xlsx")
+openxlsx::write.xlsx(list(fig.list = fx, descriptions = data.frame(header = "x")), xl)
+rl <- batz.plot.heatmap_aru.time(pf, list(fig.list = fx, descriptions = data.frame(header = "x")), st, dir.save = dir.out, save.auto = FALSE)   # NOTE: list
+ok(length(rl$ggplots) == 1 && hm(rl$plots[[1]]$y.end) == "08:00", "fig.list = list of tables: its $fig.list table is used")
+rp <- batz.plot.heatmap_aru.time(pf, xl, st, dir.save = dir.out, save.auto = FALSE)                               # NOTE: read from file
+ok(length(rp$ggplots) == 1, "fig.list = path to the .xlsx: its fig.list tab is read")
+fs <- fx; names(fs) <- gsub(".", "_", names(fs), fixed = TRUE)                                                     # as batz.datawrangler_load.files() gives
+rs <- batz.plot.heatmap_aru.time(pf, fs, st, dir.save = dir.out, save.auto = FALSE)
+ok(hm(rs$plots[[1]]$y.end) == "08:00" && hm(rs$plots[[1]]$y.start) == "19:00",
+   "snake_case headers (time_end): optional settings still read")
+
+## ---- 15. pooled settings without this function's tab; aes.style written another way ----
+pl <- list(pltop.bar_activity.site = Batz:::batz.db("plotopts.batz.plot.bar_activity.site"))
+out <- capture.output(rm1 <- batz.plot.heatmap_aru.time(pf, fl, st, aes.plotopts = pl, dir.save = dir.out, save.auto = FALSE))
+ok(length(rm1$ggplots) == 1 && any(grepl("has no pltop.heatmap_aru.time table", out)), "pooled list without the tab: NOTE, built-in settings used")
+e <- try(batz.plot.heatmap_aru.time(pf, fl, st, aes.plotopts = unname(pl), dir.save = dir.out, save.auto = FALSE), silent = TRUE)
+ok(inherits(e, "try-error") && grepl("no names", e), "unnamed list: error says to name it with the sheet names")
+po2 <- Batz:::batz.db("plotopts.batz.plot.heatmap_aru.time"); names(po2)[names(po2) == "override.value"] <- "bristol_nh"
+po2$bristol_nh[po2$parameter == "dawn.color"] <- "orange"
+ra <- batz.plot.heatmap_aru.time(pf, fl, st, aes.plotopts = po2, aes.style = "Bristol NH", dir.save = dir.out, save.auto = FALSE)
+ok(identical(unname(ra$ggplots[[1]]$scales$get_scales("colour")$palette(3)[1]), "orange"),
+   "aes.style \"Bristol NH\" finds the column bristol_nh (case, space, \"_\" ignored)")
+
+## ---- 16. fig.list before plotopts for every setting; Excel dates / times; text sizes; no "NA" legend title ----
+fe <- fl; fe$time.start <- "0.83333333333333337"; fe$time.end <- "08:00"; fe$time.interval <- "120"      # Excel 20:00 as a day fraction
+fe$date.start <- "46199"; fe$date.end <- "46202"                                                        # Excel day numbers (6/26 - 6/29/2026)
+fe$strip.text.size <- "7"; fe$plot.dimensions <- "1/2 page"
+pe <- Batz:::batz.db("plotopts.batz.plot.heatmap_aru.time")
+pe$override.value[pe$parameter == "strip.text.size"] <- "12"                                            # fig.list wins over plotopts
+pe$override.value[pe$parameter == "legend.text.size"] <- "6"; pe$override.value[pe$parameter == "axis.text.y.size"] <- "5"
+pe$default.value[pe$parameter == "reference.line.legend.title"] <- "NA"
+re <- batz.plot.heatmap_aru.time(pf2, fe, st, aes.plotopts = pe, project.name = "excel", dir.save = dir.out, ggsave.dpi = 100)
+th <- re$ggplots[[1]]$theme
+ok(hm(re$plots[[1]]$y.start) == "20:00" && hm(re$plots[[1]]$y.end) == "08:00", "Excel time 0.8333 = 20:00; time.end 08:00")
+ok(identical(yb(re), c("20:00", "22:00", "00:00", "02:00", "04:00", "06:00", "08:00")), "time.interval 120 from the fig.list: every 2 hours, 20:00 lowest")
+ok(re$plots[[1]]$date.start == as.Date("2026-06-26") && re$plots[[1]]$date.end == as.Date("2026-06-29"), "Excel day numbers read as dates")
+ok(th$strip.text$size == 7 && th$legend.text$size == 6 && th$axis.text.y$size == 5, "text sizes: fig.list before plotopts; axis.text.y.size")
+ok(is.null(re$ggplots[[1]]$scales$get_scales("colour")$name), "reference.line.legend.title \"NA\" / blank: no legend title")
+ok(identical(px(last.png("excel")), c(600L, 400L)), "fig.list plot.dimensions \"1/2 page\" (6 x 4 in) over plotopts plot.width / plot.height")
+
 cat("\nALL TESTS PASSED - PNGs in", dir.out, "\n")

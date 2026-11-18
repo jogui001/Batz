@@ -62,7 +62,14 @@ Optional rows \code{plot.title.face}, \code{axis.title.face} and
 draws them.
 \code{aes.plotopts} can also be the path to a settings .csv file, or to a
 pooled .xlsx workbook (e.g. from \code{\link{batz.generate_plotopts}} or
-Batz_reference_db): its tab \verb{pltop.bullseye_clutter.mic} is read.}
+Batz_reference_db): its tab \verb{pltop.bullseye_clutter.mic} is read.
+Text sizes and faces (rows \code{plot.title.size}, \code{plot.title.face},
+\code{axis.title.size}, \code{axis.title.face}, \code{axis.title.x.size},
+\code{axis.title.y.size}, \code{axis.text.size}, \code{axis.text.x.size},
+\code{axis.text.y.size}, \code{legend.title.size}, \code{legend.title.face},
+\code{legend.text.size}, \code{strip.text.size} (panel titles),
+\code{strip.text.face}): a blank row keeps the function's own value; the
+\code{.x} / \code{.y} rows override the general one for that axis.}
 
 \item{project.name}{Character, default \code{"new.project"}. First part of
 each saved file name.}

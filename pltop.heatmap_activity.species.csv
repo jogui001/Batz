@@ -32,3 +32,8 @@
 "Saving","plot.height","6","","Saved plot height (one panel or one row of panels)."
 "Saving","ggsave.units","in","","Units for plot.width/plot.height/facpan.hgt."
 "Saving","ggsave.dpi","300","","Resolution of the saved PNG."
+"Text","axis.title.x.size","","","Font size of the X-axis title (pt). Blank = axis.title.size."
+"Text","axis.title.y.size","","","Font size of the Y-axis title (pt). Blank = axis.title.size."
+"Text","axis.text.x.size","","","Font size of the X-axis labels (pt). Blank = axis.text.size."
+"Text","axis.text.y.size","","","Font size of the Y-axis labels (pt). Blank = axis.text.size."
+"Text","strip.text.face","","","Font face of the panel (facet) titles: plain, bold, italic or bold.italic. Blank = the function's own face."

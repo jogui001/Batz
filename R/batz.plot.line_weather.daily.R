@@ -156,6 +156,13 @@
 #'   \code{aes.plotopts} can also be the path to a settings .csv file, or to a
 #'   pooled .xlsx workbook (e.g. from \code{\link{batz.generate_plotopts}} or
 #'   Batz_reference_db): its tab \verb{pltop.line_weather.daily} is read.
+#'   Text sizes and faces (rows \code{plot.title.size}, \code{plot.title.face},
+#'   \code{axis.title.size}, \code{axis.title.face}, \code{axis.title.x.size},
+#'   \code{axis.title.y.size}, \code{axis.text.size}, \code{axis.text.x.size},
+#'   \code{axis.text.y.size}, \code{legend.title.size}, \code{legend.title.face},
+#'   \code{legend.text.size}, \code{strip.text.size} (panel titles),
+#'   \code{strip.text.face}): a blank row keeps the function's own value; the
+#'   \code{.x} / \code{.y} rows override the general one for that axis.
 #' @param aes.style Character, default \code{"override.value"}. Name of the
 #'   \code{aes.plotopts} column read before \code{$default.value} (e.g. the
 #'   project-name column written by \code{\link{batz.generate_plotopts}}).
@@ -264,6 +271,7 @@ batz.plot.line_weather.daily <- function(data, suntimes = NULL, date.start = NUL
   given <- setdiff(names(match.call())[-1], "")
   aes.plotopts <- plotutil_read_plotopts(aes.plotopts, FN)   # data frame, settings .csv path or pooled .xlsx path
   po.vals <- weather.daily.plotopts(aes.plotopts, aes.style, given, FN)
+  po.text <- if (is.data.frame(aes.plotopts)) aes.plotopts else tryCatch(batz.db("plotopts.batz.plot.line_weather.daily"), error = function(e) NULL)
   for (nm in names(po.vals)) assign(nm, po.vals[[nm]])
   temp.given <- !missing(temp.range) || "temp.range" %in% names(po.vals)
   wind.given <- !missing(wind.range) || "wind.range" %in% names(po.vals)
@@ -655,6 +663,7 @@ batz.plot.line_weather.daily <- function(data, suntimes = NULL, date.start = NUL
                        strip.text = ggplot2::element_text(size = 10),
                        axis.text = ggplot2::element_text(size = 10),
                        axis.title = ggplot2::element_text(size = 10, face = "bold"))
+      g <- g + plotutil_text_theme(function(k) plotutil_po_value(po.text, aes.style, k))   # text sizes / faces (plotopts)
       plots[[s]][[ci]] <- g
       if (!is.null(dir.save)) {
         if (sv$save && !dir.exists(dir.save)) dir.create(dir.save, recursive = TRUE)

@@ -533,8 +533,9 @@ ok(nrow(r$suntimes) == 2 && "suntimes [proj_suntimes_odd]" %in% names(r) && !"ot
 r2 <- batz.datawrangler_load.files(d.pat, load.pattern = c("*suntimes*csv", "arulist"), duplicates.skip = TRUE)
 ok(identical(sort(names(r2)), c("arulist", "suntimes")) && nrow(r2$suntimes) == 1,
    "two IDs; ID without wildcards matches names containing it; duplicates.skip = TRUE keeps the first file only")
-r3 <- batz.datawrangler_load.files(d.pat, load.pattern = c("*nothing*", "*arulist*"))     # NOTE: no file for *nothing*
-ok(identical(names(r3), "arulist"), "an ID with no file: NOTE, others still loaded")
+out <- capture.output(r3 <- batz.datawrangler_load.files(d.pat, load.pattern = c("*nothing*", "*arulist*", "*missing2*")))
+ok(identical(names(r3), "arulist") && any(out == "Warning, The following files were not found: *nothing*, *missing2* "),
+   "IDs with no file: one warning line lists them all; others still loaded")
 r4 <- batz.datawrangler_load.files(d.pat, load.pattern = "")
 ok(length(r4) == 5, "load.pattern = \"\": every file, each named after its file")
 ok(exists("suntimes", envir = globalenv()), "objects also assigned in the calling environment")

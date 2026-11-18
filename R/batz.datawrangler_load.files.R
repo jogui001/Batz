@@ -102,8 +102,9 @@
 #' \code{"site_*.xlsx"} -> \code{site}). The files of one ID are handled as
 #' files with the same name (below): the same columns are merged into the
 #' object; different columns become \code{"<ID> [<file name>]"} (or are
-#' skipped with \code{duplicates.skip = TRUE}). An ID that matches no file
-#' gives a NOTE.
+#' skipped with \code{duplicates.skip = TRUE}). When one or more IDs match no
+#' file, one line lists them all:
+#' \code{Warning, The following files were not found: <ID1>, <ID2>}.
 #'
 #' \strong{Where each file goes}, in this order:
 #' \enumerate{
@@ -279,10 +280,11 @@ batz.datawrangler_load.files <- function(dir.load = getwd(),
     keep <- character(0); file.id <- character(0)
     for (i in seq_along(pat)) {
       h <- setdiff(hit[[i]], keep)
-      if (!length(hit[[i]])) cat(sprintf("NOTE: batz.datawrangler_load.files - load.pattern '%s' matches no .csv / .xlsx file.\n", pat[i]))
       keep <- c(keep, h); file.id <- c(file.id, rep(ids[i], length(h)))
     }
     names(file.id) <- keep
+    miss <- pat[lengths(hit) == 0]
+    if (length(miss)) cat("Warning, The following files were not found:", paste(miss, collapse = ", "), "\n")
     cat(sprintf("load.pattern: %d file(s) matched -> %s\n", length(keep),
                 paste(sprintf("%s (%d)", unique(ids), vapply(unique(ids), function(x) sum(file.id == x), numeric(1))), collapse = ", ")))
     all.files <- keep

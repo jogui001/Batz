@@ -364,7 +364,9 @@ plotutil_split_facets <- function(entry, facet.raw, facet.header, fn.name) {
 #' @param aes.plotopts Plot-options (aes.plotopts) data frame.
 #' @param aes.style Name of the custom-style column (the plot functions'
 #'   default is \code{"override.value"}).
-#' @return \code{aes.style} when that column exists. When
+#' @return \code{aes.style} when that column exists (also written another
+#'   way: case, spaces, "." and "_" ignored, e.g. \code{bristol_nh} for
+#'   \code{"Bristol NH"}). When
 #'   \code{"override.value"} is asked for and only the old misspelled
 #'   \code{"overide.value"} column exists, \code{"overide.value"}.
 #'   \code{NA} when neither exists or \code{aes.style} is not a single value.
@@ -373,6 +375,10 @@ plotutil_split_facets <- function(entry, facet.raw, facet.header, fn.name) {
 plotutil_aes_style_col <- function(aes.plotopts, aes.style) {
   if (is.null(aes.style) || length(aes.style) != 1 || is.na(aes.style)) return(NA_character_)
   if (aes.style %in% names(aes.plotopts)) return(aes.style)
+  ## same name written another way ("Bristol NH" / bristol_nh, as batz.datawrangler_load.files() gives)
+  k <- function(v) gsub("[^a-z0-9]", "", tolower(v))
+  hit <- names(aes.plotopts)[k(names(aes.plotopts)) == k(aes.style)]
+  if (length(hit)) return(hit[1])
   if (identical(aes.style, "override.value") && "overide.value" %in% names(aes.plotopts)) return("overide.value")
   NA_character_
 }
@@ -537,15 +543,47 @@ plotutil_default_plotopts <- function(fn) {
 #' row's plot type. Text cells that are \code{"NA"} (any case, spaces
 #' trimmed) are set to \code{NA}, so they are treated as blank: the setting
 #' then comes from plotopts.
+#'
+#' The fig.list can also be given as the path to a \code{.csv} or
+#' \code{.xlsx} (its \code{fig.list} tab, else the first tab), or as a list
+#' of data frames such as the template workbook loaded with
+#' \code{batz.datawrangler_load.files()} (its \code{$fig.list} element, else
+#' the first data frame); a NOTE says which. Headers are matched to the
+#' fig.list headings of Batz_reference_db (FIGLIST_all) ignoring case and
+#' "." / "_" / space, so \code{time_start} is read as \code{$time.start}.
 #' @keywords internal
 #' @noRd
 plotutil_figlist_na <- function(fig.list) {
+  if (is.character(fig.list) && length(fig.list) == 1 && !is.na(fig.list)) {     # a file
+    f <- fig.list
+    if (!file.exists(f)) stop("fig.list file not found: ", f, call. = FALSE)
+    fig.list <- if (grepl("\\.xlsx?$", f, ignore.case = TRUE)) {
+      sh <- readxl::excel_sheets(f); s <- if ("fig.list" %in% sh) "fig.list" else sh[1]
+      cat(sprintf("NOTE: fig.list read from %s, tab %s.\n", basename(f), s))
+      as.data.frame(readxl::read_excel(f, sheet = s, .name_repair = "minimal"), check.names = FALSE, stringsAsFactors = FALSE)
+    } else {
+      cat(sprintf("NOTE: fig.list read from %s.\n", basename(f)))
+      utils::read.csv(f, check.names = FALSE, stringsAsFactors = FALSE)
+    }
+  }
+  if (is.list(fig.list) && !is.data.frame(fig.list)) {                             # e.g. a loaded workbook
+    is.df <- vapply(fig.list, is.data.frame, logical(1))
+    if (!any(is.df)) stop("fig.list is a list with no data frame - give the fig.list data frame, file or workbook.", call. = FALSE)
+    k <- if ("fig.list" %in% names(fig.list) && is.df[["fig.list"]]) "fig.list" else names(fig.list)[which(is.df)[1]]
+    if (is.null(k) || is.na(k)) k <- which(is.df)[1]
+    cat(sprintf("NOTE: fig.list is a list of %d table(s) - its '%s' table is used.\n", length(fig.list), k))
+    fig.list <- fig.list[[k]]
+  }
   if (!is.data.frame(fig.list)) return(fig.list)
   ## read.csv(check.names = TRUE) adds "X" to headers that start with a digit
   ## ("40khzmyo" -> "X40khzmyo"): take the "X" off again
   nm <- names(fig.list)
   xd <- grepl("^X[0-9]", nm) & !(sub("^X", "", nm) %in% nm)
   names(fig.list)[xd] <- sub("^X", "", nm[xd])
+  ## headers written another way (time_start, Plot Type, ...) -> the fig.list heading
+  h <- tryCatch(names(batz.db("figlist.all")), error = function(e) character(0))
+  if (length(h)) fig.list <- canonicalize.headers(fig.list, h)$df
+  fig.list <- plotutil_excel_datetime(fig.list)
   for (cl in names(fig.list)) {
     v <- fig.list[[cl]]
     if (is.character(v) || is.factor(v)) {
@@ -1022,10 +1060,12 @@ plotutil_observations_raw <- function(data, spp.id = "spp.id", groupby.date = "d
 #'   \item the path to an Excel workbook (.xlsx / .xls), e.g. the pooled file
 #'     from \code{batz.generate_plotopts()} or Batz_reference_db: the tab
 #'     \verb{pltop.<function name without batz.plot.>} is read (a workbook
-#'     with one tab: that tab, NOTE). A second element names another tab,
-#'     e.g. \code{c("file.xlsx", "my.settings")};
+#'     with one tab not named \code{pltop.*}: that tab, NOTE). No such tab:
+#'     the built-in settings are used (NOTE). A second element names another
+#'     tab, e.g. \code{c("file.xlsx", "my.settings")} (missing: error);
 #'   \item a named list of data frames (e.g. read from a pooled workbook):
-#'     the element named after the tab or the function.
+#'     the element named after the tab or the function (case ignored); none:
+#'     the built-in settings are used (NOTE). An unnamed list is an error.
 #' }
 #' Every cell is read as text, blanks as \code{""}. \code{NULL} stays
 #' \code{NULL} (the built-in settings are then used).
@@ -1038,12 +1078,18 @@ plotutil_read_plotopts <- function(x, fn) {
   tab <- paste0("pltop.", sub("^batz\\.plot\\.", "", fn))
   txt <- function(d) {
     d <- as.data.frame(d, stringsAsFactors = FALSE, check.names = FALSE)
-    for (cl in names(d)) { v <- as.character(d[[cl]]); v[is.na(v)] <- ""; d[[cl]] <- v }
+    for (cl in names(d)) { v <- gsub("\r\n?", "\n", as.character(d[[cl]])); v[is.na(v)] <- ""; d[[cl]] <- v }   # Excel line breaks
     d[rowSums(d != "") > 0, , drop = FALSE]
   }
   if (is.list(x)) {
-    k <- intersect(c(tab, fn), names(x))
-    if (!length(k)) stop(fn, ": aes.plotopts is a list without an element named ", tab, " or ", fn, ".", call. = FALSE)
+    if (is.null(names(x)) || !any(nzchar(names(x))))
+      stop(fn, ": aes.plotopts is a list with no names - name it with the sheet names (names(x) <- readxl::excel_sheets(file)), or give the .xlsx path.", call. = FALSE)
+    k <- names(x)[tolower(names(x)) %in% tolower(c(tab, fn))]
+    if (!length(k)) {
+      cat(sprintf("NOTE: %s - aes.plotopts has no %s table (it has: %s) - the built-in settings are used. Add it with batz.generate_plotopts(\"%s\", file.format = \"xlsx\").\n",
+                  fn, tab, paste(names(x), collapse = ", "), fn))
+      return(NULL)
+    }
     return(plotutil_read_plotopts(x[[k[1]]], fn))
   }
   if (!is.character(x) || !length(x) || is.na(x[1]) || !nzchar(trimws(x[1])))
@@ -1055,10 +1101,15 @@ plotutil_read_plotopts <- function(x, fn) {
     want <- if (length(x) > 1 && !is.na(x[2]) && nzchar(trimws(x[2]))) trimws(x[2]) else tab
     hit <- sh[tolower(sh) == tolower(want)]
     if (!length(hit)) {
-      if (length(sh) == 1 && length(x) < 2) {
+      if (length(x) >= 2) stop(fn, ": ", basename(f), " has no tab '", want, "'. Tabs: ", paste(sh, collapse = ", "), call. = FALSE)
+      if (length(sh) == 1 && !grepl("^pltop\\.", sh, ignore.case = TRUE)) {
         cat(sprintf("NOTE: %s - %s has no tab %s - its only tab '%s' is used.\n", fn, basename(f), want, sh))
         hit <- sh
-      } else stop(fn, ": ", basename(f), " has no tab '", want, "'. Tabs: ", paste(sh, collapse = ", "), call. = FALSE)
+      } else {
+        cat(sprintf("NOTE: %s - %s has no tab %s (it has: %s) - the built-in settings are used. Add it with batz.generate_plotopts(\"%s\", file.format = \"xlsx\").\n",
+                    fn, basename(f), want, paste(sh, collapse = ", "), fn))
+        return(NULL)
+      }
     }
     d <- readxl::read_excel(f, sheet = hit[1], col_types = "text", .name_repair = "minimal")
     cat(sprintf("NOTE: %s - aes.plotopts read from %s, tab %s.\n", fn, basename(f), hit[1]))
@@ -1153,4 +1204,120 @@ plotutil_date_interval <- function(v, date.start, date.end, job.label) {
   d <- sort(unique(d[d >= date.start & d <= date.end]))
   if (!length(d)) cat(sprintf("NOTE: '%s' - $date.interval has no date within the plot window - no X-axis date labels ($xaxe.interval ignored).\n", job.label))
   d
+}
+
+
+#' Excel dates and times in a fig.list as text (internal)
+#'
+#' A fig.list read from Excel can hold dates and times as Excel values:
+#' \itemize{
+#'   \item date-time cells (POSIXct): a time on its own (Excel's day
+#'     1899-12-30 / 1899-12-31) becomes \code{"HH:MM"}, otherwise
+#'     \code{"YYYY-MM-DD"} (with \code{" HH:MM"} when not midnight);
+#'   \item Date cells: \code{"YYYY-MM-DD"};
+#'   \item numbers stored as text in the date columns (\code{$date.start},
+#'     \code{$date.end}, \code{$date.interval}): an Excel day number
+#'     (e.g. \code{46198} = 2026-06-25) becomes \code{"YYYY-MM-DD"};
+#'   \item numbers between 0 and 1 in the time columns (\code{$time.start},
+#'     \code{$time.end}): a fraction of a day (e.g. \code{0.8333} = 20:00)
+#'     becomes \code{"HH:MM"}.
+#' }
+#' @keywords internal
+#' @noRd
+plotutil_excel_datetime <- function(fig.list) {
+  if (!is.data.frame(fig.list)) return(fig.list)
+  for (cl in names(fig.list)) {
+    v <- fig.list[[cl]]
+    if (inherits(v, "POSIXt")) {
+      u <- format(v, "%Y-%m-%d", tz = "UTC"); t <- format(v, "%H:%M", tz = "UTC")
+      out <- ifelse(u %in% c("1899-12-30", "1899-12-31"), t, ifelse(t == "00:00", u, paste(u, t)))
+      out[is.na(v)] <- NA
+      fig.list[[cl]] <- out
+    } else if (inherits(v, "Date")) {
+      out <- format(v); out[is.na(v)] <- NA; fig.list[[cl]] <- out
+    }
+  }
+  num <- function(x) suppressWarnings(as.numeric(as.character(x)))
+  for (cl in intersect(c("date.start", "date.end", "date.interval"), names(fig.list))) {
+    v <- as.character(fig.list[[cl]]); n <- num(v)
+    ok <- !is.na(n) & n > 20000 & n < 80000 & grepl("^[0-9.]+$", trimws(v))    # Excel day numbers (1954 - 2118)
+    v[ok] <- format(as.Date(floor(n[ok]), origin = "1899-12-30"))
+    fig.list[[cl]] <- v
+  }
+  for (cl in intersect(c("time.start", "time.end"), names(fig.list))) {
+    v <- as.character(fig.list[[cl]]); n <- num(v)
+    ok <- !is.na(n) & n >= 0 & n < 1 & grepl("^[0-9.]+$", trimws(v))
+    m <- round(n[ok] * 1440)
+    v[ok] <- sprintf("%02d:%02d", (m %/% 60) %% 24, m %% 60)
+    fig.list[[cl]] <- v
+  }
+  fig.list
+}
+
+
+#' Text sizes and faces of every text element (internal)
+#'
+#' Theme for the text settings in plotopts / fig.list / the call, added
+#' after a plot function's own theme. Each setting is applied only when it
+#' is not blank (blank keeps the function's own value):
+#' \code{plot.title.size} / \code{plot.title.face}, \code{axis.title.size} /
+#' \code{axis.title.face}, \code{axis.title.x.size}, \code{axis.title.y.size},
+#' \code{axis.text.size}, \code{axis.text.x.size}, \code{axis.text.y.size},
+#' \code{legend.title.size} / \code{legend.title.face},
+#' \code{legend.text.size}, \code{strip.text.size} / \code{strip.text.face}
+#' (facet panel titles). Sizes in pt; faces plain, bold, italic or
+#' bold.italic.
+#' @param get Function(name) returning the setting (or NA / NULL / "").
+#' @keywords internal
+#' @noRd
+plotutil_text_theme <- function(get) {
+  val <- function(p) { v <- tryCatch(get(p), error = function(e) NULL)
+    if (is.null(v) || !length(v) || is.na(v[1]) || !nzchar(trimws(as.character(v[1]))) || toupper(trimws(v[1])) == "NA") NULL else trimws(as.character(v[1])) }
+  el <- function(size, face = NULL) {
+    s <- val(size); fc <- if (is.null(face)) NULL else val(face)
+    s <- if (is.null(s)) NULL else suppressWarnings(as.numeric(s)); if (!is.null(s) && is.na(s)) s <- NULL
+    fc <- if (is.null(fc)) NULL else plotutil_face(fc, default = NULL)
+    if (is.null(s) && is.null(fc)) return(NULL)
+    ggplot2::element_text(size = s, face = fc)
+  }
+  els <- list(plot.title = el("plot.title.size", "plot.title.face"),
+              axis.title = el("axis.title.size", "axis.title.face"),
+              axis.title.x = el("axis.title.x.size"), axis.title.y = el("axis.title.y.size"),
+              axis.text = el("axis.text.size"), axis.text.x = el("axis.text.x.size"), axis.text.y = el("axis.text.y.size"),
+              legend.title = el("legend.title.size", "legend.title.face"), legend.text = el("legend.text.size"),
+              strip.text = el("strip.text.size", "strip.text.face"))
+  els <- els[!vapply(els, is.null, logical(1))]
+  if (!length(els)) return(NULL)
+  do.call(ggplot2::theme, els)
+}
+
+#' The text-size settings plotutil_text_theme() reads (internal)
+#' @keywords internal
+#' @noRd
+PLOTUTIL_TEXT_SETTINGS <- c("plot.title.size", "plot.title.face", "axis.title.size", "axis.title.face",
+                            "axis.title.x.size", "axis.title.y.size", "axis.text.size", "axis.text.x.size",
+                            "axis.text.y.size", "legend.title.size", "legend.title.face", "legend.text.size",
+                            "strip.text.size", "strip.text.face")
+
+#' A legend / axis title setting: blank, NA or "NA" gives no title (internal)
+#' @keywords internal
+#' @noRd
+plotutil_title <- function(v) {
+  if (is.null(v) || !length(v) || is.na(v[1])) return(NULL)
+  v <- gsub("\r\n?", "\n", as.character(v[1]))
+  if (!nzchar(trimws(v)) || toupper(trimws(v)) == "NA") NULL else v
+}
+
+
+#' One plotopts value: the aes.style column, else $default.value (internal)
+#' @keywords internal
+#' @noRd
+plotutil_po_value <- function(po, aes.style, p) {
+  if (is.null(po) || !is.data.frame(po) || !"parameter" %in% names(po)) return(NULL)
+  i <- which(plotutil_param_key(po$parameter) == plotutil_param_key(p))[1]
+  if (is.na(i)) return(NULL)
+  col <- plotutil_aes_style_col(po, aes.style)
+  v <- if (!is.na(col)) as.character(po[[col]][i]) else NA
+  if (is.na(v) || !nzchar(trimws(v))) v <- if ("default.value" %in% names(po)) as.character(po$default.value[i]) else NA
+  v
 }
