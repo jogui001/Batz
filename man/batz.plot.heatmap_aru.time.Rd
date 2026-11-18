@@ -318,8 +318,17 @@ ramp), from 0 to \code{fill.max} (an unusable value gives 15).
 Values above \code{fill.max} are out of range and drawn grey.
 \item \code{legend.position}: \code{"bottom"} (default), \code{"top"},
 \code{"left"} or \code{"right"}; any other value gives a NOTE and
-\code{"bottom"}. The colorbar runs left to right when the legend is at
-the bottom or top, otherwise bottom to top.
+\code{"bottom"}. The colorbar direction follows
+\code{legend.scalebar.direction}.
+\item \code{legend.scalebar.direction}: \code{"horizontal"} (the
+colorbar runs left to right), \code{"vertical"} (bottom to top) or
+\code{"auto"} (default; blank or a missing row = auto): left to right
+when the legend is at the bottom or top, otherwise bottom to top.
+\item \code{legend.box}: how the Dawn / Dusk / Midnight legend and the
+colorbar are arranged: \code{"vertical"} (one column, left-aligned),
+\code{"horizontal"} (side by side) or \code{"auto"} (default; blank or
+a missing row = auto): one column when the legend is on the left or
+right, side by side at the bottom or top.
 \item \code{legend.scalebar}: where the colorbar sits next to its title
 (\code{fill.legend.title}): \code{"below"} (default) = the bar under
 the words; \code{"right"} = the bar to the right of the words. Any other

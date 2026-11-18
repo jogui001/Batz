@@ -285,4 +285,15 @@ fd$plot.dimensions <- "150 x 100 mm"
 batz.plot.heatmap_aru.time(pf, fd, project.name = "dimmm", dir.save = dir.out, ggsave.dpi = 100)
 ok(all(abs(px(last.png("dimmm")) - c(590.6, 393.7)) <= 1), "plot.dimensions with its own unit (150 x 100 mm)")
 
+## ---- 18. legend.scalebar.direction and legend.box ----
+rr <- batz.plot.heatmap_aru.time(pf, fl, st, dir.save = dir.out, save.auto = FALSE, legend.position = "right")
+ok(identical(gd(rr)$direction, "vertical") && identical(rr$ggplots[[1]]$theme$legend.box, "vertical"),
+   "auto at the right: colorbar bottom to top, legends in one column")
+rh <- batz.plot.heatmap_aru.time(pf, fl, st, dir.save = dir.out, save.auto = FALSE, legend.position = "right",
+                                 legend.scalebar.direction = "horizontal", legend.box = "vertical")
+ok(identical(gd(rh)$direction, "horizontal") && identical(rh$ggplots[[1]]$theme$legend.box, "vertical"),
+   "legend.scalebar.direction horizontal at the right: left to right; legend.box vertical: one column")
+rb <- batz.plot.heatmap_aru.time(pf, fl, st, dir.save = dir.out, save.auto = FALSE, legend.box = "horizontal", legend.position = "right")
+ok(identical(rb$ggplots[[1]]$theme$legend.box, "horizontal"), "legend.box horizontal: side by side")
+
 cat("\nALL TESTS PASSED - PNGs in", dir.out, "\n")

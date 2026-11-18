@@ -287,8 +287,17 @@
 #'     Values above \code{fill.max} are out of range and drawn grey.
 #'   \item \code{legend.position}: \code{"bottom"} (default), \code{"top"},
 #'     \code{"left"} or \code{"right"}; any other value gives a NOTE and
-#'     \code{"bottom"}. The colorbar runs left to right when the legend is at
-#'     the bottom or top, otherwise bottom to top.
+#'     \code{"bottom"}. The colorbar direction follows
+#'     \code{legend.scalebar.direction}.
+#'   \item \code{legend.scalebar.direction}: \code{"horizontal"} (the
+#'     colorbar runs left to right), \code{"vertical"} (bottom to top) or
+#'     \code{"auto"} (default; blank or a missing row = auto): left to right
+#'     when the legend is at the bottom or top, otherwise bottom to top.
+#'   \item \code{legend.box}: how the Dawn / Dusk / Midnight legend and the
+#'     colorbar are arranged: \code{"vertical"} (one column, left-aligned),
+#'     \code{"horizontal"} (side by side) or \code{"auto"} (default; blank or
+#'     a missing row = auto): one column when the legend is on the left or
+#'     right, side by side at the bottom or top.
 #'   \item \code{legend.scalebar}: where the colorbar sits next to its title
 #'     (\code{fill.legend.title}): \code{"below"} (default) = the bar under
 #'     the words; \code{"right"} = the bar to the right of the words. Any other
@@ -526,7 +535,7 @@ batz.plot.heatmap_aru.time <- function(data, fig.list, suntimes = NULL,
     }
     val
   }
-  plotutil_plot_inputs_check(plot.inputs, c(AES.DEFAULT.REQUIRED.PARAMETERS, aes.plotopts$parameter, names(fig.list), "plot.dimensions", "plot.dimentions", "font.family", "legend.scalebar"), "batz.plot.heatmap_aru.time")
+  plotutil_plot_inputs_check(plot.inputs, c(AES.DEFAULT.REQUIRED.PARAMETERS, aes.plotopts$parameter, names(fig.list), "plot.dimensions", "plot.dimentions", "font.family", "legend.scalebar", "legend.scalebar.direction", "legend.box"), "batz.plot.heatmap_aru.time")
 
   get.setting <- function(job, param) {
     if (!is.null(v.in <- plotutil_input_get(plot.inputs, param))) return(v.in)   # function call, then fig.list, then plotopts
@@ -793,7 +802,22 @@ batz.plot.heatmap_aru.time <- function(data, fig.list, suntimes = NULL,
       }
       colorbar.title.pos <- if (scalebar == "right") "left" else "top"   # right: words, then the bar; below: words over the bar
       font.family <- plotutil_heat_font(get.setting(p$job, "font.family"), job.label)
-      colorbar.horizontal <- legend.pos %in% c("bottom", "top")
+      ## legend.scalebar.direction: horizontal / vertical / auto (left to right at the top or bottom, else bottom to top)
+      sb.dir <- tolower(trimws(as.character(get.default("legend.scalebar.direction"))))
+      if (length(sb.dir) != 1 || is.na(sb.dir) || !nzchar(sb.dir) || sb.dir == "na") sb.dir <- "auto"
+      if (!sb.dir %in% c("auto", "horizontal", "vertical")) {
+        cat(sprintf("NOTE: '%s' - legend.scalebar.direction '%s' is not horizontal, vertical or auto - auto used.\n", job.label, sb.dir))
+        sb.dir <- "auto"
+      }
+      colorbar.horizontal <- if (sb.dir == "auto") legend.pos %in% c("bottom", "top") else sb.dir == "horizontal"
+      ## legend.box: vertical (the legends in one column) / horizontal (side by side) / auto (vertical at left or right)
+      lg.box <- tolower(trimws(as.character(get.default("legend.box"))))
+      if (length(lg.box) != 1 || is.na(lg.box) || !nzchar(lg.box) || lg.box == "na") lg.box <- "auto"
+      if (!lg.box %in% c("auto", "horizontal", "vertical")) {
+        cat(sprintf("NOTE: '%s' - legend.box '%s' is not vertical, horizontal or auto - auto used.\n", job.label, lg.box))
+        lg.box <- "auto"
+      }
+      if (lg.box == "auto") lg.box <- if (legend.pos %in% c("left", "right")) "vertical" else "horizontal"
       colorbar.direction <- if (colorbar.horizontal) "horizontal" else "vertical"
       colorbar.barheight <- if (colorbar.horizontal) grid::unit(0.4, "cm") else grid::unit(3.2, "cm")
       colorbar.barwidth  <- if (colorbar.horizontal) grid::unit(3.2, "cm") else grid::unit(0.4, "cm")
@@ -836,7 +860,7 @@ batz.plot.heatmap_aru.time <- function(data, fig.list, suntimes = NULL,
                         panel.border = ggplot2::element_rect(linewidth = panel.border.lw, colour = "grey20", fill = NA),
                         text = ggplot2::element_text(family = font.family),
                         legend.position = legend.pos,
-                        legend.box = "horizontal",
+                        legend.box = lg.box, legend.box.just = "left",
                         plot.title = ggplot2::element_text(hjust = as.numeric(get.default("plot.title.hjust")), face = plotutil_face(get.default("plot.title.face")),
                                                              size = as.numeric(get.default("plot.title.size"))),
                         axis.title = ggplot2::element_text(size = as.numeric(get.default("axis.title.size")), face = plotutil_face(get.default("axis.title.face"))),

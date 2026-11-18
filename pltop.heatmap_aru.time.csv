@@ -31,6 +31,8 @@
 "Text","font.family","Arial","","Font of all text in the plot (titles, axis labels, legend, panel titles). Blank = Arial."
 "Legend","legend.position","bottom","","Placement of the legend: bottom (default), top, left or right. At the bottom or top the colorbar runs left to right, at the left or right bottom to top."
 "Legend","legend.scalebar","below","","Where the fill colorbar sits next to its title: below (bar under the words) or right (bar to the right of the words)."
+"Legend","legend.scalebar.direction","auto","","Direction of the fill colorbar: horizontal (left to right), vertical (bottom to top) or auto (left to right when the legend is at the bottom or top, otherwise bottom to top). Blank = auto."
+"Legend","legend.box","auto","","How the Dawn/Dusk/Midnight legend and the colorbar are arranged: vertical (one column, left-aligned), horizontal (side by side) or auto (one column when legend.position is left or right, side by side at the bottom or top). Blank = auto."
 "Panel layout","panel.spacing.x","5.5","","Horizontal gap between facet panels, in points - unused by this single-panel function (no facet_wrap here), kept only because it's part of the shared theme() block copied from batz.plot.barfloat_detect.1st.last()."
 "Theme","plot.title.hjust","0","","Horizontal justification of the plot title (0 = left-aligned)."
 "Save","ggsave.dpi","300","","Resolution of the saved PNG."
