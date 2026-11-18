@@ -96,8 +96,12 @@
 #'   \code{\link{batz.plot.heatmap_aru.time}}.
 #' @param photo.width Numeric, default \code{3.1}. Largest photo width in
 #'   inches. Each photo keeps its own shape and is made as large as fits in
-#'   \code{photo.width} x 4 in, with a black border (2.25 pt), centred in its
-#'   table cell. The photo tables have no borders of their own.
+#'   \code{photo.width} x \code{photo.height} in, with a black border
+#'   (2.25 pt), centred in its table cell. The photo tables have no borders of
+#'   their own.
+#' @param photo.height Numeric, default \code{4}. Largest photo height in
+#'   inches. A photo that would be taller than this at \code{photo.width} is
+#'   shown \code{photo.height} tall, keeping its shape (so narrower).
 #' @param photo.labels Logical, default \code{TRUE}. Writes the view in the
 #'   bottom right corner of each photo, on a small white box so it can be
 #'   read on light backgrounds: "North", "East", "South", "West" (Figure 3),
@@ -396,7 +400,7 @@ batz.generate_aru.appendix <- function(data,
                                        sm4.data = NULL,
                                        plotopts.bullseye = NULL,
                                        plotopts.sm4heatmap = NULL,
-                                       photo.width = 3.1, photo.labels = TRUE,
+                                       photo.width = 3.1, photo.height = 4, photo.labels = TRUE,
                                        service.events = c("TRUE", "FALSE", "optional", "note"),
                                        text.size_data = 10, text.font_data = "Arial", text.format_data = "",
                                        text.size_labels = 10, text.font_labels = "Arial", text.format_labels = "bold",
@@ -435,6 +439,11 @@ batz.generate_aru.appendix <- function(data,
          call. = FALSE)
   }
   if (!isTRUE(word) && !isTRUE(pdf)) stop("At least one of `word` and `pdf` must be TRUE.", call. = FALSE)
+  for (a in c("photo.width", "photo.height")) {
+    v <- get(a)
+    if (!is.numeric(v) || length(v) != 1 || is.na(v) || v <= 0)
+      stop("`", a, "` must be one number greater than 0 (inches).", call. = FALSE)
+  }
   if (!isTRUE(collate) && !isTRUE(separate)) stop("At least one of `collate` and `separate` must be TRUE.", call. = FALSE)
   ## 2026-10-27: the shipped template is the terrestrial appendix; other
   ## survey types can be added later as their own named templates
@@ -1125,7 +1134,7 @@ batz.generate_aru.appendix <- function(data,
                                   "; using ", basename(cand[1]), "\n", sep = "")
         pi <- prep.image(cand[1])
         if (is.na(pi$path)) { site.values[[s]][[v]] <- pi$note; cat("NOTE: ", s, " - ", pi$note, "\n", sep = ""); next }
-        site.images[[s]][[v]] <- list(path = pi$path, width = photo.width)
+        site.images[[s]][[v]] <- list(path = pi$path, width = photo.width, max.height = photo.height)   # at most photo.width x photo.height
         site.values[[s]][[v]] <- ""
       }
     }
@@ -1443,7 +1452,6 @@ batz.generate_aru.appendix <- function(data,
       d <- img.dims(im$path)
       w <- im$width; h <- w * d[2] / d[1]
       is.photo <- k %in% img.keys[1:6]
-      if (is.photo && h > 4) { h <- 4; w <- h * d[1] / d[2] }                   # photos: at most photo.width x 4 in
       if (!is.null(im$max.height) && h > im$max.height) { h <- im$max.height; w <- h * d[1] / d[2] }
       src <- im$path
       if (is.photo && isTRUE(photo.labels)) src <- label.photo(src, photo.label.text[[k]], w)

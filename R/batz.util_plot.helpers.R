@@ -1115,8 +1115,10 @@ PLOTUTIL_PLOT_TYPE_OLD <- list(
 #' \code{"6/26/2026; 7/1/2026; 7/15/2026"}, read as m/d/Y, Y-m-d or m/d/y.
 #' The dates within \code{date.start} to \code{date.end} are the X-axis
 #' labels, sorted, duplicates dropped; they replace \code{$xaxe.interval}.
-#' Dates outside the window or not readable are dropped (NOTE). Blank, or
-#' no usable date left: \code{NULL}, and \code{$xaxe.interval} is used.
+#' Dates outside the window or not readable are dropped (NOTE). When it
+#' holds a readable date, \code{$xaxe.interval} is ignored (no date within
+#' the window: no labels, NOTE). Blank or no readable date: \code{NULL},
+#' and \code{$xaxe.interval} is used.
 #' @param v The \code{$date.interval} value.
 #' @param date.start,date.end The plot's date window (Date).
 #' @param job.label Plot name, for messages.
@@ -1144,10 +1146,11 @@ plotutil_date_interval <- function(v, date.start, date.end, job.label) {
   out <- d[d < date.start | d > date.end]
   if (length(out)) cat(sprintf("NOTE: '%s' - $date.interval: outside %s to %s, left out: %s\n",
                                job.label, format(date.start), format(date.end), paste(format(out), collapse = ", ")))
-  d <- sort(unique(d[d >= date.start & d <= date.end]))
-  if (!length(d)) {
-    cat(sprintf("NOTE: '%s' - $date.interval has no date within the plot window - $xaxe.interval used.\n", job.label))
+  if (!length(d)) {                                   # nothing readable: as blank
+    cat(sprintf("NOTE: '%s' - $date.interval has no readable date - $xaxe.interval used.\n", job.label))
     return(NULL)
   }
+  d <- sort(unique(d[d >= date.start & d <= date.end]))
+  if (!length(d)) cat(sprintf("NOTE: '%s' - $date.interval has no date within the plot window - no X-axis date labels ($xaxe.interval ignored).\n", job.label))
   d
 }

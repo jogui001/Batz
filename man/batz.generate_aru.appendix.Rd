@@ -29,6 +29,7 @@ batz.generate_aru.appendix(
   plotopts.bullseye = NULL,
   plotopts.sm4heatmap = NULL,
   photo.width = 3.1,
+  photo.height = 4,
   photo.labels = TRUE,
   service.events = c("TRUE", "FALSE", "optional", "note"),
   text.size_data = 10,
@@ -150,8 +151,13 @@ and \code{pltop.heatmap_aru.time}). Passed to
 
 \item{photo.width}{Numeric, default \code{3.1}. Largest photo width in
 inches. Each photo keeps its own shape and is made as large as fits in
-\code{photo.width} x 4 in, with a black border (2.25 pt), centred in its
-table cell. The photo tables have no borders of their own.}
+\code{photo.width} x \code{photo.height} in, with a black border
+(2.25 pt), centred in its table cell. The photo tables have no borders of
+their own.}
+
+\item{photo.height}{Numeric, default \code{4}. Largest photo height in
+inches. A photo that would be taller than this at \code{photo.width} is
+shown \code{photo.height} tall, keeping its shape (so narrower).}
 
 \item{photo.labels}{Logical, default \code{TRUE}. Writes the view in the
 bottom right corner of each photo, on a small white box so it can be

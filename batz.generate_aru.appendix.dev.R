@@ -217,3 +217,12 @@ r11 <- batz.generate_aru.appendix(file.data, project.name = "NA Bat", collate = 
 cat("serial checks - built-in inventory:", nrow(r10$serial.check), " no inventory:", nrow(r11$serial.check), "\n")
 ## Figure 1: legend on one line (Dawn / Dusk / Midnight, then the colour bar with its title on the right);
 ## the y axis starts 30 min before the even hour of the first recorded interval
+
+
+## ---- photo.height (largest photo height, inches; default 4) -----------------
+ok2 <- function(cond, msg) { if (!isTRUE(cond)) stop("FAILED: ", msg, call. = FALSE); cat("ok -", msg, "\n") }
+ok2(identical(formals(batz.generate_aru.appendix)$photo.height, 4), "photo.height default 4")
+e <- try(batz.generate_aru.appendix(data.frame(), photo.height = -1), silent = TRUE)
+ok2(inherits(e, "try-error") && grepl("photo.height", e), "photo.height must be one number > 0")
+## with your real data (as in the tests above), e.g. photos at most 3.1 x 3 in:
+# batz.generate_aru.appendix(<data>, photo.width = 3.1, photo.height = 3, dir.save = dir.out)

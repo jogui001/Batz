@@ -11,6 +11,17 @@
 #' @param dir.load Character. Directory to search. Default \code{getwd()}.
 #' @param dir.sub Logical, default \code{FALSE}. If \code{TRUE}, also searches
 #'   every subdirectory of \code{dir.load}.
+#' @param load.pattern Character, default \code{""}: every \code{.csv} /
+#'   \code{.xlsx} file is loaded, each named after its file. Otherwise one or
+#'   more file IDs with wildcards, e.g. \code{c("*suntimes*csv",
+#'   "*arulist*")}: only files whose name matches are loaded (\code{*} = any
+#'   characters, \code{?} = one character; case ignored; an ID with no
+#'   wildcard matches any name containing it). All files matching one ID go
+#'   into one object named after the ID without the wildcards and the file
+#'   extension: \code{"*suntimes*csv"} loads every CSV with "suntimes" in its
+#'   name as the object \code{suntimes}. See "load.pattern" in Details.
+#' @param ... The old argument name \code{pattern} is still read as
+#'   \code{load.pattern} (WARNING).
 #' @param duplicates.remove Logical, default \code{TRUE}. If \code{TRUE},
 #'   exact duplicate rows are removed within each data frame (and within each
 #'   sheet of a multi-sheet list), never across objects. Runs after all files
@@ -82,6 +93,18 @@
 #' and so object names, are not changed. All column matching below compares
 #' the standardized names. A file that cannot be read is logged as skipped.
 #'
+#' \strong{load.pattern.} With file IDs, only \code{.csv} / \code{.xlsx} files
+#' matching an ID are read, in the order of the IDs. A file matching several
+#' IDs goes to the first. The object name is the ID with \code{*} and
+#' \code{?} removed, the extension (\code{csv} / \code{xlsx}, with or without
+#' the dot) removed, and leading / trailing \code{.}, \code{_}, \code{-} and
+#' spaces trimmed (\code{"*suntimes*csv"} -> \code{suntimes};
+#' \code{"site_*.xlsx"} -> \code{site}). The files of one ID are handled as
+#' files with the same name (below): the same columns are merged into the
+#' object; different columns become \code{"<ID> [<file name>]"} (or are
+#' skipped with \code{duplicates.skip = TRUE}). An ID that matches no file
+#' gives a NOTE.
+#'
 #' \strong{Where each file goes}, in this order:
 #' \enumerate{
 #'   \item Same base name as a loaded object and \code{duplicates.skip = TRUE}:
@@ -119,6 +142,9 @@
 #'                                         objects.max = 50)
 #' result$my.file
 #' result$log.file
+#'
+#' # only the suntimes and arulist CSVs, as the objects suntimes and arulist
+#' batz.datawrangler_load.files("path/to/raw/data", load.pattern = c("*suntimes*csv", "*arulist*csv"))
 #' }
 #'
 #' @seealso \code{\link{batz.datawrangler_rename}}
@@ -126,12 +152,20 @@
 #' @export
 batz.datawrangler_load.files <- function(dir.load = getwd(),
                                           dir.sub           = FALSE,
+                                          load.pattern      = "",
                                           duplicates.remove = TRUE,
                                           log.file          = FALSE,
                                           header.match      = FALSE,
                                           duplicates.skip   = FALSE,
                                           objects.max       = 25,
-                                          strip.special     = TRUE) {
+                                          strip.special     = TRUE, ...) {
+  dots <- list(...)
+  if ("pattern" %in% names(dots)) {                       # old argument name
+    cat("WARNING: batz.datawrangler_load.files - argument 'pattern' is now called load.pattern - used as load.pattern.\n")
+    if (missing(load.pattern)) load.pattern <- dots$pattern
+    dots$pattern <- NULL
+  }
+  if (length(dots)) stop("batz.datawrangler_load.files: unknown argument(s): ", paste(names(dots), collapse = ", "), call. = FALSE)
 
   ## header standardization (per Josh, 2026-09-14 project preference) - see
   ## @details "Header standardization" above. Applied once, right after a
@@ -224,6 +258,36 @@ batz.datawrangler_load.files <- function(dir.load = getwd(),
 
   cat("Scanning", dir.load, "(dir.sub =", dir.sub, ") ...\n")
 
+  ## ---- load.pattern: file IDs (blank = every file) ---------------------------
+  pat <- if (is.null(load.pattern)) character(0) else trimws(as.character(load.pattern))
+  pat <- pat[!is.na(pat) & nzchar(pat)]
+  file.id <- NULL                                       # object name per file when pattern is used
+  if (length(pat)) {
+    id.name <- function(p) {
+      x <- gsub("[*?]", "", p)
+      x <- sub("\\.?(csv|xlsx)$", "", x, ignore.case = TRUE)
+      x <- gsub("^[._ -]+|[._ -]+$", "", x)
+      if (!nzchar(x)) x <- "files"
+      x
+    }
+    id.regex <- function(p) {
+      g <- if (grepl("[*?]", p)) p else paste0("*", p, "*")
+      utils::glob2rx(g)
+    }
+    ids <- vapply(pat, id.name, character(1))
+    hit <- lapply(pat, function(p) all.files[grepl(id.regex(p), basename(all.files), ignore.case = TRUE)])
+    keep <- character(0); file.id <- character(0)
+    for (i in seq_along(pat)) {
+      h <- setdiff(hit[[i]], keep)
+      if (!length(hit[[i]])) cat(sprintf("NOTE: batz.datawrangler_load.files - load.pattern '%s' matches no .csv / .xlsx file.\n", pat[i]))
+      keep <- c(keep, h); file.id <- c(file.id, rep(ids[i], length(h)))
+    }
+    names(file.id) <- keep
+    cat(sprintf("load.pattern: %d file(s) matched -> %s\n", length(keep),
+                paste(sprintf("%s (%d)", unique(ids), vapply(unique(ids), function(x) sum(file.id == x), numeric(1))), collapse = ", ")))
+    all.files <- keep
+  }
+
   loaded <- list()
   n.capped <- 0
 
@@ -231,7 +295,7 @@ batz.datawrangler_load.files <- function(dir.load = getwd(),
     cat("No .csv/.xlsx files found.\n")
   } else {
     for (f in all.files) {
-      base.name <- tools::file_path_sans_ext(basename(f))
+      base.name <- if (!is.null(file.id)) file.id[[f]] else tools::file_path_sans_ext(basename(f))
 
       obj <- tryCatch(read.one(f), error = function(e) {
         cat("  [skipped] could not read '", f, "': ", conditionMessage(e), "\n", sep = "")
@@ -288,7 +352,8 @@ batz.datawrangler_load.files <- function(dir.load = getwd(),
         next
       }
 
-      final.name <- if (needs.alt.name) paste0(base.name, " [", basename(dirname(f)), "]") else base.name
+      final.name <- if (!needs.alt.name) base.name else
+        paste0(base.name, " [", if (!is.null(file.id)) tools::file_path_sans_ext(basename(f)) else basename(dirname(f)), "]")
       reason <- if (needs.alt.name) "file with same name already exists with different headers" else "file was first of its kind"
       loaded[[final.name]] <- obj
       add.log(basename(f), "success", "loaded", reason, final.name)

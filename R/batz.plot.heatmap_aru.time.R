@@ -166,9 +166,10 @@
 #'   \item{Optional: \code{$date.interval}}{X-axis label dates, separated by
 #'     ";" (e.g. \code{"6/26/2026; 7/1/2026; 7/15/2026"}; m/d/Y, Y-m-d or
 #'     m/d/y). The dates within \code{$date.start} to \code{$date.end} are the
-#'     labels and replace \code{$xaxe.interval}; dates outside the window or
-#'     not readable are left out (NOTE). Blank: \code{$xaxe.interval} is
-#'     used.}
+#'     labels. When it holds any date, \code{$xaxe.interval} is ignored (no
+#'     date within the window: no date labels, NOTE). Dates outside the window
+#'     or not readable are left out (NOTE). Blank, or no readable date:
+#'     \code{$xaxe.interval} is used.}
 #'   \item{\code{$date.format}}{X-axis date label format (strftime style).
 #'     A literal "/n" becomes a line break. Blank gives \code{"\%b-\%d"}
 #'     (NOTE).}
@@ -707,10 +708,14 @@ batz.plot.heatmap_aru.time <- function(data, fig.list, suntimes = NULL,
         fmt.raw <- "%b-%d"
       }
       xaxe.date.labels.fmt <- gsub("/n", "\n", fmt.raw, fixed = TRUE)
+      ## $date.interval with dates: those are the labels and $xaxe.interval is ignored
+      date.int <- plotutil_date_interval(get.setting(p$job, "date.interval"), p$date.start, p$date.end, job.label)
       ## $xaxe.interval: a number = that many evenly spaced labels; "N day(s)" / "N week(s)" = a label every N days / weeks
-      xi <- tolower(trimws(as.character(get.setting(p$job, "xaxe.interval")))); if (!length(xi) || is.na(xi)) xi <- ""
+      xi <- if (!is.null(date.int)) "" else tolower(trimws(as.character(get.setting(p$job, "xaxe.interval")))); if (!length(xi) || is.na(xi)) xi <- ""
       m <- regmatches(xi, regexec("^([0-9]+)\\s*(day|days|week|weeks)$", xi))[[1]]
-      if (length(m)) {
+      if (!is.null(date.int)) {
+        xaxe.breaks <- date.int
+      } else if (length(m)) {
         xaxe.breaks <- seq(p$date.start, p$date.end, by = paste(m[2], sub("s$", "", m[3])))
       } else {
         xaxe.n.labels <- suppressWarnings(as.numeric(xi))
@@ -721,8 +726,6 @@ batz.plot.heatmap_aru.time <- function(data, fig.list, suntimes = NULL,
         }
         xaxe.breaks <- seq(p$date.start, p$date.end, length.out = round(xaxe.n.labels))
       }
-      date.int <- plotutil_date_interval(get.setting(p$job, "date.interval"), p$date.start, p$date.end, job.label)
-      if (!is.null(date.int)) xaxe.breaks <- date.int                  # $date.interval replaces $xaxe.interval
 
       panel.border.lw <- as.numeric(get.default("panel.border.linewidth"))
       # Same 2x geom-line-vs-panel-border rendering quirk documented in

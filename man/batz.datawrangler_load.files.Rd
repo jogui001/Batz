@@ -7,12 +7,14 @@
 batz.datawrangler_load.files(
   dir.load = getwd(),
   dir.sub = FALSE,
+  load.pattern = "",
   duplicates.remove = TRUE,
   log.file = FALSE,
   header.match = FALSE,
   duplicates.skip = FALSE,
   objects.max = 25,
-  strip.special = TRUE
+  strip.special = TRUE,
+  ...
 )
 }
 \arguments{
@@ -20,6 +22,16 @@ batz.datawrangler_load.files(
 
 \item{dir.sub}{Logical, default \code{FALSE}. If \code{TRUE}, also searches
 every subdirectory of \code{dir.load}.}
+
+\item{load.pattern}{Character, default \code{""}: every \code{.csv} /
+\code{.xlsx} file is loaded, each named after its file. Otherwise one or
+more file IDs with wildcards, e.g. \code{c("*suntimes*csv",
+  "*arulist*")}: only files whose name matches are loaded (\code{*} = any
+characters, \code{?} = one character; case ignored; an ID with no
+wildcard matches any name containing it). All files matching one ID go
+into one object named after the ID without the wildcards and the file
+extension: \code{"*suntimes*csv"} loads every CSV with "suntimes" in its
+name as the object \code{suntimes}. See "load.pattern" in Details.}
 
 \item{duplicates.remove}{Logical, default \code{TRUE}. If \code{TRUE},
 exact duplicate rows are removed within each data frame (and within each
@@ -55,6 +67,9 @@ curly quotes to straight quotes) and other non-ASCII characters (e.g.
 degree, micro and trademark signs) are removed, in column names and text
 columns. Files are always read with a UTF-8 / Latin-1 fallback, whatever
 this is set to.}
+
+\item{...}{The old argument name \code{pattern} is still read as
+\code{load.pattern} (WARNING).}
 }
 \value{
 Invisibly, a named list with one element per object created (data
@@ -107,6 +122,18 @@ underscore, leading/trailing underscores dropped, lower case. File names,
 and so object names, are not changed. All column matching below compares
 the standardized names. A file that cannot be read is logged as skipped.
 
+\strong{load.pattern.} With file IDs, only \code{.csv} / \code{.xlsx} files
+matching an ID are read, in the order of the IDs. A file matching several
+IDs goes to the first. The object name is the ID with \code{*} and
+\code{?} removed, the extension (\code{csv} / \code{xlsx}, with or without
+the dot) removed, and leading / trailing \code{.}, \code{_}, \code{-} and
+spaces trimmed (\code{"*suntimes*csv"} -> \code{suntimes};
+\code{"site_*.xlsx"} -> \code{site}). The files of one ID are handled as
+files with the same name (below): the same columns are merged into the
+object; different columns become \code{"<ID> [<file name>]"} (or are
+skipped with \code{duplicates.skip = TRUE}). An ID that matches no file
+gives a NOTE.
+
 \strong{Where each file goes}, in this order:
 \enumerate{
 \item Same base name as a loaded object and \code{duplicates.skip = TRUE}:
@@ -144,6 +171,9 @@ result <- batz.datawrangler_load.files("path/to/raw/data", dir.sub = TRUE,
                                         objects.max = 50)
 result$my.file
 result$log.file
+
+# only the suntimes and arulist CSVs, as the objects suntimes and arulist
+batz.datawrangler_load.files("path/to/raw/data", load.pattern = c("*suntimes*csv", "*arulist*csv"))
 }
 
 }

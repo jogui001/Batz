@@ -216,6 +216,12 @@ rdb <- batz.plot.heatmap_aru.time(data = pf, fig.list = fdi, project.name = "din
 ok(length(xb(rdb)) == 4, "$date.interval blank: $xaxe.interval (4 labels)")
 fdi$date.interval <- "7/15/2026"                                                                     # NOTE: none in the window
 rdn <- batz.plot.heatmap_aru.time(data = pf, fig.list = fdi, project.name = "dint", dir.save = dir.out, save.auto = FALSE)
-ok(length(xb(rdn)) == 4, "$date.interval with no date in the window: $xaxe.interval")
+ok(length(xb(rdn)) == 0, "$date.interval with dates but none in the window: no date labels, $xaxe.interval ignored")
+fdi$date.interval <- "6/27/2026"; fdi$xaxe.interval <- "not a number"
+out <- capture.output(rdx <- batz.plot.heatmap_aru.time(data = pf, fig.list = fdi, project.name = "dint", dir.save = dir.out, save.auto = FALSE))
+ok(identical(xb(rdx), as.Date("2026-06-27")) && !any(grepl("xaxe.interval = ", out)), "$date.interval given: $xaxe.interval not read (no NOTE about it)")
+fdi$date.interval <- "soon"; fdi$xaxe.interval <- "4"                                                 # NOTE: no readable date
+rds <- batz.plot.heatmap_aru.time(data = pf, fig.list = fdi, project.name = "dint", dir.save = dir.out, save.auto = FALSE)
+ok(length(xb(rds)) == 4, "$date.interval with no readable date: as blank, $xaxe.interval used")
 
 cat("\nALL TESTS PASSED - PNGs in", dir.out, "\n")

@@ -281,9 +281,10 @@ plotted. Otherwise the two lists must be the same length. A blank
 \item{Optional: \code{$date.interval}}{X-axis label dates, separated by
 ";" (e.g. \code{"6/26/2026; 7/1/2026; 7/15/2026"}; m/d/Y, Y-m-d or
 m/d/y). The dates within \code{$date.start} to \code{$date.end} are the
-labels and replace \code{$xaxe.interval}; dates outside the window or
-not readable are left out (NOTE). Blank: \code{$xaxe.interval} is
-used. With date windows, only listed dates that are plotted days are
+labels. When it holds any date, \code{$xaxe.interval} is ignored (no
+date within the window: no date labels, NOTE). Dates outside the window
+or not readable are left out (NOTE). Blank, or no readable date:
+\code{$xaxe.interval} is used. With date windows, only listed dates that are plotted days are
 labelled.}
 \item{\code{$xaxe.interval}}{Number of evenly spaced labeled dates on
 the X axis, from \code{$date.start} to \code{$date.end}. An unusable

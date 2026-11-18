@@ -510,3 +510,34 @@ cat("fileA nrow (should be 3 - merge succeeded even though cap was already met):
     nrow(res.v2c$fileA), "\n")
 cat("fileC exists (should be FALSE - blocked by the cap):", "fileC" %in% names(res.v2c), "\n")
 print(res.v2c$log.file)
+
+# -----------------------------------------------------------------------------
+# NEW: load.pattern - load only matching files, named after the file ID
+# (self-contained: builds its own made-up files in tempdir())
+# -----------------------------------------------------------------------------
+library(Batz)
+ok <- function(cond, msg) { if (!isTRUE(cond)) stop("FAILED: ", msg, call. = FALSE); cat("ok -", msg, "\n") }
+d.pat <- file.path(tempdir(), "loadfiles_pattern"); unlink(d.pat, recursive = TRUE); dir.create(d.pat)
+st <- data.frame(aru.name = c("A", "B"), date = c("2026-06-26", "2026-06-27"), sunset = c("20:33", "20:34"))
+write.csv(st[1, ], file.path(d.pat, "proj_suntimes_20260626to20260626_20261117101010.csv"), row.names = FALSE)
+write.csv(st[2, ], file.path(d.pat, "proj_suntimes_20260627to20260627_20261117101011.csv"), row.names = FALSE)
+write.csv(data.frame(x = 1), file.path(d.pat, "proj_suntimes_odd.csv"), row.names = FALSE)          # different columns
+write.csv(data.frame(aru.name = "A", latitude = 1), file.path(d.pat, "site.arulist.csv"), row.names = FALSE)
+write.csv(data.frame(z = 1), file.path(d.pat, "other.csv"), row.names = FALSE)
+
+e <- new.env()
+r <- local(batz.datawrangler_load.files(d.pat, load.pattern = "*suntimes*csv"), envir = e)
+print(names(r))
+ok(nrow(r$suntimes) == 2 && "suntimes [proj_suntimes_odd]" %in% names(r) && !"other" %in% names(r),
+   "\"*suntimes*csv\": both suntimes CSVs merged into object 'suntimes'; different columns -> 'suntimes [<file>]'; other files not read")
+r2 <- batz.datawrangler_load.files(d.pat, load.pattern = c("*suntimes*csv", "arulist"), duplicates.skip = TRUE)
+ok(identical(sort(names(r2)), c("arulist", "suntimes")) && nrow(r2$suntimes) == 1,
+   "two IDs; ID without wildcards matches names containing it; duplicates.skip = TRUE keeps the first file only")
+r3 <- batz.datawrangler_load.files(d.pat, load.pattern = c("*nothing*", "*arulist*"))     # NOTE: no file for *nothing*
+ok(identical(names(r3), "arulist"), "an ID with no file: NOTE, others still loaded")
+r4 <- batz.datawrangler_load.files(d.pat, load.pattern = "")
+ok(length(r4) == 5, "load.pattern = \"\": every file, each named after its file")
+ok(exists("suntimes", envir = globalenv()), "objects also assigned in the calling environment")
+r5 <- batz.datawrangler_load.files(d.pat, pattern = "*arulist*")               # WARNING: old name
+ok(identical(names(r5), "arulist"), "old argument name pattern still read (WARNING)")
+cat("\nALL load.pattern TESTS PASSED\n")

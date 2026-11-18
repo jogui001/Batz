@@ -198,9 +198,10 @@
 #'   \item{Optional: \code{$date.interval}}{X-axis label dates, separated by
 #'     ";" (e.g. \code{"6/26/2026; 7/1/2026; 7/15/2026"}; m/d/Y, Y-m-d or
 #'     m/d/y). The dates within \code{$date.start} to \code{$date.end} are the
-#'     labels and replace \code{$xaxe.interval}; dates outside the window or
-#'     not readable are left out (NOTE). Blank: \code{$xaxe.interval} is
-#'     used.}
+#'     labels. When it holds any date, \code{$xaxe.interval} is ignored (no
+#'     date within the window: no date labels, NOTE). Dates outside the window
+#'     or not readable are left out (NOTE). Blank, or no readable date:
+#'     \code{$xaxe.interval} is used.}
 #'   \item{\code{$xaxe.interval}}{Number of evenly spaced labeled dates on
 #'     the X axis, from \code{$date.start} to \code{$date.end}. An unusable
 #'     value gives 2 labels (NOTE).}
@@ -921,15 +922,20 @@ batz.plot.barfloat_detect.1st.last <- function(data, fig.list, suntimes,
       # length.out= already lands on whole calendar days, first/last break
       # always exactly date.start/date.end) and passing them to
       # scale_x_date(breaks = ...) instead of date_breaks=.
-      xaxe.n.labels <- suppressWarnings(as.numeric(get.setting(p$job, "xaxe.interval")))
-      if (is.na(xaxe.n.labels) || xaxe.n.labels < 1) {
-        cat(sprintf("NOTE: '%s' - $xaxe.interval = '%s' is not a usable number of x-axis labels - defaulting to 2 (just date.start/date.end).\n",
-                     job.label, get.setting(p$job, "xaxe.interval")))
-        xaxe.n.labels <- 2
-      }
-      xaxe.breaks <- seq(p$date.start, p$date.end, length.out = round(xaxe.n.labels))
+      ## $date.interval with dates: those are the labels and $xaxe.interval is ignored
       date.int <- plotutil_date_interval(get.setting(p$job, "date.interval"), p$date.start, p$date.end, job.label)
-      if (!is.null(date.int)) xaxe.breaks <- date.int                  # $date.interval replaces $xaxe.interval
+      xaxe.n.labels <- NA_real_
+      if (!is.null(date.int)) {
+        xaxe.breaks <- date.int
+      } else {
+        xaxe.n.labels <- suppressWarnings(as.numeric(get.setting(p$job, "xaxe.interval")))
+        if (is.na(xaxe.n.labels) || xaxe.n.labels < 1) {
+          cat(sprintf("NOTE: '%s' - $xaxe.interval = '%s' is not a usable number of x-axis labels - defaulting to 2 (just date.start/date.end).\n",
+                       job.label, get.setting(p$job, "xaxe.interval")))
+          xaxe.n.labels <- 2
+        }
+        xaxe.breaks <- seq(p$date.start, p$date.end, length.out = round(xaxe.n.labels))
+      }
 
       # $panel.border.linewidth (Theme category, default "0.5" - matches
       # ggplot2's own theme_bw() default for panel.border, so nothing

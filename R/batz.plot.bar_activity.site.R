@@ -244,9 +244,10 @@
 #'   \item{Optional: \code{$date.interval}}{X-axis label dates, separated by
 #'     ";" (e.g. \code{"6/26/2026; 7/1/2026; 7/15/2026"}; m/d/Y, Y-m-d or
 #'     m/d/y). The dates within \code{$date.start} to \code{$date.end} are the
-#'     labels and replace \code{$xaxe.interval}; dates outside the window or
-#'     not readable are left out (NOTE). Blank: \code{$xaxe.interval} is
-#'     used. With date windows, only listed dates that are plotted days are
+#'     labels. When it holds any date, \code{$xaxe.interval} is ignored (no
+#'     date within the window: no date labels, NOTE). Dates outside the window
+#'     or not readable are left out (NOTE). Blank, or no readable date:
+#'     \code{$xaxe.interval} is used. With date windows, only listed dates that are plotted days are
 #'     labelled.}
 #'   \item{\code{$xaxe.interval}}{Number of evenly spaced labeled dates on
 #'     the X axis, from \code{$date.start} to \code{$date.end}. An unusable
@@ -1002,15 +1003,20 @@ batz.plot.bar_activity.site <- function(data, fig.list = NULL, suntimes = NULL,
         if (is.na(xaxe.date.labels.fmt) || !nzchar(trimws(xaxe.date.labels.fmt))) xaxe.date.labels.fmt <- "%b-%d"
       }
       xaxe.date.labels.fmt <- gsub("\\n", "\n", gsub("/n", "\n", xaxe.date.labels.fmt, fixed = TRUE), fixed = TRUE)
-      xaxe.n.labels <- suppressWarnings(as.numeric(get.setting(p$job, "xaxe.interval")))
-      if (is.na(xaxe.n.labels) || xaxe.n.labels < 1) {
-        cat(sprintf("NOTE: '%s' - $xaxe.interval = '%s' is not a usable number of x-axis labels - defaulting to 2 (just date.start/date.end).\n",
-                     job.label, get.setting(p$job, "xaxe.interval")))
-        xaxe.n.labels <- 2
-      }
-      xaxe.breaks <- seq(p$date.start, p$date.end, length.out = round(xaxe.n.labels))
+      ## $date.interval with dates: those are the labels and $xaxe.interval is ignored
       date.int <- plotutil_date_interval(get.setting(p$job, "date.interval"), p$date.start, p$date.end, job.label)
-      if (!is.null(date.int)) xaxe.breaks <- date.int                  # $date.interval replaces $xaxe.interval
+      xaxe.n.labels <- NA_real_
+      if (!is.null(date.int)) {
+        xaxe.breaks <- date.int
+      } else {
+        xaxe.n.labels <- suppressWarnings(as.numeric(get.setting(p$job, "xaxe.interval")))
+        if (is.na(xaxe.n.labels) || xaxe.n.labels < 1) {
+          cat(sprintf("NOTE: '%s' - $xaxe.interval = '%s' is not a usable number of x-axis labels - defaulting to 2 (just date.start/date.end).\n",
+                       job.label, get.setting(p$job, "xaxe.interval")))
+          xaxe.n.labels <- 2
+        }
+        xaxe.breaks <- seq(p$date.start, p$date.end, length.out = round(xaxe.n.labels))
+      }
       ## date windows: the X axis holds only the listed days, side by side
       p$pd$x.val <- if (is.null(p$date.days)) p$pd$date.parsed else
         factor(format(p$pd$date.parsed, "%Y-%m-%d"), levels = format(p$date.days, "%Y-%m-%d"))
