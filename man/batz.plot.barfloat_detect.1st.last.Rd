@@ -350,8 +350,10 @@ at \code{ggsave.dpi}. A \code{Saved:} line is printed per file.
 of the saved PNG in inches. "1/3 page" = 6 x 3.5, "1/2 page" = 6 x 4,
 "2/3 page" = 6 x 6, "1 page" = 6 x 7.5, "1/3 ppt" = 6 x 3,
 "1/2 ppt" = 12 x 3, "2/3 ppt" = 8 x 6, "1 ppt" = 12 x 6 (case and
-spaces ignored), or any "W x H" (e.g. "7 x 4"). It replaces
-plot.width, plot.height, the pads and ggsave.units. Blank or "NA":
+spaces ignored), or any "W x H" in \code{ggsave.units} (e.g. "7 x 4"
+inches, or "18 x 10" with \code{ggsave.units} cm), or with its own unit
+("18 x 10 cm", "180 x 100 mm"). It replaces plot.width, plot.height and
+the pads. Blank or "NA":
 the plotopts size settings are used; any other entry gives a NOTE and
 the plotopts size. The old spelling $plot.dimentions is also read, and it
 can be typed into the call (e.g. plot.dimensions = "1/2 page").}

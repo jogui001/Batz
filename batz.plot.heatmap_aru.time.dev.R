@@ -266,4 +266,23 @@ ok(th$strip.text$size == 7 && th$legend.text$size == 6 && th$axis.text.y$size ==
 ok(is.null(re$ggplots[[1]]$scales$get_scales("colour")$name), "reference.line.legend.title \"NA\" / blank: no legend title")
 ok(identical(px(last.png("excel")), c(600L, 400L)), "fig.list plot.dimensions \"1/2 page\" (6 x 4 in) over plotopts plot.width / plot.height")
 
+## ---- 17. strip.text.box; "W x H" in ggsave.units ----
+gb <- function(r) { g <- ggplot2::ggplotGrob(r$ggplots[[1]]); i <- grep("^strip-t", g$layout$name)[1]
+  grid::convertHeight(sum(g$grobs[[i]]$heights), "in", valueOnly = TRUE) }
+pdf(NULL)
+r0 <- batz.plot.heatmap_aru.time(pf2, fl6, dir.save = dir.out, save.auto = "print", strip.text.size = 8)
+rA <- batz.plot.heatmap_aru.time(pf2, fl6, dir.save = dir.out, save.auto = "print", strip.text.box = "AUTO", strip.text.size = 8)
+rN <- batz.plot.heatmap_aru.time(pf2, fl6, dir.save = dir.out, save.auto = "print", strip.text.box = "0.5", strip.text.size = 8)
+rC <- batz.plot.heatmap_aru.time(pf2, fl6, dir.save = dir.out, save.auto = "print", strip.text.box = "1", ggsave.units = "cm")
+dev.off()
+ok(gb(rA) < gb(r0), "strip.text.box AUTO: box fitted to the 8 pt text (smaller than R's own)")
+ok(abs(gb(rN) - 0.5) < 0.03, "strip.text.box 0.5 (ggsave.units in): box 0.5 in tall")
+ok(abs(gb(rC) - 1 / 2.54) < 0.03, "strip.text.box 1 with ggsave.units cm: box 1 cm tall")
+fd <- fl; fd$plot.dimensions <- "15 x 10"
+batz.plot.heatmap_aru.time(pf, fd, project.name = "dimcm", dir.save = dir.out, ggsave.dpi = 100, ggsave.units = "cm")
+ok(all(abs(px(last.png("dimcm")) - c(590.6, 393.7)) <= 1), "plot.dimensions \"15 x 10\" with ggsave.units cm = 15 x 10 cm")
+fd$plot.dimensions <- "150 x 100 mm"
+batz.plot.heatmap_aru.time(pf, fd, project.name = "dimmm", dir.save = dir.out, ggsave.dpi = 100)
+ok(all(abs(px(last.png("dimmm")) - c(590.6, 393.7)) <= 1), "plot.dimensions with its own unit (150 x 100 mm)")
+
 cat("\nALL TESTS PASSED - PNGs in", dir.out, "\n")

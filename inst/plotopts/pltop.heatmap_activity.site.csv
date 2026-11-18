@@ -37,3 +37,4 @@
 "Text","axis.text.x.size","","","Font size of the X-axis labels (pt). Blank = axis.text.size."
 "Text","axis.text.y.size","","","Font size of the Y-axis labels (pt). Blank = axis.text.size."
 "Text","strip.text.face","","","Font face of the panel (facet) titles: plain, bold, italic or bold.italic. Blank = the function's own face."
+"Text","strip.text.box","","","Height of the facet panel title box (the box around strip.text): AUTO = fitted to strip.text.size; a number = the box height in ggsave.units (in, cm or mm; inches where there is no ggsave.units); blank = R's own box."

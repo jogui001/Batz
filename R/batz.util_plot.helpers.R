@@ -701,7 +701,7 @@ plotutil_facet_relabel <- function(labels, alt, job.label, fn.name, aka = NULL) 
 #' c(width, height); anything else gives NULL with a NOTE.
 #' @keywords internal
 #' @noRd
-plotutil_plot_dimensions <- function(job, inputs, job.label, fn.name) {
+plotutil_plot_dimensions <- function(job, inputs, job.label, fn.name, units = "in") {
   SIZES <- list("1/3 page" = c(6, 3.5), "1/2 page" = c(6, 4), "2/3 page" = c(6, 6), "1 page" = c(6, 7.5),
                 "1/3 ppt" = c(6, 3), "1/2 ppt" = c(12, 3), "2/3 ppt" = c(8, 6), "1 ppt" = c(12, 6))
   v <- NULL
@@ -717,8 +717,12 @@ plotutil_plot_dimensions <- function(job, inputs, job.label, fn.name) {
   key <- function(x) gsub("\\s+", "", tolower(x))
   hit <- match(key(v), key(names(SIZES)))
   if (!is.na(hit)) return(SIZES[[hit]])
-  m <- regmatches(key(v), regexec("^([0-9]*\\.?[0-9]+)(in)?x([0-9]*\\.?[0-9]+)(in)?$", key(v)))[[1]]
-  if (length(m)) return(c(as.numeric(m[2]), as.numeric(m[4])))
+  ## "<width> x <height>": in ggsave.units (in, cm, mm), or with its own unit ("15 x 10 cm")
+  m <- regmatches(key(v), regexec("^([0-9]*\\.?[0-9]+)(in|cm|mm)?x([0-9]*\\.?[0-9]+)(in|cm|mm)?$", key(v)))[[1]]
+  if (length(m)) {
+    u <- if (nzchar(m[5])) m[5] else if (nzchar(m[3])) m[3] else units
+    return(plotutil_to_inch(c(as.numeric(m[2]), as.numeric(m[4])), u))
+  }
   cat(sprintf("NOTE: %s - '%s': $plot.dimensions '%s' is not one of %s or \"<width> x <height>\" - the plotopts plot.width / plot.height are used.\n",
               fn.name, job.label, v, paste0('"', names(SIZES), '"', collapse = ", ")))
   NULL
@@ -1266,7 +1270,10 @@ plotutil_excel_datetime <- function(fig.list) {
 #' \code{legend.title.size} / \code{legend.title.face},
 #' \code{legend.text.size}, \code{strip.text.size} / \code{strip.text.face}
 #' (facet panel titles). Sizes in pt; faces plain, bold, italic or
-#' bold.italic.
+#' bold.italic. \code{strip.text.box}: height of the facet title box -
+#' \code{"AUTO"} fits it to \code{strip.text.size} (a quarter of the text
+#' size above and below), a number is the box height in \code{ggsave.units}
+#' (in, cm or mm), blank keeps R's own box.
 #' @param get Function(name) returning the setting (or NA / NULL / "").
 #' @keywords internal
 #' @noRd
@@ -1280,12 +1287,27 @@ plotutil_text_theme <- function(get) {
     if (is.null(s) && is.null(fc)) return(NULL)
     ggplot2::element_text(size = s, face = fc)
   }
+  ## facet panel title box: strip.text.box "AUTO" (fits the text), a height in ggsave.units, or blank (R's own)
+  strip.el <- function() {
+    e <- el("strip.text.size", "strip.text.face")
+    b <- val("strip.text.box")
+    if (is.null(b)) return(e)
+    s <- suppressWarnings(as.numeric(val("strip.text.size"))); if (!length(s) || is.na(s)) s <- 8.8   # ggplot2's own strip size
+    pad <- if (toupper(b) == "AUTO") s * 0.25 else {
+      h <- suppressWarnings(as.numeric(b))
+      if (is.na(h)) { cat(sprintf("NOTE: strip.text.box '%s' is not AUTO or a number - R's own box used.\n", b)); return(e) }
+      u <- val("ggsave.units"); if (is.null(u)) u <- "in"
+      max(0, (plotutil_to_inch(h, u) * 72 - s) / 2)                   # box height in pt, less the text
+    }
+    m <- ggplot2::margin(t = pad, b = pad, unit = "pt")
+    if (is.null(e)) ggplot2::element_text(margin = m) else { e$margin <- m; e }
+  }
   els <- list(plot.title = el("plot.title.size", "plot.title.face"),
               axis.title = el("axis.title.size", "axis.title.face"),
               axis.title.x = el("axis.title.x.size"), axis.title.y = el("axis.title.y.size"),
               axis.text = el("axis.text.size"), axis.text.x = el("axis.text.x.size"), axis.text.y = el("axis.text.y.size"),
               legend.title = el("legend.title.size", "legend.title.face"), legend.text = el("legend.text.size"),
-              strip.text = el("strip.text.size", "strip.text.face"))
+              strip.text = strip.el())
   els <- els[!vapply(els, is.null, logical(1))]
   if (!length(els)) return(NULL)
   do.call(ggplot2::theme, els)
@@ -1297,7 +1319,7 @@ plotutil_text_theme <- function(get) {
 PLOTUTIL_TEXT_SETTINGS <- c("plot.title.size", "plot.title.face", "axis.title.size", "axis.title.face",
                             "axis.title.x.size", "axis.title.y.size", "axis.text.size", "axis.text.x.size",
                             "axis.text.y.size", "legend.title.size", "legend.title.face", "legend.text.size",
-                            "strip.text.size", "strip.text.face")
+                            "strip.text.size", "strip.text.face", "strip.text.box")
 
 #' A legend / axis title setting: blank, NA or "NA" gives no title (internal)
 #' @keywords internal
@@ -1320,4 +1342,13 @@ plotutil_po_value <- function(po, aes.style, p) {
   v <- if (!is.na(col)) as.character(po[[col]][i]) else NA
   if (is.na(v) || !nzchar(trimws(v))) v <- if ("default.value" %in% names(po)) as.character(po$default.value[i]) else NA
   v
+}
+
+
+#' Length in ggsave.units (in, cm, mm, px) to inches (internal)
+#' @keywords internal
+#' @noRd
+plotutil_to_inch <- function(x, units = "in") {
+  u <- tolower(trimws(as.character(units)[1])); if (is.na(u) || !nzchar(u)) u <- "in"
+  x * switch(u, "in" = 1, "inch" = 1, "inches" = 1, "cm" = 1 / 2.54, "mm" = 1 / 25.4, "px" = 1 / 96, 1)
 }

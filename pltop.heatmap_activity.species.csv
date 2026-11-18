@@ -18,7 +18,7 @@
 "Legend","legend.title","Number of Observations","","Legend title."
 "Legend","legend.position","bottom","","bottom, top, left, right or none."
 "Panel layout","facpan.numcol","1","","Columns of facet panels when facet.plot = TRUE."
-"Panel layout","facpan.hgt","3","","Height (inches) per row of facet panels when there is more than one row."
+"Panel layout","facpan.hgt","3","","Height (ggsave.units (in, cm or mm)) per row of facet panels when there is more than one row."
 "Text sizes","plot.title.size","10","","Plot title size (pt)."
 "Text sizes","plot.title.face","bold","","Font face of the plot title: plain, bold, italic or bold.italic."
 "Text sizes","axis.title.size","10","","Axis title size (pt)."
@@ -37,3 +37,4 @@
 "Text","axis.text.x.size","","","Font size of the X-axis labels (pt). Blank = axis.text.size."
 "Text","axis.text.y.size","","","Font size of the Y-axis labels (pt). Blank = axis.text.size."
 "Text","strip.text.face","","","Font face of the panel (facet) titles: plain, bold, italic or bold.italic. Blank = the function's own face."
+"Text","strip.text.box","","","Height of the facet panel title box (the box around strip.text): AUTO = fitted to strip.text.size; a number = the box height in ggsave.units (in, cm or mm; inches where there is no ggsave.units); blank = R's own box."

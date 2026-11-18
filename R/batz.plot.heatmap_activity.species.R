@@ -263,8 +263,10 @@
 #'     of the saved PNG in inches. "1/3 page" = 6 x 3.5, "1/2 page" = 6 x 4,
 #'     "2/3 page" = 6 x 6, "1 page" = 6 x 7.5, "1/3 ppt" = 6 x 3,
 #'     "1/2 ppt" = 12 x 3, "2/3 ppt" = 8 x 6, "1 ppt" = 12 x 6 (case and
-#'     spaces ignored), or any "W x H" (e.g. "7 x 4"). It replaces
-#'     plot.width, plot.height, the pads and ggsave.units. Blank or "NA":
+#'     spaces ignored), or any "W x H" in \code{ggsave.units} (e.g. "7 x 4"
+#'     inches, or "18 x 10" with \code{ggsave.units} cm), or with its own unit
+#'     ("18 x 10 cm", "180 x 100 mm"). It replaces plot.width, plot.height and
+#'     the pads. Blank or "NA":
 #'     the plotopts size settings are used; any other entry gives a NOTE and
 #'     the plotopts size. The old spelling $plot.dimentions is also read, and it
 #'     can be typed into the call (e.g. plot.dimensions = "1/2 page").}
@@ -577,9 +579,9 @@ batz.plot.heatmap_activity.species <- function(data,
                            t.start = t.start, t.end = t.end)
       fname <- file.path(dir.save, pu$fname)
       n.rows <- if (pu$faceted) ceiling(length(pu$facets) / max(1, num.opt(job, "facpan.numcol"))) else 1
-      height <- if (pu$faceted && n.rows > 1) num.opt(job, "facpan.hgt") * n.rows + 1.5 else num.opt(job, "plot.height")
+      height <- if (pu$faceted && n.rows > 1) num.opt(job, "facpan.hgt") * n.rows + 1.5 / plotutil_to_inch(1, setting(job, "ggsave.units")) else num.opt(job, "plot.height")
       out$plot <- out$plot + plotutil_text_theme(function(k) setting(job, k))   # text sizes / faces (call, fig.list, plotopts)
-      dims <- plotutil_plot_dimensions(job, plot.inputs, job.label, FN)   # $plot.dimensions (inches)
+      dims <- plotutil_plot_dimensions(job, plot.inputs, job.label, FN, units = setting(job, "ggsave.units"))   # $plot.dimensions (returned in inches)
       sv$out(out$plot, fname, function(.f) plotutil_ggsave(.f, plot = out$plot, width = if (!is.null(dims)) dims[1] else num.opt(job, "plot.width"),
                       height = if (!is.null(dims)) dims[2] else height,
                       units = if (!is.null(dims)) "in" else setting(job, "ggsave.units"), dpi = num.opt(job, "ggsave.dpi")))

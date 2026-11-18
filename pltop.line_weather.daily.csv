@@ -39,3 +39,4 @@
 "Text","legend.text.size","","","Font size of the legend labels (pt). Blank = the function's own size."
 "Text","strip.text.size","","","Font size of the panel (facet) titles, e.g. the ARU or site names (pt). Blank = the function's own size."
 "Text","strip.text.face","","","Font face of the panel (facet) titles: plain, bold, italic or bold.italic. Blank = the function's own face."
+"Text","strip.text.box","","","Height of the facet panel title box (the box around strip.text): AUTO = fitted to strip.text.size; a number = the box height in ggsave.units (in, cm or mm; inches where there is no ggsave.units); blank = R's own box."
