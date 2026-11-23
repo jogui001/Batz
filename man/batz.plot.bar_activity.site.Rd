@@ -110,7 +110,9 @@ used. With the default, an old \code{$overide.value} column is still
 read when there is no \code{$override.value} column.}
 
 \item{dir.save}{Character, default \code{getwd()}. Folder every PNG is
-saved into.
+saved into. \code{NULL}: no file is saved and nothing is printed; the
+plots are only returned (used by
+\code{\link{batz.plot.barline_meancalls.weather}}).
 A legend at the top or bottom that is wider than the saved image is
 wrapped over two or more lines, and the saved height grows by the
 extra legend height so the panels keep their size.}
@@ -326,6 +328,12 @@ positive number uses the largest count in the plot (NOTE).}
 \item{Optional: \code{$legend}}{TRUE colors side-by-side bars by their
 \code{$plot.set} value and shows a legend for them.}
 \item{Optional: \code{$xaxe.title}, \code{$yaxe.title}}{Axis titles.}
+\item{Optional: \code{$break.start}, \code{$break.end}}{Nights a
+detector failed (m/d/Y, Y-m-d or m/d/y; several windows as ";" lists,
+paired in order). The nights from \code{$break.start} to
+\code{$break.end} are shaded behind the bars in every panel with the
+plotopts colour \code{break.fill} (default \code{grey85}). Not shaded
+on a plot with date windows (NOTE). Blank: nothing shaded.}
 }
 Each optional column, when blank or missing, falls back to the plotopts
 parameter of the same name. Old fig.list files still load: \code{$facet}
@@ -397,10 +405,13 @@ top, so the overlay is never hidden. With side-by-side bars each
 \item Colors: with side-by-side bars and \code{$legend} TRUE, each group
 value gets its own color from \code{legend.groupval.colors} (legend
 title \code{legend.groupval.title}) and 40kHzMyo keeps
-\code{bar.40khzmyo.fill}. The legend shows the detectors (group
-values) on one row and 40kHzMyo on the row below. When the detectors
-do not fit across the saved width they wrap over more rows, and
-40kHzMyo stays on its own row below them. Otherwise bars use
+\code{bar.40khzmyo.fill}. Where the 40kHzMyo key goes is set by the
+plotopts row (or fig.list column) \code{legend.40khzmyo}:
+\code{"before"} (default, also when blank or missing) = first, then
+the detectors (group values), on one row; \code{"after"} = after the
+detectors on one row; \code{"below"} = on its own row under the
+detectors. When the detectors do not fit across the saved width they
+wrap over more rows. Otherwise bars use
 \code{bar.alldetections.fill} and \code{bar.40khzmyo.fill} (legend
 title \code{bar.fill.legend.title}, showing only the 40kHzMyo key).
 \item The X axis runs from \code{$date.start} to \code{$date.end} plus

@@ -1,0 +1,32 @@
+sunregion,aru.label,plot,color.name,color.hex
+105059,105059-NW3,per ARU,teal green,#1b9e77
+105059,105059-SE3,per ARU,orange,#d95f02
+105059,105059-SW3,per ARU,purple,#7570b3
+105059,105059,mean per ARU,red,#FF0000
+105059,105059-MOB,mean per ARU,blue,#1f78b4
+107802,107802-NW1,per ARU,teal green,#1b9e77
+107802,107802-NW3,per ARU,orange,#d95f02
+107802,107802-SW1,per ARU,purple,#7570b3
+107802,107802,mean per ARU,red,#FF0000
+107802,107802-MOB,mean per ARU,blue,#1f78b4
+108325,108325-NE1,per ARU,teal green,#1b9e77
+108325,108325-NW,per ARU,orange,#d95f02
+108325,108325-SE1,per ARU,purple,#7570b3
+108325,108325,mean per ARU,red,#FF0000
+108325,108325-MOB,mean per ARU,blue,#1f78b4
+1079,1079-NE1,per ARU,teal green,#1b9e77
+1079,1079-NE2,per ARU,orange,#d95f02
+1079,1079-SE1,per ARU,purple,#7570b3
+1079,1079,mean per ARU,red,#FF0000
+1079,1079-MOB,mean per ARU,blue,#1f78b4
+5175,5175-NW1,per ARU,teal green,#1b9e77
+5175,5175-SE1,per ARU,orange,#d95f02
+5175,5175-SW3,per ARU,purple,#7570b3
+5175,5175,mean per ARU,red,#FF0000
+5175,5175-MOB,mean per ARU,blue,#1f78b4
+55,55-NW1,per ARU,teal green,#1b9e77
+55,55-NW3,per ARU,orange,#d95f02
+55,55-SW1,per ARU,purple,#7570b3
+55,55,mean per ARU,red,#FF0000
+55,55-MOB,mean per ARU,blue,#1f78b4
+all,40kHzMyo,all bat plots,black,#000000

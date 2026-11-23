@@ -903,3 +903,35 @@ for (k in c(3, 9)) {                                                  # 9 detect
 }
 print(list.files(lg.dir))                                             # open the PNGs: detectors, then 40kHzMyo below
 cat("legend rows: passed\n")
+
+## ---------------------------------------------------------------------------
+## 2026-11-19: legend.40khzmyo - "before" (default): 40kHzMyo key first, then
+## the detectors, one row; "after": after them; "below": own row underneath
+## ---------------------------------------------------------------------------
+g.3 <- paste0("Detector-", LETTERS[1:3])
+d.3 <- do.call(rbind, lapply(g.3, function(x) transform(mk(c("All Detections", "40KHzMyo", "EPFU")), group = x, aru.name = x)))
+f.3 <- f.al; f.3$plot.set <- paste(g.3, collapse = ";"); f.3$plot.name <- "legend.40khzmyo"
+for (pos in c("before", "after", "below")) {
+  r.p <- batz.plot.bar_activity.site(d.3, f.3, st, aes.obs, dir.save = NULL, legend.40khzmyo = pos)
+  gg <- r.p$ggplots[[1]]
+  o.fill <- gg$scales$get_scales("fill")$guide$params$order
+  o.col <- gg$scales$get_scales("colour")$guide$params$order
+  if (is.null(o.fill)) { o.fill <- gg$scales$get_scales("fill")$guide$order; o.col <- gg$scales$get_scales("colour")$guide$order }
+  stopifnot(if (pos == "before") o.col < o.fill else o.fill < o.col,
+            identical(gg$theme$legend.box, if (pos == "below") "vertical" else "horizontal"))
+  cat("legend.40khzmyo =", pos, ": ok\n")
+}
+r.p <- batz.plot.bar_activity.site(d.3, f.3, st, aes.obs, dir.save = NULL)
+stopifnot(identical(r.p$ggplots[[1]]$theme$legend.box, "horizontal"))   # default: before, one row
+cat("legend.40khzmyo: passed\n")
+
+## ---------------------------------------------------------------------------
+## 2026-11-19: $break.start / $break.end - failed-detector nights shaded (break.fill)
+## ---------------------------------------------------------------------------
+f.b <- f.3; f.b$break.start <- format(min(as.Date(d.3$date))); f.b$break.end <- format(min(as.Date(d.3$date)) + 1)
+g.b <- batz.plot.bar_activity.site(d.3, f.b, st, aes.obs, dir.save = NULL)$ggplots[[1]]
+stopifnot(inherits(g.b$layers[[1]]$geom, "GeomRect"))                 # shading is the first (bottom) layer
+f.b$break.end <- ""                                                    # unpaired: NOTE, nothing shaded
+g.b <- batz.plot.bar_activity.site(d.3, f.b, st, aes.obs, dir.save = NULL)$ggplots[[1]]
+stopifnot(!inherits(g.b$layers[[1]]$geom, "GeomRect"))
+cat("break.start / break.end: passed\n")

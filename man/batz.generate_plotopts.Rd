@@ -10,7 +10,8 @@ batz.generate_plotopts(
     "batz.plot.barfloat_detect.1st.last", "batz.plot.bullseye_clutter.mic",
     "batz.plot.heatmap_activity.time", "batz.plot.heatmap_activity.species",
     "batz.plot.heatmap_aru.time", "batz.plot.bar_vegetation.species",
-    "batz.plot.box_vegetation.dbh", "batz.plot.line_weather.daily"),
+    "batz.plot.box_vegetation.dbh", "batz.plot.line_weather.daily",
+    "batz.plot.line_weather.average", "batz.plot.barline_meancalls.weather"),
   project.name = "new project",
   file.format = c("csv", "xlsx"),
   dir.save = getwd(),
@@ -27,7 +28,8 @@ every plot function with built-in settings:
 \code{"batz.plot.bullseye_clutter.mic"},
 \code{"batz.plot.heatmap_activity.time"}, \code{"batz.plot.heatmap_activity.species"},
 \code{"batz.plot.heatmap_aru.time"}, \code{"batz.plot.bar_vegetation.species"},
-\code{"batz.plot.box_vegetation.dbh"}, \code{"batz.plot.line_weather.daily"}.}
+\code{"batz.plot.box_vegetation.dbh"}, \code{"batz.plot.line_weather.daily"},
+\code{"batz.plot.line_weather.average"}, \code{"batz.plot.barline_meancalls.weather"}.}
 
 \item{project.name}{Character, default \code{"new project"}. Leading part
 of each output file name, and the name of the column that holds the

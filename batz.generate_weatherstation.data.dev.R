@@ -99,17 +99,64 @@ stopifnot(!anyDuplicated(w9$weatherstation.data[, c("station.code", "date.time_u
 w9$weatherstation.list[, c("site", "station.code")]          # still one row per site and station
 
 ## ---- TEST 10: save the weather data (2026-11-09) -----------------------------
-## save = TRUE (default): <project.name>_weatherdata_<first date>to<last date>_<timestamp>.csv in dir.save
+## save.auto = TRUE (default): <project.name>_weatherdata_<date.start>to<date.end>_<timestamp>.xlsx in dir.save
+## (2026-11-23: an Excel workbook with tabs Weatherdata, settings, log)
 ## (the tests above also save, into the working directory)
 dir.w <- file.path(tempdir(), "weather_test")
 w10 <- batz.generate_weatherstation.data(test.data[1, ], station.max = 1, date.start = "2026-07-01", date.end = "2026-07-02",
                                          dir.save = dir.w, project.name = "Bristol NH")
-print(basename(w10$file))                   # Bristol-NH_weatherdata_20260701to20260702_<YYYYMMDDHHMMSS>.csv
-stopifnot(grepl("^Bristol-NH_weatherdata_\\d{8}to\\d{8}_\\d{14}\\.csv$", basename(w10$file)),
-          nrow(read.csv(w10$file)) == nrow(w10$weatherstation.data))
+print(basename(w10$file))                   # Bristol-NH_weatherdata_20260701to20260702_<YYYYMMDDHHMMSS>.xlsx
+stopifnot(grepl("^Bristol-NH_weatherdata_20260701to20260702_\\d{14}\\.xlsx$", basename(w10$file)),
+          identical(openxlsx::getSheetNames(w10$file), c("Weatherdata", "settings", "log")),
+          nrow(openxlsx::read.xlsx(w10$file, "Weatherdata")) == nrow(w10$weatherstation.data))
 w10b <- batz.generate_weatherstation.data(test.data[1, ], station.max = 1, date.start = "2026-07-01", date.end = "2026-07-01",
+                                          save.auto = FALSE)
+stopifnot(is.na(w10b$file))                 # save.auto = FALSE: no file
+## the old argument save = FALSE still works (WARNING: used as save.auto = FALSE)
+w10c <- batz.generate_weatherstation.data(test.data[1, ], station.max = 1, date.start = "2026-07-01", date.end = "2026-07-01",
                                           save = FALSE)
-stopifnot(is.na(w10b$file))                 # save = FALSE: no file
+stopifnot(is.na(w10c$file))
+## offline (no API key needed): the WARNING, and an unknown argument stops
+d1 <- data.frame(site = "a", site.latitude = 44, site.longitude = -70)
+out <- capture.output(try(batz.generate_weatherstation.data(d1, date.start = "2026-07-01", date.end = "2026-07-01", api.key = "", save = FALSE), silent = TRUE))
+stopifnot(any(grepl("WARNING.*'save' has been replaced by save.auto - used as save.auto = FALSE", out)))
+e <- try(batz.generate_weatherstation.data(d1, date.start = "2026-07-01", date.end = "2026-07-01", api.key = "", plot = TRUE), silent = TRUE)
+stopifnot(grepl("unknown argument\\(s\\): plot", e))
+
+## ---- TEST 11: $sunregion / $sunregion.longitude / $sunregion.latitude as $site (2026-11-18) ----
+## e.g. the output of batz.generate_unique.sunregion(): each sun region is a site
+sr <- data.frame(sunregion = c("105059", "1079"),
+                 Sunregion_Longitude = c(-70.87683101, -68.82454564),
+                 "sunregion latitude" = c(44.77018801, 46.84034242), check.names = FALSE)
+h <- Batz:::wu.sunregion.headers(sr)                       # no API key needed
+stopifnot(identical(names(h), c("site", "site.longitude", "site.latitude")), identical(h$site, sr$sunregion))
+## an ARU list with $aru.name / $latitude / $longitude keeps using those
+al <- data.frame(aru.name = "A1", latitude = 44, longitude = -70, sunregion = "R1", sunregion.latitude = 45, sunregion.longitude = -71)
+stopifnot(identical(names(Batz:::wu.sunregion.headers(al)), names(al)))
+## $site headers come first
+td <- cbind(test.data, sunregion = "R1", sunregion.latitude = 45, sunregion.longitude = -71)
+stopifnot(identical(names(Batz:::wu.sunregion.headers(td)), names(td)))
+w11 <- batz.generate_weatherstation.data(sr, station.max = 1, date.start = "2026-07-08", date.end = "2026-07-08", save.auto = FALSE)
+stopifnot(setequal(unique(unlist(strsplit(w11$weatherstation.list$site, ";"))), sr$sunregion))
+# sr <- batz.generate_unique.sunregion("NA-Bat_20261118173904.arulist.csv", dir.save = NULL)
+# w <- batz.generate_weatherstation.data(sr, date.start = "2026-07-07", date.end = "2026-08-18", project.name = "NA-Bat")
+
+## ---- TEST 12: sunregion = TRUE / FALSE with an ARU list (2026-11-23) ----------------
+## TRUE (default): one location per $sunregion at $sunregion.latitude / $sunregion.longitude;
+## FALSE: one per $aru.name at $latitude / $longitude. $aru.name / $aru.label list the ARUs (";").
+arulist <- data.frame(aru.name = c("Clerk", "SugarHill"), aru.label = c("Clerk-N", "SugarHill-S"),
+                      latitude = c(43.59224283, 43.59525033), longitude = c(-71.7364705, -71.73053717),
+                      sunregion = "Bristol", sunregion.latitude = 43.5937, sunregion.longitude = -71.7335)
+w12 <- batz.generate_weatherstation.data(arulist, station.max = 1, date.start = "2026-06-26", date.end = "2026-06-27",
+                                         dir.save = file.path(tempdir(), "weather_test"), project.name = "Bristol NH")
+stopifnot(identical(w12$log$site, "Bristol"), w12$log$aru.name == "Clerk;SugarHill", w12$log$aru.label == "Clerk-N;SugarHill-S",
+          all(c("aru.name", "aru.label") %in% names(w12$weatherstation.data)),
+          all(c("sunregion_setting", "distance.max", "station.max", "station.type", "query.max", "sample.interval_min", "weather.type",
+                "weather.patched", "date.start_weather", "date.end_weather") %in% names(w12$settings)))
+w12$log                                     # status, stations picked / skipped, days with no data, % hours with data per weather.type
+w12b <- batz.generate_weatherstation.data(arulist, sunregion = FALSE, station.max = 1, date.start = "2026-06-26", date.end = "2026-06-26",
+                                          save.auto = FALSE)
+stopifnot(identical(w12b$log$site, c("Clerk", "SugarHill")), identical(w12b$log$aru.label, c("Clerk-N", "SugarHill-S")))
 
 ## ---- save ------------------------------------------------------------------
 # write.csv(w1$weatherstation.data, "weatherstation.data.csv", row.names = FALSE)

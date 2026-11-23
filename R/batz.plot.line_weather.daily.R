@@ -693,7 +693,8 @@ batz.plot.line_weather.daily <- function(data, suntimes = NULL, date.start = NUL
 #' Settings of batz.plot.line_weather.daily from aes.plotopts (internal)
 #'
 #' Reads a plotopts table (data frame, or the path of a .csv / .xlsx) whose
-#' $parameter rows name arguments of batz.plot.line_weather.daily. For each
+#' $parameter rows name arguments of batz.plot.line_weather.daily (or of the
+#' function whose formals are given as fm; skip = arguments never read). For each
 #' argument not given in the call, the aes.style column (else
 #' $default.value) is used when not blank, converted like the argument's
 #' default: numbers and TRUE/FALSE as such, lists separated by ";". A value
@@ -701,7 +702,8 @@ batz.plot.line_weather.daily <- function(data, suntimes = NULL, date.start = NUL
 #' values to use.
 #' @keywords internal
 #' @noRd
-weather.daily.plotopts <- function(aes.plotopts, aes.style, given, FN) {
+weather.daily.plotopts <- function(aes.plotopts, aes.style, given, FN, fm = formals(batz.plot.line_weather.daily),
+                                   skip = c("data", "suntimes", "date.start", "date.end", "project.name", "dir.save", "aes.plotopts", "aes.style")) {
   if (is.null(aes.plotopts)) return(list())
   po <- aes.plotopts
   if (is.character(po)) {
@@ -711,8 +713,6 @@ weather.daily.plotopts <- function(aes.plotopts, aes.style, given, FN) {
   }
   if (!is.data.frame(po) || !all(c("parameter", "default.value") %in% names(po)))
     stop(FN, ": aes.plotopts must be a data frame (or .csv / .xlsx path) with $parameter and $default.value.", call. = FALSE)
-  fm <- formals(batz.plot.line_weather.daily)
-  skip <- c("data", "suntimes", "date.start", "date.end", "project.name", "dir.save", "aes.plotopts", "aes.style")
   usable <- setdiff(names(fm), skip)
   style.col <- plotutil_aes_style_col(po, aes.style)
   blank <- function(x) is.null(x) || length(x) == 0 || is.na(x) || !nzchar(trimws(as.character(x)))
@@ -721,7 +721,7 @@ weather.daily.plotopts <- function(aes.plotopts, aes.style, given, FN) {
     p <- trimws(as.character(po$parameter[i]))
     if (blank(p)) next
     hit <- usable[plotutil_param_key(usable) == plotutil_param_key(p)]
-    if (!length(hit)) { unknown <- c(unknown, p); next }
+    if (!length(hit)) { if (!p %in% c(PLOTUTIL_TEXT_SETTINGS, "strip.text.box")) unknown <- c(unknown, p); next }   # text rows: read by plotutil_text_theme
     p <- hit[1]
     if (p %in% given) next                                    # the call wins
     v <- if (!is.na(style.col)) po[[style.col]][i] else NA

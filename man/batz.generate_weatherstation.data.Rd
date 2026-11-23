@@ -6,6 +6,7 @@
 \usage{
 batz.generate_weatherstation.data(
   data,
+  sunregion = TRUE,
   distance.max = 50,
   station.max = 10,
   station.type = c("pws", "airport"),
@@ -18,20 +19,26 @@ batz.generate_weatherstation.data(
   weather.patched = FALSE,
   date.start = NULL,
   date.end = NULL,
-  save = TRUE,
   dir.save = getwd(),
   save.auto = TRUE,
-  project.name = ""
+  project.name = "",
+  ...
 )
 }
 \arguments{
-\item{data}{A data frame with one row per site: \code{$site},
-\code{$site.latitude}, \code{$site.longitude} (decimal degrees). Headers
-are matched ignoring case and "." / "_" / spaces. \code{$aru.name},
-\code{$latitude} and \code{$longitude} are accepted in their place
-(e.g. an ARU list from \code{\link{batz.merge_sitevisit.acoustics}});
-when both are present, \code{$site}, \code{$site.latitude} and
-\code{$site.longitude} are used.}
+\item{data}{A data frame of locations, normally an ARU list
+(\verb{*arulist.csv}) with \code{$aru.name}, \code{$aru.label},
+\code{$longitude}, \code{$latitude}, \code{$sunregion},
+\code{$sunregion.longitude}, \code{$sunregion.latitude}. Which columns
+give the locations is set by \code{sunregion} (see Details,
+"Locations"). A table with \code{$site}, \code{$site.latitude},
+\code{$site.longitude} (one row per site) is also accepted. Headers are
+matched ignoring case and "." / "_" / spaces.}
+
+\item{sunregion}{Logical, default \code{TRUE}. \code{TRUE}: stations are
+found for each \code{$sunregion} at its \code{$sunregion.latitude} /
+\code{$sunregion.longitude}. \code{FALSE}: for each \code{$aru.name} at
+its \code{$latitude} / \code{$longitude}.}
 
 \item{distance.max}{Numeric, default \code{50}. How far from the site to
 look, in km. Several distances (e.g. \code{c(5, 10, 25, 50)}) also count
@@ -87,15 +94,12 @@ gaps from several stations.}
 \code{NULL} (both are required). First and last day downloaded (station
 local time).}
 
-\item{save}{Logical, default \code{TRUE}. \code{TRUE} saves
-\code{$weatherstation.data} as a CSV in \code{dir.save}, named
-\verb{<project.name>_weatherdata_<YYYYMMDD>to<YYYYMMDD>_<YYYYMMDDHHMMSS>.csv}
-(first and last date of the data, station local time, then the time
-of the run; \verb{weatherdata_...} when \code{project.name} is blank).
-Nothing is saved when no data was downloaded (NOTE).}
-
-\item{dir.save}{Character, default \code{getwd()}. Folder the CSV is saved
-in (created if needed).}
+\item{dir.save}{Character, default \code{getwd()}. Folder the Excel
+workbook is saved in (created if needed), named
+\verb{<project.name>_weatherdata_<YYYYMMDD>to<YYYYMMDD>_<YYYYMMDDHHMMSS>.xlsx}
+(\code{date.start} and \code{date.end}, then the time of the run;
+\verb{weatherdata_...} when \code{project.name} is blank). Tabs: see
+Value. It is saved also when no data was downloaded (the log says why).}
 
 \item{save.auto}{Default \code{TRUE}: the files are saved in \code{dir.save}.
 \code{FALSE}: no files are saved. \code{"BOTH"}: saved and printed.
@@ -109,16 +113,40 @@ creates every output.}
 
 \item{project.name}{Character, default \code{""}. First part of the file
 name (spaces become "-").}
+
+\item{...}{The old argument \code{save} is still read as \code{save.auto}
+(WARNING); when \code{save.auto} is also given, \code{save} is ignored.}
 }
 \value{
-Invisibly, a list: two data frames and \code{$file} (the CSV
-saved, or \code{NA}):
+Invisibly, a list: \code{$weatherstation.list},
+\code{$weatherstation.data}, \code{$settings}, \code{$log} and
+\code{$file} (the workbook saved, or \code{NA}). The workbook has three
+tabs: \code{"Weatherdata"} (\code{$weatherstation.data}),
+\code{"settings"} (\code{$settings}: a copy of \code{data} with the
+columns \code{$sunregion} (TRUE/FALSE), \code{$distance.max},
+\code{$station.max}, \code{$station.type}, \code{$query.max},
+\code{$sample.interval_min}, \code{$weather.type},
+\code{$weather.patched}, \code{$date.start_weather} and
+\code{$date.end_weather} added; lists joined with ";"; the API key is
+never written) and \code{"log"} (\code{$log}: one row per location -
+\code{$site}, \code{$aru.name}, \code{$aru.label},
+\code{$site.latitude}, \code{$site.longitude}, \code{$status}
+("downloaded", "partial" when a \code{weather.type} or a day is
+missing, or "no data"), \code{$stations.picked} (code and km),
+\code{$stations.skipped} (code and reason), \code{$observations},
+\code{$record.first}, \code{$record.last}, \code{$days.no.data}
+(count), \code{$dates.no.data} (list), and one
+\verb{$hours.with.data_<weather.type>} column per \code{weather.type}:
+the percent of the hours from \code{date.start} to \code{date.end}
+with at least one value).
 \code{$weatherstation.list} - the stations picked, in the same layout as
 \code{batz.generate_weatherstation.list()} (\code{$station.total} counts
 only picked stations; \code{$sample.interval} is measured over the
 downloaded dates), and \code{$weatherstation.data} - their
 observations: \code{$site} (every site the record was picked for,
 separated by ";", e.g. \code{"Clerk;SugarHill"} - see Details),
+\code{$aru.name} and \code{$aru.label} (every ARU of those sites,
+separated by ";"),
 \code{$station.name}, \code{$station.code},
 \code{$station.area}, \code{$station.latitude}, \code{$station.longitude},
 then \code{$date.time} (station local time), \code{$date.time_utc} and one
@@ -154,6 +182,19 @@ within \code{distance.max} km, and downloads their observations
 from \code{date.start} to \code{date.end}.
 }
 \details{
+\strong{Locations.} \code{sunregion = TRUE}: one location per
+\code{$sunregion}, at its \code{$sunregion.latitude} /
+\code{$sunregion.longitude} (a sun region with more than one pair gets
+the central point, as in \code{\link{batz.generate_unique.sunregion}});
+\code{$site} is the sun region and \code{$aru.name} / \code{$aru.label}
+list its ARUs. \code{sunregion = FALSE}: one location per
+\code{$aru.name}, at its \code{$latitude} / \code{$longitude} (an ARU
+listed with more than one pair: the first, NOTE); \code{$site} is the
+\code{$aru.name}. When the columns for the chosen setting are missing,
+the others are used (NOTE): \code{$aru.name} / \code{$latitude} /
+\code{$longitude}, else \code{$site} / \code{$site.latitude} /
+\code{$site.longitude}, else the sun-region columns.
+
 \strong{Stations shared by several sites.} A station picked for more than
 one site is downloaded once. Its records (same station and date-time) are
 listed once in \code{$weatherstation.data}, with all those sites in

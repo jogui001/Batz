@@ -110,7 +110,9 @@
 #'   used. With the default, an old \code{$overide.value} column is still
 #'   read when there is no \code{$override.value} column.
 #' @param dir.save Character, default \code{getwd()}. Folder every PNG is
-#'   saved into.
+#'   saved into. \code{NULL}: no file is saved and nothing is printed; the
+#'   plots are only returned (used by
+#'   \code{\link{batz.plot.barline_meancalls.weather}}).
 #'   A legend at the top or bottom that is wider than the saved image is
 #'   wrapped over two or more lines, and the saved height grows by the
 #'   extra legend height so the panels keep their size.
@@ -289,6 +291,12 @@
 #'   \item{Optional: \code{$legend}}{TRUE colors side-by-side bars by their
 #'     \code{$plot.set} value and shows a legend for them.}
 #'   \item{Optional: \code{$xaxe.title}, \code{$yaxe.title}}{Axis titles.}
+#'   \item{Optional: \code{$break.start}, \code{$break.end}}{Nights a
+#'     detector failed (m/d/Y, Y-m-d or m/d/y; several windows as ";" lists,
+#'     paired in order). The nights from \code{$break.start} to
+#'     \code{$break.end} are shaded behind the bars in every panel with the
+#'     plotopts colour \code{break.fill} (default \code{grey85}). Not shaded
+#'     on a plot with date windows (NOTE). Blank: nothing shaded.}
 #' }
 #' Each optional column, when blank or missing, falls back to the plotopts
 #' parameter of the same name. Old fig.list files still load: \code{$facet}
@@ -360,10 +368,13 @@
 #'   \item Colors: with side-by-side bars and \code{$legend} TRUE, each group
 #'     value gets its own color from \code{legend.groupval.colors} (legend
 #'     title \code{legend.groupval.title}) and 40kHzMyo keeps
-#'     \code{bar.40khzmyo.fill}. The legend shows the detectors (group
-#'     values) on one row and 40kHzMyo on the row below. When the detectors
-#'     do not fit across the saved width they wrap over more rows, and
-#'     40kHzMyo stays on its own row below them. Otherwise bars use
+#'     \code{bar.40khzmyo.fill}. Where the 40kHzMyo key goes is set by the
+#'     plotopts row (or fig.list column) \code{legend.40khzmyo}:
+#'     \code{"before"} (default, also when blank or missing) = first, then
+#'     the detectors (group values), on one row; \code{"after"} = after the
+#'     detectors on one row; \code{"below"} = on its own row under the
+#'     detectors. When the detectors do not fit across the saved width they
+#'     wrap over more rows. Otherwise bars use
 #'     \code{bar.alldetections.fill} and \code{bar.40khzmyo.fill} (legend
 #'     title \code{bar.fill.legend.title}, showing only the 40kHzMyo key).
 #'   \item The X axis runs from \code{$date.start} to \code{$date.end} plus
@@ -538,7 +549,7 @@ batz.plot.bar_activity.site <- function(data, fig.list = NULL, suntimes = NULL,
   ## facets and their order
   FIG.LIST.OPTIONAL <- c("date.interval", "facet.label", "plot.group", "yaxe.trans", "loglabels", "y.scale",
                           "y.custom", "ymax", "legend", "plot.dimensions", "plot.zero",
-                          "plot.zero_all.detections", "plot.zero_40khzmyo")
+                          "plot.zero_all.detections", "plot.zero_40khzmyo", "break.start", "break.end")
   AES.DEFAULT.REQUIRED <- c("category", "parameter", "default.value")
 
   ## "output.filename.pattern" deliberately removed from this required list
@@ -1122,10 +1133,17 @@ batz.plot.bar_activity.site <- function(data, fig.list = NULL, suntimes = NULL,
         pd.fill$fill.val <- ifelse(pd.fill$bar.type == "40kHzMyo", "40kHzMyo", pd.fill$group.val)
         khz.fill <- get.default("bar.40khzmyo.fill")
 
-        ## 2026-11-13, per Josh: detectors on one legend row, 40kHzMyo on the
-        ## row below. The detectors are the fill legend; the 40kHzMyo bars get
-        ## their own legend (a colour key with no outline, drawn with the
-        ## 40kHzMyo fill), placed under the detector legend.
+        ## The detectors are the fill legend; the 40kHzMyo bars get their own
+        ## legend (a colour key with no outline, drawn with the 40kHzMyo fill).
+        ## legend.40khzmyo (2026-11-19, per Josh): "before" (default) = the
+        ## 40kHzMyo key first, then the detectors, on one row; "after" = after
+        ## them on one row; "below" = on its own row under the detectors.
+        khz.at <- tolower(trimws(as.character(get.default("legend.40khzmyo"))))
+        if (is.na(khz.at) || !nzchar(khz.at)) khz.at <- "before"
+        if (!khz.at %in% c("before", "after", "below")) {
+          cat(sprintf('NOTE: %s - legend.40khzmyo "%s" is not "before", "after" or "below" - "before" used.\n', job.label, khz.at))
+          khz.at <- "before"
+        }
         g <- ggplot2::ggplot(pd.fill, ggplot2::aes(x = x.val)) +
           ggplot2::geom_col(data = pd.fill[pd.fill$bar.type == "All detections", , drop = FALSE],
                              ggplot2::aes(y = obs.plot, fill = fill.val, group = group.val, alpha = .alpha),
@@ -1136,9 +1154,9 @@ batz.plot.bar_activity.site <- function(data, fig.list = NULL, suntimes = NULL,
                              show.legend = c(colour = isTRUE(p$khz.flag), fill = FALSE)) +
           ggplot2::scale_fill_manual(name = plotutil_title(get.default("legend.groupval.title")),
                                       breaks = groupval.levels, limits = groupval.levels, values = groupval.colors,
-                                      guide = ggplot2::guide_legend(order = 1, nrow = 1, byrow = TRUE)) +
+                                      guide = ggplot2::guide_legend(order = if (khz.at == "before") 2 else 1, nrow = 1, byrow = TRUE)) +
           ggplot2::scale_colour_manual(name = NULL, breaks = "40kHzMyo", limits = "40kHzMyo", values = c(`40kHzMyo` = NA),
-                                        guide = ggplot2::guide_legend(order = 2, nrow = 1,
+                                        guide = ggplot2::guide_legend(order = if (khz.at == "before") 1 else 2, nrow = 1,
                                           override.aes = list(fill = khz.fill, colour = NA, alpha = 1)))
       } else {
         g <- ggplot2::ggplot(p$pd, ggplot2::aes(x = x.val)) +
@@ -1179,8 +1197,8 @@ batz.plot.bar_activity.site <- function(data, fig.list = NULL, suntimes = NULL,
           strip.background = ggplot2::element_blank(),
           panel.border = ggplot2::element_rect(linewidth = as.numeric(get.default("panel.border.linewidth")), colour = "grey20", fill = NA),
           legend.position = get.default("legend.position"),
-          legend.box = if (show.groupval.color) "vertical" else NULL,          # detectors, then 40kHzMyo on the row below
-          legend.box.just = if (show.groupval.color) "left" else NULL,
+          legend.box = if (show.groupval.color) (if (khz.at == "below") "vertical" else "horizontal") else NULL,   # legend.40khzmyo
+          legend.box.just = if (show.groupval.color) (if (khz.at == "below") "left" else "center") else NULL,
           legend.spacing.y = if (show.groupval.color) grid::unit(0, "pt") else NULL,
           legend.margin = if (show.groupval.color) ggplot2::margin(1, 5.5, 1, 5.5) else NULL,
           plot.title = ggplot2::element_text(hjust = as.numeric(get.default("plot.title.hjust")), face = plotutil_face(get.default("plot.title.face")), size = as.numeric(get.default("plot.title.size"))),
@@ -1193,6 +1211,30 @@ batz.plot.bar_activity.site <- function(data, fig.list = NULL, suntimes = NULL,
         )
 
       g <- g + plotutil_text_theme(get.default)   # text sizes / faces (call, fig.list, plotopts)
+
+      ## $break.start / $break.end (2026-11-19, per Josh): nights a detector
+      ## failed, shaded behind the bars in every panel (break.fill, default
+      ## grey85). Several windows: ";" lists, paired in order.
+      brk.split <- function(v) { x <- trimws(gsub('"', "", unlist(strsplit(as.character(v), "[;,]")))); x[!is.na(x) & nzchar(x) & toupper(x) != "NA"] }
+      b0 <- parse.flex.date(brk.split(get.setting(p$job, "break.start")))
+      b1 <- parse.flex.date(brk.split(get.setting(p$job, "break.end")))
+      if (length(b0) || length(b1)) {
+        if (length(b0) != length(b1) || any(is.na(c(b0, b1))) || any(b1 < b0)) {
+          cat(sprintf("NOTE: '%s' - $break.start / $break.end must be dates in pairs (end on or after start) - not shaded.\n", job.label))
+        } else if (!is.null(p$date.days)) {
+          cat(sprintf("NOTE: '%s' - $break.start / $break.end are not shaded on a plot with date windows.\n", job.label))
+        } else {
+          lim <- c(p$date.start - xaxe.buffer, p$date.end + xaxe.buffer)
+          bw <- data.frame(xmin = pmax(b0 - 0.5, lim[1]), xmax = pmin(b1 + 0.5, lim[2]))
+          bw <- bw[bw$xmax > bw$xmin, , drop = FALSE]
+          if (nrow(bw)) {
+            bf <- get.default("break.fill"); if (is.na(bf) || !nzchar(trimws(bf))) bf <- "grey85"
+            g <- g + ggplot2::geom_rect(data = bw, ggplot2::aes(xmin = xmin, xmax = xmax, ymin = -Inf, ymax = Inf),
+                                        fill = bf, colour = NA, inherit.aes = FALSE)
+            g$layers <- c(g$layers[length(g$layers)], g$layers[-length(g$layers)])   # behind the bars
+          }
+        }
+      }
       ggplots[[job.key]] <- g
 
       ## File naming (round twenty-one), per Josh (2026-09-24): "the plots
@@ -1214,7 +1256,8 @@ batz.plot.bar_activity.site <- function(data, fig.list = NULL, suntimes = NULL,
       fname <- file.path(dir.save, fname)
 
       dims <- plotutil_plot_dimensions(p$job, plot.inputs, job.label, "batz.plot.bar_activity.site", units = get.default("ggsave.units"))   # $plot.dimensions (returned in inches)
-      sv$out(g, fname, function(.f) plotutil_ggsave(.f, plot = g,
+      p$file <- fname; p$dims <- dims; plots[[job.key]] <- p
+      if (!is.null(dir.save)) sv$out(g, fname, function(.f) plotutil_ggsave(.f, plot = g,
         width = if (!is.null(dims)) dims[1] else as.numeric(get.default("plot.width")) + as.numeric(get.default("ggsave.width.pad")),
         height = if (!is.null(dims)) dims[2] else as.numeric(get.default("plot.height")) + as.numeric(get.default("ggsave.height.pad")),
         units = if (!is.null(dims)) "in" else get.default("ggsave.units"), dpi = as.numeric(get.default("ggsave.dpi"))))

@@ -8,6 +8,18 @@
 #' from \code{date.start} to \code{date.end}.
 #'
 #' @inheritParams batz.generate_weatherstation.list
+#' @param data A data frame of locations, normally an ARU list
+#'   (\verb{*arulist.csv}) with \code{$aru.name}, \code{$aru.label},
+#'   \code{$longitude}, \code{$latitude}, \code{$sunregion},
+#'   \code{$sunregion.longitude}, \code{$sunregion.latitude}. Which columns
+#'   give the locations is set by \code{sunregion} (see Details,
+#'   "Locations"). A table with \code{$site}, \code{$site.latitude},
+#'   \code{$site.longitude} (one row per site) is also accepted. Headers are
+#'   matched ignoring case and "." / "_" / spaces.
+#' @param sunregion Logical, default \code{TRUE}. \code{TRUE}: stations are
+#'   found for each \code{$sunregion} at its \code{$sunregion.latitude} /
+#'   \code{$sunregion.longitude}. \code{FALSE}: for each \code{$aru.name} at
+#'   its \code{$latitude} / \code{$longitude}.
 #' @param units Character, default \code{"metric"} (when not given). Weather
 #'   Underground gives imperial units; metric columns are converted to the
 #'   units Weather Underground itself uses for metric (°C, km/h, hPa, mm, km).
@@ -34,14 +46,12 @@
 #' @param date.start,date.end Character \code{"YYYY-MM-DD"} (or Date), default
 #'   \code{NULL} (both are required). First and last day downloaded (station
 #'   local time).
-#' @param save Logical, default \code{TRUE}. \code{TRUE} saves
-#'   \code{$weatherstation.data} as a CSV in \code{dir.save}, named
-#'   \verb{<project.name>_weatherdata_<YYYYMMDD>to<YYYYMMDD>_<YYYYMMDDHHMMSS>.csv}
-#'   (first and last date of the data, station local time, then the time
-#'   of the run; \verb{weatherdata_...} when \code{project.name} is blank).
-#'   Nothing is saved when no data was downloaded (NOTE).
-#' @param dir.save Character, default \code{getwd()}. Folder the CSV is saved
-#'   in (created if needed).
+#' @param dir.save Character, default \code{getwd()}. Folder the Excel
+#'   workbook is saved in (created if needed), named
+#'   \verb{<project.name>_weatherdata_<YYYYMMDD>to<YYYYMMDD>_<YYYYMMDDHHMMSS>.xlsx}
+#'   (\code{date.start} and \code{date.end}, then the time of the run;
+#'   \verb{weatherdata_...} when \code{project.name} is blank). Tabs: see
+#'   Value. It is saved also when no data was downloaded (the log says why).
 #' @param save.auto Default \code{TRUE}: the files are saved in \code{dir.save}.
 #'   \code{FALSE}: no files are saved. \code{"BOTH"}: saved and printed.
 #'   \code{"print"}: nothing is saved; each
@@ -53,15 +63,38 @@
 #'   creates every output.
 #' @param project.name Character, default \code{""}. First part of the file
 #'   name (spaces become "-").
+#' @param ... The old argument \code{save} is still read as \code{save.auto}
+#'   (WARNING); when \code{save.auto} is also given, \code{save} is ignored.
 #'
-#' @return Invisibly, a list: two data frames and \code{$file} (the CSV
-#'   saved, or \code{NA}):
+#' @return Invisibly, a list: \code{$weatherstation.list},
+#'   \code{$weatherstation.data}, \code{$settings}, \code{$log} and
+#'   \code{$file} (the workbook saved, or \code{NA}). The workbook has three
+#'   tabs: \code{"Weatherdata"} (\code{$weatherstation.data}),
+#'   \code{"settings"} (\code{$settings}: a copy of \code{data} with the
+#'   columns \code{$sunregion} (TRUE/FALSE), \code{$distance.max},
+#'   \code{$station.max}, \code{$station.type}, \code{$query.max},
+#'   \code{$sample.interval_min}, \code{$weather.type},
+#'   \code{$weather.patched}, \code{$date.start_weather} and
+#'   \code{$date.end_weather} added; lists joined with ";"; the API key is
+#'   never written) and \code{"log"} (\code{$log}: one row per location -
+#'   \code{$site}, \code{$aru.name}, \code{$aru.label},
+#'   \code{$site.latitude}, \code{$site.longitude}, \code{$status}
+#'   ("downloaded", "partial" when a \code{weather.type} or a day is
+#'   missing, or "no data"), \code{$stations.picked} (code and km),
+#'   \code{$stations.skipped} (code and reason), \code{$observations},
+#'   \code{$record.first}, \code{$record.last}, \code{$days.no.data}
+#'   (count), \code{$dates.no.data} (list), and one
+#'   \verb{$hours.with.data_<weather.type>} column per \code{weather.type}:
+#'   the percent of the hours from \code{date.start} to \code{date.end}
+#'   with at least one value).
 #'   \code{$weatherstation.list} - the stations picked, in the same layout as
 #'   \code{batz.generate_weatherstation.list()} (\code{$station.total} counts
 #'   only picked stations; \code{$sample.interval} is measured over the
 #'   downloaded dates), and \code{$weatherstation.data} - their
 #'   observations: \code{$site} (every site the record was picked for,
 #'   separated by ";", e.g. \code{"Clerk;SugarHill"} - see Details),
+#'   \code{$aru.name} and \code{$aru.label} (every ARU of those sites,
+#'   separated by ";"),
 #'   \code{$station.name}, \code{$station.code},
 #'   \code{$station.area}, \code{$station.latitude}, \code{$station.longitude},
 #'   then \code{$date.time} (station local time), \code{$date.time_utc} and one
@@ -89,6 +122,19 @@
 #'   and \code{$station.id}), with the number of observations.
 #'
 #' @details
+#' \strong{Locations.} \code{sunregion = TRUE}: one location per
+#' \code{$sunregion}, at its \code{$sunregion.latitude} /
+#' \code{$sunregion.longitude} (a sun region with more than one pair gets
+#' the central point, as in \code{\link{batz.generate_unique.sunregion}});
+#' \code{$site} is the sun region and \code{$aru.name} / \code{$aru.label}
+#' list its ARUs. \code{sunregion = FALSE}: one location per
+#' \code{$aru.name}, at its \code{$latitude} / \code{$longitude} (an ARU
+#' listed with more than one pair: the first, NOTE); \code{$site} is the
+#' \code{$aru.name}. When the columns for the chosen setting are missing,
+#' the others are used (NOTE): \code{$aru.name} / \code{$latitude} /
+#' \code{$longitude}, else \code{$site} / \code{$site.latitude} /
+#' \code{$site.longitude}, else the sun-region columns.
+#'
 #' \strong{Stations shared by several sites.} A station picked for more than
 #' one site is downloaded once. Its records (same station and date-time) are
 #' listed once in \code{$weatherstation.data}, with all those sites in
@@ -146,6 +192,7 @@
 #'
 #' @export
 batz.generate_weatherstation.data <- function(data,
+                                              sunregion = TRUE,
                                               distance.max = 50,
                                               station.max = 10,
                                               station.type = c("pws", "airport"),
@@ -158,15 +205,24 @@ batz.generate_weatherstation.data <- function(data,
                                               weather.patched = FALSE,
                                               date.start = NULL,
                                               date.end = NULL,
-                                              save = TRUE,
                                               dir.save = getwd(), save.auto = TRUE,
-                                              project.name = "") {
-  sv <- util_saver(save.auto, "batz.generate_weatherstation.data")   # TRUE save / FALSE / "print" / "generate <n>"
+                                              project.name = "", ...) {
   FN <- "batz.generate_weatherstation.data"
+  dots <- list(...)
+  if ("save" %in% c(names(sys.call()), names(dots))) {    # old argument, replaced by save.auto
+    old <- if ("save" %in% names(dots)) dots$save else save.auto   # R matches save = to save.auto when save.auto isn't given
+    cat("WARNING: ", FN, " - argument 'save' has been replaced by save.auto",
+        if ("save" %in% names(dots)) " - save ignored, save.auto used" else sprintf(" - used as save.auto = %s", format(old)), ".\n", sep = "")
+    dots$save <- NULL
+  }
+  if (length(dots)) stop(FN, ": unknown argument(s): ", paste(names(dots), collapse = ", "), call. = FALSE)
+  sv <- util_saver(save.auto, FN)   # TRUE save / FALSE / "BOTH" / "print" / "generate <n>"
   if (missing(units)) units <- "metric"
   units <- unique(match.arg(units, c("metric", "imperial", "both"), several.ok = TRUE))
   if ("both" %in% units) units <- "both"
-  chk <- wu.check.inputs(data, distance.max, station.max, station.type, api.key, FN, sample.interval_min)
+  if (!is.data.frame(data) || !nrow(data)) stop(FN, ": data must be a data frame with rows.", call. = FALSE)
+  loc <- wu.locations(data, sunregion, FN)                         # $site / $site.latitude / $site.longitude + ARU lists
+  chk <- wu.check.inputs(loc$data, distance.max, station.max, station.type, api.key, FN, sample.interval_min)
   types.all <- c("Temperature", "Dew Point", "Humidity", "Wind", "Wind Speed", "Wind Gust", "Pressure",
                  "Precip.", "UV", "Solar", "Condition", "Visibility")
   wt <- types.all[match(tolower(trimws(weather.type)), tolower(types.all))]
@@ -181,7 +237,7 @@ batz.generate_weatherstation.data <- function(data,
               paste(weather.type, collapse = ", "), if (isTRUE(weather.patched)) " (patched from several stations)" else ""))
 
   info.cache <- new.env(); data.cache <- new.env()
-  lists <- list(); obs <- list()
+  lists <- list(); obs <- list(); logs <- list()
   for (i in seq_len(nrow(chk$data))) {
     site <- chk$data$site[i]
     cand <- wu.candidates(chk$lat[i], chk$lon[i], chk$station.type, max(chk$distance),
@@ -243,29 +299,67 @@ batz.generate_weatherstation.data <- function(data,
       cat(sprintf("NOTE: %s - only %d of station.max = %d suitable station(s) found within %s km.\n",
                   site, length(picked), station.max, max(chk$distance)))
     lists[[i]] <- wu.rows(site, chk$lat[i], chk$lon[i], cand[picked, , drop = FALSE], chk$distance)
+    logs[[i]] <- data.frame(site = site,
+                            stations.picked = paste(sprintf("%s (%.1f km)", cand$station.code[picked], cand$station.distance[picked]), collapse = "; "),
+                            stations.skipped = paste(skipped, collapse = "; "),
+                            stations.found = nrow(cand), stringsAsFactors = FALSE)
   }
   wl <- do.call(rbind, lists); rownames(wl) <- NULL
   wd <- if (length(obs) > 0) do.call(rbind, obs) else data.frame()
+  cover <- wu.coverage(obs, chk$data$site, weather.type, d0, d1)  # per site: days and hours with data
   wd <- wu.merge.sites(wd)                                    # shared stations: one record, sites joined with ";"
   wd <- wu.units(wd, units)
+  if (nrow(wd)) {                                             # every ARU of the record's site(s), ";"-separated
+    lst <- function(m) vapply(strsplit(as.character(wd$site), ";", fixed = TRUE), function(ss) paste(unique(unlist(m[ss])), collapse = ";"), "")
+    wd <- cbind(wd[1], aru.name = lst(loc$aru.name), aru.label = lst(loc$aru.label), wd[-1], stringsAsFactors = FALSE)
+  }
   rownames(wd) <- NULL
+  ## log: one row per location
+  lg <- data.frame(site = chk$data$site,
+                   aru.name = vapply(chk$data$site, function(x) paste(loc$aru.name[[x]], collapse = ";"), ""),
+                   aru.label = vapply(chk$data$site, function(x) paste(loc$aru.label[[x]], collapse = ";"), ""),
+                   site.latitude = chk$lat, site.longitude = chk$lon, stringsAsFactors = FALSE, row.names = NULL)
+  lg <- cbind(lg, do.call(rbind, logs)[-1], cover[match(lg$site, cover$site), -1, drop = FALSE])
+  hcols <- grep("^hours.with.data_", names(lg), value = TRUE)
+  lg$status <- ifelse(lg$observations == 0, "no data",
+                      ifelse(lg$days.no.data > 0 | apply(lg[hcols], 1, function(v) any(v == 0)), "partial", "downloaded"))
+  lg <- lg[c("site", "aru.name", "aru.label", "site.latitude", "site.longitude", "status", "stations.picked", "stations.skipped",
+             "stations.found", "observations", "record.first", "record.last", "days.no.data", "dates.no.data", hcols)]
+  rownames(lg) <- NULL
+  ## settings: the input with the run's settings
+  st <- data
+  extra <- list(sunregion = loc$mode == "sunregion", distance.max = paste(distance.max, collapse = ";"), station.max = station.max,
+                station.type = paste(chk$station.type, collapse = ";"), query.max = query.max, sample.interval_min = sample.interval_min,
+                weather.type = paste(weather.type, collapse = ";"), weather.patched = isTRUE(weather.patched),
+                date.start_weather = format(d0), date.end_weather = format(d1))
+  if ("sunregion" %in% names(st) && !is.logical(st$sunregion)) {   # the ARU list's own $sunregion column is kept as is
+    names(extra)[1] <- "sunregion_setting"
+    cat("NOTE: ", FN, " - data has a $sunregion column, so the setting is written as $sunregion_setting in the settings tab.\n", sep = "")
+  }
+  for (k in names(extra)) st[[k]] <- extra[[k]]
   print(wl[, setdiff(names(wl), c("station.type", "station.id"))], row.names = FALSE)
   cat(sprintf("weatherstation.data: %d observation(s) from %d station(s).\n", nrow(wd), length(unique(wd$station.code))))
+  if (nrow(wd) == 0) cat("NOTE: ", FN, " - no weather data downloaded - see the log tab.\n", sep = "")
+  print(lg[c("site", "status", "observations", "days.no.data")], row.names = FALSE)
+  pj <- if (is.null(project.name) || !length(project.name) || is.na(project.name[1]) || !nzchar(trimws(project.name[1]))) "" else
+    paste0(gsub("\\s+", "-", gsub('[\\\\/:*?"<>|]+', "", trimws(project.name[1]))), "_")
   file <- NA_character_
-  if (isTRUE(save)) {
-    if (nrow(wd) == 0 || !"date.time" %in% names(wd)) {
-      cat("NOTE: ", FN, " - no weather data downloaded - nothing saved.\n", sep = "")
-    } else {
-      dts <- as.Date(substr(as.character(wd$date.time), 1, 10))
-      pj <- if (is.null(project.name) || !length(project.name) || is.na(project.name[1]) || !nzchar(trimws(project.name[1]))) "" else
-        paste0(gsub("\\s+", "-", gsub('[\\\\/:*?"<>|]+', "", trimws(project.name[1]))), "_")
-      if (sv$save && !dir.exists(dir.save)) dir.create(dir.save, recursive = TRUE)
-      file <- file.path(dir.save, sprintf("%sweatherdata_%sto%s_%s.csv", pj, format(min(dts, na.rm = TRUE), "%Y%m%d"),
-                                          format(max(dts, na.rm = TRUE), "%Y%m%d"), format(Sys.time(), "%Y%m%d%H%M%S")))
-      file <- sv$out(wd, file, function(.f) utils::write.csv(wd, .f, row.names = FALSE))
-    }
+  if (!is.null(dir.save)) {
+    if (sv$save && !dir.exists(dir.save)) dir.create(dir.save, recursive = TRUE)
+    file <- file.path(dir.save, sprintf("%sweatherdata_%sto%s_%s.xlsx", pj, format(d0, "%Y%m%d"), format(d1, "%Y%m%d"),
+                                        format(Sys.time(), "%Y%m%d%H%M%S")))
+    tabs <- list(Weatherdata = wd, settings = st, log = lg)
+    file <- sv$out(tabs, file, function(.f) {
+      wb <- openxlsx::createWorkbook()
+      for (tb in names(tabs)) {
+        openxlsx::addWorksheet(wb, tb)
+        openxlsx::writeData(wb, tb, tabs[[tb]], headerStyle = openxlsx::createStyle(textDecoration = "bold"))
+        openxlsx::freezePane(wb, tb, firstRow = TRUE)
+      }
+      openxlsx::saveWorkbook(wb, .f, overwrite = TRUE)
+    })
   }
-  invisible(list(weatherstation.list = wl, weatherstation.data = wd, file = file))
+  invisible(list(weatherstation.list = wl, weatherstation.data = wd, settings = st, log = lg, file = file))
 }
 
 #' One row per station record; sites sharing it joined with ";" (internal)
@@ -419,4 +513,100 @@ wu.precip.interval <- function(d, type) {
   d <- cbind(d[seq_len(pos)], `Precip. interval` = out, d[-seq_len(pos)])
   names(d)[pos + 1] <- "Precip. interval"
   d
+}
+
+
+#' $sunregion / $sunregion.latitude / $sunregion.longitude as the site headers (internal)
+#'
+#' When \code{data} has neither all of \code{$site}, \code{$site.latitude},
+#' \code{$site.longitude} nor all of \code{$aru.name}, \code{$latitude},
+#' \code{$longitude}, but has all three sun-region headers, they are renamed
+#' to \code{$site}, \code{$site.latitude}, \code{$site.longitude}. Headers
+#' are matched ignoring case and "." / "_" / spaces.
+#' @noRd
+wu.sunregion.headers <- function(data) {
+  if (!is.data.frame(data)) return(data)
+  std <- standardize.headers(names(data))
+  has <- function(h) all(standardize.headers(h) %in% std)
+  if (has(c("site", "site.latitude", "site.longitude")) || has(c("aru.name", "latitude", "longitude"))) return(data)
+  sr <- c(site = "sunregion", site.latitude = "sunregion.latitude", site.longitude = "sunregion.longitude")
+  if (!has(sr)) return(data)
+  for (h in names(sr)) {
+    if (standardize.headers(h) %in% std) names(data)[std == standardize.headers(h)] <- paste0(h, ".old")   # a lone $site etc. set aside
+    names(data)[match(standardize.headers(sr[[h]]), std)] <- h
+  }
+  data
+}
+
+
+#' Locations to find stations for (internal)
+#'
+#' Returns \code{$data} (\code{$site}, \code{$site.latitude},
+#' \code{$site.longitude}), \code{$aru.name} and \code{$aru.label} (named
+#' lists, site -> ARU names / labels) and \code{$mode} ("sunregion", "aru"
+#' or "site"). See batz.generate_weatherstation.data, Details, "Locations".
+#' @noRd
+wu.locations <- function(data, sunregion, FN) {
+  sr.h <- c("sunregion", "sunregion.latitude", "sunregion.longitude"); aru.h <- c("aru.name", "latitude", "longitude")
+  site.h <- c("site", "site.latitude", "site.longitude")
+  has <- function(h) !length(canonicalize.headers(data, h)$missing)
+  d <- canonicalize.headers(data, unique(c(sr.h, aru.h, site.h, "aru.label")))$df
+  mode <- if (isTRUE(sunregion) && has(sr.h)) "sunregion" else if (!isTRUE(sunregion) && has(aru.h)) "aru" else
+    if (has(aru.h)) "aru" else if (has(site.h)) "site" else if (has(sr.h)) "sunregion" else NA
+  if (is.na(mode)) stop(FN, ": data needs $sunregion / $sunregion.latitude / $sunregion.longitude, $aru.name / $latitude / $longitude, ",
+                        "or $site / $site.latitude / $site.longitude.", call. = FALSE)
+  if (isTRUE(sunregion) && mode != "sunregion")
+    cat(sprintf("NOTE: %s - sunregion = TRUE but data has no $sunregion / $sunregion.latitude / $sunregion.longitude - using %s.\n",
+                FN, if (mode == "aru") "$aru.name / $latitude / $longitude" else "$site / $site.latitude / $site.longitude"))
+  if (!isTRUE(sunregion) && mode == "site")
+    cat(sprintf("NOTE: %s - sunregion = FALSE but data has no $aru.name / $latitude / $longitude - using $site / $site.latitude / $site.longitude.\n", FN))
+  grp <- function(key) {
+    k <- trimws(as.character(d[[key]]))
+    an <- if ("aru.name" %in% names(d)) trimws(as.character(d$aru.name)) else k
+    al <- if ("aru.label" %in% names(d)) trimws(as.character(d$aru.label)) else an
+    list(aru.name = lapply(split(an, factor(k, levels = unique(k))), function(x) unique(x[!is.na(x) & nzchar(x)])),
+         aru.label = lapply(split(al, factor(k, levels = unique(k))), function(x) unique(x[!is.na(x) & nzchar(x)])))
+  }
+  if (mode == "sunregion") {
+    u <- suppressWarnings(utils::capture.output(sr <- batz.generate_unique.sunregion(d, dir.save = NULL)))
+    if (length(u)) cat(u, sep = "\n")
+    loc <- data.frame(site = sr$sunregion, site.latitude = sr$sunregion.latitude, site.longitude = sr$sunregion.longitude, stringsAsFactors = FALSE)
+    g <- grp("sunregion")
+  } else if (mode == "aru") {
+    k <- trimws(as.character(d$aru.name)); ok <- !is.na(k) & nzchar(k)
+    first <- !duplicated(k[ok]); dd <- d[ok, , drop = FALSE]
+    two <- unique(k[ok][duplicated(k[ok]) & !duplicated(paste(k[ok], d$latitude[ok], d$longitude[ok]))])
+    if (length(two)) cat(sprintf("NOTE: %s - ARU(s) listed with more than one $latitude / $longitude - the first is used: %s\n", FN, paste(two, collapse = ", ")))
+    loc <- data.frame(site = k[ok][first], site.latitude = dd$latitude[first], site.longitude = dd$longitude[first], stringsAsFactors = FALSE)
+    g <- grp("aru.name")
+  } else {
+    loc <- data.frame(site = trimws(as.character(d$site)), site.latitude = d$site.latitude, site.longitude = d$site.longitude, stringsAsFactors = FALSE)
+    loc <- loc[!duplicated(loc$site), , drop = FALSE]
+    g <- grp("site")
+  }
+  list(data = loc, aru.name = g$aru.name, aru.label = g$aru.label, mode = mode)
+}
+
+#' Days and hours with data per site (internal)
+#'
+#' From the per-station records (before sites are merged): observations,
+#' first and last record, the dates from d0 to d1 with no record, and per
+#' weather.type the percent of hours with at least one value.
+#' @noRd
+wu.coverage <- function(obs, sites, weather.type, d0, d1) {
+  all.d <- format(seq(d0, d1, by = "day")); n.h <- length(all.d) * 24
+  do.call(rbind, lapply(sites, function(s) {
+    d <- do.call(rbind, lapply(obs, function(o) if (identical(o$site[1], s)) o[c("date.time", intersect(weather.type, names(o)))] else NULL))
+    out <- data.frame(site = s, observations = if (is.null(d)) 0L else nrow(d),
+                      record.first = if (is.null(d)) NA_character_ else min(d$date.time),
+                      record.last = if (is.null(d)) NA_character_ else max(d$date.time), stringsAsFactors = FALSE)
+    miss <- setdiff(all.d, if (is.null(d)) character(0) else unique(substr(d$date.time, 1, 10)))
+    out$days.no.data <- length(miss)
+    out$dates.no.data <- paste(miss, collapse = ";")
+    for (t in weather.type) {
+      h <- if (is.null(d) || !t %in% names(d)) character(0) else unique(substr(d$date.time[!is.na(d[[t]])], 1, 13))
+      out[[paste0("hours.with.data_", gsub("[^A-Za-z]", "", t))]] <- round(100 * length(h) / n.h, 1)
+    }
+    out
+  }))
 }
