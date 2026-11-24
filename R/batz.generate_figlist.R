@@ -18,14 +18,13 @@
 #' and their help pages when the function runs, so the workbook always
 #' matches the installed version.
 #'
-#' @param functions Character, default all plot functions that take a
-#'   fig.list: \code{"batz.plot.bar_activity.community"},
-#'   \code{"batz.plot.heatmap_activity.site"},
-#'   \code{"batz.plot.bar_activity.site"},
-#'   \code{"batz.plot.barfloat_detect.1st.last"},
-#'   \code{"batz.plot.heatmap_aru.time"}, \code{"batz.plot.heatmap_activity.species"}.
-#'   Plot functions to include. \code{""} (or \code{NULL}) = all of them,
-#'   one row for every plot type.
+#' @param functions Character, default \code{""} (or \code{NULL}): every
+#'   Batz plot function (\code{batz.plot.*}). Plot functions to include, one
+#'   row each. \code{"batz."} or \code{"batz.plot."} may be left out (e.g.
+#'   \code{"plot.bar_activity.site"} or \code{"bar_activity.site"}); case
+#'   and spaces are ignored, and a name that is part of exactly one plot
+#'   function name is read as that function (NOTE). Plot functions that take
+#'   no fig.list get no row (NOTE).
 #' @param project.name Character, default \code{""}. First part of the file
 #'   name. Blank = no project part.
 #' @param dir.save Character, default \code{getwd()}. Folder the workbook is
@@ -83,20 +82,16 @@
 #' f$descriptions
 #' }
 #' @export
-batz.generate_figlist <- function(functions = c("batz.plot.bar_activity.community", "batz.plot.heatmap_activity.site",
-                                                "batz.plot.bar_activity.site", "batz.plot.barfloat_detect.1st.last",
-                                                "batz.plot.heatmap_aru.time", "batz.plot.heatmap_activity.species"),
+batz.generate_figlist <- function(functions = "",
                                   project.name = "", dir.save = getwd(), save.auto = TRUE) {
   sv <- util_saver(save.auto, "batz.generate_figlist")   # TRUE save / FALSE / "print" / "generate <n>"
   FN <- "batz.generate_figlist"
-  ALL <- c("batz.plot.bar_activity.community", "batz.plot.heatmap_activity.site", "batz.plot.bar_activity.site",
-           "batz.plot.barfloat_detect.1st.last", "batz.plot.heatmap_aru.time", "batz.plot.heatmap_activity.species")
-  functions <- if (is.null(functions)) character(0) else trimws(as.character(functions))
-  functions <- functions[!is.na(functions) & nzchar(functions)]
-  if (!length(functions)) functions <- ALL                 # "" = every plot type
+  functions <- plotutil_match_functions(functions, plotutil_all_plots(), FN)   # "" = every plot function
   ns <- asNamespace("Batz")
-  bad <- functions[!vapply(functions, exists, logical(1), envir = ns, inherits = FALSE)]
-  if (length(bad)) stop(FN, ": not a Batz function: ", paste(bad, collapse = ", "), call. = FALSE)
+  no.fl <- functions[!vapply(functions, function(f) "fig.list" %in% names(formals(get(f, envir = ns))), logical(1))]
+  if (length(no.fl)) cat(sprintf("NOTE: %s - no fig.list argument, no row: %s\n", FN, paste(no.fl, collapse = ", ")))
+  functions <- setdiff(functions, no.fl)
+  if (!length(functions)) stop(FN, ": none of the functions take a fig.list.", call. = FALSE)
   ## settings that heatmap2 reads from fig.list besides its checked headings
   EXTRA.OPTIONAL <- list(batz.plot.heatmap_activity.species = c("date.format", "date.interval", "xaxe.interval", "xaxe.title", "yaxe.title", "facet.label",
                                                          "plot.dimensions", "plot.zero"))

@@ -111,7 +111,8 @@ after the file it would have been saved as, without the extension and the
 time stamp (e.g. \code{acme_vegetation.dbh}); \code{"generate"} alone
 creates every output.}
 
-\item{project.name}{Character, default \code{""}. First part of the file
+\item{project.name}{Character, default \code{""}. Written in the
+\code{$project.name} column of \code{$weatherstation.data}, and first part of the file
 name (spaces become "-").}
 
 \item{...}{The old argument \code{save} is still read as \code{save.auto}
@@ -143,10 +144,9 @@ with at least one value).
 \code{batz.generate_weatherstation.list()} (\code{$station.total} counts
 only picked stations; \code{$sample.interval} is measured over the
 downloaded dates), and \code{$weatherstation.data} - their
-observations: \code{$site} (every site the record was picked for,
-separated by ";", e.g. \code{"Clerk;SugarHill"} - see Details),
-\code{$aru.name} and \code{$aru.label} (every ARU of those sites,
-separated by ";"),
+observations: \code{$project.name} (the \code{project.name}
+argument), \code{$aru.name} and \code{$aru.label} (every ARU of the
+location(s) the record was picked for, separated by ";" - see Details),
 \code{$station.name}, \code{$station.code},
 \code{$station.area}, \code{$station.latitude}, \code{$station.longitude},
 then \code{$date.time} (station local time), \code{$date.time_utc} and one
@@ -197,10 +197,11 @@ the others are used (NOTE): \code{$aru.name} / \code{$latitude} /
 
 \strong{Stations shared by several sites.} A station picked for more than
 one site is downloaded once. Its records (same station and date-time) are
-listed once in \code{$weatherstation.data}, with all those sites in
-\code{$site} separated by ";" (in the order of \code{data}), and a NOTE
-names the shared stations. \code{$weatherstation.list} still has one row
-per site and station.
+listed once in \code{$weatherstation.data}, with the ARUs of all those
+sites in \code{$aru.name} and \code{$aru.label} separated by ";" (in the
+order of \code{data}), and a NOTE names the shared stations.
+\code{$weatherstation.list} and the log still have one row per site
+(\code{$site}) and station.
 
 \strong{Which stations count.} Stations are tried nearest first. A quick
 check of the station's current data types (see

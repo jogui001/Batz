@@ -15,16 +15,12 @@
 #' \code{aes.plotopts} as a data frame, the path to its CSV, or the path to
 #' the pooled workbook (it reads its own \verb{pltop.*} tab).
 #'
-#' @param generate.files Character vector of plot function names. Default:
-#'   every plot function with built-in settings:
-#'   \code{"batz.plot.bar_activity.community"}, \code{"batz.plot.heatmap_activity.site"},
-#'   \code{"batz.plot.bar_activity.site"},
-#'   \code{"batz.plot.barfloat_detect.1st.last"},
-#'   \code{"batz.plot.bullseye_clutter.mic"},
-#'   \code{"batz.plot.heatmap_activity.time"}, \code{"batz.plot.heatmap_activity.species"},
-#'   \code{"batz.plot.heatmap_aru.time"}, \code{"batz.plot.bar_vegetation.species"},
-#'   \code{"batz.plot.box_vegetation.dbh"}, \code{"batz.plot.line_weather.daily"},
-#'   \code{"batz.plot.line_weather.average"}, \code{"batz.plot.barline_meancalls.weather"}.
+#' @param functions Character, default \code{""} (or \code{NULL}): every
+#'   Batz plot function (\code{batz.plot.*}). Plot functions to write
+#'   settings for. \code{"batz."} or \code{"batz.plot."} may be left out
+#'   (e.g. \code{"plot.bar_activity.site"} or \code{"bar_activity.site"});
+#'   case and spaces are ignored, and a name that is part of exactly one plot
+#'   function name is read as that function (NOTE).
 #' @param project.name Character, default \code{"new project"}. Leading part
 #'   of each output file name, and the name of the column that holds the
 #'   project's own settings (written as \code{$override.value} in the
@@ -63,16 +59,17 @@
 #' are added, removed or computed. Only the \code{$override.value} header is
 #' renamed to \code{project.name} (kept when \code{project.name = ""}). With \code{strip.special.plotopts = TRUE},
 #' special characters are simplified or removed first. A name in
-#' \code{generate.files} with no built-in settings stops the function with
-#' an error that lists the recognised names.
+#' \code{functions} that matches no plot function, matches several, or
+#' has no built-in settings stops the function with an error that lists
+#' the recognised names.
 #'
 #' \strong{Pooled workbook.} One tab per function, in the order of
-#' \code{generate.files}, named as the Batz_reference_db tab (at most 31
+#' \code{functions}, named as the Batz_reference_db tab (at most 31
 #' characters). Bold header row, frozen; column widths fitted. The cells are
 #' the same text as in the CSVs.
 #'
 #' @return Invisibly, a character vector of the file names written (names
-#'   only, not full paths): the CSVs in the order of \code{generate.files},
+#'   only, not full paths): the CSVs in the order of \code{functions},
 #'   then the pooled workbook. Each saved file name is printed.
 #'
 #' @examples
@@ -93,32 +90,32 @@
 #' #   aes.style = "acme.wetlands.2026")
 #'
 #' # One function only
-#' batz.generate_plotopts(generate.files = "batz.plot.bullseye_clutter.mic",
+#' batz.generate_plotopts(functions = "bullseye_clutter.mic",
 #'                        project.name = "acme.wetlands.2026")
 #' }
 #'
 #' @seealso \code{\link{batz.util_refdb.sync}}, \code{\link{batz.generate_figlist}}
 #'
 #' @export
-batz.generate_plotopts <- function(generate.files = c("batz.plot.bar_activity.community", "batz.plot.heatmap_activity.site",
-                                                      "batz.plot.bar_activity.site", "batz.plot.barfloat_detect.1st.last",
-                                                      "batz.plot.bullseye_clutter.mic",
-                                                      "batz.plot.heatmap_activity.time", "batz.plot.heatmap_activity.species",
-                                                      "batz.plot.heatmap_aru.time", "batz.plot.bar_vegetation.species",
-                                                      "batz.plot.box_vegetation.dbh", "batz.plot.line_weather.daily",
-                                                      "batz.plot.line_weather.average",
-                                                      "batz.plot.barline_meancalls.weather"),
+batz.generate_plotopts <- function(functions = "",
                                    project.name = "new project",
                                    file.format = c("csv", "xlsx"),
                                    dir.save = getwd(), save.auto = TRUE,
-                                   strip.special.plotopts = FALSE) {
+                                   strip.special.plotopts = FALSE, ...) {
   sv <- util_saver(save.auto, "batz.generate_plotopts")   # TRUE save / FALSE / "print" / "generate <n>"
   FN <- "batz.generate_plotopts"
-  if (length(generate.files) == 0 || !is.character(generate.files))
-    stop(FN, ": generate.files must be a non-empty character vector of plot function names.", call. = FALSE)
+  dots <- list(...)
+  if ("generate.files" %in% names(dots)) {                 # old name of functions
+    cat("WARNING: ", FN, " - argument 'generate.files' has been renamed functions",
+        if (missing(functions)) " - used as functions" else " - ignored, functions used", ".\n", sep = "")
+    if (missing(functions)) functions <- dots$generate.files
+    dots$generate.files <- NULL
+  }
+  if (length(dots)) stop(FN, ": unknown argument(s): ", paste(names(dots), collapse = ", "), call. = FALSE)
   db <- get0(".batz.db", envir = asNamespace("Batz"), inherits = FALSE)
   known <- sub("^plotopts\\.", "", grep("^plotopts\\.", names(db), value = TRUE))
-  unknown <- setdiff(generate.files, known)
+  functions <- plotutil_match_functions(functions, plotutil_all_plots(), FN)
+  unknown <- setdiff(functions, known)
   if (length(unknown) > 0)
     stop(FN, ": no built-in settings for: ", paste(unknown, collapse = ", "),
          ". Plot functions with built-in settings: ", paste(known, collapse = ", "), ".", call. = FALSE)
@@ -132,7 +129,7 @@ batz.generate_plotopts <- function(generate.files = c("batz.plot.bar_activity.co
 
   saved <- character(0)
   pooled <- list()
-  for (fn.name in generate.files) {
+  for (fn.name in functions) {
     opts <- batz.db(paste0("plotopts.", fn.name))
     s <- special.strip(opts, strip.special.plotopts); opts <- s$df
     for (h in names(opts)) opts[[h]] <- as.character(opts[[h]])

@@ -37,9 +37,8 @@
 #'     A missing k-Pro or SonoBat column is filled with \code{NA}.
 #' }
 #' Optional columns: \code{Serial} or \code{aru.serial} (becomes
-#' \code{$aru.serial}, else \code{NA}), \code{sunregion} (copied to
-#' \code{$sunregion}, else \code{NA}), and \code{aru.name} or \code{site}
-#' (see below).
+#' \code{$aru.serial}, else \code{NA}) and \code{aru.name} or \code{site}
+#' (see below). Any other column, e.g. \code{sunregion}, is not kept.
 #'
 #' \strong{Skipped files.} A file is skipped with \code{$reason}
 #' \code{"could not read file"}, \code{"mismatched headers"} (with the
@@ -143,7 +142,7 @@
 #'   \describe{
 #'     \item{vetted.merged}{Columns \code{$filename},
 #'       \code{$date.monitoringnight}, \code{$aru.name}, \code{$aru.model},
-#'       \code{$aru.serial}, \code{$sunregion}, \code{$lat},
+#'       \code{$aru.serial}, \code{$lat},
 #'       \code{$longitude}, \code{$manid}, \code{$autoid.kp},
 #'       \code{$autoid.sb}, any extra auto-ID columns, \code{$date},
 #'       \code{$time}, \code{$call.datetime}, then \code{$manid.kp} and
@@ -354,8 +353,8 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
     ## $aru.serial is OPTIONAL (2026-08-30 follow-up), not one of the required
     ## expected.headers - a file is never skipped for lacking it (e.g. a
     ## Mobile-transect export, which has no fixed instrument serial number at
-    ## all). Captured BEFORE trimming to expected.headers below, exactly like
-    ## $sunregion, since that trim would otherwise silently drop it. The real
+    ## all). Captured BEFORE trimming to expected.headers below, since that
+    ## trim would otherwise silently drop it. The real
     ## vetting-software header ("Serial") standardizes to the OLD spelling
     ## "serial" - kept here as a legacy input alias (renamed 2026-09-27, see
     ## @details, "Column identifiers renamed" above) while this function's
@@ -378,21 +377,11 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
         !is.na(nm.vals) & nzchar(nm.vals)
       aru.name.vals[use] <- nm.vals[use]
     }
-    ## $sunregion is OPTIONAL, not one of the required expected.headers - a
-    ## file is never skipped for lacking it. If a file's own (standardized)
-    ## headers happen to include it, copy those values straight through;
-    ## otherwise this file's rows get NA for $sunregion (still needs to be
-    ## joined in separately, exactly as before, for files that don't already
-    ## carry it). Captured BEFORE trimming to expected.headers below, since
-    ## that trim would otherwise silently drop it.
-    sunregion.vals <- if ("sunregion" %in% names(tmp)) as.character(tmp$sunregion) else
-      rep(NA_character_, nrow(tmp))
     for (h in c(auto.headers)) if (!(h %in% names(tmp))) tmp[[h]] <- NA_character_
     tmp <- tmp[, c(expected.headers, extra.autoid), drop = FALSE]
     tmp[c("wa_kaleidoscope_auto_id", "sppaccp", extra.autoid)] <-
       lapply(tmp[c("wa_kaleidoscope_auto_id", "sppaccp", extra.autoid)], as.character)
     tmp$aru.serial <- aru.serial.vals
-    tmp$sunregion <- sunregion.vals
     tmp$aru.name.file <- aru.name.vals
     vetted.merged <- rbind(vetted.merged, tmp)
   }
@@ -418,9 +407,6 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
     ## --- rename, reorder, call.datetime, recode.names, manid.kp/sb
     ## fill-in - see @details above -----------------
 
-    ## positional rename ($sunregion, appended right after $aru.serial back
-    ## in the per-file loop above, keeps its own name here - no rename
-    ## needed)
     ## 2026-10-23: renamed by name instead of position, so extra auto-ID
     ## columns (autoid.header_out) can sit in between
     rename.map <- c(species_manual_id = "manid", wa_kaleidoscope_auto_id = "autoid.kp",
@@ -428,11 +414,10 @@ batz.merge_vetted.acoustics <- function(dir.load = getwd(),
     hit <- names(vetted.merged) %in% names(rename.map)
     names(vetted.merged)[hit] <- rename.map[names(vetted.merged)[hit]]
 
-    ## reorder ($sunregion placed with the other detector-level columns,
-    ## next to $aru.serial/$aru.name)
+    ## reorder
     vetted.merged$aru.model <- aru.model.vals
     vetted.merged <- vetted.merged[, c("filename", "date.monitoringnight", "aru.name", "aru.model",
-                                        "aru.serial", "sunregion", "lat", "longitude",
+                                        "aru.serial", "lat", "longitude",
                                         "manid", "autoid.kp", "autoid.sb", extra.autoid,
                                         "date", "time")]
 

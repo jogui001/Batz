@@ -13,12 +13,12 @@ library(Batz)
 dir.out <- file.path(tempdir(), "figlist_test"); dir.create(dir.out, showWarnings = FALSE)
 ok <- function(cond, msg) { if (!isTRUE(cond)) stop("FAILED: ", msg, call. = FALSE); cat("ok -", msg, "\n") }
 
-## 1. All plot functions that take a fig.list
+## 1. All plot functions (functions = ""); those without a fig.list argument get no row (NOTE)
 f <- batz.generate_figlist(dir.save = dir.out)
 print(basename(f$file))                                   # fig.list_template_<timestamp>.xlsx
 print(names(f$fig.list))
 print(f$fig.list$plot.type)                               # one starter row per plot function
-View(f$descriptions)
+# View(f$descriptions)
 ok(identical(openxlsx::getSheetNames(f$file), c("fig.list", "descriptions")), "two tabs: fig.list, descriptions")
 ok(all(nzchar(f$descriptions$description)), "every heading has a description")
 ok(identical(names(f$descriptions), c("header", "required.in", "optional.in", "description")), "descriptions headers")
@@ -42,8 +42,8 @@ fl$plot.name[i] <- "my.site"; fl$plot.set[i] <- "my.site"            # ... fill 
 ## example entries in every heading a plot type uses, "NA" in the others; $facet.label_format and $facet.label (2026-11-09)
 bl <- which(as.matrix(f$fig.list) == "", arr.ind = TRUE)
 bl.h <- names(f$fig.list)[bl[, "col"]]
-ok(all(bl.h == "date.interval" | (bl.h == "time.start" & f$fig.list$plot.type[bl[, "row"]] == "heatmap_aru.time")),
-   "every used heading has an example entry (blank: $date.interval, and heatmap_aru.time time.start = 1 h before Dusk)")
+ok(all(bl.h %in% c("date.interval", "break.start", "break.end") | (bl.h == "time.start" & f$fig.list$plot.type[bl[, "row"]] == "heatmap_aru.time")),
+   "every used heading has an example entry (blank: $date.interval, $break.start / $break.end = no outage, and heatmap_aru.time time.start = 1 h before Dusk)")
 ok(match("date.interval", names(f$fig.list)) == match("date.end", names(f$fig.list)) + 1, "$date.interval right after $date.end")
 ok(all(c("facet.label_format", "facet.label") %in% names(f$fig.list)), "$facet.label_format and $facet.label headings")
 print(f$fig.list[, c("plot.type", "facet.label_format", "facet.label")])
@@ -54,12 +54,28 @@ ok(nrow(f3$fig.list) == nrow(f$fig.list) && identical(f3$fig.list$plot.type, f$f
 
 ## $plot.dimensions: a heading for every plot type, right after $plot.name, with an example size (2026-11-09)
 ok(identical(names(f$fig.list)[match("plot.name", names(f$fig.list)) + 1], "plot.dimensions"), "$plot.dimensions after $plot.name")
-ok(all(f$fig.list$plot.dimensions != "NA"), "every plot type has an example $plot.dimensions")
-ok(all(f$fig.list$plot.zero == "FALSE"), "every plot type has $plot.zero = FALSE")
+bw <- f$fig.list$plot.type != "barline_meancalls.weather"   # barline_meancalls.weather: size from plot.width / plot.height
+ok(all(f$fig.list$plot.dimensions[bw] != "NA"), "every plot type (but barline_meancalls.weather) has an example $plot.dimensions")
+ok(all(f$fig.list$plot.zero[bw] == "FALSE"), "every plot type (but barline_meancalls.weather) has $plot.zero = FALSE")
 z <- f$fig.list[, c("plot.type", grep("^plot.zero_", names(f$fig.list), value = TRUE))]; print(z)
 ok(all(z$plot.zero_sites.sampled[z$plot.type == "bar_activity.community"] == "FALSE") &&
    all(z$plot.zero_40khzmyo[z$plot.type %in% c("bar_activity.site", "barfloat_detect.1st.last")] == "FALSE"), "plot.zero_<data> columns for multi-data plots")
 print(f$fig.list[, c("plot.type", "plot.dimensions")])
 
-try(batz.generate_figlist(functions = "batz.not_a_function", dir.save = NULL))   # error names it
+e <- try(batz.generate_figlist(functions = "batz.not_a_function", dir.save = NULL), silent = TRUE)
+ok(inherits(e, "try-error") && grepl("not a plot function", e), "unknown name: error")
+
+## all batz.plot functions; "batz." / "batz.plot." optional (2026-11-24)
+ok(identical(sort(f$fig.list$plot.type), sort(c("bar_activity.community", "bar_activity.site", "barfloat_detect.1st.last", "barline_meancalls.weather",
+                                                "heatmap_activity.site", "heatmap_activity.species", "heatmap_aru.time"))), "every plot function with a fig.list")
+f4 <- batz.generate_figlist(functions = c("plot.bar_activity.site", "barline_meancalls.weather", "BATZ.PLOT.HEATMAP_ARU.TIME"), dir.save = NULL)
+ok(identical(f4$fig.list$plot.type, c("bar_activity.site", "barline_meancalls.weather", "heatmap_aru.time")), "\"batz.\" / \"batz.plot.\" optional, case ignored")
+out <- capture.output(f5 <- batz.generate_figlist(functions = "meancalls", dir.save = NULL))
+ok(f5$fig.list$plot.type == "barline_meancalls.weather" && any(grepl("read as batz.plot.barline_meancalls.weather", out)), "part of one name: used (NOTE)")
+e <- try(batz.generate_figlist(functions = "heatmap", dir.save = NULL), silent = TRUE)
+ok(inherits(e, "try-error") && grepl("matches several", e), "part of several names: error")
+out <- capture.output(f6 <- batz.generate_figlist(functions = c("line_weather.daily", "heatmap_aru.time"), dir.save = NULL))
+ok(nrow(f6$fig.list) == 1 && any(grepl("no fig.list argument, no row: batz.plot.line_weather.daily", out)), "no fig.list argument: no row (NOTE)")
+
+cat("\nALL TESTS PASSED\n")
 cat("Workbook in:", dir.out, "\n")

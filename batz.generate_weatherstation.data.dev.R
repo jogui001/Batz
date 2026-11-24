@@ -20,8 +20,8 @@ w1 <- batz.generate_weatherstation.data(test.data, station.max = 2,
 names(w1)                                   # weatherstation.list, weatherstation.data
 w1$weatherstation.list
 head(w1$weatherstation.data)
-stopifnot(identical(names(w1$weatherstation.data)[1:6],
-                    c("site", "station.name", "station.code", "station.area", "station.latitude", "station.longitude")))
+stopifnot(identical(names(w1$weatherstation.data)[1:8],
+                    c("project.name", "aru.name", "aru.label", "station.name", "station.code", "station.area", "station.latitude", "station.longitude")))
 
 ## ---- TEST 2: temperature + humidity only, patched from several stations -----
 w2 <- batz.generate_weatherstation.data(test.data[1, ], station.max = 5,
@@ -88,14 +88,14 @@ stopifnot(identical(unique(w8b$site), test.data$site))
 
 ## ---- TEST 9: a station shared by several sites (2026-11-06) ------------------
 ## Clerk and SugarHill are ~0.5 km apart, so they pick the same stations:
-## each record is listed once, $site = "Clerk;SugarHill"
+## each record is listed once, $aru.name = "Clerk;SugarHill"
 arulist <- data.frame(aru.name = c("Clerk", "SugarHill"),
                       latitude = c(43.59224283, 43.59525033), longitude = c(-71.7364705, -71.73053717))
 w9 <- batz.generate_weatherstation.data(arulist, station.max = 1,
                                         date.start = "2026-06-26", date.end = "2026-06-26")   # NOTE: station ... is shared by sites Clerk, SugarHill
-table(w9$weatherstation.data$site)
+table(w9$weatherstation.data$aru.name)
 stopifnot(!anyDuplicated(w9$weatherstation.data[, c("station.code", "date.time_utc")]),
-          any(w9$weatherstation.data$site == "Clerk;SugarHill"))
+          any(w9$weatherstation.data$aru.name == "Clerk;SugarHill"))
 w9$weatherstation.list[, c("site", "station.code")]          # still one row per site and station
 
 ## ---- TEST 10: save the weather data (2026-11-09) -----------------------------
@@ -144,13 +144,15 @@ stopifnot(setequal(unique(unlist(strsplit(w11$weatherstation.list$site, ";"))), 
 ## ---- TEST 12: sunregion = TRUE / FALSE with an ARU list (2026-11-23) ----------------
 ## TRUE (default): one location per $sunregion at $sunregion.latitude / $sunregion.longitude;
 ## FALSE: one per $aru.name at $latitude / $longitude. $aru.name / $aru.label list the ARUs (";").
+## $weatherstation.data starts with $project.name (the project.name argument); the log keeps $site.
 arulist <- data.frame(aru.name = c("Clerk", "SugarHill"), aru.label = c("Clerk-N", "SugarHill-S"),
                       latitude = c(43.59224283, 43.59525033), longitude = c(-71.7364705, -71.73053717),
                       sunregion = "Bristol", sunregion.latitude = 43.5937, sunregion.longitude = -71.7335)
 w12 <- batz.generate_weatherstation.data(arulist, station.max = 1, date.start = "2026-06-26", date.end = "2026-06-27",
                                          dir.save = file.path(tempdir(), "weather_test"), project.name = "Bristol NH")
 stopifnot(identical(w12$log$site, "Bristol"), w12$log$aru.name == "Clerk;SugarHill", w12$log$aru.label == "Clerk-N;SugarHill-S",
-          all(c("aru.name", "aru.label") %in% names(w12$weatherstation.data)),
+          identical(names(w12$weatherstation.data)[1:3], c("project.name", "aru.name", "aru.label")),
+          all(w12$weatherstation.data$project.name == "Bristol NH"), !"site" %in% names(w12$weatherstation.data),
           all(c("sunregion_setting", "distance.max", "station.max", "station.type", "query.max", "sample.interval_min", "weather.type",
                 "weather.patched", "date.start_weather", "date.end_weather") %in% names(w12$settings)))
 w12$log                                     # status, stations picked / skipped, days with no data, % hours with data per weather.type

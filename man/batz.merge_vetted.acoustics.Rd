@@ -92,7 +92,7 @@ the calling environment.
 \describe{
 \item{vetted.merged}{Columns \code{$filename},
 \code{$date.monitoringnight}, \code{$aru.name}, \code{$aru.model},
-\code{$aru.serial}, \code{$sunregion}, \code{$lat},
+\code{$aru.serial}, \code{$lat},
 \code{$longitude}, \code{$manid}, \code{$autoid.kp},
 \code{$autoid.sb}, any extra auto-ID columns, \code{$date},
 \code{$time}, \code{$call.datetime}, then \code{$manid.kp} and
@@ -148,9 +148,8 @@ SonoBat \code{SppAccp}, or a header named in \code{autoid.header_in}.
 A missing k-Pro or SonoBat column is filled with \code{NA}.
 }
 Optional columns: \code{Serial} or \code{aru.serial} (becomes
-\code{$aru.serial}, else \code{NA}), \code{sunregion} (copied to
-\code{$sunregion}, else \code{NA}), and \code{aru.name} or \code{site}
-(see below).
+\code{$aru.serial}, else \code{NA}) and \code{aru.name} or \code{site}
+(see below). Any other column, e.g. \code{sunregion}, is not kept.
 
 \strong{Skipped files.} A file is skipped with \code{$reason}
 \code{"could not read file"}, \code{"mismatched headers"} (with the

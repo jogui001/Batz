@@ -1352,3 +1352,42 @@ plotutil_to_inch <- function(x, units = "in") {
   u <- tolower(trimws(as.character(units)[1])); if (is.na(u) || !nzchar(u)) u <- "in"
   x * switch(u, "in" = 1, "inch" = 1, "inches" = 1, "cm" = 1 / 2.54, "mm" = 1 / 25.4, "px" = 1 / 96, 1)
 }
+
+
+#' Match Batz plot function names, "batz." / "batz.plot." optional (internal)
+#'
+#' Each name in \code{x} is matched to one of \code{known} (full function
+#' names), ignoring case and spaces: as given, with \code{"batz."} added, or
+#' with \code{"batz.plot."} added (e.g. \code{"plot.bar_activity.site"} and
+#' \code{"bar_activity.site"} both give \code{"batz.plot.bar_activity.site"}).
+#' Otherwise a name that is part of exactly one known name is used (NOTE).
+#' A name matching none, or part of several, stops \code{FN} with the
+#' known names. \code{NULL}, \code{""} or \code{NA} only: \code{known}.
+#' Returns the full names, without repeats, in the order given.
+#' @keywords internal
+#' @noRd
+plotutil_match_functions <- function(x, known, FN, what = "plot function") {
+  x <- if (is.null(x)) character(0) else trimws(as.character(x))
+  x <- x[!is.na(x) & nzchar(x)]
+  if (!length(x)) return(known)
+  k <- tolower(gsub("\\s+", "", known))
+  out <- vapply(x, function(v) {
+    v0 <- tolower(gsub("\\s+", "", v))
+    for (cand in c(v0, paste0("batz.", v0), paste0("batz.plot.", v0))) if (cand %in% k) return(known[match(cand, k)])
+    part <- known[grepl(v0, k, fixed = TRUE)]
+    if (length(part) == 1) {
+      cat(sprintf("NOTE: %s - \"%s\" read as %s.\n", FN, v, part)); return(part)
+    }
+    stop(FN, ": ", if (length(part) > 1) sprintf("\"%s\" matches several %ss: %s", v, what, paste(part, collapse = ", ")) else
+      sprintf("not a %s: \"%s\"", what, v), ". Use any of: ", paste(known, collapse = ", "),
+      " (\"batz.\" / \"batz.plot.\" may be left out).", call. = FALSE)
+  }, character(1), USE.NAMES = FALSE)
+  unique(out)
+}
+
+#' Every Batz plot function (internal)
+#' @noRd
+plotutil_all_plots <- function() {
+  f <- grep("^batz\\.plot\\.", getNamespaceExports("Batz"), value = TRUE)
+  sort(f[!grepl("\\.defaults$", f)])                     # batz.plot.*.defaults are settings lists, not plots
+}

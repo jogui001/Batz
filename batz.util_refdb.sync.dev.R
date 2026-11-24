@@ -24,7 +24,7 @@ head(Batz:::batz.db("plotopts.batz.plot.bar_activity.site"))
 stopifnot(identical(names(Batz:::.batz.db), s$tables$name))
 
 ## 3. Starting plotopts files for a project come from the same tables
-batz.generate_plotopts(generate.files = "batz.plot.bar_activity.site", project.name = "test",
+batz.generate_plotopts(functions = "batz.plot.bar_activity.site", project.name = "test",
                        dir.save = file.path(tempdir(), "plotopts_test"))
 
 ## 2026-11-13: tab names <= 31 characters; plot settings tabs pltop.<plot function name without batz.plot.>

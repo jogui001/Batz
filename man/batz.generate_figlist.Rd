@@ -5,23 +5,20 @@
 \title{Excel template of every fig.list heading, with descriptions}
 \usage{
 batz.generate_figlist(
-  functions = c("batz.plot.bar_activity.community", "batz.plot.heatmap_activity.site",
-    "batz.plot.bar_activity.site", "batz.plot.barfloat_detect.1st.last",
-    "batz.plot.heatmap_aru.time", "batz.plot.heatmap_activity.species"),
+  functions = "",
   project.name = "",
   dir.save = getwd(),
   save.auto = TRUE
 )
 }
 \arguments{
-\item{functions}{Character, default all plot functions that take a
-fig.list: \code{"batz.plot.bar_activity.community"},
-\code{"batz.plot.heatmap_activity.site"},
-\code{"batz.plot.bar_activity.site"},
-\code{"batz.plot.barfloat_detect.1st.last"},
-\code{"batz.plot.heatmap_aru.time"}, \code{"batz.plot.heatmap_activity.species"}.
-Plot functions to include. \code{""} (or \code{NULL}) = all of them,
-one row for every plot type.}
+\item{functions}{Character, default \code{""} (or \code{NULL}): every
+Batz plot function (\code{batz.plot.*}). Plot functions to include, one
+row each. \code{"batz."} or \code{"batz.plot."} may be left out (e.g.
+\code{"plot.bar_activity.site"} or \code{"bar_activity.site"}); case
+and spaces are ignored, and a name that is part of exactly one plot
+function name is read as that function (NOTE). Plot functions that take
+no fig.list get no row (NOTE).}
 
 \item{project.name}{Character, default \code{""}. First part of the file
 name. Blank = no project part.}
